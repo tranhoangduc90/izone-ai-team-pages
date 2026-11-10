@@ -1,5 +1,14 @@
 export function handoutTablesHtml(tables, esc) {
   if (!tables.length) return '<p class="empty-inline">Chưa có bảng tổng hợp để xem.</p>';
+  if (tables.every(table=>Array.isArray(table.outlineIdeas))) {
+    const position=tables[0].outlinePosition;
+    const heading=position ? '<div class="outline-position"><h3>Quan điểm của cả bài</h3><p>'+esc(position)+'</p></div>' : '';
+    const bodies=tables.map(table=>{
+      const ideas=table.outlineIdeas.map((idea,i)=>'<dt>Idea '+(i+1)+'</dt><dd>'+esc(idea)+'</dd>').join('');
+      return '<section class="handout-summary-block lesson3-outline-body"><h3>'+esc(table.title)+'</h3><dl><dt>Thông điệp chung của các idea trong đoạn văn này là gì?</dt><dd>'+esc(table.topicSentence)+'</dd>'+ideas+'</dl></section>';
+    });
+    return heading+bodies.join('');
+  }
   const headings={A:'Điểm đầu',X:'Cầu nối',B:'Điểm cuối'};
   return tables.map((table,index)=>`<section class="handout-summary-block" data-handout-table="${esc(table.id)}"><h3>${esc(table.title || `Bảng ${index+1}`)}</h3>${table.topicSentence ? `<div class="handout-entry"><h4>Topic Sentence</h4><p class="handout-cell-content" lang="en">${esc(table.topicSentence)}</p></div>` : ''}
     <p class="handout-table-hint">Cuộn ngang bảng để xem đủ các cột A – X – B.</p>

@@ -9,6 +9,13 @@ export function assignmentStatus(row) {
   if (['submitted', 'accepted', 'grading','grading_failed'].includes(value)) return 'submitted';
   return 'not_submitted';
 }
+export const lesson3StatusNames = { submitted: 'Đã nhận bài · Chờ GV', returned: 'GV đã trả bài' };
+export function lesson3Status(row) {
+  const status = assignmentStatus(row);
+  if (status === 'returned' || status === 'revised') return 'returned';
+  if (status === 'submitted' || status === 'graded') return 'submitted';
+  return '';
+}
 export const statusLabel = row => statusNames[assignmentStatus(row)];
 export const statusColor = row => (typeof row==='string'?row:row?.status)==='grading_failed'?'error':statusColors[assignmentStatus(row)];
 export const statusDetail = row => row?.status==='grading_failed'?'Chấm đang gặp lỗi · bài đã được giữ':row?.status === 'draft' ? 'Đang viết nháp' : assignmentStatus(row) === 'graded' ? 'Chờ GV duyệt và trả bài' : '';

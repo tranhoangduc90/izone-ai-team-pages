@@ -1,4 +1,4 @@
-import { assignmentStatus, statusNames, statusLabel, statusColor, statusDetail } from './assignment-status.js';
+import { assignmentStatus, lesson3Status, lesson3StatusNames, statusNames, statusLabel, statusColor, statusDetail } from './assignment-status.js';
 import {feedbackBlockHtml,overallFeedback} from './feedback-format.js';
 import {alignmentPanelHtml} from './handout-alignment.js';
 import {handoutLinkHtml,handoutReadOnlyHtml} from './handout-view.js';
@@ -20,11 +20,11 @@ export function loginViewHtml() {
   </section></div>`;
 }
 
-export function studentLessonsHtml(rows, {filtered=false} = {}) {
+export function studentLessonsHtml(rows, {filtered=false,compactStatus=false} = {}) {
   const timestamp = value => value ? new Date(Number(value)).toLocaleString('vi-VN', {timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'Chưa có thời gian giao';
-  return rows.length ? rows.map(row => `<article class="lesson-row" data-home-assignment="${esc(row.id)}"><div class="lesson-information"><h3>${esc(row.title)}</h3><p>Giao lúc <time datetime="${row.assignedAt ? new Date(Number(row.assignedAt)).toISOString() : ''}">${esc(timestamp(row.assignedAt))}</time></p></div><div class="assignment-state"><span class="badge ${statusColor(row)}">${statusLabel(row)}</span>${statusDetail(row) ? `<small>${esc(statusDetail(row))}</small>` : ''}</div><button data-open-lesson="${esc(row.id)}" ${['returned', 'revised', 'not_submitted'].includes(assignmentStatus(row)) ? 'class="primary"' : ''}>${['returned','revised'].includes(assignmentStatus(row)) ? 'Xem nhận xét' : row.status === 'not_started' ? 'Viết bài' : 'Mở bài'}</button></article>`).join('') : `<div class="empty-state"><strong>${filtered ? 'Không có bài khớp bộ lọc' : 'Chưa có bài được giao'}</strong><p>${filtered ? 'Đổi điều kiện hoặc xóa bộ lọc để xem lại bài.' : 'Các bài được giao cho lớp của em sẽ xuất hiện tại đây.'}</p></div>`;
+  return rows.length ? rows.map(row => `<article class="lesson-row" data-home-assignment="${esc(row.id)}"><div class="lesson-information"><h3>${esc(row.title)}</h3><p>Giao lúc <time datetime="${row.assignedAt ? new Date(Number(row.assignedAt)).toISOString() : ''}">${esc(timestamp(row.assignedAt))}</time></p></div><div class="assignment-state">${compactStatus?lesson3Badge(lesson3Status(row)):`<span class="badge ${statusColor(row)}">${statusLabel(row)}</span>${statusDetail(row) ? `<small>${esc(statusDetail(row))}</small>` : ''}`}</div><button data-open-lesson="${esc(row.id)}" ${['returned', 'revised', 'not_submitted'].includes(assignmentStatus(row)) ? 'class="primary"' : ''}>${['returned','revised'].includes(assignmentStatus(row)) ? 'Xem nhận xét' : row.status === 'not_started' ? 'Viết bài' : 'Mở bài'}</button></article>`).join('') : `<div class="empty-state"><strong>${filtered ? 'Không có bài khớp bộ lọc' : 'Chưa có bài được giao'}</strong><p>${filtered ? 'Đổi điều kiện hoặc xóa bộ lọc để xem lại bài.' : 'Các bài được giao cho lớp của em sẽ xuất hiện tại đây.'}</p></div>`;
 }
-export function studentHomeHtml(rows, me) {
+export function studentHomeHtml(rows, me, {compactStatus=false} = {}) {
   return `<div class="page-heading"><div><h1>Homework Writing</h1></div><button id="refresh-home" class="quiet">Cập nhật</button></div>
   <section class="student-home-controls" aria-label="Tìm và lọc bài của em">
     <label class="field"><span>Tìm bài</span><input id="student-search" type="search" placeholder="Nhập tên bài hoặc chủ đề…"></label>
@@ -32,37 +32,43 @@ export function studentHomeHtml(rows, me) {
       <label class="field"><span>Giao từ ngày</span><input id="student-date-from" type="date"></label>
       <label class="field"><span>Đến ngày</span><input id="student-date-to" type="date"></label>
       <label class="field"><span>Bài học</span><select id="student-lesson"><option value="">Tất cả bài</option>${rows.map(row=>`<option value="${esc(row.id)}">${esc(row.title)}</option>`).join('')}</select></label>
-      <label class="field"><span>Trạng thái</span><select id="student-status"><option value="">Tất cả trạng thái</option>${Object.entries(statusNames).map(([value,label])=>`<option value="${value}">${label}</option>`).join('')}</select></label>
+      <label class="field"><span>Trạng thái</span><select id="student-status"><option value="">Tất cả trạng thái</option>${Object.entries(compactStatus?lesson3StatusNames:statusNames).map(([value,label])=>`<option value="${value}">${label}</option>`).join('')}</select></label>
     </div>
     <p id="student-filter-error" class="error-text" role="alert"></p>
     <div class="teacher-filter-footer"><p id="student-filter-result" role="status"></p><button id="student-clear" class="text-button">Xóa bộ lọc</button></div>
   </section>
-  <section class="card student-lessons"><h2>Bài được giao</h2><div id="student-lesson-list">${studentLessonsHtml(rows)}</div></section>`;
+  <section class="card student-lessons"><h2>Bài được giao</h2><div id="student-lesson-list">${studentLessonsHtml(rows,{compactStatus})}</div></section>`;
 }
 
-function publicationHistoryHtml(data){
-  const rows=data.publicationHistory||[];if(rows.length<2)return '';
+function publicationHistoryHtml(data, includeLatest=false){
+  const rows=data.publicationHistory||[];if(rows.length<(includeLatest?1:2))return '';
   return '<details class="history-panel block"><summary>Lịch sử trả bài · '+rows.length+' bản</summary><label class="field"><span>Bản nhận xét đã trả</span><select id="publication-history"><option value="">Chọn bản đã trả</option>'+rows.map(p=>'<option value="'+esc(p.id)+'">Bản '+p.publication_version+' · '+date(p.created_ms)+'</option>').join('')+'</select></label><div id="publication-history-content"></div></details>';
 }
-export function studentViewHtml({ me, model, assignments, isLocked, feedback, delivery }) {
+const compactLessonTitle = title => title.replace(/ · Viết mở bài$/u,'');
+const lesson3Badge = (status,id='') => status
+  ? `<span ${id?`id="${id}"`:''} class="badge ${status==='returned'?'success':'attention'}">${lesson3StatusNames[status]}</span>`
+  : '';
+export function studentViewHtml({ me, model, assignments, isLocked, feedback, delivery, compactStatus=false }) {
   const { state, text } = model, a = state.assignment;
+  const introduction=a.writingPart==='introduction';
   const saveLabel = model.backupError ? 'Chưa lưu được dự phòng trên thiết bị' : model.text !== model.lastSavedText ? 'Đã khôi phục bản trên thiết bị · chưa đồng bộ' : model.baseRevision ? 'Đã lưu nháp trên hệ thống · bản ' + model.baseRevision : 'Chưa có bản lưu';
-  return `<button id="student-home" class="text-button back">← Bài được giao</button><div class="page-heading"><div><h1>${esc(a.title)}</h1></div><div class="heading-tools"><button id="refresh" class="quiet">Cập nhật trạng thái</button></div></div>
+  const status = state.publication?'returned':lesson3Status(state.submission);
+  return `${compactStatus?'':'<button id="student-home" class="text-button back">← Bài được giao</button>'}<div class="page-heading${compactStatus?' compact-lesson-heading':''}"><div><h1>${esc(compactStatus?compactLessonTitle(a.title):a.title)}</h1></div><div class="heading-tools">${compactStatus?lesson3Badge(status,'processing-status'):''}<button id="refresh" class="quiet">Cập nhật trạng thái</button></div></div>
 
 
     <div class="student-workspace-tools"><button type="button" id="toggle-handout" aria-expanded="false" aria-controls="handout-preview">Xem handout Writing</button>${handoutLinkHtml({assignmentId:a.id})}${state.publication ? '<button type="button" id="show-feedback" class="quiet" aria-pressed="true">Nhận xét đã trả</button>' : ''}</div>
     <div class="student-layout ${state.publication ? 'has-feedback' : ''}">
       <aside class="study-context" aria-label="Handout và phản hồi" ${state.publication ? '' : 'hidden'}><section id="handout-preview" class="handout-preview" hidden></section>${state.publication ? `<section class="feedback-section" id="approved-feedback" tabindex="-1"><header class="feedback-heading"><h2>Nhận xét đã duyệt</h2>${meta(`Bản ${state.publication.publication_version||state.publication.review_version} · ${date(state.publication.created_ms)}`)}</header><a class="mobile-jump" href="#essay">Đến ô viết bản sửa ↓</a>${feedback}${publicationHistoryHtml(state)}<details class="block original-disclosure"><summary>Đọc toàn bộ bài gốc đã nộp</summary><p class="feedback-text" lang="en">${esc(state.submission.text)}</p></details></section>` : ''}</aside>
-      <section class="card editor-card"><div class="editor-head"><div><h2>${esc(a.title)}</h2></div><span id="processing-status" class="badge ${statusColor(state.submission)}">${statusLabel(state.submission)}</span></div>
-        ${state.submission?.status==='grading_failed'?'<section class="error-panel grading-failure" role="alert"><strong>Chấm bài đang gặp lỗi</strong><p>Bài của em đã được lưu. Cần người phụ trách kiểm tra để tiếp tục chấm; em không cần nộp lại.</p></section>':''}
+      <section class="card editor-card">${compactStatus?'':`<div class="editor-head"><div><h2>${esc(a.title)}</h2></div><span id="processing-status" class="badge ${statusColor(state.submission)}">${statusLabel(state.submission)}</span></div>`}
+        ${!compactStatus&&state.submission?.status==='grading_failed'?'<section class="error-panel grading-failure" role="alert"><strong>Chấm bài đang gặp lỗi</strong><p>Bài của em đã được lưu. Cần người phụ trách kiểm tra để tiếp tục chấm; em không cần nộp lại.</p></section>':''}
         <section class="prompt-disclosure writing-prompt"><h2>Đề bài</h2>${prompt(a)}</section>
-        ${state.publication ? `<p class="revision-hint">${isLocked&&state.revision ? 'Bản sửa đã được nhận. Bản này chưa được AI chấm lại hoặc xác nhận đạt.' : 'Đọc nhận xét đã duyệt rồi tự viết bản sửa tại đây. Nộp bản sửa chưa đồng nghĩa bài đã đạt.'}</p><a class="mobile-jump" href="#approved-feedback">↑ Đọc lại nhận xét</a>` : ''}
-        <label class="editor-label" for="essay">${model.kind === 'revision' ? 'Bản sửa của em'+(model.revisionRound>1?' · Lượt '+model.revisionRound:'') : 'Bài viết bằng tiếng Anh'}<small>${isLocked ? 'Bản đã nhận · chỉ đọc' : 'Em tự diễn đạt ý của mình'}</small></label>
+        ${state.publication ? `${compactStatus&&isLocked&&state.revision?'':`<p class="revision-hint">${isLocked&&state.revision ? 'Bản sửa đã được nhận. Bản này chưa được AI chấm lại hoặc xác nhận đạt.' : 'Đọc nhận xét đã duyệt rồi tự viết bản sửa tại đây. Nộp bản sửa chưa đồng nghĩa bài đã đạt.'}</p>`}<a class="mobile-jump" href="#approved-feedback">↑ Đọc lại nhận xét</a>` : ''}
+        <label class="editor-label" for="essay">${model.kind === 'revision' ? 'Bản sửa của em'+(model.revisionRound>1?' · Lượt '+model.revisionRound:'') : introduction?'Phần mở bài của em':'Bài viết bằng tiếng Anh'}<small>${isLocked ? 'Bản đã nhận · chỉ đọc' : 'Em tự diễn đạt ý của mình'}</small></label>
         <textarea id="essay" class="writing-area" lang="en" spellcheck="false" aria-describedby="save-status editor-error" ${isLocked ? 'readonly' : ''} placeholder="Bắt đầu viết tại đây…">${esc(text)}</textarea>
         <div class="editor-status"><span id="save-status">${esc(saveLabel)}</span><span id="word-count">${text.trim() ? text.trim().split(/\s+/).length : 0} từ</span></div>
         <div id="conflict"></div><div id="editor-error" role="alert"></div>${!isLocked?alignmentPanelHtml(model.kind==='revision'?state.revisionHandoutCheck:state.handoutCheck,a.handoutRequired):''}
-        ${!isLocked ? `<div class="editor-bottom"><span id="submit-progress" role="status"></span><p class="save-hint">Lưu nháp chưa phải nộp bài.</p><div class="actions"><button id="save">Lưu nháp</button><button id="submit" class="primary">${model.kind === 'revision' ? 'Nộp bản sửa cho GV' : 'Nộp bài'}</button></div></div><div class="demo-tool"><button id="sample" class="text-button">Điền bài giả để thử luồng</button></div>` : `<section class="notice-panel receipt-panel"><strong>✓ ${model.kind === 'revision' ? 'Đã nhận bản sửa của em' : 'Bài đã được nhận trên hệ thống'}</strong><p class="receipt">Biên nhận: ${esc(state.revision?.id || state.submission?.id)}</p><small>${model.kind === 'revision' ? 'GV phụ trách sẽ nhận thông báo mô phỏng.' : 'Bản nộp được giữ nguyên; em có thể quay lại để xem trạng thái.'}</small></section>`}
-        ${state.submission ? delivery : ''}
+        ${!isLocked ? `<div class="editor-bottom"><span id="submit-progress" role="status"></span><p class="save-hint">Lưu nháp chưa phải nộp bài.</p><div class="actions"><button id="save">Lưu nháp</button><button id="submit" class="primary">${model.kind === 'revision' ? 'Nộp bản sửa cho GV' : introduction?'Nộp mở bài':'Nộp bài'}</button></div></div><div class="demo-tool"><button id="sample" class="text-button">${introduction?'Điền mở bài mẫu':'Điền bài giả để thử luồng'}</button></div>` : `<section class="notice-panel receipt-panel"><strong>✓ ${model.kind === 'revision' ? 'Đã nhận bản sửa của em' : 'Bài đã được nhận trên hệ thống'}</strong>${compactStatus&&model.kind==='revision'?'':`<p class="receipt">Biên nhận: ${esc(state.revision?.id || state.submission?.id)}</p>`}${compactStatus?'':`<small>${model.kind === 'revision' ? 'GV phụ trách sẽ nhận thông báo mô phỏng.' : 'Bản nộp được giữ nguyên; em có thể quay lại để xem trạng thái.'}</small>`}</section>`}
+        ${!compactStatus&&state.submission ? delivery : ''}
       </section></div>`;
 }
 
@@ -102,15 +108,15 @@ function teacherSourceHtml(data){
   </section></aside>`;
 }
 
-export function teacherReviewHtml(data, feedback, editableFeedback = '') {
+export function teacherReviewHtml(data, feedback, editableFeedback = '', { directEdit = false } = {}) {
   const published=data.publication&&!data.editingReview;
-  const roundTools=data.features?.revisionRounds&&data.publication&&!data.editingReview?
+  const roundTools=data.features?.revisionRounds&&data.publication&&(!data.editingReview||directEdit)?
     (data.revisionRound?.revision_id?'<button type="button" id="open-revision-round">Mở lại quyền nộp sửa</button>':'<span class="section-note">Đang mở lượt sửa '+(data.revisionRound?.number||1)+'</span>'):'';
   const readOnly=`<section class="card published-review"><div class="section-heading"><h2>Phản hồi đã trả</h2><span class="badge success">Bản ${data.publication?.publication_version||data.publication?.review_version}</span></div><p class="section-note">Học viên đang đọc đúng bản đã duyệt này.</p><div class="actions">${data.features?.publicationHistory?'<button type="button" id="edit-published-review">Chỉnh nhận xét</button>':''}${roundTools}</div>${feedback}</section>`;
-  const form=`<section class="card review-form"><div class="review-toolbar"><div class="section-heading"><h2>Duyệt phản hồi</h2><span class="badge attention">HV chưa thấy</span></div><div class="review-submit"><p id="review-status" class="section-note">${data.publication?'HV vẫn xem bản đã trả '+data.publication.publication_version+'. Chỉnh sửa này chưa được công bố.':'Đang xem bản nhận xét '+data.review?.version+' · chưa trả cho HV.'}</p><div class="actions"><button id="save-review">Lưu chỉnh sửa</button><button id="approve" class="primary">Lưu và trả bài</button>${data.publication?'<button type="button" id="cancel-published-edit">Xem bản đã trả</button>':''}</div></div></div>${editableFeedback}<section class="teacher-comments-editor"><button type="button" id="add-teacher-comment">+ Thêm nhận xét</button><div id="teacher-comments-list"></div></section><div id="review-error" role="alert"></div></section>`;
-  return `<button id="back-teacher" class="text-button back">← Danh sách bài</button><div class="page-heading"><div><h1>${esc(data.assignment.title)}</h1></div><span class="badge ${statusColor(data.submission)}">${statusLabel(data.submission)}</span></div>
+  const form=`<section class="card review-form"><div class="review-toolbar"><div class="section-heading"><h2>Duyệt phản hồi</h2>${directEdit&&data.publication?'<span class="badge success">Đã trả bản '+data.publication.publication_version+'</span>':'<span class="badge attention">HV chưa thấy</span>'}</div><div class="review-submit"><p id="review-status" class="section-note">${data.publication?'HV vẫn xem bản đã trả '+data.publication.publication_version+(directEdit?'. Chỉ cập nhật khi GV trả bài.':'. Chỉnh sửa này chưa được công bố.'):'Đang xem bản nhận xét '+data.review?.version+' · chưa trả cho HV.'}</p><div class="actions"><button id="save-review">Lưu chỉnh sửa</button><button id="approve" class="primary">Lưu và trả bài</button>${data.publication&&!directEdit?'<button type="button" id="cancel-published-edit">Xem bản đã trả</button>':''}${directEdit?roundTools:''}</div></div></div>${editableFeedback}${!directEdit?'<section class="teacher-comments-editor"><button type="button" id="add-teacher-comment">+ Thêm nhận xét</button><div id="teacher-comments-list"></div></section>':''}<div id="review-error" role="alert"></div></section>`;
+  return `${directEdit?'':'<button id="back-teacher" class="text-button back">← Danh sách bài</button>'}<div class="page-heading${directEdit?' compact-lesson-heading':''}"><div><h1>${esc(directEdit?compactLessonTitle(data.assignment.title):data.assignment.title)}</h1></div><span class="badge ${statusColor(data.submission)}">${statusLabel(data.submission)}</span></div>
     <div class="review-layout">${teacherSourceHtml(data)}<div class="review-column">${data.review?(published?readOnly:form):(data.submission.status==='grading_failed'?'<section class="card grading-failure" role="alert"><h2>Chấm bài đang gặp lỗi</h2><p>Bài gốc đã được lưu. Cần phục hồi đúng bước bị lỗi trước khi có phản hồi để duyệt.</p><button id="reload-review">Cập nhật bài</button></section>':'<section class="card"><h2>Đang chờ kết quả AI</h2><p>Bộ chấm chưa trả kết quả hoặc có bước cần phục hồi. Bài gốc vẫn được giữ.</p><button id="reload-review">Cập nhật bài</button></section>')}
-    ${publicationHistoryHtml(data)}${data.review?.history?.length?`<details class="history-panel block"><summary>Lịch sử chỉnh sửa · ${data.review.history.length} bản trước</summary>${data.review.history.map(h=>`<h3 class="block">Bản ${h.version}</h3>${feedbackBlockHtml(overallFeedback(h.result.feedback))}`).join('')}</details>`:''}</div></div>`;
+    ${publicationHistoryHtml(data,directEdit)}${data.review?.history?.length?`<details class="history-panel block"><summary>Lịch sử chỉnh sửa · ${data.review.history.length} bản trước</summary>${data.review.history.map(h=>`<h3 class="block">Bản ${h.version}</h3>${feedbackBlockHtml(overallFeedback(h.result.feedback))}`).join('')}</details>`:''}</div></div>`;
 }
 
 export function operatorViewHtml(data, events) {

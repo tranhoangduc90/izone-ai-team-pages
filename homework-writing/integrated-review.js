@@ -1,0 +1,156 @@
+import {mountEditor,closeMenu,closeReviewDialog,dialog} from './review-format.js';
+import {languageCards} from './language-cards.js';
+import {feedbackTextHtml,overallFeedback} from './feedback-format.js';
+import {highlightHtml} from './text-highlights.js';
+
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const asParagraph=value=>'<p>'+esc(value).replace(/\r?\n/g,'<br>')+'</p>';
+const blue='#d8eefc';
+const byField=(ranges,field)=>(ranges||[]).map(mark=>mark[field]).filter(Boolean);
+const asMarked=(value,ranges)=>'<p>'+highlightHtml(value,ranges)+'</p>';
+const sorted=value=>Array.isArray(value)?value.map(sorted):value&&typeof value==='object'
+  ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,sorted(value[key])])) : value;
+export const equalReview=(a,b)=>JSON.stringify(sorted(a))===JSON.stringify(sorted(b));
+
+export function mountIntegratedReview(root,{result,editable=false,sourceRoot,submittedText,storageKey,onDirty=()=>{}}){
+  const overall=root?.querySelector('[data-feedback-panel="overall"]');
+  const sentences=root?.querySelector('[data-feedback-panel="sentences"]');
+  if(!overall||!sentences)return;
+  const canonical=languageCards(result);
+  const sources=new Map(canonical.map(card=>[card.id,card]));
+  const defaults=canonical.map(card=>({id:card.id,sourceId:card.id}));
+  let overlay=structuredClone(result.richReview||{version:1});
+  let trccText,feedbackText,changed=!!result.richReview;
+  const handles=[],cardEditors=[];
+  const cardList=()=>overlay.cards??defaults;
+  const count=root.querySelector('[data-feedback-tab="sentences"] .tab-count');
+  const change=()=>{changed=true;onDirty();};
+  const mounts=(element,content,label,onUpdate,extras={})=>mountEditor(element,{content,label,editable,onUpdate,...extras});
+  let index=0;
+  if(storageKey)try{index=Number(sessionStorage.getItem(storageKey))||0;}catch{}
+  root.classList.add('integrated-review');
+  const originalHtml=overlay.original||asParagraph(submittedText);
+  if(editable&&sourceRoot){
+    sourceRoot.classList.add('integrated-source');
+    const copy=document.createElement('section');copy.className='integrated-editor-shell';
+    copy.innerHTML='<h3>Bài viết</h3><div data-original-review></div>';
+    const archived=document.createElement('details');archived.className='integrated-original';
+    const summary=document.createElement('summary');summary.textContent='Xem phần mở bài học viên đã nộp';
+    archived.append(summary,...sourceRoot.childNodes);
+    sourceRoot.append(copy,archived);
+    handles.push(mounts(copy.querySelector('[data-original-review]'),originalHtml,'Bài viết',editor=>{
+      overlay.original=editor.getHTML();change();
+    }));
+  }
+  overall.innerHTML='<div class="integrated-editor-shell integrated-trcc"><h3>Nhận xét TR và CC</h3><div data-rich-trcc></div></div>';
+  if(!editable&&overlay.original){
+    const original=document.createElement('details');original.className='integrated-original';
+    original.innerHTML='<summary>Bài viết dùng khi nhận xét</summary><div data-rich-original></div>';
+    overall.prepend(original);
+    handles.push(mounts(original.querySelector('[data-rich-original]'),overlay.original,'Bài viết'));
+  }
+  const general=overallFeedback(result.feedback).replace(/^Đây là bản chấm AI giả lập để thử hành trình\. Giảng viên cần đọc và chỉnh trước khi trả bài\.\s*/u,'');
+  const hasGeneral=overlay.feedback!==undefined
+    ? overlay.feedback!=='<p></p>'
+    : !!general;
+  if(editable||hasGeneral){
+    const section=document.createElement('section');
+    section.className='integrated-editor-shell integrated-general';
+    section.innerHTML='<h3>Nhận xét chung</h3><div data-rich-feedback></div>';
+    overall.append(section);
+    handles.push(mounts(section.querySelector('[data-rich-feedback]'),
+      overlay.feedback??feedbackTextHtml(general,result.teacherHighlights?.feedback?.ranges),
+      'Nhận xét chung',editor=>{overlay.feedback=editor.getHTML();feedbackText=editor.getText();change();}));
+  }
+  handles.push(mounts(overall.querySelector('[data-rich-trcc]'),
+    overlay.trcc??feedbackTextHtml(result.trcc,result.teacherHighlights?.trcc?.ranges).replace('<p>Bản mô phỏng theo rubric Fast Food Lesson 3.</p>',''),
+    'Nhận xét về mặt nội dung',editor=>{overlay.trcc=editor.getHTML();trccText=editor.getText();change();}));
+  function renderCard(focus=false){
+    closeMenu();cardEditors.splice(0).forEach(editor=>editor.destroy());
+    const list=cardList();
+    if(count)count.textContent=list.length;
+    if(!list.length){sentences.innerHTML='<p class="empty-inline">Không còn thẻ nhận xét từng câu trong bản này.</p>';return;}
+    index=Math.min(list.length-1,Math.max(0,index));
+    if(storageKey)try{sessionStorage.setItem(storageKey,String(index));}catch{}
+    const card=list[index],source=sources.get(card.sourceId);
+    if(!source){sentences.innerHTML='<p role="alert">Chưa đọc được câu nguồn.</p>';return;}
+    const baseline={
+      original:asMarked(source.original_text,byField(source.highlights,'original')),
+      revised:asMarked(source.revised_text,result.teacherHighlights?.['card:'+source.id+':revised']?.ranges||byField(source.revisedHighlights,'revised')),
+      explanation:feedbackTextHtml(source.explanation,result.teacherHighlights?.['card:'+source.id+':explanation']?.ranges)
+    };
+    sentences.innerHTML='<div class="integrated-card-title"><h3 tabindex="-1">Bài làm và Gợi ý chỉnh sửa</h3><span aria-label="Vị trí thẻ">'+(index+1)+'/'+list.length+'</span></div>'+
+      (editable?'<div class="integrated-sentence-actions"><div><button type="button" data-add-mark>Thêm Highlight</button><button type="button" data-remove-mark>Xoá Highlight</button></div><div><button class="danger" type="button" data-delete-card>Xoá bài</button><button type="button" data-clone-card>Tạo bản sao</button></div></div>':'')+
+      '<div class="integrated-pair"><section><h4>Bài làm</h4><div data-rich-source></div></section><section><h4>Gợi ý chỉnh sửa</h4><div data-rich-revision></div></section></div>'+
+      '<section class="integrated-explanation"><h4>'+(editable?'Giải thích':'Nhận xét')+'</h4><div class="integrated-editor-shell"><div data-rich-explanation></div></div></section>'+
+      '<nav class="integrated-pager" aria-label="Chuyển thẻ nhận xét"><button type="button" data-prev-card>‹ Trước</button>'+
+      (editable?'<button type="button" data-save-card>Lưu</button>':'')+'<button type="button" data-next-card>Tiếp ›</button></nav>';
+    const update=(field,editor)=>{
+      if(!overlay.cards)overlay.cards=structuredClone(defaults);
+      overlay.cards[index][field]=editor.getHTML();change();
+    };
+    let activePair;
+    for(const [selector,field,label] of [['[data-rich-source]','original','Bài làm'],['[data-rich-revision]','revised','Gợi ý chỉnh sửa']]){
+      const editor=mounts(sentences.querySelector(selector),card[field]??baseline[field],label,editor=>update(field,editor),
+        {rich:false,onFocus:editor=>{activePair=editor;}});
+      cardEditors.push(editor);activePair=editor;
+    }
+    cardEditors.push(mounts(sentences.querySelector('[data-rich-explanation]'),card.explanation??baseline.explanation,
+      editable?'Giải thích':'Nhận xét',editor=>update('explanation',editor)));
+    const previous=sentences.querySelector('[data-prev-card]'),next=sentences.querySelector('[data-next-card]');
+    previous.setAttribute('aria-label','Trước');next.setAttribute('aria-label','Tiếp');
+    previous.onclick=()=>{if(index){index--;renderCard(true);}else root.querySelector('[data-feedback-tab="overall"]').click();};
+    next.disabled=index===list.length-1;next.onclick=()=>{index++;renderCard(true);};
+    if(editable){
+      sentences.querySelector('[data-save-card]').onclick=()=>document.querySelector('#save-review')?.click();
+      for(const [selector,remove] of [['[data-add-mark]',false],['[data-remove-mark]',true]]){
+        const button=sentences.querySelector(selector);
+        button.onmousedown=e=>e.preventDefault();
+        button.onclick=()=>{
+          const chain=activePair.chain().focus();
+          if(activePair.state.selection.empty){
+            if(!activePair.isActive('highlight')){
+              document.querySelector('#review-status').textContent='Chọn cụm từ trong Bài làm hoặc Gợi ý chỉnh sửa để tô sáng.';
+              return;
+            }
+            chain.extendMarkRange('highlight');
+          }
+          if(remove)chain.unsetHighlight().run();else chain.setHighlight({color:blue}).run();
+        };
+      }
+      sentences.querySelector('[data-clone-card]').onclick=()=>{
+        if(list.length>=150)return;
+        overlay.cards??=structuredClone(defaults);
+        overlay.cards.splice(index+1,0,{...structuredClone(overlay.cards[index]),id:crypto.randomUUID()});
+        index++;change();renderCard(true);
+      };
+      sentences.querySelector('[data-delete-card]').onclick=()=>dialog('Xoá thẻ nhận xét này?',
+        '<p>Thẻ sẽ được gỡ khỏi bản đang duyệt. Bài mở đầu đã nộp vẫn được lưu trong biên nhận.</p>',()=>()=>{
+          overlay.cards??=structuredClone(defaults);overlay.cards.splice(index,1);change();renderCard(true);
+        },'Xoá thẻ');
+    }
+    if(focus)sentences.querySelector('h3').focus({preventScroll:true});
+  }
+  renderCard();
+  const onKeys=event=>{
+    if(!event.altKey||!['ArrowLeft','ArrowRight'].includes(event.key)||sentences.hidden)return;
+    const action=sentences.querySelector(event.key==='ArrowLeft'?'[data-prev-card]':'[data-next-card]');
+    if(action&&!action.disabled){event.preventDefault();action.click();}
+  };
+  root.addEventListener('keydown',onKeys);
+  let active=true;
+  const observer=new MutationObserver(()=>{if(!root.isConnected)destroy();});
+  observer.observe(document.getElementById('app'),{childList:true,subtree:true});
+  function destroy(){
+    if(!active)return;active=false;observer.disconnect();root.removeEventListener('keydown',onKeys);
+    if(editable){closeMenu();closeReviewDialog();}
+    handles.concat(cardEditors).forEach(editor=>editor.destroy());
+  }
+  return {
+    collect(){return {richReview:changed?structuredClone(overlay):undefined,trccText,feedback:feedbackText};},
+    commit(sent,saved){
+      if(equalReview(overlay,sent.richReview)){overlay=structuredClone(saved.richReview||{version:1});changed=!!saved.richReview;}
+    },
+    destroy
+  };
+}

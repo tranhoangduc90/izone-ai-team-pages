@@ -1,5 +1,5 @@
 import { studentLessonsHtml } from './views.js';
-import { assignmentStatus } from './assignment-status.js';
+import { assignmentStatus, lesson3Status } from './assignment-status.js';
 
 const normalized = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
 export function assignedDay(value) {
@@ -8,7 +8,7 @@ export function assignedDay(value) {
   const get = type => parts.find(p => p.type === type).value;
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
-export function setupStudentFilters(root,{rows,state,onOpen}) {
+export function setupStudentFilters(root,{rows,state,onOpen,compactStatus=false}) {
   const fields = {search:'#student-search',from:'#student-date-from',to:'#student-date-to',assignmentId:'#student-lesson',status:'#student-status'};
   const list = root.querySelector('#student-lesson-list');
   const apply = () => {
@@ -18,9 +18,9 @@ export function setupStudentFilters(root,{rows,state,onOpen}) {
     const visible = rows.filter(row => {
       const day=assignedDay(row.assignedAt);
       return !invalid && (!query || normalized(row.title).includes(query)) && (!state.assignmentId || row.id === state.assignmentId) &&
-        (!state.status || assignmentStatus(row) === state.status) && (!state.from || day >= state.from) && (!state.to || (day && day <= state.to));
+        (!state.status || (compactStatus?lesson3Status(row):assignmentStatus(row)) === state.status) && (!state.from || day >= state.from) && (!state.to || (day && day <= state.to));
     });
-    list.innerHTML=studentLessonsHtml(visible,{filtered:rows.length>0});
+    list.innerHTML=studentLessonsHtml(visible,{filtered:rows.length>0,compactStatus});
     root.querySelector('#student-filter-result').textContent=`Đang hiển thị ${visible.length} / ${rows.length} bài`;
   };
   for(const [key,selector] of Object.entries(fields)) {

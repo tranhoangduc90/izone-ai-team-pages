@@ -1,9 +1,9 @@
 {
   "source": {
-    "revision": "200b2bc16d4a577d065d4ae5cc49dc464ae735fd05edcc15f02680c6d9876c80",
-    "files": 211
+    "revision": "f21503b21e1cfa4fe77d1a23b27d3968e7b91927bd1bcb104a0c93ee96c54c58",
+    "files": 227
   },
-  "createdAt": "2026-11-09T09:57:26.820Z",
+  "createdAt": "2026-11-10T13:11:08.388Z",
   "public": {
     "mode": "online",
     "apiBase": "https://ducizone.ddns.net/homework-writing-api/api",
@@ -18,8 +18,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 46517,
-      "sha256": "cc870b72b59765c5e6fad60803ff4ecdabb4e29b6e111160f0d96df02e76664e"
+      "bytes": 50637,
+      "sha256": "dea6a2df39628a1fbcec867e597c814817caf489ea542b443a35b993c1e6a554"
     },
     {
       "path": "assets/SourceSans3-Italic-Variable.woff2",
@@ -48,8 +48,8 @@
     },
     {
       "path": "assignment-status.js",
-      "bytes": 1311,
-      "sha256": "425785cac81ed43f2e706b761c6c3d5eb34d9739d2df7b83308ace4051d596a0"
+      "bytes": 1682,
+      "sha256": "643cfed6cbb8fa25120ff1a5f0c8dc03c099c0bb997df93349d487763bd9288f"
     },
     {
       "path": "drafts.js",
@@ -57,9 +57,14 @@
       "sha256": "51902836633f857b9fd8d09382a15e0f59bd7ce6bb4ef33092a174cebc361911"
     },
     {
+      "path": "fast-food-demo.css",
+      "bytes": 6092,
+      "sha256": "6e02aee4fa825c39cee3b2c54c8c8da9bc8144122a151cd907a1ab38eb6c95d7"
+    },
+    {
       "path": "feedback-cards.js",
-      "bytes": 7375,
-      "sha256": "a6285d8624d30a6bdd52a32fc5f597ba655f334f42a1f49d69c3f47ed715e471"
+      "bytes": 7854,
+      "sha256": "5eda47dec6b6dd9b53bd5ddda0f3034460fcb4ce5173380f66b2f7fd96874a4c"
     },
     {
       "path": "feedback-format.js",
@@ -68,8 +73,8 @@
     },
     {
       "path": "feedback-tabs.js",
-      "bytes": 6268,
-      "sha256": "36e01107c0c528ed06edc52aa69b175d23893de404f45c5664e370b67821540f"
+      "bytes": 6257,
+      "sha256": "e2b9d76d1307223d9b468404ef2fc84c3b257a4947b590eace819d35d32e1de8"
     },
     {
       "path": "handout-alignment.js",
@@ -78,18 +83,18 @@
     },
     {
       "path": "handout-editor.js",
-      "bytes": 6608,
-      "sha256": "74851ddc3940de24a2a20ce1394f07ef0d6c01a4286ceaadb49b929a37a3e6ee"
+      "bytes": 6767,
+      "sha256": "7ce31b44e574d9c6b10267d6738f5db9f24f9045fa072b85f3855d46975d3937"
     },
     {
       "path": "handout-preview.js",
-      "bytes": 5463,
-      "sha256": "1849e3355b096e73c1bd0def4048198f6f20e334e58ad3411e5c1a8b0b702be0"
+      "bytes": 5751,
+      "sha256": "1835941da63777de41c0fdbfe9256ce096531c7b199c0872b66918663bc4b5a9"
     },
     {
       "path": "handout-tables.js",
-      "bytes": 2053,
-      "sha256": "b793f61ecfe62cfb62da96ed6303adbf95342b32881d77ad8b5f901d6a904d60"
+      "bytes": 2732,
+      "sha256": "c9f3964019252b04a946950f7421558422298a6254272e0065ed59a922960ff7"
     },
     {
       "path": "handout-view.js",
@@ -118,8 +123,18 @@
     },
     {
       "path": "index.html",
-      "bytes": 1577,
-      "sha256": "8f0582b24ca18f2299b396e6bfce94d24485f175719ed51c2e613929d29c101e"
+      "bytes": 1796,
+      "sha256": "7c8d23a2d49d4bb5b62ad90765237b66df94d0428a53b67972e7c3c034e12617"
+    },
+    {
+      "path": "integrated-review.css",
+      "bytes": 6532,
+      "sha256": "cc63202dec465e30b9db5d55cfc7c4a866c0e76b217103a361be8f557f013abd"
+    },
+    {
+      "path": "integrated-review.js",
+      "bytes": 10775,
+      "sha256": "d68291c4682a08150c694c448f0ced83e93403dcb787f26c1f4730b5004fbd89"
     },
     {
       "path": "language-cards.js",
@@ -147,9 +162,14 @@
       "sha256": "89eac8a910ae348a7ac4af47468af6ef1bea110825fdf9a122a98ceb32c9ca23"
     },
     {
+      "path": "review-format.js",
+      "bytes": 466940,
+      "sha256": "c2e0e2906b8dc558f7bd89b7d026b3c1b1d2e2b63328eac204910d31e6b6fb17"
+    },
+    {
       "path": "review-highlights.js",
-      "bytes": 3701,
-      "sha256": "692adc73c0c542735d3cdd52e3fa5d6a26347b00e3f2af4e20cf59db93fbde74"
+      "bytes": 4047,
+      "sha256": "45fb7e2f186742bd65188170a65fdb7e32b6f6d8dfe44987574f570ce2007b3a"
     },
     {
       "path": "revision-draft.js",
@@ -178,13 +198,13 @@
     },
     {
       "path": "split-panes.js",
-      "bytes": 5889,
-      "sha256": "d21ab0d97e36b85440338d80499fa8e9d210ab5bc2110867180cb7ca84eecbdc"
+      "bytes": 6054,
+      "sha256": "640516b715d3fdcab77e07cf6f7211d5c01151f4e4330e787874bb6475176c9d"
     },
     {
       "path": "student-filters.js",
-      "bytes": 2383,
-      "sha256": "126d387742bbbdcd20ceb014512ba2a02875bb1d7e928deb734fc15542270eda"
+      "bytes": 2502,
+      "sha256": "cf64603a0a023cb5db8c32226ccb65913c3cd7648a78e0b3a02ed6922d76d5e6"
     },
     {
       "path": "submission-check.js",
@@ -218,8 +238,8 @@
     },
     {
       "path": "views.js",
-      "bytes": 28055,
-      "sha256": "f57d59ef8dce4a9be2498f85f2f59e9adfc96e7fee0b26572a27c3e9fd6bf6aa"
+      "bytes": 29584,
+      "sha256": "b4f61dac70b8b649ee3b8a29c6aaa9daf91dd06a01f431f1171413d6695eda0c"
     },
     {
       "path": "workspace.css",

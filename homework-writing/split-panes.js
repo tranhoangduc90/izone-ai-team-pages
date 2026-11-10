@@ -6,7 +6,9 @@ export function setupSplitPanes(root){
   for(const layout of root.querySelectorAll('.student-layout,.review-layout,.alignment-review-grid')){
     const panes=[...layout.children];if(panes.length!==2)continue;
     const [left,right]=panes,kind=layout.classList.contains('student-layout')?'student':layout.classList.contains('review-layout')?'review':'alignment';
-    const media=matchMedia(kind==='review'?'(min-width:1001px)':'(min-width:801px)'),defaultRatio=.5;
+    const media=matchMedia(kind==='review'?'(min-width:1001px)':'(min-width:801px)'),defaultRatio=document.body.classList.contains('fast-food-demo')
+      ? (kind==='review' ? .33 : kind==='student'&&layout.classList.contains('has-feedback') ? .65 : .46)
+      : .5;
     // Mỗi lần mở màn bắt đầu 50:50, chỉ giữ điều chỉnh trong màn hiện tại.
     let preferred=null,ratio=defaultRatio,active=false,drag=null;
     const handle=document.createElement('div');handle.className='split-divider';handle.hidden=true;handle.tabIndex=-1;

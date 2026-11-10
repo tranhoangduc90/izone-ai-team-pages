@@ -3,3 +3,7 @@ progress-log/releases/** -text
 term-tests/term-test-2-k56-computer-based/offline-assets.mjs text eol=lf
 
 term-tests/term-test-1-k56-computer-based/offline-assets.mjs text eol=lf
+
+# Homework release manifest hashes exact served bytes.
+homework-writing/** -text whitespace=cr-at-eol
+homework-writing/review-format.js whitespace=cr-at-eol,-blank-at-eol

@@ -1,6 +1,7 @@
 import runtime from './runtime-config.js';
 import {frontendConfiguration,createOnlineAccess} from './online-access.js';
 import {setupRichReview} from './rich-review.js';
+import {mountIntegratedReview,equalReview} from './integrated-review.js';
 import {basicSubmissionError} from './submission-check.js';
 import {vietnameseWritingError} from './submission-language.js';
 import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js';
@@ -12,6 +13,7 @@ import {feedbackBlockHtml,feedbackInlineHtml,overallFeedback} from './feedback-f
 import {setupSourceVersions} from './source-versions.js';
 import { setupTeacherComments } from './teacher-comments.js';
 import { setupTeacherFilters } from './teacher-filters.js';
+import {lesson3Status} from './assignment-status.js';
 import { setupStudentFilters } from './student-filters.js';
 import { setupHandoutPreview } from './handout-preview.js';
 import {handoutReadOnlyHtml,setupReadOnlyHandout} from './handout-view.js';
@@ -24,6 +26,14 @@ import {initialRevisionText,shouldRestoreRevisionBackup} from './revision-draft.
 import {highlightHtml} from './text-highlights.js';
 
 const $ = selector => document.querySelector(selector);
+const lesson3Experience = assignment => assignment?.experience==='fast-food-introduction-v1';
+function setLesson3Chrome(enabled){
+  document.body.classList.toggle('fast-food-demo',enabled);
+  if(!onlineAccess)return;
+  const brand=$('.brand');
+  if(enabled)brand.removeAttribute('href');
+  else brand.setAttribute('href','./');
+}
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const uid = () => crypto.randomUUID();
 const events = { received: 'Đã nhận bài · đang xử lý', ai_ready: 'AI xong · chờ GV', returned: 'GV đã trả bài', revision_received: 'HV đã nộp bản sửa' };
@@ -40,9 +50,9 @@ async function changeOnlineAccess(){
 const teacherFilterStates = new Map();
 const studentFilterStates = new Map();
 let teacherCommentsEditor;
-let studentAlignment,handoutEditor,richReview;
+let studentAlignment,handoutEditor,richReview,integratedTeacher;
 let reviewHighlights,reviewToolbarObserver;
-function clearTeacherComments() { richReview?.destroy();richReview=null;teacherCommentsEditor?.destroy(); teacherCommentsEditor = null; reviewHighlights?.destroy(); reviewHighlights=null;reviewToolbarObserver?.disconnect(); }
+function clearTeacherComments() { integratedTeacher?.destroy();integratedTeacher=null;richReview?.destroy();richReview=null;teacherCommentsEditor?.destroy(); teacherCommentsEditor = null; reviewHighlights?.destroy(); reviewHighlights=null;reviewToolbarObserver?.disconnect(); }
 const sessionChannel = new BroadcastChannel('homework-writing-5667-local-session');
 sessionChannel.onmessage = async e => {
   if(onlineAccess)return;
@@ -95,36 +105,46 @@ async function loginView(options={}) {
 async function home() {
   clearTeacherComments();
   generation++; model = null; teacherView = null; account();
+  setLesson3Chrome(!!runtime.richReviewDemo);
   $('#app').innerHTML = '<p class="loading">Đang mở không gian của bạn…</p>';
   try {
     if(new URLSearchParams(location.search).get('view')==='handout'){const q=new URLSearchParams(location.search);q.delete('view');setRoute(Object.fromEntries(q));}
     if (me.role === 'student') {
       assignments = await api('/assignments');
       const query = new URLSearchParams(location.search);
-      if (query.get('view') === 'docs-debug') return docsView();
+      if (!runtime.richReviewDemo && query.get('view') === 'docs-debug') return docsView();
       if (query.get('submission')) {
         const submission = query.get('submission');
         const owned = await api('/student/submissions/' + encodeURIComponent(submission));
-        return openStudent(owned.assignment.id, { resultSubmissionId: submission });
+        return await openStudent(owned.assignment.id, { resultSubmissionId: submission });
       }
+      if (runtime.richReviewDemo) {
+        const id = query.get('assignment') || assignments.find(assignment => assignment.writingPart === 'introduction')?.id;
+        return id ? await openStudent(id) : showDocsEntry();
+      }
+      const requested=assignments.find(a=>a.id===query.get('assignment'));
+      if(lesson3Experience(requested)&&onlineAccess?.personal)return await openStudent(requested.id,{fromDocs:true});
       return query.get('assignment')&&query.get('view')!=='assignments' ? openStudent(query.get('assignment')) : studentHome();
     }
     if (me.role === 'teacher') {
       const id = new URLSearchParams(location.search).get('submission');
-      return id ? openReview(id) : teacherList();
+      return id ? await openReview(id) : runtime.richReviewDemo ? showDocsEntry() : teacherList();
     }
     return operatorLibrary();
   } catch (e) { showPageError(e); }
+}
+function showDocsEntry() {
+  $('#app').innerHTML = '<section class="card"><h1>Mở bài từ Google Docs</h1><p>Mở đường dẫn của bài bạn cần xem hoặc duyệt.</p></section>';
 }
 async function studentHome() {
   clearTimeout(saveTimer); await flushBackups(); const gen = ++generation;
   const rows = await api('/student/home');
   if (gen !== generation) return;
   model = null; setRoute({});
-  $('#app').innerHTML = studentHomeHtml(rows, me);
+  $('#app').innerHTML = studentHomeHtml(rows, me, {compactStatus:runtime.richReviewDemo});
   $('#refresh-home').onclick = () => studentHome().catch(showPageError);
   if (!studentFilterStates.has(me.id)) studentFilterStates.set(me.id, {});
-  setupStudentFilters($('#app'), {rows,state:studentFilterStates.get(me.id),onOpen:id=>openStudent(id).catch(showPageError)});
+  setupStudentFilters($('#app'), {rows,compactStatus:runtime.richReviewDemo,state:studentFilterStates.get(me.id),onOpen:id=>openStudent(id).catch(showPageError)});
 }
 async function studentWorkspace(){
   if(working)return;
@@ -149,17 +169,27 @@ function standaloneHandout(){
 function showPageError(e) {
   if(e.handled||e.stale)return;
   if(onlineAccess&&!me){onlineAccess.showError($('#app'),e);return;}
+  if(runtime.richReviewDemo){
+    $('#app').innerHTML = `<section class="card"><h1>Chưa mở được bài</h1><p>${esc(e.message)}</p><button id="retry-page">Thử lại</button></section>`;
+    $('#retry-page').onclick = () => (me ? home() : start()).catch(showPageError);
+    return;
+  }
   $('#app').innerHTML = `<section class="card"><h1>Chưa mở được bài</h1><p>${esc(e.message)}</p><button id="home">Về danh sách</button></section>`;
   if(!me){$('#home').textContent='Thử lại';$('#home').onclick=()=>start().catch(showPageError);}else $('#home').onclick = () => { setRoute({}); home(); };
 }
-async function openStudent(id, { resultSubmissionId = null } = {}) {
+async function openStudent(id, { resultSubmissionId = null, fromDocs = false } = {}) {
   clearTimeout(saveTimer); await flushBackups(); const gen = ++generation;
   const state = await api('/student/assignments/' + encodeURIComponent(id));
   if (gen !== generation) return;
   setWriting67Scope([state.assignment.classId]);
-  const resultRoute = resultSubmissionId && state.submission?.id === resultSubmissionId ? resultSubmissionId : null;
+  const compact=lesson3Experience(state.assignment);
+  const resultRoute = resultSubmissionId && state.submission?.id === resultSubmissionId ? resultSubmissionId
+    : fromDocs&&compact&&onlineAccess?.personal&&state.publication ? state.submission.id : null;
   const showResult = resultRoute && state.publication;
-  setRoute({assignment:id,...(resultRoute?{submission:resultRoute}:{})});
+  setLesson3Chrome(compact||!!runtime.richReviewDemo);
+  const directSubmission = runtime.richReviewDemo && state.assignment.writingPart==='introduction' ? state.submission?.id : null;
+  const submission = directSubmission || resultRoute;
+  setRoute({assignment:id,...(submission?{submission}:{})});
   const kind = state.publication ? 'revision' : 'original';
   const server = kind === 'revision' ? state.revisionDraft : state.draft;
   const revisionRound=state.revisionRound?.number||1;
@@ -203,7 +233,7 @@ function persist() {
 function setSaveStatus(text, error = false) { const e = $('#save-status'); if (e) { e.textContent = text; e.className = error ? 'error-text' : ''; } }
 function renderStudent() {
   const { state, text } = model, a = state.assignment;
-  $('#app').innerHTML = studentViewHtml({ me, model, assignments, isLocked: locked(), feedback: state.publication ? resultHtml(state.publication.result, true) : '', delivery: state.submission ? deliveryHtml(state.deliveries) : '' });
+  $('#app').innerHTML = studentViewHtml({ me, model, assignments, isLocked: locked(), feedback: state.publication ? resultHtml(state.publication.result, true) : '', compactStatus: lesson3Experience(a), delivery: state.submission && !lesson3Experience(a) && !runtime.richReviewDemo ? deliveryHtml(state.deliveries) : '' });
   const alignmentModel=model,alignmentGeneration=generation;
   studentAlignment=setupStudentAlignment({panel:$('#handout-check-panel'),api,assignmentId:model.id,kind:model.kind,revisionRound:model.revisionRound,isCurrent:()=>generation===alignmentGeneration&&model===alignmentModel});
   if(state.assignment.handoutRequired&&!locked())studentAlignment.draw(model.kind==='revision'?state.revisionHandoutCheck:state.handoutCheck);
@@ -218,19 +248,20 @@ function renderStudent() {
   if (state.publication) {
     setupPublicationHistory($('#app'),state,'student',state.submission.id,generation);
     const feedbackKey = 'hw5667:feedback-card:' + JSON.stringify([me.id, model.id, state.publication.id, state.publication.review_version]);
-    setupFeedbackCards($('#approved-feedback'), { storageKey: feedbackKey });
     setupFeedbackTabs($('#approved-feedback'), { storageKey: feedbackKey + ':tab' });
+    if(lesson3Experience(a))mountIntegratedReview($('#approved-feedback'),{result:state.publication.result,storageKey:feedbackKey,submittedText:state.submission.text});
+    else setupFeedbackCards($('#approved-feedback'), { storageKey: feedbackKey });
     $('.study-context').tabIndex = 0;
     $('.editor-card').tabIndex = 0;
     $('.editor-card').setAttribute('aria-label', 'Đề bài và bài làm của em');
   }
   $('#refresh').onclick = () => openStudent(model.id, { resultSubmissionId: model.resultSubmissionId }).catch(showPageError);
-  $('#student-home').onclick = () => studentWorkspace().catch(editorError);
+  if ($('#student-home')) $('#student-home').onclick = () => studentWorkspace().catch(editorError);
   if (!locked()) {
     $('#essay').oninput = () => { const current = model; current.text = $('#essay').value;studentAlignment?.draw(null); $('#essay').removeAttribute('aria-invalid'); if($('#editor-error').dataset.errorCode==='SUBMISSION_INVALID')$('#editor-error').replaceChildren(); $('#word-count').textContent = wordCount(current.text) + ' từ'; persist().then(() => { if (model === current && !current.backupError) setSaveStatus('Đã lưu trên thiết bị này · chờ đồng bộ'); }); clearTimeout(saveTimer); saveTimer = setTimeout(() => saveDraft().catch(editorError), 1500); };
     $('#save').onclick = () => saveDraft().catch(editorError);
     $('#submit').onclick = () => submitDraft().catch(editorError);
-    if(onlineAccess)$('#sample')?.closest('.demo-tool').remove();else $('#sample').onclick = () => { $('#essay').value = 'People is interested in learning together. Students can share their ideas and support each other.'; $('#essay').dispatchEvent(new Event('input')); };
+    if(onlineAccess)$('#sample')?.closest('.demo-tool').remove();else $('#sample').onclick = () => { $('#essay').value = a.writingPart==='introduction' ? 'People is eating fast food more often, and it cause health problems when consumed too frequently. Some argue that banning it completely is the only solution. I disagree because a total ban would be hard to enforce and clearer nutrition labels could help people make healthier choices.' : 'People is interested in learning together. Students can share their ideas and support each other.'; $('#essay').dispatchEvent(new Event('input')); };
   }
   if (model.conflict) showConflict();
   const backups = [...model.otherBackups.map(b => ({ text: b.text })), ...model.history.flatMap(h => [{ text: h.text }, { text: h.serverText }])]
@@ -332,7 +363,10 @@ async function submitDraft() {
     await persist();
     await api('/student/assignments/' + encodeURIComponent(m.id) + (m.kind === 'revision' ? '/revision' : '/submit'), m.pendingSubmit);
     if (gen !== generation || model !== m) return;
-    m.pendingSubmit = null; await persist(); notice(m.kind === 'revision' ? 'Đã nhận bản sửa của em.' : 'Đã nhận bài hợp lệ và xếp hàng chấm.'); await openStudent(m.id);
+    m.pendingSubmit = null; await persist();
+    const compact = lesson3Experience(m.state.assignment);
+    if (!compact) notice(m.kind === 'revision' ? 'Đã nhận bản sửa của em.' : 'Đã nhận bài hợp lệ và xếp hàng chấm.');
+    await openStudent(m.id);
   } catch (e) {
     if(['SUBMISSION_INVALID','HANDOUT_CHECK_REQUIRED','HANDOUT_CHECK_STALE'].includes(e.code)&&gen===generation&&model){model.pendingSubmit=null;await persist();}
     if (e.network) e.message = 'Chưa xác nhận được kết quả nộp. Em giữ nguyên nội dung và dùng Cập nhật trạng thái để tra lại biên nhận.';
@@ -390,11 +424,13 @@ async function openReview(id,{editPublished=false}={}) {
   const gen = ++generation; const data = await api('/teacher/submissions/' + encodeURIComponent(id));
   if (gen !== generation) return;
   setWriting67Scope([data.assignment.classId]);
-  const editing=!!data.review&&(!data.publication||editPublished);data.editingReview=editing;
+  const lesson3Review = lesson3Experience(data.assignment);
+  setLesson3Chrome(lesson3Review||!!runtime.richReviewDemo);
+  const editing=!!data.review&&(lesson3Review||!data.publication||editPublished);data.editingReview=editing;
   teacherView = { id, data, version: data.review?.version, result: structuredClone(data.review?.result) };
   if(editing){const backup=await loadBackup(draftKey(me.id,id,'teacher-review')).catch(()=>null);if(gen!==generation)return;if(backup?.version===data.review.version&&backup.result)data.review.result=backup.result;}
   setRoute({submission:id});
-  $('#app').innerHTML = teacherReviewHtml(data, data.publication ? resultHtml(data.publication.result, true) : '', editing ? feedbackTabsHtml(data.review.result, { esc, marked, editable: true }) : '');
+  $('#app').innerHTML = teacherReviewHtml(data, data.publication ? resultHtml(data.publication.result, true) : '', editing ? feedbackTabsHtml(data.review.result, { esc, marked, editable: true }) : '', { directEdit: lesson3Review });
   setupSplitPanes($('#app'));
   const reviewRoot = $('.review-column'), reviewKey = 'hw5667:teacher-view:' + JSON.stringify([me.id, id]);
   let selectedRevisionId=data.revision?.id;let handoutKind='original';try{handoutKind=sessionStorage.getItem(reviewKey+':handout-kind')||'original';}catch{}
@@ -403,9 +439,14 @@ async function openReview(id,{editPublished=false}={}) {
     loadHandout:()=>api('/teacher/submissions/'+encodeURIComponent(id)+'/handout?kind='+handoutKind+(handoutKind==='revision'&&selectedRevisionId?'&revisionId='+encodeURIComponent(selectedRevisionId):''))
   });
   setupSourceVersions($('#app'),{storageKey:reviewKey+':source:'+String(data.revision?.id||'no-revision'),onSelect:value=>{if(value!=='handout'){handoutKind=value;try{sessionStorage.setItem(reviewKey+':handout-kind',value);}catch{}}if(value==='handout')void handout.reload();}});
-  setupFeedbackCards(reviewRoot, { storageKey: reviewKey + ':card' });
   setupFeedbackTabs(reviewRoot, { storageKey: reviewKey + ':tab' });
-  if (editing) teacherCommentsEditor = setupTeacherComments($('#app'), {
+  if(lesson3Review&&(editing||data.publication)){
+    const mounted=mountIntegratedReview(reviewRoot,{result:editing?data.review.result:data.publication.result,
+      editable:editing,sourceRoot:$('#source-panel-original'),submittedText:data.submission.text,storageKey:reviewKey+':card',
+      onDirty:()=>{$('#review-status').textContent='Có chỉnh sửa chưa lưu · HV chưa thấy nội dung này.';}});
+    if(editing)integratedTeacher=mounted;
+  }else setupFeedbackCards(reviewRoot, { storageKey: reviewKey + ':card' });
+  if (editing && !lesson3Review) teacherCommentsEditor = setupTeacherComments($('#app'), {
     sourceText: data.submission.text, comments: data.review.result.teacherComments || [],
     onDirty: () => { $('#review-status').textContent = 'Có chỉnh sửa chưa lưu · HV chưa thấy nội dung này.'; },
     onSave: async () => { await saveTeacherReview(); return { dirty: reviewDirty() }; }
@@ -420,13 +461,13 @@ async function openReview(id,{editPublished=false}={}) {
   for (const [selector, label] of [['.source-column', 'Bài gốc và bản sửa của học viên'], ['.review-column', 'Phản hồi và chỉnh sửa của giảng viên']]) {
     const panel = $(selector); panel.tabIndex = 0; panel.setAttribute('role', 'region'); panel.setAttribute('aria-label', label);
   }
-  $('#back-teacher').onclick = () => { if (mayLeaveReview()) teacherList().catch(showPageError); };
+  if ($('#back-teacher')) $('#back-teacher').onclick = () => { if (mayLeaveReview()) teacherList().catch(showPageError); };
   if ($('#reload-review')) $('#reload-review').onclick = () => openReview(id).catch(showPageError);
   if($('#edit-published-review'))$('#edit-published-review').onclick=()=>openReview(id,{editPublished:true}).catch(showPageError);
   if($('#cancel-published-edit'))$('#cancel-published-edit').onclick=()=>{if(mayLeaveReview())void openReview(id);};
   if($('#open-revision-round')){
     const payload={expectedRound:data.revisionRound.number,idempotencyKey:uid()};
-    $('#open-revision-round').onclick=async()=>{const button=$('#open-revision-round');button.disabled=true;try{await api('/teacher/submissions/'+encodeURIComponent(id)+'/revision-rounds',payload);await openReview(id);notice('Đã mở lượt sửa tiếp theo cho học viên.');}catch(e){notice(e.message);if(button.isConnected)button.disabled=false;}};
+    $('#open-revision-round').onclick=async()=>{if(lesson3Review&&!mayLeaveReview())return;const button=$('#open-revision-round');button.disabled=true;try{await api('/teacher/submissions/'+encodeURIComponent(id)+'/revision-rounds',payload);await openReview(id);notice('Đã mở lượt sửa tiếp theo cho học viên.');}catch(e){notice(e.message);if(button.isConnected)button.disabled=false;}};
   }
   if($('#revision-history'))$('#revision-history').onchange=async event=>{
     const wanted=event.target.value;try{const revision=await api('/teacher/submissions/'+encodeURIComponent(id)+'/revisions/'+encodeURIComponent(wanted));if(gen!==generation||$('#revision-history')?.value!==wanted)return;
@@ -456,25 +497,38 @@ function setupPublicationHistory(root,data,role,id,gen){
       // Mỗi snapshot là một vùng độc lập, kể cả quan hệ ARIA giữa tab và panel.
       const ids=new Map();target.querySelectorAll('[id]').forEach(element=>{const old=element.id,next='history-'+value.publication_version+'-'+old;ids.set(old,next);element.id=next;});
       for(const attribute of ['aria-controls','aria-labelledby'])target.querySelectorAll('['+attribute+']').forEach(element=>element.setAttribute(attribute,element.getAttribute(attribute).split(/\s+/).map(id=>ids.get(id)||id).join(' ')));
-      setupFeedbackCards(target);setupFeedbackTabs(target);
+      setupFeedbackTabs(target);
+      if(lesson3Experience(data.assignment))mountIntegratedReview(target,{result:value.result,submittedText:data.submission.text});
+      else setupFeedbackCards(target);
     }catch(e){if(gen===generation&&at===request)target.textContent=e.message;}
   };
 }
 function reviewDirty() {
-  if (!teacherView || !$('#review-feedback')) return false;
-  return JSON.stringify(collectTeacherReview())!==JSON.stringify(teacherView.result);
+  if (!teacherView || !($('#review-feedback')||integratedTeacher)) return false;
+  return !equalReview(collectTeacherReview(),teacherView.result);
 }
 function collectTeacherReview(){
   const result=structuredClone(teacherView.result);
-  result.feedback=$('#review-feedback').value;result.trcc=$('#review-trcc').value;
-  const comments=teacherCommentsEditor?.collect()||[];
-  if(comments.length||'teacherComments'in result)result.teacherComments=comments;
+  const integrated=integratedTeacher?.collect();
+  if(integrated){
+    if(integrated.richReview)result.richReview=integrated.richReview;
+    if(integrated.trccText!==undefined)result.trcc=integrated.trccText;
+    if(integrated.feedback!==undefined)result.feedback=integrated.feedback;
+  }else{
+    result.feedback=$('#review-feedback').value;result.trcc=$('#review-trcc').value;
+  }
+  if (teacherCommentsEditor) {
+    const comments = teacherCommentsEditor.collect();
+    if (comments.length || 'teacherComments' in result) result.teacherComments = comments;
+  }
   const cards=languageCards(result).map(card=>({id:card.id,revised_text:card.revised_text,explanation:card.explanation}));
   document.querySelectorAll('[data-revised]').forEach(e=>{cards.find(c=>c.id===e.dataset.cardKey).revised_text=e.value;});
   document.querySelectorAll('[data-explanation]').forEach(e=>{cards.find(c=>c.id===e.dataset.cardKey).explanation=e.value;});
   const defaults=languageCards(result).map(card=>({id:card.id,revised_text:card.revised_text,explanation:card.explanation}));
   if(result.languageCards||JSON.stringify(cards)!==JSON.stringify(defaults))result.languageCards=cards;
-  const highlights=reviewHighlights?.collect()||{};
+  const highlights=integrated?{...result.teacherHighlights,...reviewHighlights?.collect()}:(reviewHighlights?.collect()||{});
+  if(integrated?.trccText!==undefined)delete highlights.trcc;
+  if(integrated?.feedback!==undefined)delete highlights.feedback;
   if(Object.keys(highlights).length||result.teacherHighlights)result.teacherHighlights=highlights;
   return result;
 }
@@ -485,11 +539,12 @@ function reviewError(e) { if ($('#review-error')) $('#review-error').innerHTML =
 async function saveTeacherReview() {
   if (teacherView?.saving) { await teacherView.saving; return saveTeacherReview(); }
   const view = teacherView, gen = generation, result = collectTeacherReview();
-  if (JSON.stringify(result) === JSON.stringify(view.result)) return;
+  if (equalReview(result,view.result)) return;
   view.saving = api('/teacher/submissions/' + encodeURIComponent(view.id) + '/review', { expectedVersion: view.version, result }, 'PUT');
   try {
     const saved = await view.saving;
     if (gen !== generation || teacherView !== view) throw Error('Phiên hoặc bài đang mở đã đổi. Bản lưu chỉ thuộc bài trước.');
+    integratedTeacher?.commit(result,saved.result);
     view.version = saved.version; view.result = saved.result; teacherCommentsEditor?.commit(saved.result.teacherComments || []);
     $('#review-status').textContent = reviewDirty() ? 'Đã lưu bản trước; còn chỉnh sửa mới chưa lưu.' : 'Đã lưu bản nhận xét ' + saved.version + ' · chưa trả cho HV.';
   } finally { view.saving = null; }
@@ -536,7 +591,14 @@ setInterval(async () => {
   try {
     const state = await api('/student/assignments/' + encodeURIComponent(id));
     if (gen !== generation) return;
-    if (!!state.publication !== !!model.state.publication || state.publication?.id!==model.state.publication?.id || state.revisionRound?.number!==model.state.revisionRound?.number || state.submission?.status !== model.state.submission?.status) await openStudent(id);
+    const before = model.state;
+    const compactStatus = lesson3Experience(state.assignment);
+    const statusChanged = compactStatus
+      ? lesson3Status(state.submission) !== lesson3Status(before.submission) || state.revision?.id !== before.revision?.id
+      : state.submission?.status !== before.submission?.status;
+    if (state.publication?.id!==before.publication?.id || state.revisionRound?.number!==before.revisionRound?.number || statusChanged) {
+      await openStudent(id, { resultSubmissionId: model.resultSubmissionId });
+    }
   } catch { /* Giữ màn hiện tại khi mất mạng; không biến thành thành công. */ }
   finally { polling = false; }
 }, 5000);
@@ -546,7 +608,8 @@ window.addEventListener('beforeunload', e => {
 });
 async function start() {
   frontend=frontendConfiguration(runtime);
-  if(frontend.mode==='online'){onlineAccess=createOnlineAccess(frontend,{onWarning:message=>requestAnimationFrame(()=>notice(message)),onTeacherChanged:changeOnlineAccess,onReady:session=>completeOnlineSession(session).catch(showPageError)});$('.brand').onclick=async e=>{e.preventDefault();try{if(me?.role==='student')await studentWorkspace();else if(me&&mayLeaveReview()){await preserveLocalWork();setRoute({});await home();}else if(!me)await loginView();}catch(error){if(model)editorError(error);else showPageError(error);}};await loginView();return;}
+  if(runtime.richReviewDemo) $('.brand').removeAttribute('href');
+  if(frontend.mode==='online'){onlineAccess=createOnlineAccess(frontend,{onWarning:message=>requestAnimationFrame(()=>notice(message)),onTeacherChanged:changeOnlineAccess,onReady:session=>completeOnlineSession(session).catch(showPageError)});$('.brand').onclick=async e=>{e.preventDefault();try{if(lesson3Experience(model?.state.assignment)||lesson3Experience(teacherView?.data.assignment))return;if(me?.role==='student')await studentWorkspace();else if(me&&mayLeaveReview()){await preserveLocalWork();setRoute({});await home();}else if(!me)await loginView();}catch(error){if(model)editorError(error);else showPageError(error);}};await loginView();return;}
   try { const session = await api('/session'); me = session.person; csrf = session.csrf; await home(); }
   catch (e) { if (e.status === 401) await loginView(); else showPageError(e); }
 }
