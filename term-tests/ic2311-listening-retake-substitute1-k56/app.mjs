@@ -8,7 +8,7 @@ const params=new URLSearchParams(location.search),cohort=params.get('course')===
 function show(id,value=true){$(id).hidden=!value;if(id==='exam'){$('listeningView').hidden=!value;$('identityView').hidden=!value;$('page-shell').classList.toggle('cbt-bootstrap-shell',!value);if(value)$('lobby').hidden=true;}if(id==='finished'&&value)$('lobby').hidden=true;}
 const storage=await new DurableStore(cohort?'k56:':'').open().catch(e=>{text('identity-status',e.message);throw e;});
 let state=await storage.get('current'),preparation=await storage.get('preparation'),busy=false,syncing=false,syncFailures=0,retryAt=0,content,roster,prepared=false,reviewMono=null,presentationReady=false,trialPassed=false,reviewAsset;
-let loginProof;
+let loginProof,unmatchedProof,loginEpoch=0;
 if(cohort){document.title='Listening thi lại · Khóa 56';text('roster-note','Đăng nhập Google bằng tài khoản đã đăng ký với IZONE để xác nhận học viên và lớp.');$('view-review').href='../ic2311-retake-review/?skill=listening&course=56';}
 const tabId=crypto.randomUUID(),audioOwnerId=state?.identity?.audioOwnerId||preparation?.audioOwnerId||crypto.randomUUID();
 let releaseOwner,ownerHeld=false,durablePending=state?.pending?.operationId??null;
@@ -72,7 +72,7 @@ function renderFinished(){
  text('finish-message',state.phase==='technical_stop'?
   'Hãy liên hệ giảng viên sau buổi thi để nhận bài Listening thay thế. '+(state.interruptionReceipt?'Máy chủ đã nhận thông tin gián đoạn.':'Thông tin gián đoạn đã lưu trên thiết bị và sẽ gửi khi có mạng.'):state.serverConfirmed?'Máy chủ đã xác nhận nhận bài Listening. Bạn có thể đóng trang.':'Bài làm đã được lưu trên thiết bị này, chưa được máy chủ xác nhận. Hệ thống sẽ tự gửi khi có kết nối. Hãy giữ trang mở; nếu đã đóng trang, mở lại liên kết này trên cùng thiết bị và trình duyệt khi có mạng. Không xóa dữ liệu trình duyệt trước khi có xác nhận nộp thành công.');
  text('receipt',state.serverConfirmed?'Biên nhận: '+state.receipt.receiptId+' · '+new Date(state.receipt.serverNow).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'Mã lượt: '+state.identity.attemptId.slice(0,8));
- show('check-new-attempt',state.phase==='technical_stop'&&!cohort);if(state.localPersistFailed)text('finish-message','Bộ nhớ trình duyệt đang gặp lỗi; một phần bài có thể chưa lưu được. Không đóng trang và liên hệ giảng viên ngay để kiểm tra phần đã lưu.');
+ show('check-new-attempt',state.phase==='technical_stop');if(state.localPersistFailed)text('finish-message','Bộ nhớ trình duyệt đang gặp lỗi; một phần bài có thể chưa lưu được. Không đóng trang và liên hệ giảng viên ngay để kiểm tra phần đã lưu.');
  const link = $('view-review');
  const confirmed = state.phase === 'submitted' && state.serverConfirmed && !state.pending && state.receipt?.receiptId;
  if (link) link.hidden = !confirmed;
@@ -245,7 +245,7 @@ $('sync-now').onclick=async()=>{
 };
 $('check-new-attempt').onclick=async()=>{
  if(busy||state?.phase!=='technical_stop')return;busy=true;
- try{if(!state.replacementPreparation)state.replacementPreparation={operationId:crypto.randomUUID(),audioOwnerId:crypto.randomUUID()};await persist();const {operationId,audioOwnerId:owner}=state.replacementPreparation;const r=await journal.request('/prepare',{classCode:state.identity.classCode,studentRef:state.identity.studentRef,operationId,tabId,audioOwnerId:owner},{permit:null,operationId});if(r.value.identity.generation<=state.identity.generation||r.value.identity.contentVersion!==CONTENT_VERSION||r.value.identity.audioHash!==AUDIO.hash||r.value.identity.studentRef!==state.identity.studentRef)throw Error('NEW_GENERATION_REQUIRED');await storage.put('attempt:'+state.identity.attemptId,state);state={permit:r.value.permit,identity:r.value.identity,revision:r.value.revision,answers:Object.fromEntries(Array.from({length:40},(_,i)=>[i+1,''])),phase:'prepared',pending:null,serverConfirmed:false};await persist();location.reload();}catch{note('Chưa có lượt mới được xác nhận. Hãy giữ bài hiện tại và liên hệ giảng viên; hệ thống không tự reset lượt thi.');}finally{busy=false;}
+ try{if(!state.replacementPreparation)state.replacementPreparation={operationId:crypto.randomUUID(),audioOwnerId:crypto.randomUUID()};await persist();const {operationId,audioOwnerId:owner}=state.replacementPreparation;const r=await journal.request(cohort?'/self-enrollment/replacement':'/prepare',{classCode:state.identity.classCode,studentRef:state.identity.studentRef,operationId,tabId,audioOwnerId:owner},{permit:cohort?state.permit:null,operationId});if(r.value.identity.generation<=state.identity.generation||r.value.identity.contentVersion!==CONTENT_VERSION||r.value.identity.audioHash!==AUDIO.hash||r.value.identity.studentRef!==state.identity.studentRef||r.value.identity.classCode!==state.identity.classCode)throw Error('NEW_GENERATION_REQUIRED');await storage.put('attempt:'+state.identity.attemptId,state);state={permit:r.value.permit,identity:r.value.identity,learnerName:state.learnerName,revision:r.value.revision,answers:Object.fromEntries(Array.from({length:40},(_,i)=>[i+1,''])),phase:'prepared',pending:null,serverConfirmed:false};await persist();location.reload();}catch{note('Chưa có lượt mới được xác nhận. Hãy giữ bài hiện tại và liên hệ giảng viên; hệ thống không tự reset lượt thi.');}finally{busy=false;}
 };
 addEventListener('offline',()=>{if(['playing','review'].includes(state?.phase))note('Bạn đang mất kết nối. Audio và bài thi vẫn tiếp tục. Đáp án đang được lưu trên thiết bị này.');});
 addEventListener('online',()=>{retryAt=0;void synchronize(true);});
@@ -272,12 +272,25 @@ try{
   const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src='assets/kinney-hotel-plan.png';});
   function fillPicker(){const select=$('student');select.replaceChildren(new Option(cohort?'Chọn lớp bạn sẽ dùng để thi':'Chọn tên của bạn',''));for(const s of roster.students)select.add(new Option(cohort?s.name+' · '+s.classCode:s.name,s.studentRef));if(cohort&&roster.students.length===1)select.value=roster.students[0].studentRef;select.dispatchEvent(new Event('change'));}
   fillPicker();await renderContent();
-  if(cohort&&!state){const {showLearnerLogin}=await import('./learner-login.mjs');await showLearnerLogin($('student-login'),results[1].value,async proof=>{
-   loginProof=null;roster={students:[]};fillPicker();
-   try{const {value}=await journal.request('/self-enrollment/identify',proof,{permit:null});roster={students:value.students};loginProof=value.submitted?null:proof;fillPicker();
-    text('identity-status',value.submitted?'Máy chủ đã nhận lượt thi lại của bạn.':'Đã xác nhận tài khoản và lớp.');}
-   catch{text('identity-status','Chưa xác minh được tài khoản học viên K56. Hãy kiểm tra tài khoản Google đã đăng ký với IZONE hoặc liên hệ giảng viên.');}
-  });}else if(!roster.students.length)text('identity-status','Hiện không còn học viên trong danh sách vào thi. Nếu bạn cần hỗ trợ, hãy liên hệ giảng viên.');
+  if(cohort&&!state){
+   function acceptIdentity(value,proof){roster={students:value.students};loginProof=value.submitted?null:proof;unmatchedProof=null;show('verification',false);fillPicker();text('identity-status',value.submitted?'Máy chủ đã nhận lượt thi lại của bạn.':'Đã xác nhận tài khoản và lớp.');}
+   const {showLearnerLogin}=await import('./learner-login.mjs');
+   await showLearnerLogin($('student-login'),results[1].value,async proof=>{
+    const epoch=++loginEpoch;
+    loginProof=unmatchedProof=null;show('verification',false);roster={students:[]};fillPicker();
+    try{const {value}=await journal.request('/self-enrollment/identify',proof,{permit:null});if(epoch===loginEpoch)acceptIdentity(value,proof);}
+    catch(error){if(epoch!==loginEpoch)return;if(error.code==='K56_MEMBERSHIP_NOT_VERIFIED'){unmatchedProof=proof;show('verification');text('identity-status','Tài khoản này chưa khớp hồ sơ K56. Hãy dùng đúng tài khoản đã đăng ký hoặc nhập mã do giảng viên cấp.');}
+     else text('identity-status','Chưa xác minh được tài khoản Google. Hãy đăng nhập lại.');}
+   });
+   $('verify-learner').onclick=async()=>{
+    const proof=unmatchedProof,code=$('verification-code').value.trim(),epoch=loginEpoch;
+    if(!proof||!/^[\w-]{22}$/.test(code)){text('identity-status','Hãy nhập đúng mã xác minh do giảng viên cấp.');return;}
+    $('verify-learner').disabled=true;
+    try{const {value}=await journal.request('/self-enrollment/redeem',{...proof,code},{permit:null});if(epoch===loginEpoch){$('verification-code').value='';acceptIdentity(value,proof);}}
+    catch{if(epoch===loginEpoch)text('identity-status','Không xác minh được mã. Hãy kiểm tra mã và tài khoản Google, hoặc liên hệ giảng viên.');}
+    finally{$('verify-learner').disabled=false;}
+   };
+  }else if(!roster.students.length)text('identity-status','Hiện không còn học viên trong danh sách vào thi. Nếu bạn cần hỗ trợ, hãy liên hệ giảng viên.');
   if(state?.phase==='prepared'){$('student').value=state.identity.studentRef;void prepare();}
  }
 }catch(e){if(e.code==='AUDIO_OWNER_CONFLICT'){show('identity',false);note('Bài Listening đang mở ở tab khác. Hãy quay lại tab đó để tiếp tục; trang này không thay đổi bài đang làm.');}else text('identity-status','Chưa tải được nội dung hoặc danh sách học viên. Hãy kết nối mạng và tải lại trước khi bắt đầu.');}

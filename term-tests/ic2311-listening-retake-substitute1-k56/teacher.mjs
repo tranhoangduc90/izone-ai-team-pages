@@ -7,12 +7,36 @@ const label={prepared:'Đã chuẩn bị',draft:'Đang làm / đã lưu nháp',s
 const cell=(tr,value)=>{const td=document.createElement('td');td.textContent=value??'—';tr.append(td);return td;};
 function clearSession(){
  authEpoch++;authenticated=false;loading=false;latest='';
- for(const id of ['results','logs'])show(id,false);
+ for(const id of ['results','logs','verification-admin','verification-output'])show(id,false);
  $('rows').replaceChildren();$('log-rows').replaceChildren();
+ $('verification-list').replaceChildren();$('issued-code').value='';
 }
-function reviewLink(attemptId){
+async function loadVerifications(){
+ const epoch=authEpoch;
+ try{
+  const result=await call('k56-verification');if(epoch!==authEpoch)return;
+  const list=$('verification-list');list.replaceChildren();
+  $('verification-status').textContent=result.students.length?'Chọn hồ sơ đã đối chiếu danh tính.':'Không còn hồ sơ chờ xác minh.';
+  for(const student of result.students){
+   const row=document.createElement('li');row.append(document.createTextNode(student.classCode+' · '+student.name+' '));
+   const issue=document.createElement('button');issue.type='button';issue.textContent='Cấp mã';
+   issue.onclick=async()=>{
+    if(!confirm('Bạn đã đối chiếu danh tính của '+student.name+' qua kênh IZONE đã đăng ký?'))return;
+    issue.disabled=true;
+    try{const issued=await call('k56-verification/issue',{studentRef:student.studentRef,identityChecked:true});if(epoch!==authEpoch)return;
+     $('issued-code').value=issued.code;show('verification-output');$('verification-status').textContent='Mã đã cấp cho '+student.classCode+' · '+student.name+'.';}
+    catch(error){if(epoch===authEpoch)$('verification-status').textContent='Chưa cấp được mã ('+error.message+').';}
+    finally{issue.disabled=false;}
+   };row.append(issue);list.append(row);
+  }
+ }catch(error){if(epoch===authEpoch)$('verification-status').textContent='Chưa đọc được danh sách ('+error.message+').';}
+}
+$('load-verifications').onclick=loadVerifications;
+$('copy-issued-code').onclick=async()=>{try{await navigator.clipboard.writeText($('issued-code').value);}catch{$('issued-code').select();}};
+function reviewLink(attemptId,classCode){
  const url=new URL('../ic2311-retake-review/teacher.html',location.href);
  url.search=new URLSearchParams({skill:'listening',attemptId});
+ if(classCode&&classCode!=='IC2311')url.searchParams.set('class',classCode);
  const link=document.createElement('a');
  link.href=url.href;link.textContent='Xem bài đã nộp';
  return link;
@@ -23,9 +47,10 @@ async function refresh(){if(!authenticated||loading)return;loading=true;const ep
  if(epoch!==authEpoch)return;
  const canManage=r.role==='admin';
  document.querySelectorAll('[data-admin-only]').forEach(node=>node.hidden=!canManage);
+ show('verification-admin',canManage&&r.selfEnrollment===true);
  if(!canManage){show('logs',false);$('log-rows').replaceChildren();}
  const fingerprint=JSON.stringify(r);if(fingerprint===latest){$('status').textContent='Đã cập nhật · không có thay đổi';return;}latest=fingerprint;const fragment=document.createDocumentFragment();for(const student of r.students){const attempts=r.attempts.filter(a=>a.student_ref===student.studentRef);const tr=document.createElement('tr'),a=attempts[0];cell(tr,student.name);cell(tr,a?label[a.status]:'Chưa vào bài');cell(tr,a?.status==='submitted'?a.raw_score+'/40':'—');cell(tr,a?.receipt_id||'—').hidden=!canManage;cell(tr,a?.portal_status==='confirmed'?'Đã ghi Term Test 1 Listening':a?.portal_status==='blocked'?'Cần đối soát · '+(a.portal_error_code||''):a?.portal_status?'Chờ ghi Term Test 1 Listening':'—').hidden=!canManage;const actions=cell(tr,'');
- if(a?.status==='submitted')actions.append(reviewLink(a.id));
+ if(a?.status==='submitted')actions.append(reviewLink(a.id,a.class_code));
  if(canManage&&a){const b=document.createElement('button');b.className='secondary';b.textContent='Xem log';b.onclick=()=>void logs(a.id);actions.append(b);if(a.status!=='submitted'){const reopen=document.createElement('button');reopen.className='secondary';reopen.textContent='Cấp lượt thay thế';reopen.onclick=async()=>{if(!confirm('Chỉ cấp khi đã xác nhận học viên dừng lượt hiện tại. Tạo lượt Listening thay thế cho '+student.name+'? Lượt cũ và đáp án vẫn được giữ; lượt cũ sẽ không gửi tiếp được.'))return;try{const key=student.studentRef+':'+a.generation;if(!reopenOperations.has(key))reopenOperations.set(key,crypto.randomUUID());await call('reopen',{studentRef:student.studentRef,operationId:reopenOperations.get(key)});reopenOperations.delete(key);latest='';await refresh();}catch(e){$('status').textContent='Chưa cấp lượt: '+e.message;}};actions.append(reopen);}}fragment.append(tr);}$('rows').replaceChildren(fragment);show('results');$('status').textContent='Đã cập nhật. Điểm /40 được ghi vào Term Test 1 Listening. Reading/Writing giữ nguyên.';}catch(e){if(epoch!==authEpoch)return;$('status').textContent='Chưa tải được kết quả ('+e.message+'). Dữ liệu đang xem được giữ.';if([401,403].includes(e.status))void authenticate();}finally{if(epoch===authEpoch)loading=false;}}
 async function google(){const cfg=await call('config');if(!cfg.googleClientId)throw Error('GOOGLE_CONFIG_UNAVAILABLE');if(!window.google?.accounts?.id){await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.onload=resolve;script.onerror=reject;document.head.append(script);});}window.google.accounts.id.initialize({client_id:cfg.googleClientId,callback:async response=>{try{await window.IzoneTeacherSso.login('listeningretake',response.credential,true);await authenticate();}catch{$('auth-status').textContent='Chưa xác minh được tài khoản Google.';}}});show('google');window.google.accounts.id.renderButton($('google'),{theme:'outline',text:'signin_with'});}
 async function authenticate(){clearSession();const epoch=authEpoch;show('google',false);show('retry-auth',false);$('auth-status').textContent='Đang khôi phục đăng nhập của bạn…';try{const restored=await window.IzoneTeacherSso.restore('listeningretake');if(epoch!==authEpoch)return;if(!restored){$('auth-status').textContent='Đăng nhập Google để xem kết quả được cấp quyền.';await google();return;}const session=await call('session');if(epoch!==authEpoch)return;authenticated=true;$('auth-status').textContent='Đã xác minh: '+session.email+(session.role==='viewer'?' · Chỉ xem kết quả':'');show('logout');await refresh();}catch(e){if(epoch!==authEpoch)return;authenticated=false;$('auth-status').textContent=e.status===403?'Tài khoản chưa được cấp quyền xem Listening thi lại IC2311.':'Chưa xác minh được đăng nhập. Hãy thử lại.';show('retry-auth');}}

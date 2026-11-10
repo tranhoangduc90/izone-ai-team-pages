@@ -13,6 +13,7 @@ const skill = new URLSearchParams(location.search).get('skill');
 const setup = definition.get(skill);
 const teacherMode = location.pathname.endsWith('/teacher.html');
 const teacherAttempt = new URLSearchParams(location.search).get('attemptId');
+const teacherClass = skill==='listening'&&new URLSearchParams(location.search).get('class')||'IC2311';
 const byName = new URLSearchParams(location.search).get('view')==='by-name';
 const status = byId('result-status');
 const retry = byId('result-retry');
@@ -239,7 +240,7 @@ async function loadTeacherReview() {
     if (!response.ok) throw Error('Review unavailable');
     const {review}=await response.json();
     const identity=review?.identity;
-    if (identity?.classCode!=='IC2311'||identity.attemptId!==teacherAttempt||
+    if (identity?.classCode!==teacherClass||identity.attemptId!==teacherAttempt||
         !matchingReview(review,{identity},undefined)) throw Error('Wrong review');
     controller.signal.throwIfAborted();
     render(review);
