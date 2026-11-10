@@ -2,8 +2,9 @@
 // Dựng cửa sổ giống Reading/Listening thực chiến. Lỗi tải hiện tại nút, không đổi bài làm hay điểm.
 (function () {
   'use strict';
-  const supported = new Set(['term-test-1', 'term-test-2', 'mini-test-lesson-5', 'substitute-test-1-k67']);
-  const replayTests = new Set(['term-test-1', 'term-test-2', 'substitute-test-1-k67']);
+  const substituteTests = new Set(['substitute-test-1-k67', 'k67-term1-listening-makeup-substitute1']);
+  const supported = new Set(['term-test-1', 'term-test-2', 'mini-test-lesson-5', ...substituteTests]);
+  const replayTests = new Set(['term-test-1', 'term-test-2', ...substituteTests]);
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[c]);
@@ -32,7 +33,7 @@
   function sourceFor(review) {
     const descriptor = review.bundle.reviewAudio;
     if (!descriptor || !/^[a-f0-9]{64}$/.test(descriptor.sha256) || !Number.isInteger(descriptor.durationMs) || descriptor.durationMs < 1) throw Error('Sai định danh audio');
-    const substitute = review.bundle.testSlug === 'substitute-test-1-k67' && descriptor.asset === 'substitute-test-1-k67.mp3'
+    const substitute = substituteTests.has(review.bundle.testSlug) && descriptor.asset === 'substitute-test-1-k67.mp3'
       && descriptor.sha256 === '59e69c9691841655a639a22fa9d7a8aec658e4c0c82c5e1451dd5bdd895d0b10';
     const termAsset = {
       'term-test-1': /^term-test-1-128kbps-[0-9a-f]{16}\.mp3$/,
@@ -256,7 +257,7 @@
     d.innerHTML = `<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">${escape(context.title)} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${number} · ${escape(entry.type.replace(/^(Reading|Listening) - /, ''))}</h2></div><button type="button" class="explanation-dialog-close" data-explanation-close aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="${isReading ? 'Bài đọc' : fullTranscript ? 'Transcript đầy đủ' : 'Trích transcript'}"><div class="explanation-dialog-pane-head"><strong>${isReading ? 'Bài đọc' : fullTranscript ? 'Transcript đầy đủ' : 'Trích transcript'} · ${escape(section.label)}</strong><span>Câu ${number}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">${escape(sectionTitle)}</p>${left}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(correctAnswer)}</strong></span><span>${escape(context.answerLabel || 'Bài làm của bạn')} <strong>${escape(studentAnswer || '—')}</strong></span><span class="result-${outcome}">${outcome === 'correct' ? 'Đúng' : outcome === 'blank' ? 'Bỏ trống' : outcome === 'incorrect' ? 'Sai' : 'Chưa có dữ liệu từng câu'}</span></div>${entry.gradingNote ? `<p class="explanation-dialog-hint">${escape(entry.gradingNote)}</p>` : ''}${entry.pairNumbers ? `<p class="explanation-dialog-hint">Câu ${entry.pairNumbers.join('–')} dùng chung lời giải; hai đáp án đúng không xét thứ tự. Kết quả từng câu giữ theo bài đã chấm.</p>` : ''}<h3>Đối chiếu ý trong đề và ${isReading ? 'bài đọc' : 'transcript'}</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${paragraphs(entry.prompt)}</section><section><h4>Bằng chứng trong ${isReading ? 'bài đọc' : 'transcript'}</h4>${entry.contextOnly ? `<p>${escape(entry.contextNote)}</p>` : paragraphs(entry.evidence)}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${index + 1}/${numbers.length}</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-explanation-prev ${index === 0 ? 'disabled' : ''}>← Câu trước</button><button type="button" class="button outline" data-explanation-next ${index === numbers.length - 1 ? 'disabled' : ''}>Câu sau →</button></nav></footer></div>`;
     d.querySelector('[data-explanation-close]').onclick = closeDialog;
     if (fullTranscript) d.querySelector('.explanation-dialog-passage-scroll').classList.add('explanation-full-transcript');
-    if (review.bundle.testSlug === 'substitute-test-1-k67' && entry.figure === 'home-improvement-store.png') {
+    if (substituteTests.has(review.bundle.testSlug) && entry.figure === 'home-improvement-store.png') {
       const image = document.createElement('img');
       image.src = new URL('../substitute-test-1-k67-computer-based/assets/figures/home-improvement-store.png', scriptBase);
       image.alt = 'Sơ đồ Home Improvement Store, các vị trí A–H';

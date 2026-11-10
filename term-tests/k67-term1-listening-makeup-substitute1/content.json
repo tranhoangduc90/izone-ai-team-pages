@@ -1,0 +1,332 @@
+{
+  "sourceSlug": "substitute-test-1-k67",
+  "contentVersion": "substitute1-k67-listening-v1",
+  "listening": {
+    "instructions": [
+      "Bài nghe gồm 4 phần và 40 câu.",
+      "Audio chỉ phát sau khi hoàn thành bước nghe thử.",
+      "Không tải lại hoặc đóng tab khi audio đang phát."
+    ],
+    "sections": [
+      {
+        "label": "Section 1",
+        "range": "Questions 1–10",
+        "html": "<div class=\"k67-semantic-questions\"><h3 class=\"k67-content-title\">Cinema Club Enquiry</h3>\n<h4 class=\"k67-note-heading\">Membership information</h4>\n<p class=\"k67-note-line\">Club meets every 2 weeks</p>\n<p class=\"k67-note-line\">No <span class=\"k67-inline-control\" data-question-number=\"1\"><strong class=\"cbt-blank-number\">1</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"1\"></span></span> limit</p>\n<p class=\"k67-note-line\">Student membership costs £<span class=\"k67-inline-control\" data-question-number=\"2\"><strong class=\"cbt-blank-number\">2</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"2\"></span></span> season.</p>\n<h4 class=\"k67-note-heading\">Members get:</h4>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> free entry to club films</p>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> £<span class=\"k67-inline-control\" data-question-number=\"3\"><strong class=\"cbt-blank-number\">3</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"3\"></span></span> reduction on other films at cinema.</p>\n<p class=\"k67-note-line\">Members are entitled to 3 hours&#x27; free <span class=\"k67-inline-control\" data-question-number=\"4\"><strong class=\"cbt-blank-number\">4</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"4\"></span></span></p>\n<h4 class=\"k67-note-heading\">Films to be shown:</h4>\n<h5 class=\"k67-note-subheading\">Oct 14: Pablo</h5>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> about a child in <span class=\"k67-inline-control\" data-question-number=\"5\"><strong class=\"cbt-blank-number\">5</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"5\"></span></span> way from home and wins a <span class=\"k67-inline-control\" data-question-number=\"6\"><strong class=\"cbt-blank-number\">6</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"6\"></span></span> competition on TV</p>\n<h5 class=\"k67-note-subheading\">Oct 28: The Soldier</h5>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> with live <span class=\"k67-inline-control\" data-question-number=\"7\"><strong class=\"cbt-blank-number\">7</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"7\"></span></span> companiment</p>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> made in the year <span class=\"k67-inline-control\" data-question-number=\"8\"><strong class=\"cbt-blank-number\">8</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"8\"></span></span></p>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> type of film: a <span class=\"k67-inline-control\" data-question-number=\"9\"><strong class=\"cbt-blank-number\">9</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"9\"></span></span></p>\n<h5 class=\"k67-note-subheading\">Nov 11: Tiger</h5>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> cartoon aimed at adults</p>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> followed by a <span class=\"k67-inline-control\" data-question-number=\"10\"><strong class=\"cbt-blank-number\">10</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"10\"></span></span> by the director</p></div>"
+      },
+      {
+        "label": "Section 2",
+        "range": "Questions 11–20",
+        "html": "<div class=\"k67-map-and-answers\"><figure><img src=\"../substitute-test-1-k67-computer-based/assets/figures/home-improvement-store.png\" alt=\"Map for Questions 11–20\"></figure><div class=\"k67-semantic-questions\"><h3 class=\"k67-content-title\">Home Improvement Store Plan</h3>\n<h4 class=\"k67-note-heading\">Sections</h4>\n<div class=\"cbt-question-card\" data-question-number=\"11\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">11</strong><p>Paint</p></div><div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"11\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"12\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">12</strong><p>Kitchen</p></div><div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"12\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"13\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">13</strong><p>Children’s play area</p></div><div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"13\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"14\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">14</strong><p>Shower and bath</p></div><div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"14\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"15\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">15</strong><p>Garden</p></div><div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"15\"></span></div></div>\n</div></div><div class=\"k67-semantic-questions\"><p class=\"k67-standalone-instruction\">Choose the correct letter, A, B or C.</p>\n<h3 class=\"k67-content-title\">Home Improvement Store</h3>\n<div class=\"cbt-question-card\" data-question-number=\"16\" data-control=\"radio\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">16</strong><p>What makes the Home Improve Store special?</p></div><div class=\"cbt-choice-list\"><label class=\"cbt-choice\" data-choice-value=\"A\"><strong class=\"cbt-choice-letter\">A</strong><span>their low prices</span></label><label class=\"cbt-choice\" data-choice-value=\"B\"><strong class=\"cbt-choice-letter\">B</strong><span>their wide range of products</span></label><label class=\"cbt-choice\" data-choice-value=\"C\"><strong class=\"cbt-choice-letter\">C</strong><span>their customer service</span></label></div><div class=\"cbt-native-slot\"><span class=\"cbt-inline-answer\" data-answer-slot=\"16\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"17\" data-control=\"radio\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">17</strong><p>What should staff promote to customers?</p></div><div class=\"cbt-choice-list\"><label class=\"cbt-choice\" data-choice-value=\"A\"><strong class=\"cbt-choice-letter\">A</strong><span>the catalogue</span></label><label class=\"cbt-choice\" data-choice-value=\"B\"><strong class=\"cbt-choice-letter\">B</strong><span>the magazine</span></label><label class=\"cbt-choice\" data-choice-value=\"C\"><strong class=\"cbt-choice-letter\">C</strong><span>the website</span></label></div><div class=\"cbt-native-slot\"><span class=\"cbt-inline-answer\" data-answer-slot=\"17\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"18\" data-control=\"radio\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">18</strong><p>What do the current staff like best about working in the store?</p></div><div class=\"cbt-choice-list\"><label class=\"cbt-choice\" data-choice-value=\"A\"><strong class=\"cbt-choice-letter\">A</strong><span>the general staff discounts</span></label><label class=\"cbt-choice\" data-choice-value=\"B\"><strong class=\"cbt-choice-letter\">B</strong><span>the good atmosphere</span></label><label class=\"cbt-choice\" data-choice-value=\"C\"><strong class=\"cbt-choice-letter\">C</strong><span>the flexible working time</span></label></div><div class=\"cbt-native-slot\"><span class=\"cbt-inline-answer\" data-answer-slot=\"18\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"19\" data-control=\"radio\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">19</strong><p>What will the next workshop be about?</p></div><div class=\"cbt-choice-list\"><label class=\"cbt-choice\" data-choice-value=\"A\"><strong class=\"cbt-choice-letter\">A</strong><span>how to grow plants</span></label><label class=\"cbt-choice\" data-choice-value=\"B\"><strong class=\"cbt-choice-letter\">B</strong><span>how to fix a fence</span></label><label class=\"cbt-choice\" data-choice-value=\"C\"><strong class=\"cbt-choice-letter\">C</strong><span>how to paint a room</span></label></div><div class=\"cbt-native-slot\"><span class=\"cbt-inline-answer\" data-answer-slot=\"19\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"20\" data-control=\"radio\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">20</strong><p>What special deal does the company offer when people buy a new kitchen</p></div><div class=\"cbt-choice-list\"><label class=\"cbt-choice\" data-choice-value=\"A\"><strong class=\"cbt-choice-letter\">A</strong><span>free appliances</span></label><label class=\"cbt-choice\" data-choice-value=\"B\"><strong class=\"cbt-choice-letter\">B</strong><span>free delivery</span></label><label class=\"cbt-choice\" data-choice-value=\"C\"><strong class=\"cbt-choice-letter\">C</strong><span>free installation</span></label></div><div class=\"cbt-native-slot\"><span class=\"cbt-inline-answer\" data-answer-slot=\"20\"></span></div></div></div>"
+      },
+      {
+        "label": "Section 3",
+        "range": "Questions 21–30",
+        "html": "<div class=\"k67-semantic-questions\"><header class=\"k67-instruction-block\"><h4>Questions 21-26</h4>\n<p class=\"k67-standalone-instruction\">Choose the correct letter, A, B or C.</p></header>\n<h3 class=\"k67-content-title\">Report on Geography Field Trip</h3>\n<div class=\"cbt-question-card\" data-question-number=\"21\" data-control=\"radio\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">21</strong><p>The tutor tells Charlotte that the report is important because it will</p></div><div class=\"cbt-choice-list\"><label class=\"cbt-choice\" data-choice-value=\"A\"><strong class=\"cbt-choice-letter\">A</strong><span>go into her portfolio</span></label><label class=\"cbt-choice\" data-choice-value=\"B\"><strong class=\"cbt-choice-letter\">B</strong><span>help her choose her next study option</span></label><label class=\"cbt-choice\" data-choice-value=\"C\"><strong class=\"cbt-choice-letter\">C</strong><span>form the basis of next term&#x27;s presentation</span></label></div><div class=\"cbt-native-slot\"><span class=\"cbt-inline-answer\" data-answer-slot=\"21\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"22\" data-control=\"radio\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">22</strong><p>What is the tutor&#x27;s first impression of Charlotte&#x27;s report?</p></div><div class=\"cbt-choice-list\"><label class=\"cbt-choice\" data-choice-value=\"A\"><strong class=\"cbt-choice-letter\">A</strong><span>It is under length</span></label><label class=\"cbt-choice\" data-choice-value=\"B\"><strong class=\"cbt-choice-letter\">B</strong><span>It doesn&#x27;t follow the required format.</span></label><label class=\"cbt-choice\" data-choice-value=\"C\"><strong class=\"cbt-choice-letter\">C</strong><span>It contains confusing statistical data.</span></label></div><div class=\"cbt-native-slot\"><span class=\"cbt-inline-answer\" data-answer-slot=\"22\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"23\" data-control=\"radio\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">23</strong><p>How did Charlotte&#x27;s group choose the exact location to study?</p></div><div class=\"cbt-choice-list\"><label class=\"cbt-choice\" data-choice-value=\"A\"><strong class=\"cbt-choice-letter\">A</strong><span>They chose a location that had easy access.</span></label><label class=\"cbt-choice\" data-choice-value=\"B\"><strong class=\"cbt-choice-letter\">B</strong><span>They found an interesting location on a map.</span></label><label class=\"cbt-choice\" data-choice-value=\"C\"><strong class=\"cbt-choice-letter\">C</strong><span>They chose a location at random.</span></label></div><div class=\"cbt-native-slot\"><span class=\"cbt-inline-answer\" data-answer-slot=\"23\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"24\" data-control=\"radio\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">24</strong><p>What was Charlotte&#x27;s personal aim for the field trip?</p></div><div class=\"cbt-choice-list\"><label class=\"cbt-choice\" data-choice-value=\"A\"><strong class=\"cbt-choice-letter\">A</strong><span>to collect information on the range of vegetation</span></label><label class=\"cbt-choice\" data-choice-value=\"B\"><strong class=\"cbt-choice-letter\">B</strong><span>to apply good fieldwork techniques</span></label><label class=\"cbt-choice\" data-choice-value=\"C\"><strong class=\"cbt-choice-letter\">C</strong><span>to analyse the composition of the soil</span></label></div><div class=\"cbt-native-slot\"><span class=\"cbt-inline-answer\" data-answer-slot=\"24\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"25\" data-control=\"radio\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">25</strong><p>Why does Charlotte want to include other students&#x27; data in her report?</p></div><div class=\"cbt-choice-list\"><label class=\"cbt-choice\" data-choice-value=\"A\"><strong class=\"cbt-choice-letter\">A</strong><span>to make her findings more valid</span></label><label class=\"cbt-choice\" data-choice-value=\"B\"><strong class=\"cbt-choice-letter\">B</strong><span>to vary the type of data collected</span></label><label class=\"cbt-choice\" data-choice-value=\"C\"><strong class=\"cbt-choice-letter\">C</strong><span>to test several hypotheses</span></label></div><div class=\"cbt-native-slot\"><span class=\"cbt-inline-answer\" data-answer-slot=\"25\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"26\" data-control=\"radio\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">26</strong><p>Which measurements did Charlotte find easy to take?</p></div><div class=\"cbt-choice-list\"><label class=\"cbt-choice\" data-choice-value=\"A\"><strong class=\"cbt-choice-letter\">A</strong><span>the elevation of the land</span></label><label class=\"cbt-choice\" data-choice-value=\"B\"><strong class=\"cbt-choice-letter\">B</strong><span>the height of the vegetation</span></label><label class=\"cbt-choice\" data-choice-value=\"C\"><strong class=\"cbt-choice-letter\">C</strong><span>the ration of sand to vegetation</span></label></div><div class=\"cbt-native-slot\"><span class=\"cbt-inline-answer\" data-answer-slot=\"26\"></span></div></div>\n<header class=\"k67-instruction-block\"><h4>Questions 27-30</h4>\n<p class=\"k67-note-line\">What suggestion is made for each of the following aspects of future field trips?</p>\n<p class=\"k67-note-line\">Choose FOUR answers from the box and write the correct letter, A-F, next to questions 27-30.</p></header>\n<div class=\"k67-matching-columns\"><div class=\"k67-matching-questions\"><h4 class=\"k67-note-heading\">Aspects of future field trips</h4>\n<div class=\"cbt-question-card\" data-question-number=\"27\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">27</strong><p>equipment</p></div><div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"27\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"28\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">28</strong><p>data collection sheets</p></div><div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"28\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"29\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">29</strong><p>reference material</p></div><div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"29\"></span></div></div>\n<div class=\"cbt-question-card\" data-question-number=\"30\"><div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">30</strong><p>structure of groups</p></div><div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"30\"></span></div></div></div><aside class=\"k67-option-bank\"><h4 class=\"k67-note-heading\">Suggestions</h4>\n<p class=\"k67-option-line\" data-option-letter=\"A\"><strong>A</strong><span>more training needed before trip</span></p>\n<p class=\"k67-option-line\" data-option-letter=\"B\"><strong>B</strong><span>reduce complexity</span></p>\n<p class=\"k67-option-line\" data-option-letter=\"C\"><strong>C</strong><span>repeat on future trips</span></p>\n<p class=\"k67-option-line\" data-option-letter=\"D\"><strong>D</strong><span>offer a wider range</span></p>\n<p class=\"k67-option-line\" data-option-letter=\"E\"><strong>E</strong><span>organize additional tasks more</span></p>\n<p class=\"k67-option-line\" data-option-letter=\"F\"><strong>F</strong><span>details required during trip</span></p>\n</aside></div></div>"
+      },
+      {
+        "label": "Section 4",
+        "range": "Questions 31–40",
+        "html": "<div class=\"k67-semantic-questions\"><p class=\"k67-standalone-instruction\">Write ONE WORD ONLY for each answer.</p>\n<h3 class=\"k67-content-title\">Future of Aquaculture</h3>\n<p class=\"k67-note-line\">Local fish farmers are afraid that genetically modified fish will <span class=\"k67-inline-control\" data-question-number=\"31\"><strong class=\"cbt-blank-number\">31</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"31\"></span></span> into the sea.</p>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> like to breed fish with special features, like <span class=\"k67-inline-control\" data-question-number=\"32\"><strong class=\"cbt-blank-number\">32</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"32\"></span></span></p>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> Other solutions:</p>\n<p class=\"k67-note-line\">to build some cages to prevent the fish from <span class=\"k67-inline-control\" data-question-number=\"33\"><strong class=\"cbt-blank-number\">33</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"33\"></span></span></p>\n<p class=\"k67-note-line\">to use <span class=\"k67-inline-control\" data-question-number=\"34\"><strong class=\"cbt-blank-number\">34</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"34\"></span></span> nets to support the frames of the cages</p>\n<h4 class=\"k67-note-heading\">Problems facing the local fishermen:</h4>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> lack of land on the <span class=\"k67-inline-control\" data-question-number=\"35\"><strong class=\"cbt-blank-number\">35</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"35\"></span></span></p>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> lack of <span class=\"k67-inline-control\" data-question-number=\"36\"><strong class=\"cbt-blank-number\">36</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"36\"></span></span> fish</p>\n<h4 class=\"k67-note-heading\">Initiatives taken by the government</h4>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> encourages fish farmers to <span class=\"k67-inline-control\" data-question-number=\"37\"><strong class=\"cbt-blank-number\">37</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"37\"></span></span> local fish farming business</p>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> helps fish farmers to sell seaweed and oyster:</p>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">-</span> Seaweed can be used to make <span class=\"k67-inline-control\" data-question-number=\"38\"><strong class=\"cbt-blank-number\">38</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"38\"></span></span></p>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">-</span> Oyster is a source of seafood which can supply local <span class=\"k67-inline-control\" data-question-number=\"39\"><strong class=\"cbt-blank-number\">39</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"39\"></span></span>  industry.</p>\n<p class=\"k67-note-line k67-note-bullet\"><span class=\"k67-bullet\">•</span> saves local fishing business by encouraging aquaculture, recreation and <span class=\"k67-inline-control\" data-question-number=\"40\"><strong class=\"cbt-blank-number\">40</strong><span class=\"cbt-inline-answer\" data-answer-slot=\"40\"></span></span></p></div>"
+      }
+    ]
+  },
+  "controls": [
+    {
+      "number": 1,
+      "kind": "text"
+    },
+    {
+      "number": 2,
+      "kind": "text"
+    },
+    {
+      "number": 3,
+      "kind": "text"
+    },
+    {
+      "number": 4,
+      "kind": "text"
+    },
+    {
+      "number": 5,
+      "kind": "text"
+    },
+    {
+      "number": 6,
+      "kind": "text"
+    },
+    {
+      "number": 7,
+      "kind": "text"
+    },
+    {
+      "number": 8,
+      "kind": "text"
+    },
+    {
+      "number": 9,
+      "kind": "text"
+    },
+    {
+      "number": 10,
+      "kind": "text"
+    },
+    {
+      "number": 11,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ]
+    },
+    {
+      "number": 12,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ]
+    },
+    {
+      "number": 13,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ]
+    },
+    {
+      "number": 14,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ]
+    },
+    {
+      "number": 15,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ]
+    },
+    {
+      "number": 16,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "number": 17,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "number": 18,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "number": 19,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "number": 20,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "number": 21,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "number": 22,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "number": 23,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "number": 24,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "number": 25,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "number": 26,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "number": 27,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "number": 28,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "number": 29,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "number": 30,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "number": 31,
+      "kind": "text"
+    },
+    {
+      "number": 32,
+      "kind": "text"
+    },
+    {
+      "number": 33,
+      "kind": "text"
+    },
+    {
+      "number": 34,
+      "kind": "text"
+    },
+    {
+      "number": 35,
+      "kind": "text"
+    },
+    {
+      "number": 36,
+      "kind": "text"
+    },
+    {
+      "number": 37,
+      "kind": "text"
+    },
+    {
+      "number": 38,
+      "kind": "text"
+    },
+    {
+      "number": 39,
+      "kind": "text"
+    },
+    {
+      "number": 40,
+      "kind": "text"
+    }
+  ]
+}
