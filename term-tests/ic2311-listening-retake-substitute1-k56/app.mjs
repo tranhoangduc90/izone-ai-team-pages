@@ -260,10 +260,11 @@ try{
  else if(state.phase!=='prepared'){await technicalStop('PAGE_RELOADED_DURING_EXAM');}}
  if(!state||state.phase==='prepared'){
   if(![...document.styleSheets].some(sheet=>sheet.href?.includes('/native-upgrades.css')))throw Error('STYLESHEET_UNAVAILABLE');
-  const results=await Promise.all([loadContent(),journal.request('/roster',null,{permit:null,method:'GET'})]);content=results[0];roster=results[1].value;
+  const results=await Promise.all([loadContent(),journal.request('/roster?purpose=prepare',null,{permit:null,method:'GET'})]);content=results[0];roster=results[1].value;
   if(roster.classCode!=='IC2311'||roster.contentVersion!==CONTENT_VERSION)throw Error('CONTENT_CONTRACT_MISMATCH');
   const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src='assets/kinney-hotel-plan.png';});
   $('student').replaceChildren(new Option('Chọn tên của bạn',''));for(const s of roster.students)$('student').add(new Option(s.name,s.studentRef));await renderContent();
+  if(!roster.students.length)text('identity-status','Hiện không còn học viên trong danh sách vào thi. Nếu bạn cần hỗ trợ, hãy liên hệ giảng viên.');
   if(state?.phase==='prepared'){$('student').value=state.identity.studentRef;void prepare();}
  }
 }catch(e){if(e.code==='AUDIO_OWNER_CONFLICT'){show('identity',false);note('Bài Listening đang mở ở tab khác. Hãy quay lại tab đó để tiếp tục; trang này không thay đổi bài đang làm.');}else text('identity-status','Chưa tải được nội dung hoặc danh sách học viên. Hãy kết nối mạng và tải lại trước khi bắt đầu.');}
