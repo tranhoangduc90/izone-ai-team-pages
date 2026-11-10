@@ -2,7 +2,7 @@ import {setupHandoutEditor} from './handout-editor.js';
 import { handoutTablesHtml } from './handout-tables.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function handoutPreviewHtml(assignment, person, result = {tables:[]}) {
-  return `<header class="handout-heading"><div><h2>Handout Writing</h2><p>${esc(assignment.title)}</p></div><button type="button" id="close-handout" aria-label="Đóng handout">×</button></header>
+  return `<header class="handout-heading"><div><h2>${assignment.writingPart==='introduction'?'Dàn ý từ Handout Lesson 3':'Handout Writing'}</h2>${assignment.writingPart==='introduction'?'':`<p>${esc(assignment.title)}</p>`}</div><button type="button" id="close-handout" aria-label="Đóng handout">×</button></header>
     <div class="handout-sheet"><div class="handout-person"><strong>${esc(person.label)}</strong><span class="badge neutral">Đang xác định nguồn</span></div>
     <div class="handout-actions"><button type="button" id="reload-handout">Tải lại handout</button><span id="handout-status" role="status"></span></div>
     <div id="handout-content"><p class="section-note">${esc(result.message || '')}</p><div class="handout-summary-title"><h3>Bảng tổng hợp trên lớp</h3><span class="badge neutral">${result.tables.length} bảng</span></div>
@@ -44,7 +44,7 @@ export function setupHandoutPreview(root,{assignment,person,initialMode='handout
     if(feedback) feedback.hidden=mode !== 'feedback';
     side.hidden=mode === 'closed'; layout.classList.toggle('handout-open',mode === 'handout');
     toggle.setAttribute('aria-expanded',String(mode === 'handout'));
-    toggle.textContent=mode === 'handout' ? 'Đóng handout Writing' : 'Xem handout Writing';
+    toggle.textContent=assignment.writingPart==='introduction' ? (mode==='handout'?'Đóng dàn ý':'Xem dàn ý Lesson 3') : (mode==='handout'?'Đóng handout Writing':'Xem handout Writing');
     if(showFeedback) showFeedback.setAttribute('aria-pressed',String(mode === 'feedback'));
     side.setAttribute('aria-label',mode === 'handout'?'Handout Writing trên lớp':'Nhận xét đã duyệt');
     side.tabIndex=0; side.scrollTop=positions[mode] || 0;
