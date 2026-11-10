@@ -154,7 +154,8 @@ async function load() {
   retry.hidden = true;
   let cached;
   try {
-    const storage = await new setup.Store().open();
+    const courseScope=skill==='listening'&&new URLSearchParams(location.search).get('course')==='56';
+    const storage = await new setup.Store(courseScope?'k56:':'').open();
     const state = await storage.get('current');
     const current = submission(state);
     if (!current) {
