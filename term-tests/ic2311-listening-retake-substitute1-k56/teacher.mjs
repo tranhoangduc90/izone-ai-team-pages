@@ -7,32 +7,9 @@ const label={prepared:'Đã chuẩn bị',draft:'Đang làm / đã lưu nháp',s
 const cell=(tr,value)=>{const td=document.createElement('td');td.textContent=value??'—';tr.append(td);return td;};
 function clearSession(){
  authEpoch++;authenticated=false;loading=false;latest='';
- for(const id of ['results','logs','verification-admin','verification-output'])show(id,false);
+ for(const id of ['results','logs'])show(id,false);
  $('rows').replaceChildren();$('log-rows').replaceChildren();
- $('verification-list').replaceChildren();$('issued-code').value='';
 }
-async function loadVerifications(){
- const epoch=authEpoch;
- try{
-  const result=await call('k56-verification');if(epoch!==authEpoch)return;
-  const list=$('verification-list');list.replaceChildren();
-  $('verification-status').textContent=result.students.length?'Chọn hồ sơ đã đối chiếu danh tính.':'Không còn hồ sơ chờ xác minh.';
-  for(const student of result.students){
-   const row=document.createElement('li');row.append(document.createTextNode(student.classCode+' · '+student.name+' '));
-   const issue=document.createElement('button');issue.type='button';issue.textContent='Cấp mã';
-   issue.onclick=async()=>{
-    if(!confirm('Bạn đã đối chiếu danh tính của '+student.name+' qua kênh IZONE đã đăng ký?'))return;
-    issue.disabled=true;
-    try{const issued=await call('k56-verification/issue',{studentRef:student.studentRef,identityChecked:true});if(epoch!==authEpoch)return;
-     $('issued-code').value=issued.code;show('verification-output');$('verification-status').textContent='Mã đã cấp cho '+student.classCode+' · '+student.name+'.';}
-    catch(error){if(epoch===authEpoch)$('verification-status').textContent='Chưa cấp được mã ('+error.message+').';}
-    finally{issue.disabled=false;}
-   };row.append(issue);list.append(row);
-  }
- }catch(error){if(epoch===authEpoch)$('verification-status').textContent='Chưa đọc được danh sách ('+error.message+').';}
-}
-$('load-verifications').onclick=loadVerifications;
-$('copy-issued-code').onclick=async()=>{try{await navigator.clipboard.writeText($('issued-code').value);}catch{$('issued-code').select();}};
 function reviewLink(attemptId,classCode){
  const url=new URL('../ic2311-retake-review/teacher.html',location.href);
  url.search=new URLSearchParams({skill:'listening',attemptId});
@@ -47,7 +24,6 @@ async function refresh(){if(!authenticated||loading)return;loading=true;const ep
  if(epoch!==authEpoch)return;
  const canManage=r.role==='admin';
  document.querySelectorAll('[data-admin-only]').forEach(node=>node.hidden=!canManage);
- show('verification-admin',canManage&&r.selfEnrollment===true);
  if(!canManage){show('logs',false);$('log-rows').replaceChildren();}
  const fingerprint=JSON.stringify(r);if(fingerprint===latest){$('status').textContent='Đã cập nhật · không có thay đổi';return;}latest=fingerprint;const fragment=document.createDocumentFragment();for(const student of r.students){const attempts=r.attempts.filter(a=>a.student_ref===student.studentRef);const tr=document.createElement('tr'),a=attempts[0];cell(tr,student.name);cell(tr,a?label[a.status]:'Chưa vào bài');cell(tr,a?.status==='submitted'?a.raw_score+'/40':'—');cell(tr,a?.receipt_id||'—').hidden=!canManage;cell(tr,a?.portal_status==='confirmed'?'Đã ghi Term Test 1 Listening':a?.portal_status==='blocked'?'Cần đối soát · '+(a.portal_error_code||''):a?.portal_status?'Chờ ghi Term Test 1 Listening':'—').hidden=!canManage;const actions=cell(tr,'');
  if(a?.status==='submitted')actions.append(reviewLink(a.id,a.class_code));
