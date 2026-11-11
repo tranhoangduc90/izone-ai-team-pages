@@ -17,7 +17,7 @@ const namespace='izone:sw-task2:production:'+ACTIVITY+':',drafts=new Map(),compo
 const openDetails=new Map(),historyCounts=new Map(),resultIndexes=new Map();let renderedOwner='login';
 const vocabularyRequests=new Set(),resultRequests=new Map();
 let legacyDraft=null;
-let pendingIdentity=null,rememberStudent=true,registrationBusy=false,registrationRequest=null;
+let pendingIdentity=null,rememberStudent=true,pinEntryOnly=false;
 let classes=[],person=null,current=null,threads=[],rows=[],responses={},dirty=false,conflict=false,busy=false,saveTimer,pollTimer,generation=0;
 let teacherOverviewRequest=0;
 let teacherAuth='checking';
@@ -128,48 +128,33 @@ function draw({background=false}={}){
  if(root.querySelector('#connected-draft-result'))void loadResult(current.sessionRef);
 }
 function loginView(){
- return '<section id="identity" class="login-shell" aria-labelledby="login-title"><div class="login-card"><p class="kicker red">Speaking Writing chuyên sâu · Writing buổi '+esc(TASK.number)+'</p><h1 id="login-title">Bắt đầu bài học</h1><p class="login-description">Xây lập luận cho một thân bài,<br>từng bước từ ý tưởng đến A–X–B.</p><form id="identity-form"><label>Lớp của bạn<select id="identity-class" required><option value="">Chọn lớp của bạn</option>'+classes.map(c=>`<option value="${c.classRef}" ${classes.length===1?'selected':''}>${esc(c.className)}</option>`).join('')+'</select></label><label>Tên của bạn<select id="identity-person" required></select></label><label class="checkbox"><input id="identity-remember" type="checkbox" checked><span>Ghi nhớ tôi trên thiết bị này</span></label><button class="primary wide" type="submit">Tiếp tục <span aria-hidden="true">→</span></button></form>'+provisionalEntryView()+'<p class="fine-print">Chọn đúng tên của bạn. Bài làm và các lần nhận xét được lưu để bạn tiếp tục khi quay lại.</p></div></section>';
+ return '<section id="identity" class="login-shell" aria-labelledby="login-title"><div class="login-card"><p class="kicker red">Speaking Writing chuyên sâu · Writing buổi '+esc(TASK.number)+'</p><h1 id="login-title">Bắt đầu bài học</h1><p class="login-description">Xây lập luận cho một thân bài,<br>từng bước từ ý tưởng đến A–X–B.</p><form id="identity-form"><label>Lớp của bạn<select id="identity-class" required><option value="">Chọn lớp của bạn</option>'+classes.map(c=>`<option value="${c.classRef}" ${classes.length===1?'selected':''}>${esc(c.className)}</option>`).join('')+'</select></label><label>Tên của bạn<select id="identity-person" required></select></label><label class="checkbox"><input id="identity-remember" type="checkbox" checked><span>Ghi nhớ tôi trên thiết bị này</span></label><button class="primary wide" type="submit">Tiếp tục <span aria-hidden="true">→</span></button></form>'+loginHelpView()+'<p class="fine-print">Chọn đúng tên của bạn. Bài làm và các lần nhận xét được lưu để bạn tiếp tục khi quay lại.</p></div></section>';
 }
 function confirmLoginView(){const {p}=pendingIdentity;return '<section id="identity-confirm-screen" class="login-shell" aria-labelledby="confirm-title"><div class="login-card confirm-card"><p class="kicker red">Xác nhận người học</p><div class="avatar" aria-hidden="true">HV</div><h1 id="confirm-title">'+esc(p.name)+'</h1><p><span>'+esc(p.classCode)+'</span><br><strong>Writing · Buổi '+esc(TASK.number)+'</strong></p><button id="confirm-button" class="primary wide" data-action="confirm-identity">Đúng là tôi · mở bài làm →</button><button class="text-button" data-action="identity-back">Chọn lại tên</button><p class="fine-print">Chọn tên và xác nhận như Progress Log.</p></div></section>';}
 function pinControl(){const p=PEOPLE.find(p=>p.id===$('#identity-person')?.value);let box=$('#pin-box');if(!box&&$('#identity-form')){$('#identity-form .primary').insertAdjacentHTML('beforebegin','<label id="pin-box" hidden>Mã 4 số<input id="access-code" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off"></label>');box=$('#pin-box');}if(box){box.hidden=!p?.requiresAccessCode;$('#access-code').required=!!p?.requiresAccessCode;$('#access-code').value='';}}
-function fillPeople(){const c=classes.find(c=>c.classRef===$('#identity-class')?.value);if($('#identity-person')){$('#identity-person').innerHTML='<option value="">Chọn tên của bạn</option>'+(c?.students||[]).map(p=>`<option value="${p.studentRef}">${esc(p.displayAlias||p.alias||p.displayName)}</option>`).join('');if(c?.students.some(p=>p.studentRef===entry.get('student')))$('#identity-person').value=entry.get('student');}pinControl();}
-function provisionalEntryView(){
- return '<button class="text-button" type="button" data-action="show-provisional" aria-expanded="false" aria-controls="provisional-form">Không có tên trong danh sách</button><form id="provisional-form" hidden><h2>Thêm tên để làm bài</h2><p>Nhập họ tên đầy đủ và tự đặt mã 4 số. Hãy nhớ mã này để mở lại bài của bạn. Giảng viên có thể đối soát hồ sơ tạm sau.</p><label>Họ và tên<input id="provisional-name" autocomplete="name" minlength="2" maxlength="100" required></label><label>Mã 4 số<input id="provisional-pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="new-password" required></label><label>Nhập lại mã 4 số<input id="provisional-pin-confirm" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="new-password" required></label><label id="provisional-duplicate-row" class="checkbox" hidden><input id="provisional-duplicate" type="checkbox"><span>Tôi là người khác cùng tên</span></label><p id="provisional-status" role="status" aria-live="polite"></p><button id="provisional-submit" class="primary wide" type="submit">Tạo hồ sơ tạm</button><button class="text-button" type="button" data-action="cancel-provisional">Quay lại chọn tên</button></form>';
+function fillPeople(){
+ const select=$('#identity-person');
+ if(!select)return;
+ const group=classes.find(c=>c.classRef===$('#identity-class').value);
+ const students=group?.students||[];
+ const pinStudents=students.filter(p=>p.requiresAccessCode);
+ const visible=pinEntryOnly?pinStudents:students;
+ select.innerHTML='<option value="">Chọn tên của bạn</option>'+visible.map(p=>
+  `<option value="${p.studentRef}">${esc(p.displayAlias||p.alias||p.displayName)}</option>`).join('');
+ if(visible.some(p=>p.studentRef===entry.get('student')))select.value=entry.get('student');
+ const toggle=$('#pin-entry-toggle');
+ toggle.hidden=!pinStudents.length;
+ toggle.textContent=pinEntryOnly?'Quay lại danh sách đầy đủ':'Mở lại bài bằng mã 4 số';
+ pinControl();
 }
-function resetRegistration(){registrationRequest=null;const form=$('#provisional-form');if(form){form.reset();form.hidden=true;$('#provisional-duplicate-row').hidden=true;$('#provisional-status').textContent='';}$('#identity-person')?.setCustomValidity('');const toggle=$('[data-action="show-provisional"]');if(toggle)toggle.setAttribute('aria-expanded','false');}
-function selectRegisteredStudent(group,student){
- const existing=group.students.find(p=>p.studentRef===student.studentRef);
- if(existing)Object.assign(existing,student);else group.students.push(student);
- indexPeople();fillPeople();$('#identity-person').value=student.studentRef;pinControl();
-}
-async function registerProvisional(){
- if(registrationBusy)return;
- const group=classes.find(c=>c.classRef===$('#identity-class').value),form=$('#provisional-form'),status=$('#provisional-status');
- const displayName=$('#provisional-name').value.trim().replace(/\s+/gu,' '),pin=$('#provisional-pin').value,confirmPin=$('#provisional-pin-confirm').value,duplicateConfirmed=$('#provisional-duplicate').checked;
- if(!group){status.textContent='Hãy chọn lớp trước.';return;}
- if(displayName.length<2||displayName.length>100){status.textContent='Họ và tên cần có từ 2 đến 100 ký tự.';return;}
- if(!/^\d{4}$/.test(pin)||pin!==confirmPin){status.textContent='Hai ô mã phải giống nhau và gồm đúng 4 số.';return;}
- const input={classRef:group.classRef,displayName,pin,duplicateConfirmed};
- // Giữ requestId khi thử lại cùng dữ liệu để không tạo hai hồ sơ sau lỗi mạng.
- if(!registrationRequest||JSON.stringify(registrationRequest.input)!==JSON.stringify(input))registrationRequest={input,requestId:id()};
- registrationBusy=true;status.textContent='Đang tạo hồ sơ…';
- const controls=[...root.querySelectorAll('#identity-form input,#identity-form select,#identity-form button,#provisional-form input,#provisional-form button,[data-action="show-provisional"]')].map(el=>[el,el.disabled]);
- for(const [el] of controls)el.disabled=true;
- try{
-  const {student}=await api('activities/'+encodeURIComponent(ACTIVITY)+'/provisional-students','POST',{...input,requestId:registrationRequest.requestId});
-  if(!student?.studentRef)throw Error('Máy chủ chưa xác nhận hồ sơ. Hãy thử lại.');
-  selectRegisteredStudent(group,{...student,provisional:true,requiresAccessCode:true});
-  resetRegistration();$('#access-code').value=pin;message('Đã tạo hồ sơ tạm. Kiểm tra đúng tên rồi bấm Tiếp tục.');
- }catch(error){
-  if(['DUPLICATE_STUDENT_NAME','PROVISIONAL_STUDENT_EXISTS'].includes(error.code)){
-   $('#provisional-duplicate-row').hidden=false;
-   if(error.data?.current){selectRegisteredStudent(group,{...error.data.current,displayName,provisional:true,requiresAccessCode:true});$('#access-code').value='';}
-  }
-  status.textContent=error.message;
- }finally{
-  for(const [el,disabled] of controls)el.disabled=disabled;
-  registrationBusy=false;if(form.hidden)$('#identity-person').focus();
- }
+function loginHelpView(){
+ return `<div class="login-help">
+  <details id="missing-name-help">
+   <summary>Không có tên trong danh sách</summary>
+   <p>Bạn hãy nhờ giảng viên thêm tên vào danh sách lớp và gửi liên kết làm bài</p>
+  </details>
+  <button id="pin-entry-toggle" type="button" data-action="toggle-pin-entry" aria-controls="identity-person" hidden>Mở lại bài bằng mã 4 số</button>
+ </div>`;
 }
 function jump(key){const target=document.getElementById(key);if(!target)return;if(target.matches('details'))target.open=true;const inner=target.querySelector('details.prior-step');if(inner)inner.open=true;target.scrollIntoView({block:'start'});}
 async function openPerson(p,accessCode,rememberedRef){
@@ -178,7 +163,7 @@ async function openPerson(p,accessCode,rememberedRef){
  if(epoch!==generation)return;
  if(data.session.studentRef!==p.id||data.session.classRef!==p.classRef)throw Error('Máy chủ trả phiên khác chủ; chưa mở bài.');
  if(data.session.activitySlug!==ACTIVITY)throw Error('Phiên không thuộc đúng đề. Chưa mở bài.');
- current=data.session;responses=working(current);dirty=false;conflict=false;legacyDraft=null;pendingIdentity=null;
+ current=data.session;responses=working(current);dirty=false;conflict=false;legacyDraft=null;pendingIdentity=null;pinEntryOnly=false;
  try{
   const saved=JSON.parse(localStorage.getItem(namespace+current.sessionRef)||'null');
   if(saved?.dirty&&saved.studentRef===p.id&&saved.classRef===p.classRef){responses=saved.responses;dirty=true;conflict=saved.baseVersion!==current.draftVersion;message(conflict?'Bản dự phòng chưa lưu khác phiên bản máy chủ. Giữ bản gõ để đối chiếu; chưa ghi đè.':'Đã khôi phục bản gõ chưa lưu; bấm Lưu máy chủ trước khi Check.');}
@@ -340,7 +325,7 @@ root.addEventListener('input',e=>{
  if(el.id==='search'){query=el.value;const caret=el.selectionStart;draw();$('#search').focus();$('#search').setSelectionRange(caret,caret);}
 });
 root.addEventListener('change',e=>{
- const el=e.target;if(el.id==='identity-class'){resetRegistration();fillPeople();}
+ const el=e.target;if(el.id==='identity-class'){pinEntryOnly=false;$('#missing-name-help').open=false;fillPeople();}
  if(el.id==='identity-person')pinControl();
  if(el.id==='body-choice'){
   if(current?.sections.topic_sentence.locked){const value=el.value;if(!confirm('Đổi thân bài sẽ mở vòng Check mới. Nội dung và lịch sử cũ vẫn giữ. Tiếp tục?')){draw();return;}void action('change_body',{value,confirmed:true}).then(()=>draw()).catch(e=>message(e.message));return;}
@@ -380,8 +365,7 @@ root.addEventListener('click',async e=>{
   if(b.dataset.threadStatus){const t=threads.find(t=>t.threadRef===b.dataset.threadStatus);await api('admin/teacher-comments/'+t.threadRef+'/status','POST',{status:t.status==='addressed'?'open':'addressed',requestId:id()});await refresh();draw();return;}
   const a=b.dataset.action;
   if(a==='open-class-roster'){await openRoster();return;}
-  if(a==='show-provisional'){if(registrationBusy)return;if(!$('#identity-class').value){message('Hãy chọn lớp trước.');$('#identity-class').focus();return;}const form=$('#provisional-form');form.hidden=!form.hidden;b.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden)$('#provisional-name').focus();return;}
-  if(a==='cancel-provisional'){if(registrationBusy)return;resetRegistration();$('[data-action="show-provisional"]').focus();return;}
+  if(a==='toggle-pin-entry'){pinEntryOnly=!pinEntryOnly;$('#missing-name-help').open=false;fillPeople();$('#identity-person').focus();return;}
   if(a==='confirm-identity'){const chosen=pendingIdentity;if(!chosen)throw Error('Hãy chọn lại tên của bạn.');rememberStudent=chosen.remember;await openPerson(chosen.p,chosen.accessCode);return;}
   if(a==='identity-back'){const chosen=pendingIdentity;pendingIdentity=null;draw();$('#identity-class').value=chosen.p.classRef;fillPeople();$('#identity-person').value=chosen.p.id;$('#identity-remember').checked=chosen.remember;pinControl();$('#identity-person').focus();return;}
   if(a==='legacy-compare'){
@@ -420,7 +404,6 @@ root.addEventListener('click',async e=>{
 root.addEventListener('submit',async e=>{
  e.preventDefault();const form=e.target;
  try{
-  if(form.id==='provisional-form'){await registerProvisional();return;}
   if(form.id==='identity-form'){const p=PEOPLE.find(p=>p.id===$('#identity-person').value&&p.classRef===$('#identity-class').value);if(!p)throw Error('Hãy chọn đúng người trong lớp.');pendingIdentity={p,accessCode:$('#access-code')?.value,remember:$('#identity-remember').checked};draw();$('#confirm-button').focus();}
   if(form.dataset.inlineField){await action('edit',{field:serverField(form.dataset.inlineField,responses.body_choice),value:form.querySelector('textarea').value});editor=null;draw();}
   if(form.id==='attest-form'){if(!$('#teacher-permission').checked)return;await action('attest',{section:SECTION[attestKey],confirmed:true});attestKey=null;draw();}
