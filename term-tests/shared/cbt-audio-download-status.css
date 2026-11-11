@@ -1,0 +1,34 @@
+[data-audio-busy]::before {
+  content: "";
+  display: inline-block;
+  vertical-align: -.15em;
+  margin-right: .55em;
+  width: .78em;
+  height: .78em;
+  border: 2px solid currentColor;
+  border-left-color: transparent;
+  border-radius: 50%;
+  animation: cbt-audio-download-spin .9s linear infinite;
+}
+
+@keyframes cbt-audio-download-spin {
+  to { transform: rotate(360deg); }
+}
+
+[data-audio-indeterminate=""] {
+  visibility: hidden;
+}
+
+[data-audio-indeterminate="track"]::-webkit-progress-value {
+  background: transparent !important;
+}
+
+[data-audio-indeterminate="track"]::-moz-progress-bar {
+  background: transparent !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-audio-busy]::before {
+    animation: none;
+  }
+}
