@@ -1,0 +1,22 @@
+.login-layout.hw-student-entry{max-width:1160px;grid-template-columns:minmax(0,1fr) minmax(0,505px);gap:100px;margin:48px auto;padding:0}
+.hw-student-entry .login-intro h1{font-size:28px;margin:0 0 12px}
+.hw-student-entry .hw-login-lesson{font-weight:700;color:var(--structure);margin-bottom:8px}
+.hw-student-entry .login-card{padding:32px;border-radius:12px;min-width:0}
+.hw-student-entry h2{font-size:26px}
+.hw-student-entry .hw-login-subtitle{font-size:15px;margin:0 0 18px}
+.hw-student-entry .field{display:grid;gap:6px;margin:0 0 16px}
+.hw-student-entry select,.hw-student-entry .primary{min-height:52px}
+.hw-student-entry select:disabled{opacity:1;color:#526276;background:#f3f5f7}
+.hw-student-entry .primary:disabled{background:#e9edf2;color:#536071;border-color:#d8e0ea}
+.hw-student-entry .primary span{margin-left:8px}
+.hw-student-entry .hw-entry-hint,.hw-student-entry .hw-entry-footer,.hw-student-entry #hw-entry-verification,.hw-student-entry #online-error{font-size:14px;color:#526276}
+.hw-student-entry #hw-entry-verification{margin-top:16px}
+.hw-student-entry #hw-entry-verification p{margin-bottom:8px}
+.hw-student-entry #online-error:not(:empty){margin-top:12px;color:#8b2b22}
+.hw-student-entry #hw-entry-note{font-size:14px;background:#e8f0f6;color:#174265;border-radius:8px;padding:8px 12px}
+.hw-student-entry .hw-entry-link{border:0;background:transparent;color:var(--navy);padding:0;text-decoration:underline;text-underline-offset:3px}
+.hw-student-entry #hw-entry-change{margin-top:10px}
+.hw-student-entry .hw-entry-footer{border-top:1px solid var(--line);margin-top:18px;padding-top:12px}
+.hw-student-entry .hw-entry-footer p{margin:0 0 5px}
+@media(max-width:850px){.login-layout.hw-student-entry{gap:32px}}
+@media(max-width:680px){.login-layout.hw-student-entry{grid-template-columns:minmax(0,1fr);margin:16px auto;gap:16px}.hw-student-entry .login-card{padding:24px}.hw-student-entry .login-intro h1,.hw-student-entry h2{font-size:23px}}
