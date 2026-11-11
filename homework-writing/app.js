@@ -1,14 +1,14 @@
 import runtime from './runtime-config.js?v=20261111-ic2363';
 import {frontendConfiguration,createOnlineAccess} from './online-access.js?v=20261111-ic2363-teacher';
 import {setupRichReview} from './rich-review.js';
-import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261111-review-ui';
+import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261111-review-polish';
 import {basicSubmissionError} from './submission-check.js';
 import {vietnameseWritingError} from './submission-language.js';
-import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261111-review-ui';
+import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261111-review-polish';
 import { setupLoginForm } from './login-form.js';
 import { draftKey, loadBackup, saveBackup, flushBackups, listBackups } from './drafts.js';
 import { setupFeedbackCards } from './feedback-cards.js';
-import { feedbackTabsHtml, setupFeedbackTabs, teacherCommentsHtml } from './feedback-tabs.js';
+import { feedbackTabsHtml, setupFeedbackTabs, teacherCommentsHtml } from './feedback-tabs.js?v=20261111-review-polish';
 import {feedbackBlockHtml,feedbackInlineHtml,overallFeedback} from './feedback-format.js';
 import {setupSourceVersions} from './source-versions.js';
 import { setupTeacherComments } from './teacher-comments.js';
@@ -274,7 +274,7 @@ function renderStudent() {
     const feedbackKey = 'hw5667:feedback-card:' + JSON.stringify([me.id, model.id, state.publication.id, state.publication.review_version]);
     setupFeedbackTabs($('#approved-feedback'), { storageKey: feedbackKey + ':tab' });
     if(lesson3Experience(a))mountIntegratedReview($('#approved-feedback'),{
-      result:state.publication.result,storageKey:feedbackKey,submittedText:state.submission.text,
+      result:state.publication.result,storageKey:feedbackKey,
       guideStudent:true,revisionTarget:model.kind==='revision'&&!locked()?$('#essay'):null
     });
     else setupFeedbackCards($('#approved-feedback'), { storageKey: feedbackKey });
@@ -471,13 +471,15 @@ async function openReview(id,{editPublished=false}={}) {
     loadHandout:()=>api('/teacher/submissions/'+encodeURIComponent(id)+'/handout?kind='+handoutKind+(handoutKind==='revision'&&selectedRevisionId?'&revisionId='+encodeURIComponent(selectedRevisionId):''))
   });
   setupSourceVersions($('#app'),{storageKey:reviewKey+':source:'+String(data.revision?.id||'no-revision'),onSelect:value=>{if(value!=='handout'){handoutKind=value;try{sessionStorage.setItem(reviewKey+':handout-kind',value);}catch{}}if(value==='handout')void handout.reload();}});
-  setupFeedbackTabs(reviewRoot, { storageKey: reviewKey + ':tab' });
+  let mounted;
   if(lesson3Review&&(editing||data.publication)){
-    const mounted=mountIntegratedReview(reviewRoot,{result:editing?data.review.result:data.publication.result,
-      editable:editing,sourceRoot:$('#source-panel-original'),submittedText:data.submission.text,storageKey:reviewKey+':card',
+    mounted=mountIntegratedReview(reviewRoot,{result:editing?data.review.result:data.publication.result,
+      editable:editing,storageKey:reviewKey+':card',
       onDirty:()=>{$('#review-status').textContent='Có chỉnh sửa chưa lưu · HV chưa thấy nội dung này.';}});
     if(editing)integratedTeacher=mounted;
-  }else setupFeedbackCards(reviewRoot, { storageKey: reviewKey + ':card' });
+  }
+  setupFeedbackTabs(reviewRoot, { storageKey: reviewKey + ':tab', onSelect:mounted?.placeActions });
+  if(!mounted)setupFeedbackCards(reviewRoot, { storageKey: reviewKey + ':card' });
   if (editing && !lesson3Review) teacherCommentsEditor = setupTeacherComments($('#app'), {
     sourceText: data.submission.text, comments: data.review.result.teacherComments || [],
     onDirty: () => { $('#review-status').textContent = 'Có chỉnh sửa chưa lưu · HV chưa thấy nội dung này.'; },
@@ -530,7 +532,7 @@ function setupPublicationHistory(root,data,role,id,gen){
       const ids=new Map();target.querySelectorAll('[id]').forEach(element=>{const old=element.id,next='history-'+value.publication_version+'-'+old;ids.set(old,next);element.id=next;});
       for(const attribute of ['aria-controls','aria-labelledby'])target.querySelectorAll('['+attribute+']').forEach(element=>element.setAttribute(attribute,element.getAttribute(attribute).split(/\s+/).map(id=>ids.get(id)||id).join(' ')));
       setupFeedbackTabs(target);
-      if(lesson3Experience(data.assignment))mountIntegratedReview(target,{result:value.result,submittedText:data.submission.text});
+      if(lesson3Experience(data.assignment))mountIntegratedReview(target,{result:value.result});
       else setupFeedbackCards(target);
     }catch(e){if(gen===generation&&at===request)target.textContent=e.message;}
   };

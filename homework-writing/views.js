@@ -55,7 +55,7 @@ export function studentViewHtml({ me, model, assignments, isLocked, feedback, de
   const showRevisionGuide=compactRevision&&!!state.publication&&!isLocked;
   const editorLabel = `<label class="editor-label" for="essay">${model.kind === 'revision' ? 'Bản sửa của em'+(model.revisionRound>1?' · Lượt '+model.revisionRound:'') : introduction?'Phần mở bài của em':'Bài viết bằng tiếng Anh'}${isLocked?'<small>Bản đã nhận · chỉ đọc</small>':compactRevision?'':'<small>Em tự diễn đạt ý của mình</small>'}</label>`;
   const revisionTask=showRevisionGuide
-    ? '<aside class="revision-task" aria-label="Việc cần làm"><div><strong>Sửa và nộp lại mở bài</strong><p>Đọc nhận xét về nội dung và gợi ý sửa từng câu trước khi viết bản sửa.</p></div><a class="revision-task-link" href="#essay" data-go-to-revision>Đến ô viết bản sửa <span aria-hidden="true">↗</span></a></aside>'
+    ? '<aside class="revision-task" aria-label="Việc cần làm"><div><strong>Sửa và nộp lại mở bài</strong><p>Đọc nhận xét về nội dung và gợi ý sửa từng câu trước khi viết bản sửa.</p></div><a class="revision-task-link" href="#essay" data-go-to-revision>Đến ô viết bản sửa <span aria-hidden="true">→</span></a></aside>'
     : '';
   const saveLabel = model.backupError ? 'Chưa lưu được dự phòng trên thiết bị' : model.text !== model.lastSavedText ? 'Đã khôi phục bản trên thiết bị · chưa đồng bộ' : model.baseRevision ? 'Đã lưu nháp trên hệ thống · bản ' + model.baseRevision : 'Chưa có bản lưu';
   const status = state.publication?'returned':lesson3Status(state.submission);
@@ -104,7 +104,7 @@ export function docsViewHtml(states, me, events) {
   }).join('')}</section>`;
 }
 
-function teacherSourceHtml(data){
+function teacherSourceHtml(data, directEdit){
   return `<aside class="source-column"><section class="card source-paper">
     <div class="teacher-handout-link">${handoutLinkHtml({submissionId:data.submission.id})}</div>
     <div class="source-version-tabs" data-source-tablist role="tablist" aria-label="Bài viết và handout của học viên">
@@ -114,7 +114,7 @@ function teacherSourceHtml(data){
     </div>
     <section class="prompt-disclosure" data-source-prompt><h2>Đề bài</h2>${prompt(data.assignment)}</section>
     <section id="source-panel-original" role="tabpanel" aria-labelledby="source-tab-original" data-source-panel="original">
-      <div class="section-heading"><h2>Bài làm</h2><span class="badge neutral">Chỉ đọc</span></div><p class="feedback-text student-original" lang="en">${esc(data.submission.text)}</p><p class="source-note">Nhận lúc ${date(data.submission.created_ms)} · ${data.submission.text.trim().split(/\s+/).length} từ</p>
+      <div class="section-heading"><h2>${directEdit?'Bài học viên đã nộp':'Bài làm'}</h2><span class="badge neutral">Chỉ đọc</span></div><p class="feedback-text student-original" lang="en">${esc(data.submission.text)}</p><p class="source-note">Nhận lúc ${date(data.submission.created_ms)} · ${data.submission.text.trim().split(/\s+/).length} từ</p>
     </section>
     <section id="source-panel-revision" role="tabpanel" aria-labelledby="source-tab-revision" data-source-panel="revision" hidden>
       ${data.revision?`<div class="section-heading"><h2>Bản sửa của học viên</h2><span class="badge neutral">Chỉ đọc</span></div>${data.revisionHistory?.length>1?`<label class="field"><span>Lượt sửa đã nộp</span><select id="revision-history">${data.revisionHistory.map(r=>`<option value="${esc(r.id)}">Lượt ${r.round_number} · ${date(r.created_ms)}</option>`).join('')}</select></label>`:''}<p class="feedback-text student-revision" lang="en">${esc(data.revision.text)}</p><p class="source-note" id="revision-source-note">Lượt ${data.revision.round_number||1} · Nhận lúc ${date(data.revision.created_ms)} · ${data.revision.text.trim().split(/\s+/).length} từ</p><p class="section-note">Chưa tự chấm lại hoặc xác nhận đạt.</p>`:'<p class="section-note">Học viên chưa nộp bản sửa.</p>'}
@@ -126,11 +126,20 @@ function teacherSourceHtml(data){
 export function teacherReviewHtml(data, feedback, editableFeedback = '', { directEdit = false } = {}) {
   const published=data.publication&&!data.editingReview;
   const roundTools=data.features?.revisionRounds&&data.publication&&(!data.editingReview||directEdit)?
-    (data.revisionRound?.revision_id?'<button type="button" id="open-revision-round">Mở lại quyền nộp sửa</button>':'<span class="section-note">Đang mở lượt sửa '+(data.revisionRound?.number||1)+'</span>'):'';
+    (data.revisionRound?.revision_id?'<button type="button" id="open-revision-round">Mở lại quyền nộp sửa</button>':directEdit?'':'<span class="section-note">Đang mở lượt sửa '+(data.revisionRound?.number||1)+'</span>'):'';
   const readOnly=`<section class="card published-review"><div class="section-heading"><h2>Phản hồi đã trả</h2><span class="badge success">Bản ${data.publication?.publication_version||data.publication?.review_version}</span></div><p class="section-note">Học viên đang đọc đúng bản đã duyệt này.</p><div class="actions">${data.features?.publicationHistory?'<button type="button" id="edit-published-review">Chỉnh nhận xét</button>':''}${roundTools}</div>${feedback}</section>`;
-  const form=`<section class="card review-form"><div class="review-toolbar"><div class="section-heading"><h2>Duyệt phản hồi</h2>${directEdit&&data.publication?'<span class="badge success">Đã trả bản '+data.publication.publication_version+'</span>':'<span class="badge attention">HV chưa thấy</span>'}</div><div class="review-submit"><p id="review-status" class="section-note">${data.publication?'HV vẫn xem bản đã trả '+data.publication.publication_version+(directEdit?'. Chỉ cập nhật khi GV trả bài.':'. Chỉnh sửa này chưa được công bố.'):'Đang xem bản nhận xét '+data.review?.version+' · chưa trả cho HV.'}</p><div class="actions"><button id="save-review">Lưu chỉnh sửa</button><button id="approve" class="primary">Lưu và trả bài</button>${data.publication&&!directEdit?'<button type="button" id="cancel-published-edit">Xem bản đã trả</button>':''}${directEdit?roundTools:''}</div></div></div>${editableFeedback}${!directEdit?'<section class="teacher-comments-editor"><button type="button" id="add-teacher-comment">+ Thêm nhận xét</button><div id="teacher-comments-list"></div></section>':''}<div id="review-error" role="alert"></div></section>`;
-  return `${directEdit?'':'<button id="back-teacher" class="text-button back">← Danh sách bài</button>'}<div class="page-heading${directEdit?' compact-lesson-heading':''}"><div><h1>${esc(directEdit?compactLessonTitle(data.assignment.title):data.assignment.title)}</h1></div><span class="badge ${statusColor(data.submission)}">${statusLabel(data.submission)}</span></div>
-    <div class="review-layout">${teacherSourceHtml(data)}<div class="review-column">${data.review?(published?readOnly:form):(data.submission.status==='grading_failed'?'<section class="card grading-failure" role="alert"><h2>Chấm bài đang gặp lỗi</h2><p>Bài gốc đã được lưu. Cần phục hồi đúng bước bị lỗi trước khi có phản hồi để duyệt.</p><button id="reload-review">Cập nhật bài</button></section>':'<section class="card"><h2>Đang chờ kết quả AI</h2><p>Bộ chấm chưa trả kết quả hoặc có bước cần phục hồi. Bài gốc vẫn được giữ.</p><button id="reload-review">Cập nhật bài</button></section>')}
+  const reviewHeading='<h2>Duyệt phản hồi</h2>';
+  const reviewStatus=`<p id="review-status" class="section-note" role="status">${data.publication?(directEdit?'':'HV vẫn xem bản đã trả '+data.publication.publication_version+'. Chỉnh sửa này chưa được công bố.'):'Đang xem bản nhận xét '+data.review?.version+' · chưa trả cho HV.'}</p>`;
+  const reviewActions=`<div class="actions"${directEdit?' data-integrated-review-actions':''}><button id="save-review">Lưu chỉnh sửa</button><button id="approve" class="primary">Lưu và trả bài</button>${!directEdit&&data.publication?'<button type="button" id="cancel-published-edit">Xem bản đã trả</button>':''}</div>`;
+  const reviewToolbar=directEdit
+    ? `<div class="review-toolbar review-toolbar--direct"><div class="review-toolbar-row">${reviewHeading}<div class="review-toolbar-note">${roundTools}${reviewStatus}</div></div></div>`
+    : `<div class="review-toolbar"><div class="section-heading">${reviewHeading}<span class="badge attention">HV chưa thấy</span></div><div class="review-submit">${reviewStatus}${reviewActions}</div></div>`;
+  const form=`<section class="card review-form">${reviewToolbar}${editableFeedback}${directEdit?reviewActions:'<section class="teacher-comments-editor"><button type="button" id="add-teacher-comment">+ Thêm nhận xét</button><div id="teacher-comments-list"></div></section>'}<div id="review-error" role="alert"></div></section>`;
+  const lessonStatus=directEdit&&data.publication
+    ? (assignmentStatus(data.submission)==='revised'?'HV đã sửa · ':'')+'Đã trả bản '+(data.publication.publication_version||data.publication.review_version)
+    : statusLabel(data.submission);
+  return `${directEdit?'':'<button id="back-teacher" class="text-button back">← Danh sách bài</button>'}<div class="page-heading${directEdit?' compact-lesson-heading':''}"><div><h1>${esc(directEdit?compactLessonTitle(data.assignment.title):data.assignment.title)}</h1></div><span class="badge ${statusColor(data.submission)}">${lessonStatus}</span></div>
+    <div class="review-layout">${teacherSourceHtml(data,directEdit)}<div class="review-column">${data.review?(published?readOnly:form):(data.submission.status==='grading_failed'?'<section class="card grading-failure" role="alert"><h2>Chấm bài đang gặp lỗi</h2><p>Bài gốc đã được lưu. Cần phục hồi đúng bước bị lỗi trước khi có phản hồi để duyệt.</p><button id="reload-review">Cập nhật bài</button></section>':'<section class="card"><h2>Đang chờ kết quả AI</h2><p>Bộ chấm chưa trả kết quả hoặc có bước cần phục hồi. Bài gốc vẫn được giữ.</p><button id="reload-review">Cập nhật bài</button></section>')}
     ${publicationHistoryHtml(data,directEdit)}${data.review?.history?.length?`<details class="history-panel block"><summary>Lịch sử chỉnh sửa · ${data.review.history.length} bản trước</summary>${data.review.history.map(h=>`<h3 class="block">Bản ${h.version}</h3>${feedbackBlockHtml(overallFeedback(h.result.feedback))}`).join('')}</details>`:''}</div></div>`;
 }
 
