@@ -35,6 +35,8 @@
 .integrated-card-title{margin-bottom:6px}
 .integrated-card-title h3{font-size:17px;margin:0}
 .integrated-card-title span{color:#52657d;font-size:14px}
+.sentence-revision-action .primary{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 11px;font-size:14px}
+.sentence-revision-action .primary span{color:inherit}
 .integrated-sentence-actions{margin-bottom:8px}
 .integrated-sentence-actions button{border:0;min-height:34px;background:#fff;color:#4d5866;padding:5px 8px}
 .integrated-sentence-actions button:hover{background:#f2f4f6}
@@ -50,16 +52,32 @@
 .integrated-pager{display:flex;gap:5px;justify-content:center;width:max-content;max-width:100%;padding:3px;margin:9px auto 0;border:1px solid #e4e5e8;border-radius:100px;background:#fff}
 .integrated-pager button{border:0;border-radius:100px;min-width:72px;min-height:36px;padding:4px 8px;background:#f4f6f8}
 .integrated-pager [data-save-card]{background:#fff;color:#db0829}
+.review-next-step{display:flex;justify-content:flex-end;margin-top:14px}
+.review-next-step .primary{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px}
+.revision-task{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 14px;margin:0 0 12px;padding:9px 12px;border:1px solid #d4e0eb;border-left:4px solid #18476e;border-radius:8px;background:#eaf1f7;color:#173b58}
+.revision-task strong{display:block;font-size:16px;line-height:1.3}
+.revision-task p{margin:2px 0 0;font-size:14px;line-height:1.4}
+.revision-task-link{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 12px;border:1px solid #152b4e;border-radius:7px;background:#152b4e;color:#fff;font-size:14px;font-weight:700;text-decoration:none}
+.revision-task-link:hover,.revision-task-link:focus-visible{background:#23466e;color:#fff}
+.revision-guide{display:flex;align-items:flex-start;gap:12px;margin:16px 0 0;padding:12px 14px;border:1px solid var(--line);border-left:4px solid #18476e;border-radius:8px;background:#eaf1f7;color:#173b58;scroll-margin-top:16px}
+.revision-guide h3{margin:0 0 2px;font-size:17px;color:inherit}
+.revision-guide p{margin:0;font-size:15px;line-height:1.45}
+.revision-guide-icon{flex:none;font-size:21px;line-height:1.2}
 .format-dialog{border:1px solid #cbd5e1;border-radius:12px;padding:16px;width:min(470px,calc(100% - 24px));color:#202b3b}
 .format-dialog::backdrop{background:#152b4e55}
 .format-dialog .dialog-head,.format-dialog .dialog-actions{display:flex;justify-content:space-between;align-items:center;gap:7px}
 .format-dialog .dialog-head h2{margin:0}
+.format-dialog.writing-prompt-dialog{width:min(580px,calc(100% - 32px));max-height:calc(100dvh - 32px);padding:16px 20px}
+.writing-prompt-dialog .dialog-head{margin-bottom:10px}
+.writing-prompt-dialog .dialog-head h2{font-size:19px}
+.writing-prompt-dialog .dialog-head button{min-width:36px;min-height:36px;padding:0;font-size:21px;line-height:1}
 .format-dialog .dialog-actions{justify-content:flex-end;margin-top:12px}
 .format-dialog label{display:grid;gap:4px;margin:10px 0}
 .format-dialog input{max-width:100%}
 .format-dialog .checkbox{display:flex;align-items:center}
 .format-dialog #dialog-error{color:#b0243a;margin:4px 0}
 @media(max-width:620px){
+ .review-next-step .primary{width:100%}
  .integrated-pair{grid-template-columns:minmax(0,1fr)}
  .integrated-pair>section+section{border-left:0;border-top:1px solid #e4e5e8}
  .integrated-pair>section:last-child h4{border-radius:0}

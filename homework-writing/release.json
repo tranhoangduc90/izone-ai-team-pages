@@ -18,8 +18,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 50637,
-      "sha256": "dea6a2df39628a1fbcec867e597c814817caf489ea542b443a35b993c1e6a554"
+      "bytes": 51208,
+      "sha256": "578149a465afcd718ff8051a11f0ca56d019a6762c7fc4cf4c74d1ae371a43c4"
     },
     {
       "path": "assets/SourceSans3-Italic-Variable.woff2",
@@ -58,8 +58,8 @@
     },
     {
       "path": "fast-food-demo.css",
-      "bytes": 6092,
-      "sha256": "6e02aee4fa825c39cee3b2c54c8c8da9bc8144122a151cd907a1ab38eb6c95d7"
+      "bytes": 7441,
+      "sha256": "791b5b073142397566ca1cd65732c64200ce52bba2498463e134f7bb7c752f61"
     },
     {
       "path": "feedback-cards.js",
@@ -123,18 +123,18 @@
     },
     {
       "path": "index.html",
-      "bytes": 1796,
-      "sha256": "7c8d23a2d49d4bb5b62ad90765237b66df94d0428a53b67972e7c3c034e12617"
+      "bytes": 1859,
+      "sha256": "1a9269804b838cb84c3deb516960f656a5a15e7f5b50c52df03aeacb74f32071"
     },
     {
       "path": "integrated-review.css",
-      "bytes": 6532,
-      "sha256": "cc63202dec465e30b9db5d55cfc7c4a866c0e76b217103a361be8f557f013abd"
+      "bytes": 8400,
+      "sha256": "753481aaca655ae4feaa9503aec5c7063d65ec7bc5177a9866bf035db736d84a"
     },
     {
       "path": "integrated-review.js",
-      "bytes": 10775,
-      "sha256": "d68291c4682a08150c694c448f0ced83e93403dcb787f26c1f4730b5004fbd89"
+      "bytes": 11384,
+      "sha256": "c9dd2c59a2a1bc88ce363111d51f7b02817670bbf7e33444b2fb2f1d853490e9"
     },
     {
       "path": "language-cards.js",
@@ -238,8 +238,8 @@
     },
     {
       "path": "views.js",
-      "bytes": 29584,
-      "sha256": "b4f61dac70b8b649ee3b8a29c6aaa9daf91dd06a01f431f1171413d6695eda0c"
+      "bytes": 31625,
+      "sha256": "eb6bb3b88218540ad8fb2ec3ed8f895f94aeb64da882db94b58617988910cf4e"
     },
     {
       "path": "workspace.css",
@@ -250,5 +250,6 @@
   "limits": [
     "Prepared static package only; no publish, real SSO/Google, API activation or private data included.",
     "Consumer homeworkwriting must be registered separately before use."
-  ]
+  ],
+  "frontendRevision": "20261111-review-ui"
 }
