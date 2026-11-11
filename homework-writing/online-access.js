@@ -24,6 +24,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
   const storageKey='homework-writing:session:v1:'+config.apiBase,memory=createStudentIdentityMemory();
   const course=createCourseStudentIdentity({product:'homework-writing',entry:'workspace',memory,requestIdentity:input=>raw('/access/identity/resolve',input)});
   const teacherIntent=()=>intent!=='student';
+  const requiresAssignedTeacher=()=>intent==='teacher'&&query.get('workspace')==='k67'&&query.has('submission');
   function headers(){return {...(!teacherIntent()?{'X-HW-Student':'1'}:{}),...(!teacherIntent()&&token?{Authorization:'Bearer '+token}:{}),...(!teacherIntent()&&context?{'X-HW-Document':context.documentId,'X-HW-Assignment':context.assignmentId}:{})};}
   async function raw(route,body,method=body===undefined?'GET':'POST'){
     const stamp=epoch;let response;
@@ -100,10 +101,16 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
     });
   }
   async function sdk(){const u=new URL(config.ssoScript);if(u.origin!==location.origin)throw Error('Script phiên dùng chung chưa đúng nguồn Pages.');if(!window.IzoneTeacherSso)await script(u.href,{izoneTeacherProduct:'homeworkwriting'});if(!window.IzoneTeacherSso?.restore)throw Error('Chưa nạp được consumer Homework vào phiên dùng chung.');return window.IzoneTeacherSso;}
-  async function teacherSession(stamp){const session=await raw('/session');if(stamp!==epoch)throw changed();if(!['teacher','operator'].includes(session.person?.role)||intent==='operator'&&session.person.role!=='operator')throw Object.assign(Error('Tài khoản chưa có vai trò được yêu cầu trong Homework.'),{status:403});active=session;return session;}
+  async function teacherSession(stamp){
+    const session=await raw('/session');if(stamp!==epoch)throw changed();
+    const role=session.person?.role;
+    if(requiresAssignedTeacher()&&role!=='teacher')throw Object.assign(Error('Chọn tài khoản Google của giảng viên phụ trách bài này.'),{status:403});
+    if(!['teacher','operator'].includes(role)||intent==='operator'&&role!=='operator')throw Object.assign(Error('Tài khoản chưa có vai trò được yêu cầu trong Homework.'),{status:403});
+    active=session;return session;
+  }
   async function openTeacher(root,stamp){
     const sso=await sdk();if(stamp!==epoch)throw changed();const restored=await sso.restore('homeworkwriting');if(stamp!==epoch)throw changed();
-    if(restored){try{return await teacherSession(stamp);}catch(e){if(e.status!==401)throw e;}}
+    if(restored){try{return await teacherSession(stamp);}catch(e){if(e.status!==401&&!(requiresAssignedTeacher()&&e.status===403))throw e;}}
     root.innerHTML='<div class="login-layout compact-login"><section class="card login-card"><h1>Đăng nhập</h1>'+roleField()+'<p>Dùng tài khoản Google đã được cấp quyền Homework.</p><div id="google-login"></div><button id="online-sso-retry" type="button">Kiểm tra lại phiên dùng chung</button><div id="online-error" role="alert"></div></section></div>';
     return new Promise((resolve,reject)=>{pendingReject=reject;roleListener(root,reject);const error=root.querySelector('#online-error');root.querySelector('#online-sso-retry').onclick=async()=>{try{if(await sso.restore('homeworkwriting',{force:true})){const session=await teacherSession(stamp);pendingReject=null;resolve(session);}else error.textContent='Chưa có phiên giảng viên dùng chung.';}catch(e){if(stamp===epoch)error.textContent=e.message;}};
       if(!publicConfig.googleClientId){error.textContent='Chưa cấu hình đăng nhập Google cho consumer Homework. Có thể kiểm tra lại phiên dùng chung.';return;}
