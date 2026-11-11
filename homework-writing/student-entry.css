@@ -20,3 +20,9 @@
 .hw-student-entry .hw-entry-footer p{margin:0 0 5px}
 @media(max-width:850px){.login-layout.hw-student-entry{gap:32px}}
 @media(max-width:680px){.login-layout.hw-student-entry{grid-template-columns:minmax(0,1fr);margin:16px auto;gap:16px}.hw-student-entry .login-card{padding:24px}.hw-student-entry .login-intro h1,.hw-student-entry h2{font-size:23px}}
+
+#hw-entry-confirm{width:min(32rem,calc(100% - 32px));border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);padding:24px}
+#hw-entry-confirm::backdrop{background:#152b4eaa}
+#hw-entry-confirm p{overflow-wrap:anywhere}
+.hw-entry-confirm-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.hw-entry-confirm-actions button.primary{width:auto;min-height:44px}
