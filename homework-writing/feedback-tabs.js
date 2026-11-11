@@ -28,7 +28,7 @@ export function feedbackTabsHtml(result, { esc, marked, editable = false }) {
   </div>${editable ? '' : teacherCommentsHtml(result.teacherComments, esc,result.teacherHighlights)}`;
 }
 
-export function setupFeedbackTabs(root, { storageKey } = {}) {
+export function setupFeedbackTabs(root, { storageKey, onSelect } = {}) {
   root?.querySelectorAll('[data-feedback-preview]').forEach(preview=>{
     const input=root.querySelector('#'+preview.dataset.feedbackPreview);
     input?.addEventListener('input',()=>{if(input.dataset.richSync)return;preview.innerHTML=feedbackTextHtml(input.value);});
@@ -49,6 +49,7 @@ export function setupFeedbackTabs(root, { storageKey } = {}) {
     if (independent && next !== current) scrollPositions[current] = pane.scrollTop;
     tabs.forEach(tab => { const active = tab === selected; tab.setAttribute('aria-selected', String(active)); tab.tabIndex = active ? 0 : -1; });
     panels.forEach(panel => { panel.hidden = panel.dataset.feedbackPanel !== next; });
+    onSelect?.();
     if (independent && next !== current) pane.scrollTop = scrollPositions[next];
     current = next;
     if (storageKey) { try { sessionStorage.setItem(storageKey, current); } catch { /* Lưu lựa chọn không chặn tương tác. */ } }

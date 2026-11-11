@@ -18,8 +18,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 51208,
-      "sha256": "578149a465afcd718ff8051a11f0ca56d019a6762c7fc4cf4c74d1ae371a43c4"
+      "bytes": 52520,
+      "sha256": "4ce4413ebfd496d4b2950dc2a68cf4787dae1706a8d9564ae8cdba00f98fae3a"
     },
     {
       "path": "assets/SourceSans3-Italic-Variable.woff2",
@@ -58,8 +58,8 @@
     },
     {
       "path": "fast-food-demo.css",
-      "bytes": 7441,
-      "sha256": "791b5b073142397566ca1cd65732c64200ce52bba2498463e134f7bb7c752f61"
+      "bytes": 7842,
+      "sha256": "e1062770d930ee183f60222cc8a04fb92e28f6a5956a3f59b8647c38f3058ee1"
     },
     {
       "path": "feedback-cards.js",
@@ -73,8 +73,8 @@
     },
     {
       "path": "feedback-tabs.js",
-      "bytes": 6257,
-      "sha256": "e2b9d76d1307223d9b468404ef2fc84c3b257a4947b590eace819d35d32e1de8"
+      "bytes": 6285,
+      "sha256": "2d62134c661aa3f8f866eeaf3cf0f81843f375dbefbcc80ca9fbcaa1c2ff3b2a"
     },
     {
       "path": "handout-alignment.js",
@@ -123,18 +123,18 @@
     },
     {
       "path": "index.html",
-      "bytes": 1859,
-      "sha256": "1a9269804b838cb84c3deb516960f656a5a15e7f5b50c52df03aeacb74f32071"
+      "bytes": 1871,
+      "sha256": "62698e12650d9d77ad4d077d6b0bfea714a0f78923e078612d1428d0d5e37d9e"
     },
     {
       "path": "integrated-review.css",
-      "bytes": 8400,
-      "sha256": "753481aaca655ae4feaa9503aec5c7063d65ec7bc5177a9866bf035db736d84a"
+      "bytes": 9980,
+      "sha256": "0be2b0e909fb05dfe537881e8852119ab36f847514079c3c71b04d2e2bdfe703"
     },
     {
       "path": "integrated-review.js",
-      "bytes": 11384,
-      "sha256": "c9dd2c59a2a1bc88ce363111d51f7b02817670bbf7e33444b2fb2f1d853490e9"
+      "bytes": 10885,
+      "sha256": "f539bf40330b62229664d3a63e4f7d2465a7660100e66f1b5c9fe5d95b87c7c5"
     },
     {
       "path": "language-cards.js",
@@ -238,8 +238,8 @@
     },
     {
       "path": "views.js",
-      "bytes": 31625,
-      "sha256": "eb6bb3b88218540ad8fb2ec3ed8f895f94aeb64da882db94b58617988910cf4e"
+      "bytes": 32205,
+      "sha256": "f19321648b3cb042a2330aceb832902716266b734ee999c8ee6aa04e4f9334c7"
     },
     {
       "path": "workspace.css",
@@ -251,5 +251,5 @@
     "Prepared static package only; no publish, real SSO/Google, API activation or private data included.",
     "Consumer homeworkwriting must be registered separately before use."
   ],
-  "frontendRevision": "20261111-review-ui"
+  "frontendRevision": "20261111-review-polish"
 }

@@ -20,7 +20,9 @@
 .fast-food-demo .handout-heading{border-top:3px solid #152b4e;background:#f3f4f6}
 .fast-food-demo .editor-card .writing-prompt{border-top:3px solid #db0829;border-radius:6px;padding:10px 12px;background:#f7f8fa}
 .fast-food-demo .editor-card .writing-prompt h2{font-size:16px;margin:0 0 5px}
-.fast-food-demo .question-text,.fast-food-demo .student-layout .writing-area--revision{font-size:16px;line-height:1.55}
+.fast-food-demo .question-text,
+.fast-food-demo #source-panel-original .student-original,
+.fast-food-demo .student-layout .writing-area--revision{font-size:16px;line-height:1.55}
 .fast-food-demo .student-layout .writing-area{min-height:155px!important;height:clamp(170px,27dvh,290px)!important}
 .fast-food-demo .student-layout .writing-area--revision{height:clamp(220px,38dvh,360px)!important}
 .revision-editor-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:14px 0 8px}
@@ -64,6 +66,11 @@
 .fast-food-demo .feedback-deck .card-explanation label{margin:0}
 .fast-food-demo .review-form,.fast-food-demo .published-review{padding:12px}
 .fast-food-demo .review-toolbar{margin-bottom:8px;padding-top:4px}
+.review-toolbar-row,.review-toolbar-note{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px}
+.review-toolbar-row h2{margin:0}
+.review-toolbar-note{flex:1 1 auto;justify-content:flex-end}
+.review-toolbar--direct{padding-bottom:7px}
+.review-toolbar--direct #review-status{font-size:13px;line-height:1.3;margin:0;text-align:end}
 .fast-food-demo .review-submit .actions{gap:5px;flex-wrap:wrap}
 .fast-food-demo .review-submit .actions button{min-height:38px;padding:5px 10px}
 @media(max-width:620px){
