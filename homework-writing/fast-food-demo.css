@@ -11,11 +11,22 @@
 .fast-food-demo .compact-lesson-heading .heading-tools button{min-height:32px;padding:3px 8px}
 .fast-food-demo .compact-lesson-heading~.student-layout .writing-prompt{margin-top:0}
 .fast-food-demo .student-workspace-tools{margin-bottom:10px}
+.fast-food-demo .student-lesson-heading{justify-content:flex-start;gap:4px 14px;margin-bottom:8px}
+.fast-food-demo .student-lesson-heading .student-workspace-tools{gap:6px;margin:0}
+.fast-food-demo .student-lesson-heading .student-workspace-tools button{min-height:34px;padding:4px 9px;font-size:14px}
+.fast-food-demo .student-lesson-heading .heading-tools{margin-inline-start:auto}
+.fast-food-demo .lesson3-student-layout.has-feedback>.study-context{padding-top:0}
+.fast-food-demo .lesson3-student-layout #approved-feedback{padding-top:0}
 .fast-food-demo .handout-heading{border-top:3px solid #152b4e;background:#f3f4f6}
 .fast-food-demo .editor-card .writing-prompt{border-top:3px solid #db0829;border-radius:6px;padding:10px 12px;background:#f7f8fa}
 .fast-food-demo .editor-card .writing-prompt h2{font-size:16px;margin:0 0 5px}
-.fast-food-demo .question-text{font-size:16px;line-height:1.55}
+.fast-food-demo .question-text,.fast-food-demo .student-layout .writing-area--revision{font-size:16px;line-height:1.55}
 .fast-food-demo .student-layout .writing-area{min-height:155px!important;height:clamp(170px,27dvh,290px)!important}
+.fast-food-demo .student-layout .writing-area--revision{height:clamp(220px,38dvh,360px)!important}
+.revision-editor-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:14px 0 8px}
+.revision-editor-heading .editor-label{margin:0}
+.revision-editor-heading button{min-height:36px;padding:4px 9px;font-size:14px}
+.fast-food-demo .editor-card .revision-guide:first-child{margin-top:0}
 .fast-food-demo .outline-position,.fast-food-demo .lesson3-outline-body{border:1px solid #dce1e7;border-top:3px solid #152b4e;border-radius:9px;padding:12px 14px;background:white;margin:0 0 12px}
 .fast-food-demo .outline-position h3,.fast-food-demo .lesson3-outline-body h3{font-size:18px;margin:0 0 6px;color:#153957}
 .fast-food-demo .outline-position p,.fast-food-demo .lesson3-outline-body dl{margin:0}
@@ -56,8 +67,12 @@
 .fast-food-demo .review-submit .actions{gap:5px;flex-wrap:wrap}
 .fast-food-demo .review-submit .actions button{min-height:38px;padding:5px 10px}
 @media(max-width:620px){
+ .fast-food-demo .student-lesson-heading{gap:4px 8px}
+ .fast-food-demo .student-lesson-heading .student-workspace-tools{flex-basis:100%;order:1}
+ .fast-food-demo .student-lesson-heading .heading-tools{margin-inline-start:0}
  .fast-food-demo .feedback-deck .card-comparison{grid-template-columns:1fr}
  .fast-food-demo .feedback-deck .card-comparison>:nth-child(2){border-left:0;border-top:1px solid #dce1e7}
  .fast-food-demo .student-layout .writing-area{height:170px!important}
+ .fast-food-demo .student-layout .writing-area--revision{height:240px!important}
  .fast-food-demo .review-toolbar,.fast-food-demo .feedback-tab-list{position:static}
 }

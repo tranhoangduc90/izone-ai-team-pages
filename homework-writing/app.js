@@ -1,10 +1,10 @@
 import runtime from './runtime-config.js';
 import {frontendConfiguration,createOnlineAccess} from './online-access.js';
 import {setupRichReview} from './rich-review.js';
-import {mountIntegratedReview,equalReview} from './integrated-review.js';
+import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261111-review-ui';
 import {basicSubmissionError} from './submission-check.js';
 import {vietnameseWritingError} from './submission-language.js';
-import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js';
+import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261111-review-ui';
 import { setupLoginForm } from './login-form.js';
 import { draftKey, loadBackup, saveBackup, flushBackups, listBackups } from './drafts.js';
 import { setupFeedbackCards } from './feedback-cards.js';
@@ -234,6 +234,15 @@ function setSaveStatus(text, error = false) { const e = $('#save-status'); if (e
 function renderStudent() {
   const { state, text } = model, a = state.assignment;
   $('#app').innerHTML = studentViewHtml({ me, model, assignments, isLocked: locked(), feedback: state.publication ? resultHtml(state.publication.result, true) : '', compactStatus: lesson3Experience(a), delivery: state.submission && !lesson3Experience(a) && !runtime.richReviewDemo ? deliveryHtml(state.deliveries) : '' });
+  const promptDialog=$('#writing-prompt-dialog');
+  if(promptDialog){
+    $('#open-writing-prompt').onclick=()=>promptDialog.showModal();
+    promptDialog.onclick=event=>{
+      if(event.target!==promptDialog)return;
+      const bounds=promptDialog.getBoundingClientRect();
+      if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)promptDialog.close();
+    };
+  }
   const alignmentModel=model,alignmentGeneration=generation;
   studentAlignment=setupStudentAlignment({panel:$('#handout-check-panel'),api,assignmentId:model.id,kind:model.kind,revisionRound:model.revisionRound,isCurrent:()=>generation===alignmentGeneration&&model===alignmentModel});
   if(state.assignment.handoutRequired&&!locked())studentAlignment.draw(model.kind==='revision'?state.revisionHandoutCheck:state.handoutCheck);
@@ -249,7 +258,10 @@ function renderStudent() {
     setupPublicationHistory($('#app'),state,'student',state.submission.id,generation);
     const feedbackKey = 'hw5667:feedback-card:' + JSON.stringify([me.id, model.id, state.publication.id, state.publication.review_version]);
     setupFeedbackTabs($('#approved-feedback'), { storageKey: feedbackKey + ':tab' });
-    if(lesson3Experience(a))mountIntegratedReview($('#approved-feedback'),{result:state.publication.result,storageKey:feedbackKey,submittedText:state.submission.text});
+    if(lesson3Experience(a))mountIntegratedReview($('#approved-feedback'),{
+      result:state.publication.result,storageKey:feedbackKey,submittedText:state.submission.text,
+      guideStudent:true,revisionTarget:model.kind==='revision'&&!locked()?$('#essay'):null
+    });
     else setupFeedbackCards($('#approved-feedback'), { storageKey: feedbackKey });
     $('.study-context').tabIndex = 0;
     $('.editor-card').tabIndex = 0;

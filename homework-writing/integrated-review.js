@@ -1,6 +1,6 @@
 import {mountEditor,closeMenu,closeReviewDialog,dialog} from './review-format.js';
 import {languageCards} from './language-cards.js';
-import {feedbackTextHtml,overallFeedback} from './feedback-format.js';
+import {feedbackTextHtml} from './feedback-format.js';
 import {highlightHtml} from './text-highlights.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -12,7 +12,7 @@ const sorted=value=>Array.isArray(value)?value.map(sorted):value&&typeof value==
   ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,sorted(value[key])])) : value;
 export const equalReview=(a,b)=>JSON.stringify(sorted(a))===JSON.stringify(sorted(b));
 
-export function mountIntegratedReview(root,{result,editable=false,sourceRoot,submittedText,storageKey,onDirty=()=>{}}){
+export function mountIntegratedReview(root,{result,editable=false,sourceRoot,submittedText,storageKey,guideStudent=false,revisionTarget,onDirty=()=>{}}){
   const overall=root?.querySelector('[data-feedback-panel="overall"]');
   const sentences=root?.querySelector('[data-feedback-panel="sentences"]');
   if(!overall||!sentences)return;
@@ -20,7 +20,7 @@ export function mountIntegratedReview(root,{result,editable=false,sourceRoot,sub
   const sources=new Map(canonical.map(card=>[card.id,card]));
   const defaults=canonical.map(card=>({id:card.id,sourceId:card.id}));
   let overlay=structuredClone(result.richReview||{version:1});
-  let trccText,feedbackText,changed=!!result.richReview;
+  let trccText,changed=!!result.richReview;
   const handles=[],cardEditors=[];
   const cardList=()=>overlay.cards??defaults;
   const count=root.querySelector('[data-feedback-tab="sentences"] .tab-count');
@@ -49,22 +49,37 @@ export function mountIntegratedReview(root,{result,editable=false,sourceRoot,sub
     overall.prepend(original);
     handles.push(mounts(original.querySelector('[data-rich-original]'),overlay.original,'Bài viết'));
   }
-  const general=overallFeedback(result.feedback).replace(/^Đây là bản chấm AI giả lập để thử hành trình\. Giảng viên cần đọc và chỉnh trước khi trả bài\.\s*/u,'');
-  const hasGeneral=overlay.feedback!==undefined
-    ? overlay.feedback!=='<p></p>'
-    : !!general;
-  if(editable||hasGeneral){
-    const section=document.createElement('section');
-    section.className='integrated-editor-shell integrated-general';
-    section.innerHTML='<h3>Nhận xét chung</h3><div data-rich-feedback></div>';
-    overall.append(section);
-    handles.push(mounts(section.querySelector('[data-rich-feedback]'),
-      overlay.feedback??feedbackTextHtml(general,result.teacherHighlights?.feedback?.ranges),
-      'Nhận xét chung',editor=>{overlay.feedback=editor.getHTML();feedbackText=editor.getText();change();}));
-  }
   handles.push(mounts(overall.querySelector('[data-rich-trcc]'),
     overlay.trcc??feedbackTextHtml(result.trcc,result.teacherHighlights?.trcc?.ranges).replace('<p>Bản mô phỏng theo rubric Fast Food Lesson 3.</p>',''),
     'Nhận xét về mặt nội dung',editor=>{overlay.trcc=editor.getHTML();trccText=editor.getText();change();}));
+  function appendNextStep(panel,label,action,{position='end'}={}){
+    const group=document.createElement('div');
+    group.className=position==='header'?'sentence-revision-action':'review-next-step';
+    const button=document.createElement('button');
+    button.type='button';button.className='primary';
+    const arrow=document.createElement('span');
+    arrow.setAttribute('aria-hidden','true');arrow.textContent='→';
+    button.append(label,arrow);button.addEventListener('click',action);
+    group.append(button);panel.append(group);
+  }
+  function goToRevision(){
+    revisionTarget.focus({preventScroll:true});
+    document.getElementById('revision-guide')?.scrollIntoView({block:'start'});
+  }
+  if(revisionTarget)root.querySelector('[data-go-to-revision]')?.addEventListener('click',event=>{
+    event.preventDefault();
+    goToRevision();
+  });
+  if(guideStudent){
+    if(cardList().length){
+      appendNextStep(overall,'Chuyển sang Sửa từng câu',()=>{
+        root.querySelector('[data-feedback-tab="sentences"]').click();
+        const heading=sentences.querySelector('h3');
+        heading.focus({preventScroll:true});
+        heading.scrollIntoView({block:'nearest'});
+      });
+    }else if(revisionTarget)appendNextStep(overall,'Viết bản sửa',goToRevision);
+  }
   function renderCard(focus=false){
     closeMenu();cardEditors.splice(0).forEach(editor=>editor.destroy());
     const list=cardList();
@@ -101,6 +116,7 @@ export function mountIntegratedReview(root,{result,editable=false,sourceRoot,sub
     previous.setAttribute('aria-label','Trước');next.setAttribute('aria-label','Tiếp');
     previous.onclick=()=>{if(index){index--;renderCard(true);}else root.querySelector('[data-feedback-tab="overall"]').click();};
     next.disabled=index===list.length-1;next.onclick=()=>{index++;renderCard(true);};
+    if(guideStudent&&revisionTarget)appendNextStep(sentences.querySelector('.integrated-card-title'),'Viết bản sửa',goToRevision,{position:'header'});
     if(editable){
       sentences.querySelector('[data-save-card]').onclick=()=>document.querySelector('#save-review')?.click();
       for(const [selector,remove] of [['[data-add-mark]',false],['[data-remove-mark]',true]]){
@@ -147,7 +163,7 @@ export function mountIntegratedReview(root,{result,editable=false,sourceRoot,sub
     handles.concat(cardEditors).forEach(editor=>editor.destroy());
   }
   return {
-    collect(){return {richReview:changed?structuredClone(overlay):undefined,trccText,feedback:feedbackText};},
+    collect(){return {richReview:changed?structuredClone(overlay):undefined,trccText};},
     commit(sent,saved){
       if(equalReview(overlay,sent.richReview)){overlay=structuredClone(saved.richReview||{version:1});changed=!!saved.richReview;}
     },
