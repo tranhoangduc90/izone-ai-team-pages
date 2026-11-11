@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://*.r2.cloudflarestorage.com https://tranhoangduc90.github.io; media-src 'self' blob:; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+    <title>Term Test 1 · Khóa 56 · Listening dự phòng</title>
+    <link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg">
+    <link rel="stylesheet" href="../k56-shared/styles.css?rev=20261003-writing-save-cas-v1">
+    <link rel="stylesheet" href="../term-test-1-k56-computer-based/styles.css?v=20261018-cbt-viewport-r73-identity-v1">
+    <link rel="stylesheet" href="../term-test-1-k56-computer-based/layout-updates.css?v=20260911-parity-v2">
+    <link rel="stylesheet" href="../k56-exam-integrity/styles.css?rev=20260911-find-lock-v1">
+    <link rel="preload" href="../k56-design/assets/SourceSans3-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="../k56-design/theme.css?v=20261023-master170-v3">
+    <link rel="stylesheet" href="../shared/desktop-exam-guard.css?v=20261027-v1&resilience=20261027-v1">
+    <script defer src="../../shared/red-focus-glow.js?v=20261102-r1"></script>
+      <link rel="stylesheet" href="../shared/cbt-audio-download-status.css?v=20261111-audio-status-v1">
+</head>
+  <body class="cbt-mode" data-k56-design data-term1-skill="listening">
+    <div id="app">
+      <header class="topbar cbt-bootstrap-topbar"><h1>Term Test 1 · Khóa 56</h1></header>
+      <main class="page-shell cbt-bootstrap-shell">
+        <section class="panel cbt-bootstrap-card" aria-labelledby="securePrepTitle">
+          <header class="cbt-lobby-header">
+            <span class="cbt-lobby-badge">Chuẩn bị Listening</span>
+            <h2 id="securePrepTitle">Xác nhận học viên trước khi bắt đầu Listening</h2>
+            <p>Chọn lớp và họ tên để vào bài.</p>
+          </header>
+          <form class="cbt-bootstrap-identity" id="skillIdentity" hidden>
+            <strong id="bootstrapClass"></strong>
+            <label>Họ và tên<select required></select></label>
+            <button class="button button-primary" type="submit">Tiếp tục</button>
+          </form>
+          <div class="cbt-lobby-steps" id="skillAudioLobby" hidden>
+            <section class="cbt-lobby-step" data-state="complete">
+              <span class="cbt-lobby-step-number">1</span>
+              <div class="cbt-lobby-step-body">
+                <h3>Tải đủ và kiểm tra audio</h3>
+                <p>Audio đã sẵn sàng để nghe thử.</p>
+                <strong class="cbt-audio-status cbt-lobby-download-status" role="status">Đã tải đủ audio · 100%</strong>
+                <progress class="cbt-audio-progress" max="1" value="1" aria-label="Tiến độ tải audio"></progress>
+              </div>
+            </section>
+            <section class="cbt-lobby-step" id="skillPreviewStep" data-state="active">
+              <span class="cbt-lobby-step-number">2</span>
+              <div class="cbt-lobby-step-body">
+                <h3>Nghe thử</h3>
+                <p>Bản nghe thử chỉ có 30 giây đầu. Âm lượng này được giữ cho bài thi chính.</p>
+                <div class="cbt-lobby-preview-controls">
+                  <button class="button button-secondary" id="skillPreview" type="button">Nghe thử</button>
+                  <label class="cbt-volume cbt-lobby-volume"><span>Âm lượng</span><input id="skillVolume" type="range" min="0.1" max="1" step="0.1" value="1"></label>
+                </div>
+                <span class="cbt-preview-status" id="skillPreviewStatus" role="status">Bấm nút để nghe thử và chỉnh âm lượng.</span>
+              </div>
+            </section>
+            <section class="cbt-lobby-step" id="skillStartStep" data-state="locked">
+              <span class="cbt-lobby-step-number">3</span>
+              <div class="cbt-lobby-step-body">
+                <h3>Bắt đầu thi</h3>
+                <p>Sau khi bấm, đề được mở và audio đã lưu bắt đầu phát.</p>
+                <button class="button button-primary" id="skillStart" type="button" disabled>Bắt đầu thi Listening</button>
+              </div>
+            </section>
+          </div>
+          <div class="notice" id="bootstrapNotice" role="status">Đang kiểm tra link dự phòng…</div>
+        </section>
+      </main>
+    </div>
+    <script src="../shared/desktop-exam-guard.js?v=20261027-v1&resilience=20261027-v1"></script>
+    <script src="../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1"></script>
+    <script src="../k56-exam-order.js?rev=20260930-k56-order-v1&amp;history=20261102-1"></script>
+    <script src="../k56-shared/config.js?rev=20261020-demo-v1&amp;ej=20261024-production-r1"></script>
+    <script src="../term-test-1-k56/test-config.js?journal=20261024-startup-v2&amp;diagnostics=20261107-v3"></script>
+    <script src="../shared/cbt-audio-start-label.js?rev=20261109-preview-10s-v1"></script>
+    <script type="module" src="../term-test-1-k56-reading-fallback/bootstrap-audio-status-v1.mjs?v=20261110-continuity-v1&amp;listeningLog=20261110-listening-observations-v1&amp;audioStatus=20261111-audio-status-v1"></script>
+    <script defer src="../k56-exam-integrity/app.js?rev=20260911-find-lock-v1"></script>
+    <script defer src="../k56-design/presentation.js?v=20261023-master170-v3"></script>
+  </body>
+</html>
