@@ -13,6 +13,12 @@ export function devHandoutUrl(documentId){
   return url;
 }
 
+export function linkedHandoutUrl(assignment,documentId){
+  const url=new URL('../writing-handouts/lesson3-writing/',import.meta.url);
+  url.search=new URLSearchParams({mode:'student',assignment,documentId,workspace:'k67'}).toString();
+  return url;
+}
+
 export function rememberApprovedOutline(documentId,version){
   if(!validDocument(documentId)||!Number.isSafeInteger(version)||version<0)throw Error('OUTLINE_VERSION_INVALID');
   sessionStorage.setItem(versionKey(documentId),String(version));

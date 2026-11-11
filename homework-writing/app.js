@@ -1,5 +1,5 @@
-import runtime from './runtime-config.js';
-import {frontendConfiguration,createOnlineAccess} from './online-access.js';
+import runtime from './runtime-config.js?v=20261111-ic2363';
+import {frontendConfiguration,createOnlineAccess} from './online-access.js?v=20261111-ic2363';
 import {setupRichReview} from './rich-review.js';
 import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261111-review-ui';
 import {basicSubmissionError} from './submission-check.js';
@@ -20,7 +20,7 @@ import {handoutReadOnlyHtml,setupReadOnlyHandout} from './handout-view.js';
 import {setupStudentAlignment,alignmentTeacherQueueHtml,alignmentTeacherViewHtml} from './handout-alignment.js';
 import {setWriting67Scope} from './master170-writing67.js';
 import {setupSplitPanes} from './split-panes.js';
-import {approvedOutlineVersion,devHandoutUrl,isDevWritingEntry} from './fast-food-dev-entry.js';
+import {approvedOutlineVersion,devHandoutUrl,isDevWritingEntry,linkedHandoutUrl} from './fast-food-dev-entry.js?v=20261111-ic2363';
 import {languageCards} from './language-cards.js';
 import {setupReviewHighlights} from './review-highlights.js';
 import {initialRevisionText,shouldRestoreRevisionBackup} from './revision-draft.js';
@@ -184,12 +184,14 @@ async function openStudent(id, { resultSubmissionId = null, fromDocs = false } =
   if (gen !== generation) return;
   const documentId=new URLSearchParams(location.search).get('documentId');
   let confirmedOutline;
-  if(onlineAccess?.personal&&!state.submission&&isDevWritingEntry(me,id,documentId)){
+  const linked=state.assignment.approvedOutlineRequired===true;
+  if(onlineAccess?.personal&&!state.submission&&(linked||isDevWritingEntry(me,id,documentId))){
     const version=approvedOutlineVersion(documentId);
     if(version!==null)confirmedOutline=await api('/student/assignments/'+encodeURIComponent(id)+'/handout');
     if(gen!==generation)return;
-    if(confirmedOutline?.status!=='ready'||confirmedOutline.assignmentId!==id||confirmedOutline.sourceVersion!==version){
-      location.replace(devHandoutUrl(documentId));
+    if(confirmedOutline?.status!=='ready'||confirmedOutline.assignmentId!==id||confirmedOutline.sourceVersion!==version||
+        (linked&&confirmedOutline.outlineApproved!==true)){
+      location.replace(linked?linkedHandoutUrl(id,documentId):devHandoutUrl(documentId));
       return;
     }
   }
@@ -385,6 +387,7 @@ async function submitDraft() {
     }
     if (!m.pendingSubmit || m.pendingSubmit.draftRevision !== m.baseRevision) m.pendingSubmit = { draftRevision: m.baseRevision,revisionRound:m.revisionRound, idempotencyKey: uid() };
     if(handoutCheckId)m.pendingSubmit.handoutCheckId=handoutCheckId;
+    if(m.kind==='original'&&m.state.assignment.approvedOutlineRequired)m.pendingSubmit.outlineVersion=m.confirmedOutline?.sourceVersion;
     await persist();
     await api('/student/assignments/' + encodeURIComponent(m.id) + (m.kind === 'revision' ? '/revision' : '/submit'), m.pendingSubmit);
     if (gen !== generation || model !== m) return;
@@ -393,7 +396,11 @@ async function submitDraft() {
     if (!compact) notice(m.kind === 'revision' ? 'Đã nhận bản sửa của em.' : 'Đã nhận bài hợp lệ và xếp hàng chấm.');
     await openStudent(m.id);
   } catch (e) {
-    if(['SUBMISSION_INVALID','HANDOUT_CHECK_REQUIRED','HANDOUT_CHECK_STALE'].includes(e.code)&&gen===generation&&model){model.pendingSubmit=null;await persist();}
+    if(['SUBMISSION_INVALID','HANDOUT_CHECK_REQUIRED','HANDOUT_CHECK_STALE','LESSON3_OUTLINE_NOT_CONFIRMED'].includes(e.code)&&gen===generation&&model){model.pendingSubmit=null;await persist();}
+    if(e.code==='LESSON3_OUTLINE_NOT_CONFIRMED'&&gen===generation&&model&&onlineAccess?.personal){
+      location.assign(linkedHandoutUrl(model.id,new URLSearchParams(location.search).get('documentId')));
+      return;
+    }
     if (e.network) e.message = 'Chưa xác nhận được kết quả nộp. Em giữ nguyên nội dung và dùng Cập nhật trạng thái để tra lại biên nhận.';
     throw e;
   } finally { working = false; if (document.contains(button)) button.disabled = false; }
