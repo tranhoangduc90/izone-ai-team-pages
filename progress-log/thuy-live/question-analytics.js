@@ -2,15 +2,20 @@
 import {questionPresentation} from './question-presentation.js?rev=20261022-parity-v1';
 import {questionReview} from './question-review.js?rev=20261030-the17-19-v1';
 const node=(tag,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
+import {createQuestionResponses} from './question-responses.js?rev=20261111-issue590';
 const views=new WeakMap();
-const answerText=value=>Array.isArray(value)?value.map(v=>Array.isArray(v)?v.join(' / '):v).join(' · '):String(value||'');
-export function renderThuyAnalytics(root,analytics,{definition}){
+
+export function clearThuyAnalytics(root){views.get(root)?.responses.clear();}
+export function renderThuyAnalytics(root,analytics,{definition,readResponses}){
   let view=views.get(root);
-  if(!view||!view.header.isConnected){
+  if(!view||!view.header.isConnected||view.assignmentId!==analytics.assignmentId){
+    view?.responses.clear();
     const header=node('div','','thuy-analytics-heading'),summary=node('small'),workspace=node('div','','thuy-question-workspace');
     const navigation=node('div','','thuy-question-list'),detail=node('div','','thuy-question-detail');
-    header.append(node('h2','Tổng quan lớp'));workspace.append(navigation,detail);root.replaceChildren(header,workspace);
-    view={header,summary,navigation,detail,rows:new Map(),groups:new Map(),selected:root.dataset.selectedItem||null};views.set(root,view);
+    const review=node('div'),responses=createQuestionResponses();
+    detail.append(review,responses.section);
+    header.append(node('h2','Tổng quan lớp'),summary);workspace.append(navigation,detail);root.replaceChildren(header,workspace);
+    view={header,summary,navigation,review,responses,assignmentId:analytics.assignmentId,rows:new Map(),groups:new Map(),selected:null};views.set(root,view);
   }
   const summary=`${analytics.submittedCount}/${analytics.rosterCount} học viên có bài nộp hiện hành`;
   if(view.summary.textContent!==summary)view.summary.textContent=summary;
@@ -20,16 +25,22 @@ export function renderThuyAnalytics(root,analytics,{definition}){
   const ids=new Set(items.map(item=>item.itemVersionId));
   for(const [id,row]of view.rows)if(!ids.has(id)){row.choose.remove();row.card.remove();view.rows.delete(id);}
   if(!ids.has(view.selected))view.selected=items[0]?.itemVersionId||null;
-  const choose=id=>{
+  view.choose=(id,open=false)=>{
     view.selected=id;root.dataset.selectedItem=id;
-    const row=view.rows.get(id);if(row&&view.detail.firstElementChild!==row.card)view.detail.replaceChildren(row.card);
-    for(const [key,value]of view.rows)value.choose.setAttribute('aria-pressed',String(key===id));
+    const row=view.rows.get(id);
+    if(row&&view.review.firstElementChild!==row.card)view.review.replaceChildren(row.card);
+    view.responses.select({assignmentId:analytics.assignmentId,formVersionId:analytics.formVersionId,item:row?.item,read:readResponses,open});
+    for(const [key,value]of view.rows){
+      const pressed=String(key===id);
+      if(value.choose.getAttribute('aria-pressed')!==pressed)value.choose.setAttribute('aria-pressed',pressed);
+    }
   };
   for(const [index,item]of items.entries()){
     const source=sourceItems.get(item.itemVersionId)||item,display=questionPresentation(source),number=source.displayNumber||item.position;
     let row=view.rows.get(item.itemVersionId);
     if(!row){const select=node('button','','thuy-question-select');select.type='button';select.dataset.itemId=item.itemVersionId;
-      select.addEventListener('click',()=>choose(item.itemVersionId));row={choose:select,card:node('section','','thuy-question-card')};view.rows.set(item.itemVersionId,row);}
+      select.addEventListener('click',()=>view.choose(item.itemVersionId,true));row={choose:select,card:node('section','','thuy-question-card')};view.rows.set(item.itemVersionId,row);}
+    row.item=item;
     const count=item.counts,wrong=count.incorrect||0,graded=count.graded||0;
     const label=`Câu ${number} · ${display.title}`;
     const state=!item.objective?'Không chấm điểm':wrong?`${wrong}/${graded} học viên đã chấm sai`:graded?'Chưa có học viên trả lời sai':'Chưa có kết quả chấm';
@@ -40,7 +51,8 @@ export function renderThuyAnalytics(root,analytics,{definition}){
     const metadata=[part?.title,skills,type].filter(Boolean).join(' · '),result=state+(item.objective&&percent?' · '+percent:'');
     const navLabel=JSON.stringify([label,metadata,result]);
     if(row.navLabel!==navLabel){const copy=node('span','','thuy-question-copy'),stats=node('span','','thuy-question-stats');copy.append(node('span',label),node('small',metadata));stats.append(node('strong',item.objective&&graded?wrong+'/'+graded+' sai':state),node('small',item.objective&&percent?percent+' sai':''));row.choose.replaceChildren(copy,stats);row.navLabel=navLabel;}
-    const fingerprint=JSON.stringify([item,source]);
+    const {responseVersion,students,...reviewItem}=item;
+    const fingerprint=JSON.stringify([reviewItem,source]);
     if(row.fingerprint!==fingerprint){
       const card=node('section','','thuy-question-card');
       const expectedIds=item.correctOptionIds||[];
@@ -60,6 +72,6 @@ export function renderThuyAnalytics(root,analytics,{definition}){
   }
   for(const child of [...view.navigation.children])if(!desired.includes(child))child.remove();
   for(const [index,child]of desired.entries())if(view.navigation.children[index]!==child)view.navigation.insertBefore(child,view.navigation.children[index]||null);
-  if(view.selected)choose(view.selected);
-  else if(view.detail.textContent!=='Chưa có câu hỏi để thống kê.')view.detail.replaceChildren(node('p','Chưa có câu hỏi để thống kê.','muted'));
+  if(view.selected)view.choose(view.selected);
+  else {view.responses.clear();if(view.review.textContent!=='Chưa có câu hỏi để thống kê.')view.review.replaceChildren(node('p','Chưa có câu hỏi để thống kê.','muted'));}
 }

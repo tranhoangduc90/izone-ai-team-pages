@@ -80,7 +80,7 @@ export function renderThuyRoster(root,{dashboard,liveByStudent,mode='progress',q
   if(searchFocus){input.focus({preventScroll:true});if(input.type!=='search')input.setSelectionRange(caret,caret);}
 }
 
-export function mountThuyTeacherLayout(elements,{onMode,onClass,onHome}){
+export function mountThuyTeacherLayout(elements,{onMode,onClass,onHome,onResultTab=()=>{}}){
   const workspace=document.querySelector('#teacherWorkspace'),side=document.querySelector('.thuy-side .teacher-tabs');
   const priorLabel=elements.assignmentSelect.closest('label'),priorParts=elements.blockControls.closest('section');
   const context=node('section','','thuy-class-context'),pickers=node('div','','thuy-class-pickers'),classes=node('select');classes.id='thuyClassSelect';classes.setAttribute('aria-label','Chọn lớp');classes.addEventListener('change',()=>onClass(classes.value));
@@ -118,9 +118,9 @@ export function mountThuyTeacherLayout(elements,{onMode,onClass,onHome}){
   }
   analytics.setAttribute('role','tabpanel');analytics.setAttribute('aria-labelledby','thuyResultsOverview');results.setAttribute('role','tabpanel');results.setAttribute('aria-labelledby','thuyResultsStudents');
   for(const [key,label,id,panelId]of [['overview','Tổng quan lớp','thuyResultsOverview','classInsightSection'],['students','Nhận xét cá nhân','thuyResultsStudents','thuyStudentResults']]){
-    const tab=node('button',label,'button');tab.id=id;tab.type='button';tab.setAttribute('role','tab');tab.setAttribute('aria-controls',panelId);tab.addEventListener('click',()=>{resultTab=key;applyResultTab();});resultTabs.set(key,tab);resultNav.append(tab);
+    const tab=node('button',label,'button');tab.id=id;tab.type='button';tab.setAttribute('role','tab');tab.setAttribute('aria-controls',panelId);tab.addEventListener('click',()=>{if(resultTab!==key){resultTab=key;applyResultTab();onResultTab();}});resultTabs.set(key,tab);resultNav.append(tab);
   }
-  resultNav.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();resultTab=event.key==='Home'?'overview':event.key==='End'?'students':resultTab==='overview'?'students':'overview';applyResultTab();resultTabs.get(resultTab).focus();});applyResultTab();
+  resultNav.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();resultTab=event.key==='Home'?'overview':event.key==='End'?'students':resultTab==='overview'?'students':'overview';applyResultTab();onResultTab();resultTabs.get(resultTab).focus();});applyResultTab();
   analytics.querySelector('.library-heading').hidden=true;
   analytics.querySelector('.teacher-insight-tabs').hidden=true;
   elements.scoresPanel.hidden=true;elements.insightPanel.hidden=true;
@@ -133,7 +133,7 @@ export function mountThuyTeacherLayout(elements,{onMode,onClass,onHome}){
   for(const text of elements.overviewPanel.querySelectorAll(':scope>p.muted'))text.hidden=true;
   elements.dashboardSummary.remove();
   const count=node('span','','thuy-class-count');pickers.append(count);
-  return {context,classes,home,count,learner,setMode(value){mode=value;applyResultTab();},setPanel(panel){
+  return {context,classes,home,count,learner,showingAnalytics:()=>mode==='results'&&resultTab==='overview',setMode(value){mode=value;applyResultTab();},setPanel(panel){
     context.hidden=['create','classes'].includes(panel);home.classList.toggle('active',panel!=='create');
     document.querySelector('.thuy-breadcrumb').textContent=panel==='create'?'Quản lý bài tập':panel==='classes'?'Quản lý lớp':'Quản lý lớp / '+(classes.selectedOptions[0]?.textContent||'');
   }};

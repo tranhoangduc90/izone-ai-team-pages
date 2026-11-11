@@ -12,8 +12,9 @@ const uid=n=>`b0000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const assignmentId=uid(3),block=uid(4),item=uid(5);
 async function until(check,message,timeout=3000){const start=performance.now();while(performance.now()-start<timeout){if(await check())return;await new Promise(done=>setTimeout(done,40));}assert.fail(message);}
 
-async function fixture({libraryUnavailable=false,liveAllowed=true}={}){
+async function fixture({libraryUnavailable=false,liveAllowed=true,questionResponses=false}={}){
   let count=14,revision=1,unavailable=false,breakNextRead=false,writeCount=0,draftText='Bản đầu';const streams=new Set(),requests=[];
+  const readViews=[];let responseReads=0;
   const students=()=>Array.from({length:17},(_,i)=>({studentRef:uid(100+i),name:`Học viên ${String(i+1).padStart(2,'0')}`,
     submissionId:i<count?uid(200+i):null,checkpoints:i<count?[{blockId:block}]:[],sessionComment:null,portalSync:null}));
   const definition={title:'Phiếu kiểm cập nhật',blocks:[{blockId:block,checkpoint:1,title:'Ôn tập',items:[
@@ -23,8 +24,8 @@ async function fixture({libraryUnavailable=false,liveAllowed=true}={}){
     definition,journeyCommentsEnabled:true,students:students(),blockReleases:[{blockId:block,checkpoint:1,status:'open'}],classInsights:[]});
   const live=()=>({assignmentId,generatedAt:new Date().toISOString(),students:students().map((s,i)=>({studentRef:s.studentRef,attemptId:uid(400+i),draftRevision:revision,
     draftUpdatedAt:new Date().toISOString(),draftResponses:{[item]:'A',[uid(6)]:draftText},finalResponses:{[item]:'A',[uid(6)]:draftText},submissionId:s.submissionId,sessionComment:null}))});
-  const analytics=()=>({assignmentId,submittedCount:count,rosterCount:17,items:definition.blocks[0].items.map((question,i)=>({
-    ...question,objective:i===0,counts:{roster:17,submitted:count,visible:count,hidden:0,unanswered:0,answered:count,graded:i===0?count:0,correct:i===0?count-2:0,incorrect:i===0?2:0},choices:[],students:[]}))});
+  const analytics=()=>({assignmentId,formVersionId:uid(300),submittedCount:count,rosterCount:17,items:definition.blocks[0].items.map((question,i)=>({
+    ...question,responseVersion:'item-'+i+'-count-'+count,objective:i===0,counts:{roster:17,submitted:count,visible:count,hidden:0,unanswered:0,answered:count,graded:i===0?count:0,correct:i===0?count-2:0,incorrect:i===0?2:0},choices:[],students:[]}))});
   const server=createServer(async(req,res)=>{
     const u=new URL(req.url,'http://localhost');
     const json=(data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
@@ -36,6 +37,7 @@ async function fixture({libraryUnavailable=false,liveAllowed=true}={}){
         if(req.method!=='GET')writeCount++;
         if(path.endsWith('/events')){res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store'});res.write(`event: change\ndata: ${JSON.stringify({assignmentId,revision:String(revision)})}\n\n`);streams.add(res);res.on('close',()=>streams.delete(res));return;}
         if(path.endsWith('/live-updates')){
+          const view=u.searchParams.get('view')||'full';readViews.push(view);
           if(breakNextRead){
             const mode=breakNextRead;breakNextRead=false;
             if(mode==='html'){res.writeHead(200,{'Content-Type':'text/html'});res.end('<html>Phản hồi trung gian</html>');return;}
@@ -43,15 +45,24 @@ async function fixture({libraryUnavailable=false,liveAllowed=true}={}){
             res.writeHead(200,{'Content-Type':'application/json','Content-Length':'1000'});
             res.write('{"ok":true,"update":');if(mode!=='stall')setTimeout(()=>res.destroy(),30);return;
           }
-          return unavailable?json({ok:false,message:'Nguồn cập nhật tạm lỗi'},503):json({ok:true,update:{assignmentId,revision:String(revision),generatedAt:new Date().toISOString(),full:true,changes:[],dashboard:dashboard(),live:live(),analytics:analytics()}});
+          return unavailable?json({ok:false,message:'Nguồn cập nhật tạm lỗi'},503):json({ok:true,update:{assignmentId,revision:String(revision),generatedAt:new Date().toISOString(),full:true,changes:[],dashboard:dashboard(),...(view!=='overview'?{live:live()}:{}),...(view!=='roster'?{analytics:analytics()}: {})}});
         }
-        if(path==='/teacher/options')return json({ok:true,reviewer:{name:'Giảng viên mẫu',email:'teacher@example.test'},capabilities:{liveUpdates:true},
+        if(path==='/teacher/options')return json({ok:true,reviewer:{name:'Giảng viên mẫu',email:'teacher@example.test'},capabilities:{liveUpdates:true,questionResponses},
           classes:[{class_id:'1294',class_name:'IC2305',class_status:'on_going'},{class_id:'1252',class_name:'IC2264',class_status:'on_going'},{class_id:'1001',class_name:'Lớp cũ',class_status:'completed'}],
           assignments:[{assignment_id:assignmentId,public_token:assignmentId,class_id:'1294',class_name:'IC2305',session_number:11,title:definition.title,status:'published',live_updates_enabled:liveAllowed}]});
         if(path==='/teacher/dashboard')return json({ok:true,dashboard:dashboard()});
         if(path==='/teacher/live-drafts')return json({ok:true,live:live()});
         if(path==='/teacher/session-comments/editor')return json({ok:true,classId:u.searchParams.get('classId'),studentRef:u.searchParams.get('studentRef'),sessionNumber:Number(u.searchParams.get('sessionNumber')),comment:null,draft:null});
-        if(path.endsWith('/question-analytics'))return json({ok:true,analytics:analytics()});
+        if(path.endsWith('/question-analytics')){readViews.push(u.searchParams.get('view')||'full');return json({ok:true,analytics:analytics()});}
+        if(path.endsWith('/responses')){
+          responseReads++;
+          const target=analytics().items.find(q=>path.endsWith('/'+q.itemVersionId+'/responses'));
+          if(!target)return json({ok:false,error:'QUESTION_NOT_FOUND'},404);
+          const rows=students().filter(s=>s.submissionId).map((s,i)=>({name:s.name,
+            verdict:target.objective?(i<2?'incorrect':'correct'):'ungraded',answerState:'answered',
+            answer:target.objective?(i<2?'A':'B'):'Bài mở thử '+i}));
+          return json({ok:true,detail:{...target,assignmentId,formVersionId:uid(300),options:target.options||[],students:rows}});
+        }
         if(path==='/teacher/question-library')return libraryUnavailable?json({ok:false,message:'Kho câu hỏi đang lỗi'},503):json({ok:true,items:[]});
         if(path==='/teacher/journey-plan')return json({ok:true,plan:{classId:'1294',className:'IC2305',totalSessions:11,highestKnownSession:11,revision:1,testSessionNumbers:[],testSources:[],sessionDates:[]}});
         if(path.endsWith('/management'))return json({ok:true,management:{assignmentId,status:'published',revision:0,submissionWindow:{}}});
@@ -65,10 +76,10 @@ async function fixture({libraryUnavailable=false,liveAllowed=true}={}){
   });
   await new Promise(done=>server.listen(0,'127.0.0.1',done));
   const origin=`http://127.0.0.1:${server.address().port}`;
-  const browser=await chromium.launch({channel:'chrome',headless:true}),context=await browser.newContext({viewport:{width:1440,height:1000},serviceWorkers:'block'}),page=await context.newPage(),errors=[];
+  const browser=await chromium.launch({channel:'chrome',headless:true}).catch(error=>{server.close();throw error;}),context=await browser.newContext({viewport:{width:1440,height:1000},serviceWorkers:'block'}),page=await context.newPage(),errors=[];
   page.setDefaultTimeout(8000);page.on('pageerror',error=>errors.push(error.message));
   await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
-  return {page,origin,requests,errors,get writes(){return writeCount;},advance(value){count=value;revision++;draftText='Bản mới '+value;for(const stream of streams)stream.write(`event: change\ndata: ${JSON.stringify({assignmentId,revision:String(revision)})}\n\n`);},
+  return {page,origin,requests,readViews,errors,get responseReads(){return responseReads;},get writes(){return writeCount;},advance(value){count=value;revision++;draftText='Bản mới '+value;for(const stream of streams)stream.write(`event: change\ndata: ${JSON.stringify({assignmentId,revision:String(revision)})}\n\n`);},
     fail(value){unavailable=value;if(value)for(const stream of streams)stream.destroy();},
     breakNextRead(mode='truncated'){breakNextRead=mode;},
     async close(){await context.close();await browser.close();for(const stream of streams)stream.destroy();server.closeAllConnections();await new Promise(done=>server.close(done));}};
@@ -171,3 +182,46 @@ test('Cổng chung: vào danh sách đúng quyền, không đợi kho câu hỏi
     if(process.env.THUY_EVIDENCE_DIR){await f.page.setViewportSize({width:390,height:844});await f.page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'live-mobile.png'),fullPage:true});}
   }finally{await f.close();}
 });
+
+for(const liveAllowed of [true,false]){
+  test('590: Tổng quan tải từng câu và giữ vùng đọc qua cập nhật, live='+liveAllowed,{timeout:35000},async()=>{
+    const f=await fixture({questionResponses:true,liveAllowed});
+    try{
+      await f.page.goto(f.origin+'/progress-log/teacher-thuy.html#assignment='+assignmentId);
+      await f.page.locator('.thuy-roster tbody tr').first().waitFor();
+      assert.equal(f.responseReads,0);
+      const from=f.requests.length;
+      await f.page.locator('[data-thuy-mode=results]').click();
+      await f.page.getByRole('button',{name:'Xem câu trả lời',exact:true}).waitFor();
+      assert.equal(f.responseReads,0);
+      assert.ok(f.readViews.includes(liveAllowed?'overview':'summary'));
+      assert.ok(!f.requests.slice(from).includes('/teacher/live-drafts'));
+      await f.page.getByRole('button',{name:'Xem câu trả lời',exact:true}).click();
+      const table=f.page.locator('.thuy-responses-table');
+      await table.waitFor();
+      assert.equal(await table.locator('tbody tr').count(),14);
+      await f.page.getByRole('button',{name:'Sai 2',exact:true}).click();
+      assert.equal(await table.locator('tbody tr').count(),2);
+      await table.evaluate(el=>{window.savedResponseTable=el;el.focus();});
+      for(let i=0;i<3;i++){
+        const readCount=f.readViews.length;
+        await f.page.locator('#refreshDashboardButton').evaluate(el=>el.click());
+        await until(()=>f.readViews.length>readCount,'Refresh không đọc thống kê');
+        await f.page.waitForTimeout(130);
+      }
+      assert.equal(f.responseReads,1);
+      assert.equal(await table.evaluate(el=>el===window.savedResponseTable&&el===document.activeElement),true);
+      f.advance(15);
+      if(!liveAllowed)await f.page.locator('#refreshDashboardButton').click();
+      await until(()=>f.responseReads===2,'Không đọc lại câu khi bài nộp đổi');
+      await until(async()=>(await f.page.locator('.thuy-responses-status').textContent()).includes('15 đã chấm'),'Số liệu mới chưa khớp');
+      assert.equal(await table.locator('tbody tr').count(),2);
+      await f.page.locator('.thuy-question-select').filter({hasText:'Điều em đã học'}).click();
+      await table.getByText('Bài mở thử 0',{exact:true}).waitFor();
+      assert.equal(await table.locator('th').count(),2);
+      await f.page.setViewportSize({width:390,height:840});
+      assert.equal(await table.evaluate(el=>el.getBoundingClientRect().right<=innerWidth),true);
+      assert.deepEqual(f.errors,[]);
+    }finally{await f.close();}
+  });
+}
