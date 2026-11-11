@@ -9,7 +9,7 @@ export const relationMessages={
 
 const heading=(title,number,description)=>`<div class="group-header"><div><span class="group-number" aria-hidden="true">${number}</span><h2>${title}</h2><p>${description}</p></div></div>`;
 
-export function outlineSections(state,{field,comments,statusLabels}){
+export function outlineSections(state,{field,comments,statusLabels,canContinueWriting=false}){
  const stance=`<section class="section-group" id="position">${heading('Quan điểm của cả bài',1,'Chọn hướng bạn muốn bảo vệ trước khi Check từng thân bài.')}
  <div class="answer-card"><label for="field-stance">Bạn nghĩ sao về nhận định cấm hoàn toàn fast food là giải pháp duy nhất?</label>
  <select id="field-stance" data-field="stance"><option value="">Chọn quan điểm…</option>${Object.entries(OUTLINE_DIRECTIONS).map(([value,label])=>`<option value="${value}" ${state.responses.stance===value?'selected':''}>${label}</option>`).join('')}</select>
@@ -26,7 +26,8 @@ export function outlineSections(state,{field,comments,statusLabels}){
  }).join('');
  const relation=outlineRelation(state);
  const actions=relation==='order'?'<div class="section-actions"><button class="primary" data-outline-swap>Đổi chỗ hai thân bài</button><span>Chuyển cả thông điệp, hai idea và kết quả Check của mỗi đoạn.</span></div>'
-  :relation==='stance'?'<div class="field-grid section-actions"><div><button class="secondary" data-outline-focus="stance">Đổi quan điểm của cả bài</button><p class="instruction">Nếu hai thân bài đã nói đúng điều bạn muốn nói.</p></div><div><button class="secondary" data-outline-focus="body2_topicSentence">Giữ quan điểm, sửa Thân bài 2</button><p class="instruction">Nếu bạn vẫn muốn giữ lựa chọn ở đầu bài. Sửa đoạn rồi Check lại.</p></div></div>':'';
+  :relation==='stance'?'<div class="field-grid section-actions"><div><button class="secondary" data-outline-focus="stance">Đổi quan điểm của cả bài</button><p class="instruction">Nếu hai thân bài đã nói đúng điều bạn muốn nói.</p></div><div><button class="secondary" data-outline-focus="body2_topicSentence">Giữ quan điểm, sửa Thân bài 2</button><p class="instruction">Nếu bạn vẫn muốn giữ lựa chọn ở đầu bài. Sửa đoạn rồi Check lại.</p></div></div>'
+  :canContinueWriting&&relation==='passed'?'<div class="section-actions"><button type="button" class="primary" data-continue-writing>Viết mở bài →</button></div>':'';
  return stance+bodies+`<section class="answer-card" id="relation"><p class="kicker">KẾT QUẢ CHUNG</p><h2 id="relation-title" tabindex="-1">Đối chiếu hai thân bài</h2><p role="status">${relationMessages[relation]}</p>${actions}</section>`;
 }
 
