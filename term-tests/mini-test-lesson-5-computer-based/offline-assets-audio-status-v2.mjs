@@ -201,7 +201,7 @@ export const ASSET_HASHES={
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-test-2-computer-based/audio-loader-audio-status-v1.js": "a7399bba30177f98a291033678c0cd4d41909b5ea499c162f1b15a4b9c0eead3",
-  "../term-test-2-computer-based/bootstrap-audio-status-v2.js": "76a4b0ef3a3e26400c3a51e3fe1450a4bb8730588e589afef439eaedfc184df3",
+  "../term-test-2-computer-based/bootstrap-audio-status-v2.js": "129dded9216b6e1f3b9999e133c215ce839778a495c0d62f53af78974ef9f4c8",
   "../term-test-2-computer-based/enhance.js": "b2fa19b00fb7f2615207a4b3a03deb8baae8d258a8d2abec26be39d3b3fc7883",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
@@ -212,4 +212,4 @@ export const ASSET_HASHES={
   "offline-worker-audio-status-v2.js": "be14749850abdb2a519b1e44efd201386adb171378a71c938ad2fc098d319c00",
   "resilience-audio-status-v2.mjs": "7c74293a558505055148bb239607dffc83a0883459084c7ec45489368cf5d964"
 };
-export const ASSET_BUILD_ID="044232bdc138667d0fef161655e231aa6558b63ea680c0192d1810be92759c66";
+export const ASSET_BUILD_ID="eefe0e23545510cacbd12c2080affafed496c14610f9b3a25bfb1e13b184e594";

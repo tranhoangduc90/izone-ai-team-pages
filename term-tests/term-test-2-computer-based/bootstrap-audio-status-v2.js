@@ -809,10 +809,13 @@
     const student = roster.find(item => item.ref === studentRef);
     if (!student || preparing) return;
     preparing = true;
-    if ((retry || !elements.bootstrapRetry.hidden) && elements.bootstrapNotice.classList.contains('error')) {
-      elements.bootstrapNotice.hidden = true;
-      elements.bootstrapNotice.textContent = '';
-      elements.bootstrapNotice.classList.remove('error');
+    if (retry || !elements.bootstrapRetry.hidden) {
+      elements.bootstrapRetry.hidden = true;
+      if (elements.bootstrapNotice.classList.contains('error')) {
+        elements.bootstrapNotice.hidden = true;
+        elements.bootstrapNotice.textContent = '';
+        elements.bootstrapNotice.classList.remove('error');
+      }
     }
     const preparationStatus = beginAudioDownloadStatus(elements.bootstrapDownloadStatus,
       elements.bootstrapDownloadProgress, {formatBytes, retry, preparing:true});
