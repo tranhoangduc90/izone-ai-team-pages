@@ -15,7 +15,7 @@ export function frontendConfiguration(config,location=globalThis.location){
   if(config.mode==='local'){if(location.hostname!=='127.0.0.1')throw Error('Bản local không được mở như đăng nhập online.');return {mode:'local',apiBase:new URL('./api',location.href).href};}
   let api;try{api=new URL(config.apiBase);}catch{throw Error('Chưa cấu hình API Homework online.');}
   if((api.protocol!=='https:'&&!(api.protocol==='http:'&&api.hostname==='127.0.0.1'&&location.hostname==='127.0.0.1'))||api.username||api.password||api.search||api.hash||!api.pathname.endsWith('/api'))throw Error('API Homework online chưa đúng phạm vi.');
-  return {mode:'online',studentEntry:config.studentEntry===true,apiBase:api.href.replace(/\/$/,''),ssoScript:new URL(config.ssoScript||'../shared/teacher-single-sign-on.js',location.href).href};
+  return {mode:'online',studentEntry:config.studentEntry===true,studentEntryMemory:config.studentEntryMemory,apiBase:api.href.replace(/\/$/,''),ssoScript:new URL(config.ssoScript||'../shared/teacher-single-sign-on.js',location.href).href};
 }
 export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=>{},onReady=()=>{}}={}){
   const query=new URLSearchParams(location.search);let context=query.has('documentId')?{documentId:query.get('documentId'),assignmentId:query.get('assignment')}:null;
@@ -25,6 +25,22 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
   const storageKey='homework-writing:session:v1:'+config.apiBase,memory=createStudentIdentityMemory();
   const course=createCourseStudentIdentity({product:'homework-writing',entry:'workspace',memory,requestIdentity:input=>raw('/access/identity/resolve',input)});
   const teacherIntent=()=>intent!=='student';
+  // The DEV class label is not an ERP class code. Keep its verified selection
+  // within the DEV origin/API scope; a local value never authenticates a user.
+  const scopedMemoryKey=storageKey+':verified-owner';
+  const scopedIdentity=id=>config.studentEntry&&config.studentEntryMemory==='scoped'&&id;
+  function matchesRemembered(id){
+    if(scopedIdentity(id)){
+      return scopedRemembered()===id.ownerId;
+    }
+    const saved=memory.read();
+    return saved.status==='ok'&&saved.identity.id===id?.erpId;
+  }
+  function scopedRemembered(){try{return localStorage.getItem(scopedMemoryKey);}catch{return null;}}
+  function rememberScoped(id){
+    try{localStorage.setItem(scopedMemoryKey,id.ownerId);}
+    catch{onWarning('Đã vào đúng bài; chưa lưu được tên cho lần sau.');}
+  }
   const requiresAssignedTeacher=()=>intent==='teacher'&&query.get('workspace')==='k67'&&query.has('submission');
   function headers(){return {...(!teacherIntent()?{'X-HW-Student':'1'}:{}),...(!teacherIntent()&&token?{Authorization:'Bearer '+token}:{}),...(!teacherIntent()&&context?{'X-HW-Document':context.documentId,'X-HW-Assignment':context.assignmentId}:{})};}
   async function raw(route,body,method=body===undefined?'GET':'POST'){
@@ -59,7 +75,8 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
       entry=(await raw('/access/entry?'+new URLSearchParams(context))).entry;if(stamp!==epoch)throw changed();
       if(entry.documentId!==context.documentId||entry.assignmentId!==context.assignmentId||entry.studentRef!==value.identity.ownerId||entry.classId!==value.identity.courseId)throw Error('Google chưa khớp chủ link Docs.');
     }
-    if(remember){const prepared=course.prepare(value.identity.ownerId,value.identity.className);const result=await course.commit(prepared);if(stamp!==epoch)throw changed();if(!['ok','empty'].includes(result.status))onWarning('Đã vào đúng bài; chưa cập nhật được mã ghi nhớ trên trình duyệt.');}
+    if(remember&&scopedIdentity(value.identity))rememberScoped(value.identity);
+    else if(remember){const prepared=course.prepare(value.identity.ownerId,value.identity.className);const result=await course.commit(prepared);if(stamp!==epoch)throw changed();if(!['ok','empty'].includes(result.status))onWarning('Đã vào đúng bài; chưa cập nhật được mã ghi nhớ trên trình duyệt.');}
     course.pin(value.identity.ownerId,{classRef:value.identity.courseId});const u=new URL(location.href);if(u.searchParams.has('fresh')){u.searchParams.delete('fresh');try{history.replaceState(history.state,'',u);}catch{}}return rememberSession(value,value.identity);
   }
   async function open(root,{forceChoose=false}={}){
@@ -77,8 +94,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
         const value=await raw('/access/student/restore',{});
         if(stamp!==epoch)throw changed();
         if(config.studentEntry){
-          const saved=memory.read();
-          if(value.choiceRequired||saved.status!=='ok'||saved.identity.id!==value.identity?.erpId)
+          if(value.choiceRequired||!matchesRemembered(value.identity))
             return chooseStudent(root,stamp,value);
         }
         if(value.choiceRequired)return studentGoogle(root,stamp,{choices:value.choices,restore:true});
@@ -118,6 +134,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
       const picker=mountStudentEntry(root,{
         personal:!!context,
         rememberedDifferent:row=>{
+          if(scopedIdentity(row)){const stored=scopedRemembered();return stored&&stored!==row.studentRef;}
           const stored=memory.read();
           return stored.status==='ok'&&row.erpId&&stored.identity.id!==row.erpId;
         },
@@ -193,7 +210,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
     });
   }
   function showError(root,error){if(error.stale)return;root.innerHTML='<div class="login-layout compact-login"><section class="card login-card"><h1>Chưa mở được Homework</h1>'+roleField()+'<p role="alert">'+esc(error.message)+'</p><button id="access-retry" class="primary">Thử lại</button></section></div>';roleListener(root,()=>{});root.querySelector('#access-retry').onclick=()=>void open(root).then(session=>onReady(session,epoch)).catch(e=>showError(root,e));}
-  async function afterLogout(){const before=active;if(before?.person.role==='student'){const current=memory.read();if(current.identity?.id===before.identity?.erpId){const forgotten=await course.forget();if(forgotten.status!=='empty')onWarning('Đã đăng xuất Homework; chưa xóa được mã đã nhớ trên thiết bị.');}try{sessionStorage.removeItem(storageKey);}catch{}}else try{localStorage.setItem('izone:teacher-sso-logout',String(Date.now()));}catch{}invalidate();const u=routeUrl(context?{assignment:context.assignmentId}:{});u.searchParams.set('fresh','1');history.replaceState(history.state,'',u);}
+  async function afterLogout(){const before=active;if(before?.person.role==='student'){const current=memory.read();if(current.identity?.id===before.identity?.erpId){const forgotten=await course.forget();if(forgotten.status!=='empty')onWarning('Đã đăng xuất Homework; chưa xóa được mã đã nhớ trên thiết bị.');}try{sessionStorage.removeItem(storageKey);}catch{}if(scopedIdentity(before.identity)){try{localStorage.removeItem(scopedMemoryKey);}catch{}}}else try{localStorage.setItem('izone:teacher-sso-logout',String(Date.now()));}catch{}invalidate();const u=routeUrl(context?{assignment:context.assignmentId}:{});u.searchParams.set('fresh','1');history.replaceState(history.state,'',u);}
   memory.subscribe(record=>{if(active?.person.role==='student'&&record.identity?.id!==active.identity?.erpId)onWarning('Mã người học đã nhớ ở tab khác vừa đổi. Tab này vẫn giữ đúng người đang làm bài.');});
   addEventListener('storage',event=>{if(active&&teacherIntent()&&['izone:teacher-sso-login','izone:teacher-sso-logout'].includes(event.key))void onTeacherChanged();});
   return {open,headers,routeUrl,invalidate,afterLogout,showError,workspace,stamp:()=>epoch,isCurrent:stamp=>stamp===epoch,get personal(){return !!context;},get intent(){return intent;}};
