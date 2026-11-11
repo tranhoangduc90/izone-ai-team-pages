@@ -1,5 +1,6 @@
 import {createCourseStudentIdentity} from './identity/course-student-identity.js';
 import {createStudentIdentityMemory} from './identity/student-identity.js';
+import {mountStudentEntry} from './student-entry.js?v=20261111-student-entry';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const changed=()=>Object.assign(Error('Người hoặc bài đang mở đã đổi. Chưa dùng phản hồi cũ.'),{stale:true,handled:true});
@@ -14,7 +15,7 @@ export function frontendConfiguration(config,location=globalThis.location){
   if(config.mode==='local'){if(location.hostname!=='127.0.0.1')throw Error('Bản local không được mở như đăng nhập online.');return {mode:'local',apiBase:new URL('./api',location.href).href};}
   let api;try{api=new URL(config.apiBase);}catch{throw Error('Chưa cấu hình API Homework online.');}
   if((api.protocol!=='https:'&&!(api.protocol==='http:'&&api.hostname==='127.0.0.1'&&location.hostname==='127.0.0.1'))||api.username||api.password||api.search||api.hash||!api.pathname.endsWith('/api'))throw Error('API Homework online chưa đúng phạm vi.');
-  return {mode:'online',apiBase:api.href.replace(/\/$/,''),ssoScript:new URL(config.ssoScript||'../shared/teacher-single-sign-on.js',location.href).href};
+  return {mode:'online',studentEntry:config.studentEntry===true,apiBase:api.href.replace(/\/$/,''),ssoScript:new URL(config.ssoScript||'../shared/teacher-single-sign-on.js',location.href).href};
 }
 export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=>{},onReady=()=>{}}={}){
   const query=new URLSearchParams(location.search);let context=query.has('documentId')?{documentId:query.get('documentId'),assignmentId:query.get('assignment')}:null;
@@ -59,7 +60,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
       if(entry.documentId!==context.documentId||entry.assignmentId!==context.assignmentId||entry.studentRef!==value.identity.ownerId||entry.classId!==value.identity.courseId)throw Error('Google chưa khớp chủ link Docs.');
     }
     if(remember){const prepared=course.prepare(value.identity.ownerId,value.identity.className);const result=await course.commit(prepared);if(stamp!==epoch)throw changed();if(!['ok','empty'].includes(result.status))onWarning('Đã vào đúng bài; chưa cập nhật được mã ghi nhớ trên trình duyệt.');}
-    course.pin(value.identity.ownerId,{classRef:value.identity.courseId});const u=new URL(location.href);u.searchParams.delete('fresh');history.replaceState(history.state,'',u);return rememberSession(value,value.identity);
+    course.pin(value.identity.ownerId,{classRef:value.identity.courseId});const u=new URL(location.href);if(u.searchParams.has('fresh')){u.searchParams.delete('fresh');try{history.replaceState(history.state,'',u);}catch{}}return rememberSession(value,value.identity);
   }
   async function open(root,{forceChoose=false}={}){
     invalidate();const stamp=epoch;root.innerHTML='<p class="loading" role="status">Đang kiểm tra quyền vào Homework…</p>';
@@ -72,10 +73,20 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
       token=saved.token;try{const session=await raw('/session');if(stamp!==epoch)throw changed();if(session.person?.role!=='student'||session.person.id!==saved.person?.id)throw Object.assign(Error('Phiên chưa đúng người đã ghim.'),{status:401});return completeStudent({...session,token,identity:saved.identity},stamp);}catch(e){token='';if(![401,403].includes(e.status))throw e;rejected=true;}
     }
     if(!fresh&&!rejected){
-      try{const value=await raw('/access/student/restore',{});if(stamp!==epoch)throw changed();if(value.choiceRequired)return studentGoogle(root,stamp,{choices:value.choices,restore:true});return completeStudent(value,stamp);}
+      try{
+        const value=await raw('/access/student/restore',{});
+        if(stamp!==epoch)throw changed();
+        if(config.studentEntry){
+          const saved=memory.read();
+          if(value.choiceRequired||saved.status!=='ok'||saved.identity.id!==value.identity?.erpId)
+            return chooseStudent(root,stamp,value);
+        }
+        if(value.choiceRequired)return studentGoogle(root,stamp,{choices:value.choices,restore:true});
+        return completeStudent(value,stamp);
+      }
       catch(e){if(![401,403].includes(e.status))throw e;}
     }
-    return studentGoogle(root,stamp);
+    return config.studentEntry ? chooseStudent(root,stamp) : studentGoogle(root,stamp);
   }
   const roleField=()=>'<label class="field"><span>Vai trò</span><select id="online-role"><option value="student">Học viên</option><option value="teacher">Giảng viên</option><option value="operator">Vận hành</option></select></label>';
   function roleListener(root,reject){const input=root.querySelector('#online-role');input.value=intent;input.onchange=()=>{intent=input.value;invalidate();const u=routeUrl(context?{assignment:context.assignmentId}:{});history.replaceState(history.state,'',u);reject(changed());void open(root).then(session=>onReady(session,epoch)).catch(e=>{if(!e.stale)showError(root,e);});};}
@@ -98,6 +109,70 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
         window.google.accounts.id.initialize({client_id:publicConfig.googleClientId,nonce:challenge.nonce,callback:async value=>{if(stamp!==epoch||busy)return;credential=value.credential;restore=false;profiles.innerHTML='';await submit();}});
         window.google.accounts.id.renderButton(root.querySelector('#google-login'),{theme:'outline',size:'large',text:'signin_with'});
       })().catch(e=>{if(stamp===epoch)error.textContent=e.message;});
+    });
+  }
+  function chooseStudent(root,stamp,initial){
+    return new Promise((resolve,reject)=>{
+      pendingReject=reject;
+      let ready=initial,credential='';
+      const picker=mountStudentEntry(root,{
+        personal:!!context,
+        rememberedDifferent:row=>{
+          const stored=memory.read();
+          return stored.status==='ok'&&row.erpId&&stored.identity.id!==row.erpId;
+        },
+        onTeacher:()=>location.assign(teacherUrl()),
+        onChange:()=>{void open(root,{forceChoose:true}).then(session=>onReady(session,epoch)).catch(e=>showError(root,e));},
+        onChoose:row=>run(async()=>{
+          const selection={classId:row.classId,studentRef:row.studentRef};
+          const value=ready?.choiceRequired
+            ? await raw(credential?'/access/student/login':'/access/student/restore',{...selection,...(credential?{credential}:{})})
+            : ready;
+          if(value?.identity?.ownerId!==row.studentRef||value.identity.courseId!==row.classId)
+            throw Error('Phiên Homework chưa khớp tên đã chọn. Hãy mở lại từ Docs của bạn.');
+          const session=await completeStudent(value,stamp,{remember:true});
+          credential='';pendingReject=null;resolve(session);
+        })
+      });
+      const error=root.querySelector('#online-error');
+      function teacherUrl(){
+        const u=new URL(location.href);
+        u.searchParams.set('mode','teacher');
+        return u;
+      }
+      function display(value){
+        if(stamp!==epoch)return;
+        ready=value;
+        if(value.choiceRequired){picker.profiles(value.choices);return;}
+        const id=value.identity;
+        if(!id?.ownerId||!id?.courseId||!id?.name||!id?.className||value.person?.role!=='student')
+          throw Error('Chưa nhận được hồ sơ Homework hợp lệ.');
+        picker.profiles([{classId:id.courseId,classCode:id.className,studentRef:id.ownerId,name:id.name,erpId:id.erpId}]);
+      }
+      let busy=false;
+      async function run(action){
+        if(busy||stamp!==epoch)return;
+        busy=true;error.textContent='';picker.setBusy(true);
+        try{await action();}
+        catch(e){
+          if(stamp!==epoch)return;
+          error.textContent=e.code==='GOOGLE_OWNER_MISMATCH'
+            ? 'Chưa xác nhận được tên cho tài khoản Google này. Dùng đúng tài khoản chủ Docs; nếu vẫn thiếu tên, nhờ giảng viên kiểm tra liên kết ERP và Classroom.'
+            : e.message;
+        }finally{busy=false;if(stamp===epoch)picker.setBusy(false);}
+      }
+      if(initial){try{display(initial);}catch(e){error.textContent=e.message;}return;}
+      void run(async()=>{
+        if(!publicConfig.googleClientId)throw Error('Chưa cấu hình xác minh Google cho Homework.');
+        const challenge=await raw('/access/student/challenge',{});
+        if(stamp!==epoch)return;
+        if(!window.google?.accounts?.id)await script('https://accounts.google.com/gsi/client');
+        if(stamp!==epoch)return;
+        window.google.accounts.id.initialize({client_id:publicConfig.googleClientId,nonce:challenge.nonce,callback:value=>{
+          void run(async()=>{credential=value.credential;display(await raw('/access/student/login',{credential}));});
+        }});
+        window.google.accounts.id.renderButton(root.querySelector('#google-login'),{theme:'outline',size:'large',text:'signin_with'});
+      });
     });
   }
   async function sdk(){const u=new URL(config.ssoScript);if(u.origin!==location.origin)throw Error('Script phiên dùng chung chưa đúng nguồn Pages.');if(!window.IzoneTeacherSso)await script(u.href,{izoneTeacherProduct:'homeworkwriting'});if(!window.IzoneTeacherSso?.restore)throw Error('Chưa nạp được consumer Homework vào phiên dùng chung.');return window.IzoneTeacherSso;}
