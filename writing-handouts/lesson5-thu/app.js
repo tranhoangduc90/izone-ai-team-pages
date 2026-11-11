@@ -161,10 +161,12 @@ async function confirmWritingHandoff(){
  writingHandoffInFlight=true;button.disabled=true;error.hidden=true;
  try{
   if(!await flush()||epoch!==generation||outlineRelation(state)!=='passed')throw Error('OUTLINE_NOT_READY');
-  const result=await api.handoff(state.ref,{baseVersion:state.version});
+  const approvedVersion=state.version;
+  const result=await api.handoff(state.ref,{baseVersion:approvedVersion});
   if(epoch!==generation)return;
   if(result.url!==writingHandoff.writingUrl)throw Error('HANDOFF_TARGET_CHANGED');
-  acknowledgedWriting='handout-writing-ack:'+state.ref+':'+state.version;
+  writingHandoff.rememberVersion?.(approvedVersion);
+  acknowledgedWriting='handout-writing-ack:'+state.ref+':'+approvedVersion;
   try{sessionStorage.setItem(acknowledgedWriting,'1');}catch{}
   location.assign(result.url);
  }catch{

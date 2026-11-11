@@ -1,5 +1,6 @@
 import runtime from '../../homework-writing/runtime-config.js';
 import {frontendConfiguration,createOnlineAccess} from '../../homework-writing/online-access.js';
+import {rememberApprovedOutline} from '../../homework-writing/fast-food-dev-entry.js';
 
 const root=document.getElementById('lesson-access');
 const config=frontendConfiguration(runtime);
@@ -23,9 +24,11 @@ async function boot(){
       headers.set('X-Homework-Authorization',access.headers().Authorization);
       return fetch(url,{...options,headers});
     };
-    globalThis.handout67WritingHandoff=Object.freeze({apiBase,request,writingUrl:writing.href});
+    globalThis.handout67WritingHandoff=Object.freeze({
+      apiBase,request,writingUrl:writing.href,rememberVersion:version=>rememberApprovedOutline(documentId,version)
+    });
     document.getElementById('lesson-access-style')?.remove();
-    await import('../shared/loader.mjs?v=20261111-dev-handoff');
+    await import('../shared/loader.mjs?v=20261111-dev-docs-entry');
   }
   await enter(await access.open(root));
 }
