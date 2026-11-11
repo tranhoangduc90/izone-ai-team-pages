@@ -4,13 +4,14 @@
 const localPreview=['127.0.0.1','localhost'].includes(location.hostname)&&['3199','3211'].includes(location.port);
 import {lessonEntryClass} from './test-class-entry.mjs?v=20261102-lesson-scope-v1';
 import {installTeacherEntry} from '../../shared/teacher-entry.js?v=20261019-v1';
-const apiBase=localPreview?location.origin+'/api/handout67/v1':'https://ducizone.ddns.net/api/handout67/v1';
+const handoff=globalThis.handout67WritingHandoff;
+const apiBase=handoff?.apiBase||(localPreview?location.origin+'/api/handout67/v1':'https://ducizone.ddns.net/api/handout67/v1');
 if(localPreview)globalThis.handout67ApiBase=apiBase;
 async function boot(){
  const activity=document.body.dataset.activity,view=document.body.dataset.view;
  try{
   if(!/^lesson[1-9]\d*$/.test(activity)||!['student','teacher'].includes(view))throw new Error('ROUTE_INVALID');
-  const [response,template]=await Promise.all([fetch(apiBase+'/lessons/'+encodeURIComponent(activity),{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)}),fetch(new URL('./'+view+'.html?v=20261026-startup2',import.meta.url),{redirect:'error',signal:AbortSignal.timeout(15000)})]);
+  const [response,template]=await Promise.all([(handoff?.request||fetch)(apiBase+'/lessons/'+encodeURIComponent(activity),{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)}),fetch(new URL('./'+view+'.html?v=20261026-startup2',import.meta.url),{redirect:'error',signal:AbortSignal.timeout(15000)})]);
   const value=await response.json();
   if(!response.ok||!value.ok||value.lesson?.activity!==activity||!template.ok)throw new Error('LESSON_UNAVAILABLE');
   const lesson=value.lesson;
@@ -19,7 +20,7 @@ async function boot(){
   if(entryClass)document.body.dataset.classRef=entryClass;
   document.body.innerHTML=await template.text();
   if(view==='student'&&activity==='lesson15')document.querySelector('[data-lesson-text="classLesson"]')?.remove();
-  if(view==='student')installTeacherEntry({product:'handout67',teacherPath:'./teacher.html',context:{class:entryClass},hosts:[document.querySelector('.topbar')]});
+  if(view==='student')installTeacherEntry({product:'handout67',teacherPath:handoff?'../lesson3/teacher.html':'./teacher.html',context:{class:entryClass},hosts:[document.querySelector('.topbar')]});
   if(lesson.workflowMode==='whole-chain-v1'&&view==='student'){
    document.querySelector('.login-description').textContent='Giải thích vì sao người ta theo thời trang. Nhập cả A–X–B và Check chung từng ý.';
    document.querySelector('.journey h2').textContent='Thân bài 1 · WHY';document.querySelector('.lesson-tag').textContent='Thân bài 1';
@@ -52,7 +53,7 @@ async function boot(){
   for(const el of document.querySelectorAll('[data-lesson-text]'))el.textContent=texts[el.dataset.lessonText];
   document.querySelector('[data-lesson-brand]')?.setAttribute('aria-label','IZONE Writing Lesson '+lesson.number);
   document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':'Lesson '+lesson.number+' · Writing · IZONE';
-  await import(view==='teacher'?'../lesson5/teacher.js?v=20261109-l3-v1&startup=20261026-v2':'../lesson5-thu/app.js?v=20261109-l3-v1&check=20261101-v1&poll=20261104-v1');
+  await import(view==='teacher'?'../lesson5/teacher.js?v=20261109-l3-v1&startup=20261026-v2':(handoff?'../lesson5-thu/app.js?v=20261111-dev-handoff':'../lesson5-thu/app.js?v=20261109-l3-v1&check=20261101-v1&poll=20261104-v1'));
  }catch{
   document.body.textContent='Chưa mở được bài học. Hãy tải lại trang khi kết nối ổn định; bài đã lưu vẫn được giữ.';
  }

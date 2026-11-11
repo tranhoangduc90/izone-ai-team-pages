@@ -1,12 +1,12 @@
 import {createCheckFeedback,missingCheckFields} from '../../shared/writing-check-feedback.mjs?v=20261101-v1';
 import {createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs?v=20261109-l3-v1';
-import {createClient} from './client.mjs?v=20261109-l3-v1&poll=20261104-v1';
+import {createClient} from './client.mjs?v=20261111-dev-handoff';
 import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261109-l3-v1';
 import {savedContent,threadsView,approvalLabel,installStyles} from './features.mjs?v=20261007-1';
 import {workflowFor,isWhole,isMulti,isPrepared,isOpinion,isDiscussion,planFields,solutionsFor,AGREEMENT_LEVELS,requiredFields,preparationError,bodyView,bodyKey,bodyIndexOf,localKey} from '../shared/workflow.mjs?v=20261109-l3-v1';
 import {renderMultiBodies,multiJourney} from '../shared/multi-body-ui.mjs?v=20261109-l3-v1';
-import {outlineSections,outlineJourney} from '../shared/body-outline-ui.mjs?v=20261109-l3-v1';
-import {isBodyOutline,validOutlineDirection} from '../shared/workflow.mjs?v=20261109-l3-v1';
+import {outlineSections,outlineJourney} from '../shared/body-outline-ui.mjs?v=20261111-dev-handoff';
+import {isBodyOutline,outlineRelation,validOutlineDirection} from '../shared/workflow.mjs?v=20261109-l3-v1';
 import {wholeSections} from '../shared/whole-chain-ui.mjs';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../../shared/course-student-identity.js?v=20261018-identity-v1';
 import {patchReadingView} from '../../shared/reading-view.mjs?v=20261027-v1';
@@ -16,7 +16,8 @@ installStyles();
 // Backend quyết định khóa/mở bước. Lỗi mạng giữ nháp; lỗi hai tab yêu cầu đọc bản mới.
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const api=createClient(globalThis.handout67ApiBase||'https://ducizone.ddns.net/api/handout67/v1');
+const writingHandoff=globalThis.handout67WritingHandoff;
+const api=createClient(writingHandoff?.apiBase||globalThis.handout67ApiBase||'https://ducizone.ddns.net/api/handout67/v1',writingHandoff?.request);
 let lesson=globalThis.handout67Lesson||{activity:'lesson5'};
 const courseIdentity=createCourseStudentIdentity({product:'handout67',entry:lesson.activity,requestIdentity:requestMappingStudentIdentity});
 const {order:ORDER,fields:FIELDS}=workflowFor(lesson);
@@ -103,7 +104,7 @@ function render(){
   const openSteps=[...document.querySelectorAll('details.prior-step[open]')].map(d=>d.id);
   const historyStates=new Map([...document.querySelectorAll('details.comment.history[data-history]')].map(d=>[d.dataset.history,d.open]));
   if(outline){
-   renderRegion('sections',outlineSections(state,{field,comments,statusLabels}));
+   renderRegion('sections',outlineSections(state,{field,comments,statusLabels,canContinueWriting:!!writingHandoff}));
    renderRegion('journey-nav',outlineJourney(state));
    $('completion').hidden=true;
   }else if(isMulti(lesson)){
@@ -126,6 +127,51 @@ function render(){
   for(const id of openSteps)if($(id))$(id).open=true;
   for(const item of document.querySelectorAll('details.comment.history[data-history]'))if(historyStates.has(item.dataset.history))item.open=historyStates.get(item.dataset.history);
   checkFeedback.sync(state.responses,state.ref);
+  syncWritingPrompt();
+}
+let writingPrompt,acknowledgedWriting,writingHandoffInFlight=false;
+function syncWritingPrompt(force=false){
+ if(!outline||!writingHandoff)return;
+ const ready=state.ref&&outlineRelation(state)==='passed'&&!Object.keys(dirty).length&&!conflict;
+ if(!ready){
+  if(writingPrompt?.open&&!writingHandoffInFlight)writingPrompt.close();
+  return;
+ }
+ const key='handout-writing-ack:'+state.ref+':'+state.version;
+ let acknowledged=acknowledgedWriting===key;
+ try{acknowledged||=sessionStorage.getItem(key)==='1';}catch{}
+ if(!force&&acknowledged)return;
+ if(!writingPrompt){
+  writingPrompt=document.createElement('dialog');
+  writingPrompt.className='outline-writing-prompt';
+  writingPrompt.setAttribute('aria-labelledby','outline-writing-prompt-title');
+  writingPrompt.innerHTML='<h2 id="outline-writing-prompt-title">Nội dung 2 thân bài đã đạt chuẩn. Hãy viết mở bài dựa trên các nội dung này.</h2><p role="alert" hidden></p><button type="button" class="primary" autofocus>Xác nhận</button>';
+  writingPrompt.addEventListener('cancel',event=>event.preventDefault());
+  writingPrompt.querySelector('button').addEventListener('click',confirmWritingHandoff);
+  document.body.append(writingPrompt);
+ }
+ if(!writingPrompt.open){
+  writingPrompt.querySelector('[role="alert"]').hidden=true;
+  writingPrompt.showModal();
+ }
+}
+async function confirmWritingHandoff(){
+ if(writingHandoffInFlight)return;
+ const epoch=generation,button=writingPrompt.querySelector('button'),error=writingPrompt.querySelector('[role="alert"]');
+ writingHandoffInFlight=true;button.disabled=true;error.hidden=true;
+ try{
+  if(!await flush()||epoch!==generation||outlineRelation(state)!=='passed')throw Error('OUTLINE_NOT_READY');
+  const result=await api.handoff(state.ref,{baseVersion:state.version});
+  if(epoch!==generation)return;
+  if(result.url!==writingHandoff.writingUrl)throw Error('HANDOFF_TARGET_CHANGED');
+  acknowledgedWriting='handout-writing-ack:'+state.ref+':'+state.version;
+  try{sessionStorage.setItem(acknowledgedWriting,'1');}catch{}
+  location.assign(result.url);
+ }catch{
+  if(epoch!==generation)return;
+  error.textContent='Chưa mở được màn viết. Hãy bấm Xác nhận để thử lại.';
+  error.hidden=false;
+ }finally{writingHandoffInFlight=false;button.disabled=false;}
 }
 function hasReplyDraft(){return [...document.querySelectorAll('[data-thread-reply] textarea')].some(el=>el.value.trim());}
 function revealThreads(refs){
@@ -309,6 +355,7 @@ $('workspace').addEventListener('click',async event=>{
   const input=$('field-'+button.dataset.outlineFocus);
   input?.focus({preventScroll:true});input?.scrollIntoView({block:'center'});return;
  }
+ if(writingHandoff&&outline&&button.hasAttribute('data-continue-writing')){syncWritingPrompt(true);return;}
  const swap=outline&&button.hasAttribute('data-outline-swap');
  const key=button.dataset.check;
  const next=button.id==='next-idea'||!!button.id?.endsWith('_next-idea'),bodyIndex=isMulti(lesson)?bodyIndexOf(key||button.id)||Number(button.closest('[data-body-index]')?.dataset.bodyIndex)||undefined:undefined;
