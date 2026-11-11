@@ -1,6 +1,6 @@
 import {createCourseStudentIdentity} from './identity/course-student-identity.js';
 import {createStudentIdentityMemory} from './identity/student-identity.js';
-import {mountStudentEntry} from './student-entry.js?v=20261111-student-entry';
+import {mountStudentEntry} from './student-entry.js?v=20261111-self-match';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const changed=()=>Object.assign(Error('Người hoặc bài đang mở đã đổi. Chưa dùng phản hồi cũ.'),{stale:true,handled:true});
@@ -25,6 +25,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
   const storageKey='homework-writing:session:v1:'+config.apiBase,memory=createStudentIdentityMemory();
   const course=createCourseStudentIdentity({product:'homework-writing',entry:'workspace',memory,requestIdentity:input=>raw('/access/identity/resolve',input)});
   const teacherIntent=()=>intent!=='student';
+  const entryPicker=()=>config.studentEntry||Boolean(context&&publicConfig?.selfMatchAssignment===context.assignmentId);
   // The DEV class label is not an ERP class code. Keep its verified selection
   // within the DEV origin/API scope; a local value never authenticates a user.
   const scopedMemoryKey=storageKey+':verified-owner';
@@ -93,7 +94,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
       try{
         const value=await raw('/access/student/restore',{});
         if(stamp!==epoch)throw changed();
-        if(config.studentEntry){
+        if(entryPicker()){
           if(value.choiceRequired||!matchesRemembered(value.identity))
             return chooseStudent(root,stamp,value);
         }
@@ -102,7 +103,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
       }
       catch(e){if(![401,403].includes(e.status))throw e;}
     }
-    return config.studentEntry ? chooseStudent(root,stamp) : studentGoogle(root,stamp);
+    return entryPicker() ? chooseStudent(root,stamp) : studentGoogle(root,stamp);
   }
   const roleField=()=>'<label class="field"><span>Vai trò</span><select id="online-role"><option value="student">Học viên</option><option value="teacher">Giảng viên</option><option value="operator">Vận hành</option></select></label>';
   function roleListener(root,reject){const input=root.querySelector('#online-role');input.value=intent;input.onchange=()=>{intent=input.value;invalidate();const u=routeUrl(context?{assignment:context.assignmentId}:{});history.replaceState(history.state,'',u);reject(changed());void open(root).then(session=>onReady(session,epoch)).catch(e=>{if(!e.stale)showError(root,e);});};}
@@ -141,7 +142,8 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
         onTeacher:()=>location.assign(teacherUrl()),
         onChange:()=>{void open(root,{forceChoose:true}).then(session=>onReady(session,epoch)).catch(e=>showError(root,e));},
         onChoose:row=>run(async()=>{
-          const selection={classId:row.classId,studentRef:row.studentRef};
+          const selection={classId:row.classId,studentRef:row.studentRef,
+            ...(ready?.selfMatch?{selfMatchToken:ready.selfMatch.token}:{})};
           const value=ready?.choiceRequired
             ? await raw(credential?'/access/student/login':'/access/student/restore',{...selection,...(credential?{credential}:{})})
             : ready;
@@ -160,7 +162,12 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
       function display(value){
         if(stamp!==epoch)return;
         ready=value;
-        if(value.choiceRequired){picker.profiles(value.choices);return;}
+        if(value.choiceRequired){
+          const match=value.selfMatch;
+          if(match&&(!/^[\w-]{43}$/.test(match.token)||typeof match.account!=='string'||match.account.length>320))
+            throw Error('Phản hồi xác nhận hồ sơ chưa hợp lệ.');
+          picker.profiles(value.choices,match);return;
+        }
         const id=value.identity;
         if(!id?.ownerId||!id?.courseId||!id?.name||!id?.className||value.person?.role!=='student')
           throw Error('Chưa nhận được hồ sơ Homework hợp lệ.');
