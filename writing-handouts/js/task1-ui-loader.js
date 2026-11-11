@@ -6,7 +6,7 @@ if(!globalThis.__IZONE_SW_TASK2_REDIRECTING__){
   // Local templates and style are mounted only for the six approved Task 1 slugs.
   // Document URL, API config, manifest, identity and IndexedDB remain unchanged.
   try{
-   const source=new URL('../task1-ui/'+route.role+'.html',import.meta.url),response=await fetch(source,{cache:'no-cache'});
+   const source=new URL('../task1-ui/'+route.role+'.html?roster=20261111-v1',import.meta.url),response=await fetch(source,{cache:'no-cache'});
    if(!response.ok)throw new Error('Chưa tải được giao diện Task 1. Hãy tải lại trang.');
    const page=new DOMParser().parseFromString(await response.text(),'text/html');
    const styles=[...page.querySelectorAll('link[rel="stylesheet"]')].map(link=>{const copy=link.cloneNode();copy.href=new URL(link.getAttribute('href'),source);return copy;});
@@ -18,7 +18,7 @@ if(!globalThis.__IZONE_SW_TASK2_REDIRECTING__){
    document.body.replaceChildren(...page.body.childNodes);
    document.body.dataset.task1Ui='20261025-rollout1';
    const brand=document.querySelector('.brand');if(brand){const home=new URL(route.role==='teacher'?'./teacher.html':'./index.html',location.href);home.search=location.search;brand.href=home.href;}
-   await import(route.role==='teacher'?'./task1-ui-teacher.js?v=20261025-rollout2&startup=20261026-v2&reading=20261027-v1':'./task1-ui-app.js?v=20261025-rollout2&startup=20261026-v2&reading=20261027-v1');
+   await import(route.role==='teacher'?'./task1-ui-teacher.js?v=20261025-rollout2&startup=20261026-v2&reading=20261027-v1&roster=20261111-v1':'./task1-ui-app.js?v=20261025-rollout2&startup=20261026-v2&reading=20261027-v1&roster=20261111-v1');
   }catch(error){const note=document.createElement('p');note.className='notice';note.setAttribute('role','alert');note.textContent=error.message;document.body.prepend(note);}
  }
 }
