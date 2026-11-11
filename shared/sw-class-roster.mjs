@@ -54,7 +54,7 @@ function deliveryText(member) {
   const targets = member.delivery.flatMap(item => item.targets);
   const ready = targets.filter(target => target.status === 'ready').length;
   if (!targets.length) return 'Bài này đã sẵn sàng.';
-  if (member.delivery.length < 2 || ready < targets.length) return `Đã có ở ${ready}/${targets.length} bài đã kiểm. Đang đồng bộ.`;
+  if (ready < targets.length) return `Đã có ở ${ready}/${targets.length} bài đã kiểm. Đang đồng bộ.`;
   return `Đã xác nhận ${ready} bài.`;
 }
 
