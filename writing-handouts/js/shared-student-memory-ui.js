@@ -5,7 +5,8 @@ import { createCourseStudentIdentity, requestMappingStudentIdentity } from '../.
 // Mã tạm giữ PIN riêng; nháp/phiên/Check vẫn do app sở hữu theo activity–lớp–người.
 export function installStudentMemory(options) {
   const { roster, form, classSelect, studentSelect, refreshStudents, refreshAccessCode,
-    resetIdentityFields = () => {}, resumeButton, workspace, workspaceActions, beforeSwitch, notice } = options;
+    resetIdentityFields = () => {}, resumeButton, workspace, workspaceActions, beforeSwitch, notice,
+    skipInitialRestore = false } = options;
   const groups = rosterGroups(roster), query = new URLSearchParams(location.search);
   const entry = roster.activity?.slug || query.get('task') || location.pathname;
   const identity = createCourseStudentIdentity({ product: 'writing-handout', entry, requestIdentity: requestMappingStudentIdentity });
@@ -29,8 +30,9 @@ export function installStudentMemory(options) {
   function sync() {
     const { student } = selection();
     const temporary = Boolean(student && !officialStudent(student)) || Boolean(form.querySelector('[id$="provisional-panel"]:not([hidden])'));
-    checkbox.disabled = temporary || identity.read().status === 'unavailable';
-    status.textContent = temporary ? 'Hồ sơ tạm giữ mã 4 số, chưa được nhớ sang bài khác.'
+    checkbox.disabled = temporary || student?.classManaged || identity.read().status === 'unavailable';
+    status.textContent = student?.classManaged ? 'Hồ sơ do giảng viên thêm dùng liên kết để xác nhận trên thiết bị này.'
+      : temporary ? 'Hồ sơ tạm giữ mã 4 số, chưa được nhớ sang bài khác.'
       : 'Lần sau trình duyệt tự nhận bạn và mở đúng bài. Bỏ tick nếu dùng máy chung.';
   }
   function choose(group, student) {
@@ -52,7 +54,7 @@ export function installStudentMemory(options) {
       if (version !== selectionGeneration || busy || activeStudentRef) return;
       if (resolved.status !== 'unique') { sync(); return; }
       const candidates = groups.filter(g => !requested || classMatches(g, requested)).flatMap(group =>
-        group.students.filter(officialStudent).flatMap(student => resolved.aliases
+        group.students.filter(student => !student.classManaged && officialStudent(student)).flatMap(student => resolved.aliases
           .filter(alias => alias.studentRef === studentRefOf(student)).map(alias => ({ group, student, alias }))));
       const matches = classSelect.value ? candidates.filter(c => classRefOf(c.group) === classSelect.value) : candidates;
       if (matches.length !== 1) {
@@ -90,7 +92,7 @@ export function installStudentMemory(options) {
     if (matches.length === 1) { classSelect.value = classRefOf(matches[0]); refreshStudents(); } }
   sync();
   // Chờ caller nhận controller trước khi submit tự động để vẫn đi qua khóa mở phiên.
-  const ready = Promise.resolve().then(applyMemory);
+  const ready = skipInitialRestore ? Promise.resolve() : Promise.resolve().then(applyMemory);
   return {
     ready, refresh: sync,
     begin() {
@@ -107,7 +109,7 @@ export function installStudentMemory(options) {
       const { group, student } = selection();
       if (classRefOf(group || {}) !== opened.classRef || studentRefOf(student || {}) !== opened.studentRef) throw new Error('Phiên chưa khớp lớp và người đã chọn.');
       activeStudentRef = opened.studentRef;
-      if (!pinned) await identity.commit(context, { automatic: Boolean(automatic), remember }).then(result => {
+      if (!pinned && !student.classManaged) await identity.commit(context, { automatic: Boolean(automatic), remember }).then(result => {
         if (!['ok', 'empty'].includes(result.status)) notice('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.');
       }).catch(() => notice('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.'));
       identity.pin(opened.studentRef, { classRef: opened.classRef });

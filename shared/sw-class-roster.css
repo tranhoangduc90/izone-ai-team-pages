@@ -1,0 +1,25 @@
+.sw-roster-dialog {
+  color: #142136;
+  background: #fff;
+  border: 1px solid #cfd7e3;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  width: min(36rem, calc(100vw - 2rem));
+  max-height: 85vh;
+}
+.sw-roster-dialog::backdrop { background: rgb(20 33 54 / 45%); }
+.sw-roster-dialog header, .sw-roster-dialog form:not([hidden]), .sw-roster-dialog li {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.sw-roster-dialog header h2 { margin: 0; }
+.sw-roster-dialog form label { flex: 1 1 14rem; }
+.sw-roster-dialog form input { display: block; width: 100%; }
+.sw-roster-dialog button { min-height: 2.5rem; }
+.sw-roster-dialog ul { margin: 1rem 0 0; padding: 0; }
+.sw-roster-dialog li { align-items: center; padding: .5rem 0; border-top: 1px solid #dbe2ec; }
+.sw-roster-dialog li details { flex-basis: 100%; }
+.sw-roster-dialog a { display: inline-block; margin: 0 .5rem .5rem 0; color: #9d1727; }

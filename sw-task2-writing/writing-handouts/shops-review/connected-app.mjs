@@ -9,6 +9,7 @@ import {renderActivityDetail} from '../lesson5/activity-ui.mjs';
 import {renderGoogleLogin} from './teacher-google.mjs?startup=20261026-v2';
 import {readLegacyDraft} from './legacy-draft.mjs';
 import {patchReadingView} from '../../../shared/reading-view.mjs?v=20261027-draft-reading-v1';
+import {createSwRosterDialog,redeemSwRosterLink} from '../../../shared/sw-class-roster.mjs?v=20261111-v1';
 installStyles();
 const root=document.querySelector('#app'),teacher=document.body.dataset.view==='teacher',$=s=>root.querySelector(s);
 const checkFeedback=createCheckFeedback({root,serverField});let checkingRef=null;
@@ -24,7 +25,31 @@ let notice='',filter='all',query='',order='recent',detailOpen=false,editor=null,
 const id=()=>crypto.randomUUID();
 const apiBase=window.IZONE_SHOPS?.apiBase||'/api/v1/';
 const entry=new URL(location.href).searchParams;let requestedClass=null;
+let rosterPermissions={},rosterDialog;
 function indexPeople(){PEOPLE.splice(0,PEOPLE.length,...classes.flatMap(c=>c.students.map(p=>({id:p.studentRef,name:p.displayAlias||p.alias||p.displayName,classRef:c.classRef,classCode:c.className,scenario:'fresh',requiresAccessCode:!!p.requiresAccessCode}))));}
+function personForClass(group){
+ return PEOPLE.find(p=>p.classRef===group.classRef)||{id:null,name:'',classRef:group.classRef,classCode:group.className};
+}
+function rosterTarget(){
+ return {activitySlug:ACTIVITY,classRef:person?.classRef,classLabel:person?.classCode,generation};
+}
+function rosterIsCurrent(target){return loggedIn&&target.generation===generation&&target.classRef===person?.classRef;}
+function openRoster(){
+ const path='admin/activities/'+encodeURIComponent(ACTIVITY)+'/class-members';
+ rosterDialog ||= createSwRosterDialog({
+  list:({classRef})=>api(path+'?classRef='+encodeURIComponent(classRef)),
+  add:({classRef},body)=>api(path,'POST',{...body,classRef}),
+  reissue:({classRef},body)=>api(path+'/invitation','POST',{...body,classRef}),
+  isCurrent:rosterIsCurrent,
+  refresh:async target=>{
+   const data=await api('admin/activities/'+encodeURIComponent(ACTIVITY)+'/roster');
+   if(!rosterIsCurrent(target))return;
+   classes=data.classes;rosterPermissions=data.permissions||{};indexPeople();
+   await loadTeacher();
+  },
+ });
+ return rosterDialog.open(rosterTarget());
+}
 function authMessage(error){return error.status===403?'Tài khoản Google chưa có quyền xem lớp hoặc bài này.':error.status===401?'Chưa xác minh được phiên Google. Hãy đăng nhập lại.':error.status>=500?'Dịch vụ đăng nhập đang gián đoạn. Lời đang soạn được giữ; bạn có thể thử lại.':error.message;}
 async function api(path,method='GET',body){
  const response=await fetch(apiBase+path,{method,credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
@@ -55,6 +80,10 @@ function draw({background=false}={}){
  if(!teacher&&s&&legacyDraft?.sessionRef===current.sessionRef)$('#notice').insertAdjacentHTML('afterend','<section class="answer-card" id="legacy-draft-notice"><h2>Bản nháp từ giao diện cũ</h2><p>Tìm thấy bản gõ khác trên thiết bị này. Xem và chọn trước khi dùng; bản gốc vẫn được giữ.</p><button class="secondary" data-action="legacy-compare">Xem hai bản nháp</button></section>');
  if(teacher&&!loggedIn&&teacherAuth==='signedOut')void renderGoogleLogin($('#google-signin'),{onCredential:async credential=>{const epoch=generation;await fetch('https://ducizone.ddns.net/shops-writing-api/api/v1/auth/session',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:JSON.stringify({credential})}).then(r=>{if(!r.ok)throw Error('Chưa xác minh được Google.');});if(epoch===generation)await setupTeacher();},onError:error=>message(authMessage(error))}).catch(error=>message(authMessage(error)));
  if(teacher&&loggedIn)view.querySelector('.teacher-heading .teacher-actions')?.insertAdjacentHTML('beforeend','<button class="secondary" data-export-csv>Xuất CSV</button><button class="secondary" data-action="teacher-logout">Đăng xuất chung</button>');
+ if(teacher&&loggedIn)$('#teacher-class')?.replaceChildren(...classes.map(group=>new Option(
+  group.className,group.className,group.classRef===person.classRef,group.classRef===person.classRef
+ )));
+ if(teacher&&loggedIn&&rosterPermissions.swClassRoster)view.querySelector('.teacher-heading .teacher-actions')?.insertAdjacentHTML('beforeend','<button class="secondary" data-action="open-class-roster">'+(rosterPermissions.swClassRosterAdds?'Thêm học viên':'Học viên đã thêm')+'</button>');
  for(const el of view.querySelectorAll('details')){const key=owner+':'+detailsKey(el,view);if(openDetails.has(key))el.open=openDetails.get(key);}
  renderedOwner=owner;
  if(s&&(s.raw?.ui?.version==='legacy-v1'||s.raw?.previewReadOnly)){
@@ -318,7 +347,7 @@ root.addEventListener('change',e=>{
   responses.body_choice=el.value;dirty=true;cache();draw();
  }
  if(el.id==='status-filter'){filter=el.value;draw();}if(el.id==='order'){order=el.value;draw();}
- if(el.id==='teacher-class'){const p=PEOPLE.find(p=>p.classCode===el.value);if(p){const previous=person,epoch=++generation;person=p;detailOpen=false;current=null;void loadTeacher().catch(e=>{if(epoch!==generation)return;if([401,403].includes(e.status)){invalidateTeacher(authMessage(e));return;}person=previous;draw();message(e.message);});}}
+ if(el.id==='teacher-class'){const group=classes.find(c=>c.className===el.value);if(group){rosterDialog?.close();const previous=person,epoch=++generation;person=personForClass(group);detailOpen=false;current=null;void loadTeacher().catch(e=>{if(epoch!==generation)return;if([401,403].includes(e.status)){invalidateTeacher(authMessage(e));return;}person=previous;draw();message(e.message);});}}
  if(el.id==='comment-field')composer={personId:person.id,field:el.value,quote:''};
  if(el.id==='teacher-permission')$('#attest-submit').disabled=!el.checked;
 });
@@ -350,6 +379,7 @@ root.addEventListener('click',async e=>{
   if(b.dataset.commentField){composer={personId:person.id,field:b.dataset.commentField,quote:''};draw();$('#comment-body').focus();return;}
   if(b.dataset.threadStatus){const t=threads.find(t=>t.threadRef===b.dataset.threadStatus);await api('admin/teacher-comments/'+t.threadRef+'/status','POST',{status:t.status==='addressed'?'open':'addressed',requestId:id()});await refresh();draw();return;}
   const a=b.dataset.action;
+  if(a==='open-class-roster'){await openRoster();return;}
   if(a==='show-provisional'){if(registrationBusy)return;if(!$('#identity-class').value){message('Hãy chọn lớp trước.');$('#identity-class').focus();return;}const form=$('#provisional-form');form.hidden=!form.hidden;b.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden)$('#provisional-name').focus();return;}
   if(a==='cancel-provisional'){if(registrationBusy)return;resetRegistration();$('[data-action="show-provisional"]').focus();return;}
   if(a==='confirm-identity'){const chosen=pendingIdentity;if(!chosen)throw Error('Hãy chọn lại tên của bạn.');rememberStudent=chosen.remember;await openPerson(chosen.p,chosen.accessCode);return;}
@@ -438,18 +468,27 @@ async function boot(){
  const query=entry.get('class')?.trim();if(query&&!teacher){requestedClass=classes.find(c=>[c.classRef,c.className].some(v=>v.toLowerCase()===query.toLowerCase()));if(!requestedClass)throw Error('Không tìm thấy lớp trong đường link này. Chưa mở bài.');if(!teacher)classes=[requestedClass];}
  indexPeople();if(!teacher&&entry.has('student')&&!PEOPLE.some(p=>p.id===entry.get('student')&&(!requestedClass||p.classRef===requestedClass.classRef)))throw Error('Học viên trong link không thuộc lớp đã chọn. Chưa mở bài.');
  if(teacher){await restoreTeacher();}
- else{let remembered;try{remembered=JSON.parse(localStorage.getItem(namespace+'identity')||'null');if(!remembered&&ACTIVITY==='writing-task2-public-health-ban')remembered=JSON.parse(localStorage.getItem('izone:shops-writing:production:identity')||'null');}catch{}
+ else{try{
+   const claimed=await redeemSwRosterLink(body=>api('activities/'+encodeURIComponent(ACTIVITY)+'/class-members/claim','POST',body));
+   if(claimed){
+    const p=PEOPLE.find(p=>p.id===claimed.studentRef&&p.classRef===claimed.classRef);
+    if(!p)throw Error('Chưa tìm thấy hồ sơ vừa xác nhận trong bài này.');
+    await openPerson(p);return;
+   }
+  }catch(error){draw();fillPeople();message(error.message);return;}
+  let remembered;try{remembered=JSON.parse(localStorage.getItem(namespace+'identity')||'null');if(!remembered&&ACTIVITY==='writing-task2-public-health-ban')remembered=JSON.parse(localStorage.getItem('izone:shops-writing:production:identity')||'null');}catch{}
   const p=PEOPLE.find(p=>p.id===remembered?.id&&p.classRef===remembered?.classRef&&(!entry.has('student')||p.id===entry.get('student')));if(p&&(!p.requiresAccessCode||remembered.sessionRef))await openPerson(p,undefined,remembered.sessionRef);else{draw();fillPeople();}}
 }
 async function setupTeacher(){
  const epoch=generation,access=await api('admin/me');if(epoch!==generation)return;
- classes=(await api('admin/activities/'+ACTIVITY+'/roster')).classes;
+ const data=await api('admin/activities/'+ACTIVITY+'/roster');if(epoch!==generation)return;
+ classes=data.classes;rosterPermissions=data.permissions||{};
+ if(access.reviewer.role!=='admin'){const allowed=new Set(access.classes.map(c=>c.classCode));classes=classes.filter(c=>allowed.has(c.className));}
  const queryClass=entry.get('class')?.trim();requestedClass=queryClass?classes.find(c=>[c.classRef,c.className].some(v=>v.toLowerCase()===queryClass.toLowerCase())):null;
  if(queryClass&&!requestedClass)throw Error('Không tìm thấy lớp có quyền trong đường link.');
  indexPeople();
- if(access.reviewer.role!=='admin'){const allowed=new Set(access.classes.map(c=>c.classCode));PEOPLE.splice(0,PEOPLE.length,...PEOPLE.filter(p=>allowed.has(p.classCode)));}
- if(!PEOPLE.length)throw Error('Tài khoản giảng viên chưa có lớp được phân công.');
- let selected=entry.has('student')?PEOPLE.find(p=>p.id===entry.get('student')):requestedClass?PEOPLE.find(p=>p.classRef===requestedClass.classRef):PEOPLE[0];
+ if(!classes.length)throw Error('Tài khoản giảng viên chưa có lớp được phân công.');
+ let selected=entry.has('student')?PEOPLE.find(p=>p.id===entry.get('student')):personForClass(requestedClass||classes[0]);
  let linked;
  if(entry.has('session')){linked=(await api('admin/lesson9/sessions/'+encodeURIComponent(entry.get('session')))).session;if(linked.activitySlug!==ACTIVITY||requestedClass&&linked.classRef!==requestedClass.classRef)throw Error('Bài trong link không thuộc đúng đề/lớp.');selected=PEOPLE.find(p=>p.id===linked.studentRef&&p.classRef===linked.classRef);}
  if(epoch!==generation)return;if(!selected)throw Error('Tài khoản chưa có quyền lớp hoặc học viên trong đường link.');
@@ -460,6 +499,6 @@ async function setupTeacher(){
  }
  startPoll();
 }
-function invalidateTeacher(text){teacherAuth='signedOut';if(composer&&person)composers.set(person.id,composer);loggedIn=false;detailOpen=false;current=null;threads=[];generation++;clearTimeout(pollTimer);draw();message(text);}
+function invalidateTeacher(text){rosterDialog?.close();rosterPermissions={};teacherAuth='signedOut';if(composer&&person)composers.set(person.id,composer);loggedIn=false;detailOpen=false;current=null;threads=[];generation++;clearTimeout(pollTimer);draw();message(text);}
 window.addEventListener('storage',event=>{if(teacher&&['izone:teacher-sso-logout'].includes(event.key))invalidateTeacher('Phiên đã đăng xuất ở tab khác. Lời đang soạn được giữ.');});
 boot().catch(error=>{root.innerHTML=top()+banner()+'<main><h1>Chưa mở được handout</h1><p role="alert">'+esc(error.message)+'</p><button data-action="reload">Thử lại</button></main>';});

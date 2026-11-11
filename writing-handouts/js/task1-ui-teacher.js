@@ -1,5 +1,6 @@
 import {createTeacherAuthState} from "../../shared/teacher-auth-state.js?v=20261026-startup1";
-import { createTeacherApi } from "./task1-ui-api.js?rev=20260920-server-session-v1&startup=20261026-v2";
+import { createTeacherApi } from "./task1-ui-api.js?rev=20260920-server-session-v1&startup=20261026-v2&roster=20261111-v1";
+import { createSwRosterDialog } from "../../shared/sw-class-roster.mjs?v=20261111-v1";
 import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, safeLmsUrl } from "./core.js?v=20260921-draft-result-v1";
 import { sectionDefinitions } from "./lesson-core.js";
@@ -22,6 +23,23 @@ import {markReadingRegion,updateReadingRoot} from './task1-ui-reading.js?v=20261
 const state = { authenticated: false, api: null, sessionClient: null, manifest: null, activitySlug: "", students: [], pollTimer: null,
   selectedStudent: null, detailRequestId: 0, focusSection: "", pending: [], canManage: false, draftResults: new Map(),
   requestedClass: "", classQueryResolved: false, classQueryError: "", reconciliationSearches: new Map(), loginGeneration: 0 };
+let rosterDialog;
+
+function rosterTarget() {
+  const select = $("teacher-class");
+  const classLabel = select.selectedOptions[0]?.textContent || "";
+  return { activitySlug: state.activitySlug, classRef: select.value, classLabel, loginGeneration: state.loginGeneration };
+}
+
+function openRoster() {
+  rosterDialog ||= createSwRosterDialog({
+    list: state.api.classMembers, add: state.api.addClassMember, reissue: state.api.reissueClassMember,
+    refresh,
+    isCurrent: scope => state.authenticated && scope.loginGeneration === state.loginGeneration &&
+      scope.classRef === $("teacher-class").value,
+  });
+  return rosterDialog.open(rosterTarget());
+}
 
 function teacherDefinitions() {
   const dynamic = sectionDefinitions(state.manifest);
@@ -58,11 +76,11 @@ function formatTime(value) {
   return value ? new Date(value).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "Chưa có";
 }
 
-function populateClasses(students) {
+function populateClasses(students, availableClasses = []) {
   const select = $("teacher-class");
   const current = select.value;
   const existing = new Set([...select.options].map((option) => option.value));
-  const classes = new Map(students.map((student) => [student.classRef, student.className]));
+  const classes = new Map([...availableClasses, ...students].map(item => [item.classRef, item.className]));
   for (const [classRef, className] of classes) {
     if (existing.has(classRef)) continue;
     const option = document.createElement("option"); option.value = classRef; option.textContent = className; select.append(option);
@@ -511,14 +529,14 @@ async function refresh() {
   try {
     const selectedClassRef = $("teacher-class").value;
     const result = await state.api.liveActivity(state.activitySlug, selectedClassRef);
-    const pendingResult = await state.api.provisionalStudents(state.activitySlug, $("teacher-class").value);
+    const pendingResult = await state.api.provisionalStudents(state.activitySlug, selectedClassRef);
     const identityResult = await state.api.identity();
-    if (loginGeneration !== state.loginGeneration) return;
+    if (loginGeneration !== state.loginGeneration || selectedClassRef !== $("teacher-class").value) return;
     state.students = result.data.students || [];
     state.canManage = result.data.permissions?.canManage === true;
     state.canReopen = identityResult.data.reviewer?.canManage === true;
     state.pending = pendingResult.data.students || [];
-    const classes = populateClasses(state.students);
+    const classes = populateClasses(state.students, result.data.classes);
     if (!state.classQueryResolved) {
       const classRef = resolveClassRef(classes, state.requestedClass);
       if (state.requestedClass && !classRef) {
@@ -538,6 +556,10 @@ async function refresh() {
     renderSummary(state.students);
     renderStudents(state.students);
     renderReconciliation();
+    const rosterButton = $("sw-roster-open");
+    const selected = rosterTarget();
+    rosterButton.hidden = !result.data.permissions?.swClassRoster || !selected.classRef || !selected.classLabel.startsWith("CS.");
+    rosterButton.textContent = result.data.permissions?.swClassRosterAdds ? "Thêm học viên" : "Học viên đã thêm";
     $("teacher-login").hidden = true;authView.ready();
     $("teacher-dashboard").hidden = false;
     $("teacher-updated").textContent = `Cập nhật lúc ${formatTime(result.data.generatedAt)}`;
@@ -627,9 +649,11 @@ async function init() {
     $("teacher-title").textContent = state.manifest.activity?.title || "Theo dõi bài làm";
     installTeacherTools(()=>renderStudents(state.students)); $("review-refresh").onclick=()=>refresh();
     $("teacher-class").addEventListener("change", () => {
+      rosterDialog?.close();
       state.classQueryError = "";
       void refresh();
     });
+    $("sw-roster-open").addEventListener("click", () => void openRoster());
     $("teacher-export").addEventListener("click", async () => {
       const button = $("teacher-export"); if (button.disabled) return; button.disabled = true;
       try { const blob = await state.api.exportProgress(state.activitySlug, $("teacher-class").value); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${state.activitySlug}-progress.csv`; link.click(); URL.revokeObjectURL(url); }
@@ -668,6 +692,7 @@ async function init() {
 }
 
 function clearTeacherLogin() {
+  rosterDialog?.close();
   if(googleClientId)void ensureGoogle().catch(error=>showLoginError(error.message));
   state.loginGeneration += 1;
   state.authenticated = false;

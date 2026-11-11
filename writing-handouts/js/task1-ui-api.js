@@ -30,15 +30,17 @@ function jsonOptions(method, body, headers = {}, keepalive = false) {
 }
 
 /** API adapter: all backend-specific paths and request mappings belong in this file. */
-export function createApi(base = "") {
+export function createApi(base = "", { classRoster = false } = {}) {
   const root = endpoint(base, "api/v1/");
+  const studentFetch = (url, options) => fetchJson(url, classRoster ? { ...options, credentials: "include" } : options);
   return {
     roster: (slug) => fetchJson(endpoint(root, `activities/${encodeURIComponent(slug)}/roster`)),
+    claimClassMember: (slug, body) => studentFetch(endpoint(root, `activities/${encodeURIComponent(slug)}/class-members/claim`), jsonOptions("POST", body, { "X-Izone-Csrf": "1" })),
     registerProvisional: (activitySlug, classRef, displayName, pin, duplicateConfirmed = false, requestId = createRequestId()) => fetchJson(endpoint(root, `activities/${encodeURIComponent(activitySlug)}/provisional-students`), jsonOptions("POST", { classRef, displayName, pin, duplicateConfirmed, requestId })),
-    createSession: (activitySlug, classRef, studentRef, accessCode) => fetchJson(endpoint(root, "sessions"), jsonOptions("POST", { activitySlug, classRef, studentRef, ...(accessCode ? { accessCode } : {}), requestId: createRequestId() })),
-    session: (sessionRef) => fetchJson(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}`)),
-    draftResult: (sessionRef) => fetchJson(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/draft-result`)),
-    saveDraft: (sessionRef, progress, keepalive = false) => fetchJson(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/draft`), jsonOptions("PUT", {
+    createSession: (activitySlug, classRef, studentRef, accessCode) => studentFetch(endpoint(root, "sessions"), jsonOptions("POST", { activitySlug, classRef, studentRef, ...(accessCode ? { accessCode } : {}), requestId: createRequestId() })),
+    session: (sessionRef) => studentFetch(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}`)),
+    draftResult: (sessionRef) => studentFetch(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/draft-result`)),
+    saveDraft: (sessionRef, progress, keepalive = false) => studentFetch(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/draft`), jsonOptions("PUT", {
       baseVersion: progress.revision,
       overview: progress.texts.overview,
       body1: progress.texts.body1,
@@ -48,16 +50,16 @@ export function createApi(base = "") {
       draft2Unlocked: progress.draft2Unlocked,
       requestId: createRequestId(),
     }, progress.revision == null ? {} : { "if-match": String(progress.revision) }, keepalive)),
-    checkSection: (sessionRef, section, snapshot, revision) => fetchJson(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/checks`), jsonOptions("POST", {
+    checkSection: (sessionRef, section, snapshot, revision) => studentFetch(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/checks`), jsonOptions("POST", {
       section,
       requestId: createRequestId(),
       snapshot,
     }, revision == null ? {} : { "if-match": String(revision) })),
-    attempt: (attemptRef, etag) => fetchJson(endpoint(root, `attempts/${encodeURIComponent(attemptRef)}`), { headers: etag ? { "if-none-match": etag } : {} }),
-    retryAttempt: (attemptRef) => fetchJson(endpoint(root, `attempts/${encodeURIComponent(attemptRef)}/retry`), jsonOptions("POST", {})),
-    teacherComments: (sessionRef, etag) => fetchJson(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/teacher-comments`), { headers: etag ? { "if-none-match": etag } : {} }),
-    replyTeacherComment: (sessionRef, threadRef, body, requestId = createRequestId()) => fetchJson(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/teacher-comments/${encodeURIComponent(threadRef)}/replies`), jsonOptions("POST", { body, requestId })),
-    publishLive: (sessionRef) => fetchJson(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/live`), jsonOptions("PUT", {}, {}, true)),
+    attempt: (attemptRef, etag) => studentFetch(endpoint(root, `attempts/${encodeURIComponent(attemptRef)}`), { headers: etag ? { "if-none-match": etag } : {} }),
+    retryAttempt: (attemptRef) => studentFetch(endpoint(root, `attempts/${encodeURIComponent(attemptRef)}/retry`), jsonOptions("POST", {})),
+    teacherComments: (sessionRef, etag) => studentFetch(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/teacher-comments`), { headers: etag ? { "if-none-match": etag } : {} }),
+    replyTeacherComment: (sessionRef, threadRef, body, requestId = createRequestId()) => studentFetch(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/teacher-comments/${encodeURIComponent(threadRef)}/replies`), jsonOptions("POST", { body, requestId })),
+    publishLive: (sessionRef) => studentFetch(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/live`), jsonOptions("PUT", {}, {}, true)),
     beaconUrl: (sessionRef) => endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/draft`),
   };
 }
@@ -101,6 +103,19 @@ export function createTeacherApi(base = "") {
   const teacherJson = (method, body, headers = {}, keepalive = false) => teacherSessionRequestOptions(jsonOptions(method, body, headers, keepalive));
   return {
     identity: () => teacherFetch(endpoint(root, 'auth/session')),
+    classMembers: ({ activitySlug, classRef }) => {
+      const url = new URL(endpoint(root, `admin/activities/${encodeURIComponent(activitySlug)}/class-members`));
+      url.searchParams.set("classRef", classRef);
+      return teacherFetch(url).then(result => result.data);
+    },
+    addClassMember: ({ activitySlug, classRef }, body) => teacherFetch(
+      endpoint(root, `admin/activities/${encodeURIComponent(activitySlug)}/class-members`),
+      teacherJson("POST", { ...body, classRef }),
+    ).then(result => result.data),
+    reissueClassMember: ({ activitySlug, classRef }, body) => teacherFetch(
+      endpoint(root, `admin/activities/${encodeURIComponent(activitySlug)}/class-members/invitation`),
+      teacherJson("POST", { ...body, classRef }),
+    ).then(result => result.data),
     liveActivity: (slug, classRef = "") => {
       const url = new URL(endpoint(root, `admin/live/activities/${encodeURIComponent(slug)}`));
       if (classRef) url.searchParams.set("classRef", classRef);
