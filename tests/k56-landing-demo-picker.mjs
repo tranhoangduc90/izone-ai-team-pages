@@ -54,15 +54,15 @@ test('link lớp giả cũ bị bỏ lựa chọn và không tạo yêu cầu m�
   const n=f.calls.length;await f.tests[0].handlers.click();assert.equal(f.calls.length,n);
  }
 });
-test('lớp thật mở đúng ba bài và hai thứ tự, chỉ đọc roster',async()=>{
+test('nút demo khi đang chọn lớp thật mở CODEXDEMO56 ở cả ba bài và hai thứ tự',async()=>{
  const f=await fixture({query:'?class=IC2264'});
  for(const mode of ['lis_first','read_first'])for(const b of f.tests){
   f.modes.find(x=>x.dataset.mode===mode).handlers.click();b.handlers.click();
   await f.elements.openExam.handlers.click();
-  assert.equal(f.location.href,`../${b.dataset.test}/?class=IC2264&mode=${mode}`);
+  assert.equal(f.location.href,`../${b.dataset.test}/?class=CODEXDEMO56&mode=${mode}`);
  }
  assert.equal(f.calls.filter(x=>x.url.includes('/roster?')).length,6);
- assert.ok(f.calls.filter(x=>x.url.includes('/roster?')).every(x=>x.url.startsWith('https://example.invalid/live/')));
+ assert.ok(f.calls.filter(x=>x.url.includes('/roster?')).every(x=>x.url.startsWith('https://example.invalid/demo/')&&new URL(x.url).searchParams.get('class')==='CODEXDEMO56'));
  assert.ok(f.calls.every(x=>!x.opts?.method||x.opts.method==='GET'));
 });
 test('tài khoản không được cấp lớp thật vẫn có đúng lớp demo dùng thử',async()=>{

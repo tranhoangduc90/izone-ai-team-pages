@@ -11,7 +11,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const modules = process.env.CODEX_NODE_MODULES || resolve(process.env.USERPROFILE || '', '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
 const { chromium } = createRequire(pathToFileURL(resolve(modules, 'playwright/package.json')))('playwright');
 
-test('Chromium desktop/mobile: khôi phục phiên không lóe Google, mở demo và lớp thật đúng ba bài và mode', async () => {
+test('Chromium desktop/mobile: giữ link lớp thật, nút DEMO luôn mở CODEXDEMO56 đúng ba bài và mode', async () => {
   const server = createServer(async (req, res) => {
     const path = new URL(req.url, 'http://127.0.0.1').pathname;
     const target = resolve(root, `.${path.endsWith('/') ? path + 'index.html' : path}`);
@@ -42,7 +42,7 @@ test('Chromium desktop/mobile: khôi phục phiên không lóe Google, mở demo
     const url = new URL(req.url());
     if (url.origin === base) return route.continue();
     if (url.origin === 'https://accounts.google.com') return route.fulfill({ contentType: 'text/javascript', body: 'window.google={accounts:{id:{initialize(){},renderButton(){}}}};' });
-    requests.push({ path: url.pathname, method: req.method() });
+    requests.push({ path: url.pathname, method: req.method(), query: url.search });
     if (url.pathname.endsWith('/api/auth/session')) return route.fulfill({ json: { ok: true } });
     if (url.pathname.endsWith('/teacher/options')) {
       if (url.pathname.includes('mapping-api-demo/')) return route.fulfill({ status: 500, json: { ok: false, message: 'Synthetic demo options failure' } });
@@ -92,7 +92,7 @@ test('Chromium desktop/mobile: khôi phục phiên không lóe Google, mở demo
           await page.locator('#rescue summary').click();
           assert.equal(await page.locator('[data-case=skill]').isVisible(), slug === 'term-test-1-k56');
           await page.locator('#openExam').click();
-          await page.waitForURL(studentUrl);
+          await page.waitForURL(`${base}/term-tests/${slug}-computer-based/?class=CODEXDEMO56&mode=${mode}`);
         }
       }
     }
@@ -135,8 +135,9 @@ test('Chromium desktop/mobile: khôi phục phiên không lóe Google, mở demo
     }
     const rosters = requests.filter(item => item.path.endsWith('/roster'));
     assert.equal(rosters.length, 24);
-    assert.equal(rosters.filter(item=>item.path.includes('/mapping-api-k56/')).length,12);
-    assert.equal(rosters.filter(item=>item.path.includes('/mapping-api-demo/')).length,12);
+    assert.equal(rosters.filter(item=>item.path.includes('/mapping-api-k56/')).length,0);
+    assert.equal(rosters.filter(item=>item.path.includes('/mapping-api-demo/')).length,24);
+    assert.ok(rosters.every(item=>new URLSearchParams(item.query).get('class')==='CODEXDEMO56'));
     assert.ok(rosters.every(item => item.method === 'GET'));
     assert.deepEqual(errors, []);
   } finally {

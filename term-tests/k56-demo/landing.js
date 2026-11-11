@@ -1,7 +1,7 @@
 /*
  * Dữ liệu nhận vào: mã lớp nhập tay hoặc danh sách lớp API trả sau khi Google xác thực giảng viên.
  * Xử lý: ghim lớp demo đã phục hồi; lớp thật vẫn theo quyền backend.
- * Kết quả: giảng viên chọn lớp rồi mở bản computer-based, answer sheet hoặc trang kết quả.
+ * Kết quả: nút thử mở CODEXDEMO56; link gửi học viên, answer sheet và kết quả giữ lớp đang chọn.
  * Khi lỗi: giữ ô nhập tay, không hiện dữ liệu lớp và báo rõ để người dùng thử đăng nhập lại.
  */
 
@@ -10,6 +10,7 @@ import { buildK56LandingClasses } from './landing-model.js?rev=20261020-demo-fir
 
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup2';
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
+const demoClassCode = 'CODEXDEMO56';
 const input = document.getElementById('classCode');
 const classSelect = document.getElementById('classSelect');
 const classHelp = document.getElementById('classHelp');
@@ -322,11 +323,11 @@ openExam.addEventListener('click', async () => {
   const request = { classCode, mode: examMode, controller: new AbortController(), previousHelp: classHelp.textContent };
   opening = request;
   openExam.disabled = true;
-  classHelp.textContent = 'Đang kiểm tra danh sách học viên của lớp...';
+  classHelp.textContent = 'Đang kiểm tra bài demo của lớp Codex Demo 56...';
   try {
-    const apiBaseUrl = appConfig.API_FOR_CLASS(classCode);
+    const apiBaseUrl = appConfig.API_FOR_CLASS(demoClassCode);
     const response = await fetch(
-      `${apiBaseUrl}/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(slug)}`,
+      `${apiBaseUrl}/api/term-tests/roster?class=${encodeURIComponent(demoClassCode)}&test=${encodeURIComponent(slug)}`,
       { cache: 'no-store', signal: AbortSignal.any([request.controller.signal, AbortSignal.timeout(15000)]) }
     );
     const payload = await response.json();
@@ -334,7 +335,7 @@ openExam.addEventListener('click', async () => {
     if (!response.ok || !payload.ok) throw new Error(payload.message || 'Lớp này chưa được mở bài test trên hệ thống K56.');
     if (!Array.isArray(payload.students) || !payload.students.length) throw new Error('Lớp chưa có danh sách học viên cho bài test này.');
     updateLandingUrl();
-    window.location.href = testLink(test, classCode);
+    window.location.href = testLink(test, demoClassCode);
   } catch (error) {
     if (opening === request) classHelp.textContent = `Không mở được bài test: ${error.message}`;
   } finally {

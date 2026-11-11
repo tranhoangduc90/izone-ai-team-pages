@@ -70,6 +70,7 @@ body[data-k56-design] .student-link-row input { flex: 1; width: 0; min-width: 0;
 .student-link-status[data-copied] { color: #166534; }
 .main-test-action { margin: 12px 0 0; }
 .main-test-action .button { width: 100%; min-height: 52px; }
+.main-test-action .demo-help { margin: 10px 0 0; padding: 12px 14px; border-radius: 8px; background: #eef7f4; color: #205a46; font-size: 14px; line-height: 1.55; }
 .rescue { margin: 16px 0 0; border: 1px solid var(--line); border-radius: 12px; }
 .rescue > summary { cursor: pointer; padding: 13px 15px; color: var(--navy); font-weight: 700; }
 .rescue[open] > summary { border-bottom: 1px solid var(--line); background: var(--surface-soft); border-radius: 12px 12px 0 0; }

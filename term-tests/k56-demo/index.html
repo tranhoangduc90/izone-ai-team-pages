@@ -8,7 +8,7 @@
     <title>Danh sách bài test · Khóa 56</title>
     <link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg?v=20261105">
     <link rel="stylesheet" href="../shared/styles.css?rev=20261003-writing-save-cas-v1">
-    <link rel="stylesheet" href="landing.css?rev=20261109-guided-v1&amp;share=20261109-v1">
+    <link rel="stylesheet" href="landing.css?rev=20261109-guided-v1&amp;share=20261109-v1&amp;demo=20261111-v1">
   <link rel="preload" href="../k56-design/assets/SourceSans3-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="../k56-design/theme.css?v=20261023-master170-v3">
   <script defer src="../../shared/red-focus-glow.js?v=20261102-r1"></script>
@@ -23,7 +23,7 @@
       <section class="panel landing-card">
         <p class="eyebrow">IZONE · IELTS 5–6 · Hệ thống bài thi</p>
         <h1>Danh sách bài test · Khóa 56</h1>
-        <p>Chọn lớp rồi mở bài test để chọn học viên của lớp đó.</p>
+        <p>Chọn lớp và bài test để lấy đường dẫn gửi học viên. Giảng viên mở thử bằng lớp demo.</p>
         <section class="landing-auth" aria-label="Đăng nhập giảng viên">
           <div>
             <strong id="loginBadge">Đang xác minh đăng nhập…</strong>
@@ -75,7 +75,8 @@
             <p class="student-link-status" id="studentLinkStatus" role="status"></p>
           </section>
           <div class="main-test-action">
-            <button class="button button-primary" type="button" id="openExam">Mở bài thi</button>
+            <button class="button button-primary" type="button" id="openExam" aria-describedby="demoHelp">Mở bài DEMO</button>
+            <p id="demoHelp" class="demo-help">Mở thử bằng lớp <strong>Codex Demo 56</strong>. Không dùng tên học viên của lớp đang chọn.</p>
           </div>
           <details class="rescue" id="paperExam">
             <summary>Bài thi giấy</summary>
@@ -107,7 +108,7 @@
       </section>
     </main>
     <script src="../k56-shared/config.js?rev=20261020-demo-v1&ej=20261024-production-r1"></script>
-    <script type="module" src="landing.js?rev=20261022-session-handoff-v1&amp;startup=20261026-v2&amp;history=20261102-1&amp;guided=20261109-v1&amp;share=20261109-v1"></script>
+    <script type="module" src="landing.js?rev=20261022-session-handoff-v1&amp;startup=20261026-v2&amp;history=20261102-1&amp;guided=20261109-v1&amp;share=20261109-v1&amp;demo=20261111-v1"></script>
     <script src="../k56-design/presentation.js?v=20261023-master170-v3"></script>
   </body>
 </html>
