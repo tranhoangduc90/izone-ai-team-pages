@@ -1,5 +1,5 @@
 import runtime from '../../homework-writing/runtime-config.js?v=20261111-ic2363';
-import {frontendConfiguration,createOnlineAccess} from '../../homework-writing/online-access.js?v=20261111-ic2363';
+import {frontendConfiguration,createOnlineAccess} from '../../homework-writing/online-access.js?v=20261111-doc-entry';
 import {rememberApprovedOutline} from '../../homework-writing/fast-food-dev-entry.js?v=20261111-ic2363';
 
 const root=document.getElementById('lesson-access');
