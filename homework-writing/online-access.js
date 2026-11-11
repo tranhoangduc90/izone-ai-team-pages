@@ -33,7 +33,8 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
   }
   function invalidate(){epoch++;course.invalidate();token='';active=null;pendingReject?.(changed());pendingReject=null;}
   function routeUrl(params={}){
-    const u=new URL(location.href),fresh=u.searchParams.has('fresh');u.search='';u.hash='';if(fresh)u.searchParams.set('fresh','1');for(const [key,value]of Object.entries(params))if(value!==undefined&&value!==null)u.searchParams.set(key,value);
+    const u=new URL(location.href),fresh=u.searchParams.has('fresh'),workspace=u.searchParams.get('workspace');u.search='';u.hash='';if(fresh)u.searchParams.set('fresh','1');for(const [key,value]of Object.entries(params))if(value!==undefined&&value!==null)u.searchParams.set(key,value);
+    if(workspace==='k67')u.searchParams.set('workspace',workspace);
     if(teacherIntent())u.searchParams.set('mode',intent);
     else {u.searchParams.set('mode','student');if(context){u.searchParams.set('documentId',context.documentId);u.searchParams.set('assignment',context.assignmentId);if(!params.assignment&&!params.submission&&!params.view)u.searchParams.set('view','assignments');}}
     return u;
