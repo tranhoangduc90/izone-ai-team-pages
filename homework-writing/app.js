@@ -1,5 +1,5 @@
 import runtime from './runtime-config.js?v=20261111-ic2363';
-import {frontendConfiguration,createOnlineAccess} from './online-access.js?v=20261111-ic2363';
+import {frontendConfiguration,createOnlineAccess} from './online-access.js?v=20261111-ic2363-teacher';
 import {setupRichReview} from './rich-review.js';
 import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261111-review-ui';
 import {basicSubmissionError} from './submission-check.js';
