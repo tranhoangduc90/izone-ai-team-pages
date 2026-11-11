@@ -14,7 +14,7 @@ async function showResult() {
     const store = await new DurableStore().open();
     const state = await store.get('current');
     if (state?.phase !== 'submitted' || !state.serverConfirmed || state.pending ||
-        state.identity?.classCode !== 'IC2311' || !state.permit || typeof state.receipt !== 'string') return;
+        !/^IC\d{4,6}$/.test(state.identity?.classCode ?? '') || !state.permit || typeof state.receipt !== 'string') return;
 
     if (!document.getElementById('reading-review-link')) {
       const link = document.createElement('a');
