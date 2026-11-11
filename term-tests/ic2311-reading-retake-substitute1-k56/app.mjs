@@ -14,7 +14,7 @@ async function acquireOwner(){if(ownerHeld)return;if(!navigator.locks)throw Obje
 function clock(){if(state?.phase==='playing')state.elapsedMs=Math.min(DURATION_MS,Math.max(state.elapsedMs||0,baseElapsed+performance.now()-baseMono));return state?.elapsedMs||0;}
 function checkpoint(){clock();if(state)state.wallAt=Date.now();}
 function drawClock(){const remaining=Math.max(0,DURATION_MS-clock()),seconds=Math.ceil(remaining/1000);text('reading-clock',String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0'));$('reading-clock').classList.toggle('is-urgent',remaining<=600000);}
-function showExam(){show('lobby',false);show('exam');show('readingView');show('identityView');$('page-shell').classList.remove('cbt-bootstrap-shell');text('learner',state.name);drawClock();}
+function showExam(){show('lobby',false);show('exam');show('readingView');show('identityView');$('page-shell').classList.remove('cbt-bootstrap-shell');text('class-label',state.identity.classCode);text('learner',state.name);drawClock();}
 function saveFailure(){note('Không lưu được bài trên thiết bị. Hãy giữ nguyên trang, không tải lại và liên hệ giảng viên.');journal.emit('local_save_failed',{errorCode:'LOCAL_PERSIST_FAILED'});state.storageFailed=true;}
 function viewState(){const nodes=[...document.querySelectorAll('#readingView .cbt-reading-passage,#readingView .cbt-reading-questions')];return nodes.map(e=>e.scrollTop);}
 function captureUi(){if(!state||!ready)return;state.scroll=viewState();}
@@ -55,30 +55,96 @@ async function seal(reason){
 async function prepare(){
  if(busy||!layoutReady||(!$('student').value&&!state?.permit))return;busy=true;$('prepare').disabled=true;show('retry',false);
  try{
-  if(!state?.permit){const studentRef=$('student').value;if(preparation?.studentRef!==studentRef)preparation={studentRef,ownerId,operationId:crypto.randomUUID()};await storage.put('preparation',preparation);const r=await journal.request('/prepare',{classCode:'IC2311',studentRef,ownerId,tabId,operationId:preparation.operationId},{permit:null});
-   if(r.value.identity.contentVersion!==CONTENT_VERSION||r.value.identity.contentHash!==CONTENT_HASH)throw Object.assign(Error(),{code:'CONTENT_MISMATCH'});
-   state={permit:r.value.permit,identity:r.value.identity,name:roster.students.find(s=>s.studentRef===studentRef).name,phase:'prepared',revision:r.value.revision,answers:Object.fromEntries(Array.from({length:26},(_,i)=>[i+1,''])),elapsedMs:0,pending:null,serverConfirmed:false,clockOffset:Date.parse(r.value.serverNow)-Date.now(),ui:{flags:{reading:{}},activeSection:{reading:0},fontSize:{reading:100}}};await persist();
+  if(!state?.permit){
+   const studentRef=$('student').value,classCode=$('class').value;
+   const student=roster?.students.find(item=>item.studentRef===studentRef);
+   if(!student||roster.classCode!==classCode)throw Object.assign(Error(),{code:'STUDENT_NOT_ALLOWED'});
+   $('class').disabled=true;$('student').disabled=true;
+   if(preparation?.studentRef!==studentRef)preparation={studentRef,ownerId,operationId:crypto.randomUUID()};
+   await storage.put('preparation',preparation);
+   const r=await journal.request('/prepare',{classCode,studentRef,ownerId,tabId,operationId:preparation.operationId},{permit:null});
+   if(r.value.identity.contentVersion!==CONTENT_VERSION||r.value.identity.contentHash!==CONTENT_HASH||
+      r.value.identity.studentRef!==studentRef||r.value.identity.classCode!==classCode)throw Object.assign(Error(),{code:'CONTENT_MISMATCH'});
+   state={permit:r.value.permit,identity:r.value.identity,name:student.name,phase:'prepared',revision:r.value.revision,answers:Object.fromEntries(Array.from({length:26},(_,i)=>[i+1,''])),elapsedMs:0,pending:null,serverConfirmed:false,clockOffset:Date.parse(r.value.serverNow)-Date.now(),ui:{flags:{reading:{}},activeSection:{reading:0},fontSize:{reading:100}}};await persist();
   }
   await acquireOwner();if(!journal.permit)journal.bind(state.identity,state.permit);$('student').disabled=true;
   await prepareOffline({journal,onProgress:(n,total)=>{$('download').value=n/total;text('prepare-status','Đang tải và xác minh '+n+'/'+total+' tài nguyên…');}});
   await document.fonts.ready;if([...document.querySelectorAll('link[data-native-style]')].some(link=>!link.sheet))throw Object.assign(Error(),{code:'CACHE_INCOMPLETE'});
   await nativeAnnotations({content,identity:state.identity,storage,onError:saveFailure,onChange:raw=>{if(state?.phase==='playing'){state.annotationRaw=raw;void queueDraft();}}});state.offlineReady=true;await persist();ready=true;text('prepare-status','Sẵn sàng trên thiết bị. Bạn có thể bắt đầu và làm hết bài dù mất mạng.');$('download-step').dataset.state='complete';$('start-step').dataset.state='active';$('start').disabled=false;journal.emit('app_ready',{phase:'ready'});
- }catch(e){text('prepare-status','Chưa sẵn sàng ('+(e.code||'CACHE_UNAVAILABLE')+'). Bạn chưa nên bắt đầu. Kết nối mạng và thử lại; nếu vẫn lỗi, liên hệ giảng viên.');show('retry');}
- finally{busy=false;$('prepare').disabled=ready||!$('student').value;}
+ }catch(e){
+  if(e.code==='ALREADY_SUBMITTED'){
+   const selected=$('student').selectedOptions[0];
+   if(selected?.value)selected.remove();
+   $('student').value='';
+   text('prepare-status','Bài này đã được nộp.');
+  }else{
+   text('prepare-status','Chưa sẵn sàng ('+(e.code||'CACHE_UNAVAILABLE')+'). Bạn chưa nên bắt đầu. Kết nối mạng và thử lại; nếu vẫn lỗi, liên hệ giảng viên.');
+   show('retry');
+  }
+ }
+ finally{
+  busy=false;
+  if(!state?.permit){$('class').disabled=$('class').options.length===1;$('student').disabled=!roster?.students.length;}
+  $('prepare').disabled=ready||!$('student').value;
+ }
 }
 $('student').onchange=()=>{$('prepare').disabled=!layoutReady||!$('student').value;};$('prepare').onclick=prepare;$('retry').onclick=prepare;
 $('start').onclick=async()=>{if(!ready||busy||state?.phase!=='prepared')return;busy=true;try{state.phase='playing';state.startedAt=new Date(Date.now()+(state.clockOffset||0)).toISOString();state.elapsedMs=0;state.wallAt=Date.now();baseElapsed=0;baseMono=performance.now();state.ui??={flags:{reading:{}},activeSection:{reading:0},fontSize:{reading:100}};await persist();showExam();journal.emit('exam_started',{phase:'playing',startedAt:state.startedAt});await queueDraft();}catch{saveFailure();}finally{busy=false;}};
 $('submit').onclick=()=>{if(state?.phase!=='playing')return;if(clock()>=DURATION_MS)return void seal('deadline');text('confirm-text','Bạn đã nhập '+Object.values(state.answers).filter(v=>v.trim()).length+'/26 câu. Xác nhận nộp và khóa bài?');$('confirm-submit').showModal();};$('cancel-submit').onclick=()=>$('confirm-submit').close();$('accept-submit').onclick=()=>void seal('manual');$('sync-now').onclick=()=>void synchronize(true);
-$('new-attempt').onclick=async()=>{if(busy)return;busy=true;try{state.replacement??={ownerId:crypto.randomUUID(),operationId:crypto.randomUUID()};await persist();const r=await journal.request('/prepare',{classCode:'IC2311',studentRef:state.identity.studentRef,...state.replacement,tabId},{permit:null});if(r.value.identity.generation<=state.identity.generation)throw Error();await storage.put('attempt:'+state.identity.attemptId,state);await storage.put('current',{permit:r.value.permit,identity:r.value.identity,name:state.name,phase:'prepared',revision:0,answers:{},elapsedMs:0,clockOffset:Date.parse(r.value.serverNow)-Date.now()});location.reload();}catch{note('Chưa có lượt mới được giảng viên xác nhận. Bài hiện tại vẫn được giữ.');}finally{busy=false;}};
+$('new-attempt').onclick=async()=>{if(busy)return;busy=true;try{state.replacement??={ownerId:crypto.randomUUID(),operationId:crypto.randomUUID()};await persist();const r=await journal.request('/prepare',{classCode:state.identity.classCode,studentRef:state.identity.studentRef,...state.replacement,tabId},{permit:null});if(r.value.identity.generation<=state.identity.generation)throw Error();await storage.put('attempt:'+state.identity.attemptId,state);await storage.put('current',{permit:r.value.permit,identity:r.value.identity,name:state.name,phase:'prepared',revision:0,answers:{},elapsedMs:0,clockOffset:Date.parse(r.value.serverNow)-Date.now()});location.reload();}catch{note('Chưa có lượt mới được giảng viên xác nhận. Bài hiện tại vẫn được giữ.');}finally{busy=false;}};
 addEventListener('online',()=>{retryAt=0;void synchronize(true);});
 addEventListener('pagehide',()=>{if(state){checkpoint();captureUi();void persist().catch(()=>{});journal.emit('page_departed',{phase:state.phase});}releaseOwner?.();});
 setInterval(()=>{if(state?.phase==='playing'){drawClock();if(clock()>=DURATION_MS)void seal('deadline');else{checkpoint();captureUi();void persist().catch(saveFailure);}}void synchronize();},1000);
 setInterval(()=>{if(state?.phase==='playing')void queueDraft();},10000);
 try{
  content=await fetch('content.json').then(r=>{if(!r.ok)throw Error();return r.json();});const sha=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(content))))].map(n=>n.toString(16).padStart(2,'0')).join('');if(content.contentVersion!==CONTENT_VERSION||sha!==CONTENT_HASH)throw Error('CONTENT_MISMATCH');
- if(state?.permit){await acquireOwner();journal.bind(state.identity,state.permit);roster={students:[{studentRef:state.identity.studentRef,name:state.name}]};}
- else{const r=await journal.request('/roster',null,{permit:null,method:'GET'});roster=r.value;if(roster.contentHash!==CONTENT_HASH||roster.classCode!=='IC2311')throw Error('CONTENT_MISMATCH');}
- $('student').replaceChildren(new Option('Chọn tên của bạn',''));for(const s of roster.students)$('student').add(new Option(s.name,s.studentRef));if(state)$('student').value=state.identity.studentRef;await renderContent();
+ const classPicker=$('class'),studentPicker=$('student');
+ function fillStudents(label){
+  studentPicker.replaceChildren(new Option(label,''));
+  for(const s of roster?.students??[])studentPicker.add(new Option(s.name,s.studentRef));
+  studentPicker.disabled=!roster?.students.length;
+  $('prepare').disabled=true;
+ }
+ if(state?.permit){
+  await acquireOwner();journal.bind(state.identity,state.permit);
+  const {classCode,studentRef}=state.identity;
+  roster={classCode,students:[{studentRef,name:state.name}]};
+  classPicker.replaceChildren(new Option(classCode,classCode));
+  fillStudents('Chọn tên của bạn');studentPicker.value=studentRef;
+ }else{
+  let catalog;
+  try{
+   ({value:catalog}=await journal.request('/self-enrollment',null,{permit:null,method:'GET'}));
+  }catch(error){
+   if(error.code!=='NOT_FOUND')throw error;
+   const {value:legacy}=await journal.request('/roster?purpose=prepare',null,{permit:null,method:'GET'});
+   if(legacy.contentHash!==CONTENT_HASH||legacy.classCode!=='IC2311'||!Array.isArray(legacy.students))throw Error('CONTENT_MISMATCH');
+   roster=legacy;classPicker.replaceChildren(new Option(legacy.classCode,legacy.classCode));
+   fillStudents('Chọn tên của bạn');
+  }
+  if(catalog){
+   if(catalog.contentHash!==CONTENT_HASH||!Array.isArray(catalog.classes))throw Error('CONTENT_MISMATCH');
+   classPicker.replaceChildren(new Option('Chọn lớp của bạn',''),...catalog.classes.map(code=>new Option(code,code)));
+   classPicker.disabled=false;
+   let latestRosterRequest=0;
+   classPicker.addEventListener('change',async()=>{
+   const request=++latestRosterRequest,classCode=classPicker.value;
+   roster=null;fillStudents(classCode?'Đang tải danh sách…':'Chọn lớp trước');text('identity-status','');
+   if(!classCode)return;
+   try{
+    const {value:members}=await journal.request('/self-enrollment/roster?class='+encodeURIComponent(classCode),null,{permit:null,method:'GET'});
+    if(request!==latestRosterRequest)return;
+    if(members.classCode!==classCode||!Array.isArray(members.students))throw Error('CONTENT_MISMATCH');
+    roster=members;fillStudents('Chọn tên của bạn');
+    if(!members.students.length)text('identity-status','Lớp này không còn học viên trong danh sách vào thi.');
+   }catch{
+    if(request!==latestRosterRequest)return;
+    fillStudents('Chưa tải được danh sách');text('identity-status','Hãy chọn lại lớp để tải danh sách học viên.');
+   }
+   });
+  }
+ }
+ await renderContent();
  if(state?.phase==='submitted'||state?.phase==='technical_stop'){renderFinished();void synchronize(true);}
  else if(state?.phase==='playing'){
   const gap=Date.now()-state.wallAt;if(!Number.isFinite(gap)||gap< -2000){state.phase='technical_stop';state.pending=snapshot('technical_stop');await persist();renderFinished();journal.emit('restore_failed',{errorCode:'CLOCK_INVALID'});void synchronize(true);}

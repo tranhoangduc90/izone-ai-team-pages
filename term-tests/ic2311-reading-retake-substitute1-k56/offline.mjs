@@ -1,10 +1,15 @@
 import {BUILD} from './config.mjs';
 export async function prepareOffline({onProgress=()=>{},journal}){
  if(!('serviceWorker' in navigator)||!('caches' in window))throw Object.assign(Error(),{code:'CACHE_UNAVAILABLE'});
- let registration=await navigator.serviceWorker.getRegistration(new URL('./',location.href));
- if(!registration)registration=await navigator.serviceWorker.register('sw.js',{scope:'./'});
- await Promise.race([navigator.serviceWorker.ready,new Promise((_,r)=>setTimeout(()=>r(Object.assign(Error(),{code:'CACHE_UNAVAILABLE'})),15000))]);
- if(!navigator.serviceWorker.controller)await new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(Object.assign(Error(),{code:'CACHE_UNAVAILABLE'})),10000);navigator.serviceWorker.addEventListener('controllerchange',()=>{clearTimeout(t);resolve();},{once:true});});
+ const workerUrl=new URL('sw.js?v=20261111-cohort',location.href);
+ const registration=await navigator.serviceWorker.getRegistration(new URL('./',location.href));
+ if(navigator.onLine||!registration)await navigator.serviceWorker.register(workerUrl,{scope:'./'});
+ const controlled=()=>navigator.serviceWorker.controller?.scriptURL===workerUrl.href;
+ if(!controlled())await new Promise((resolve,reject)=>{
+  const timer=setTimeout(()=>{navigator.serviceWorker.removeEventListener('controllerchange',onChange);reject(Object.assign(Error(),{code:'CACHE_UNAVAILABLE'}));},15000);
+  function onChange(){if(controlled()){clearTimeout(timer);navigator.serviceWorker.removeEventListener('controllerchange',onChange);resolve();}}
+  navigator.serviceWorker.addEventListener('controllerchange',onChange);onChange();
+ });
  const {assets,build}=await fetch('asset-manifest.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Object.assign(Error(),{code:'CONTENT_HTTP_ERROR',httpStatus:r.status});return r.json();});
  if(build!==BUILD)throw Object.assign(Error(),{code:'CONTENT_MISMATCH'});
  const name='reading-retake:'+BUILD,cache=await caches.open(name);await cache.put(new URL('asset-manifest.json',location.href),new Response(JSON.stringify({assets,build}),{headers:{'Content-Type':'application/json'}}));let done=0;
