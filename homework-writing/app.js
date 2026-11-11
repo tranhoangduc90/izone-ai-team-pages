@@ -20,6 +20,7 @@ import {handoutReadOnlyHtml,setupReadOnlyHandout} from './handout-view.js';
 import {setupStudentAlignment,alignmentTeacherQueueHtml,alignmentTeacherViewHtml} from './handout-alignment.js';
 import {setWriting67Scope} from './master170-writing67.js';
 import {setupSplitPanes} from './split-panes.js';
+import {approvedOutlineVersion,devHandoutUrl,isDevWritingEntry} from './fast-food-dev-entry.js';
 import {languageCards} from './language-cards.js';
 import {setupReviewHighlights} from './review-highlights.js';
 import {initialRevisionText,shouldRestoreRevisionBackup} from './revision-draft.js';
@@ -181,6 +182,17 @@ async function openStudent(id, { resultSubmissionId = null, fromDocs = false } =
   clearTimeout(saveTimer); await flushBackups(); const gen = ++generation;
   const state = await api('/student/assignments/' + encodeURIComponent(id));
   if (gen !== generation) return;
+  const documentId=new URLSearchParams(location.search).get('documentId');
+  let confirmedOutline;
+  if(onlineAccess?.personal&&!state.submission&&isDevWritingEntry(me,id,documentId)){
+    const version=approvedOutlineVersion(documentId);
+    if(version!==null)confirmedOutline=await api('/student/assignments/'+encodeURIComponent(id)+'/handout');
+    if(gen!==generation)return;
+    if(confirmedOutline?.status!=='ready'||confirmedOutline.assignmentId!==id||confirmedOutline.sourceVersion!==version){
+      location.replace(devHandoutUrl(documentId));
+      return;
+    }
+  }
   setWriting67Scope([state.assignment.classId]);
   const compact=lesson3Experience(state.assignment);
   const resultRoute = resultSubmissionId && state.submission?.id === resultSubmissionId ? resultSubmissionId
@@ -198,6 +210,7 @@ async function openStudent(id, { resultSubmissionId = null, fromDocs = false } =
   try { backup = await loadBackup(storageKey); otherBackups = await listBackups(storageKey); } catch { backupError = true; }
   if (gen !== generation) return;
   model = { id, kind, state, storageKey, revisionRound, text: kind==='revision'?initialRevisionText(state):server.text, baseRevision: server.revision,
+    confirmedOutline,
     resultSubmissionId: resultRoute,
     handoutMode:showResult?'feedback':model?.id===id?model.handoutMode:'handout',
     lastSavedText: server.text, history: [], pendingSave: null, pendingSubmit: null, conflict: null, saving: null, backupError, otherBackups };
@@ -249,7 +262,7 @@ function renderStudent() {
   const handoutModel=model, handoutPerson=me.id;
   handoutEditor=setupHandoutPreview($('#app'),{assignment:a,person:me,initialMode:handoutModel.handoutMode,
     onModeChange:mode=>{handoutModel.handoutMode=mode;},
-    loadHandout:()=>api('/student/assignments/'+encodeURIComponent(a.id)+'/handout'),
+    loadHandout:()=>handoutModel.confirmedOutline||api('/student/assignments/'+encodeURIComponent(a.id)+'/handout'),
     saveHandout:body=>api('/student/assignments/'+encodeURIComponent(a.id)+'/handout',body,'PUT'),
     onHandoutChange:()=>{handoutModel.pendingSubmit=null;studentAlignment.draw(null);void persist();},
     isCurrent:()=>model===handoutModel && me?.id===handoutPerson});
