@@ -90,6 +90,12 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
     if(!fresh&&sameDocument&&/^[\w-]{43}$/.test(saved?.token||'')){
       token=saved.token;try{const session=await raw('/session');if(stamp!==epoch)throw changed();if(session.person?.role!=='student'||session.person.id!==saved.person?.id)throw Object.assign(Error('Phiên chưa đúng người đã ghim.'),{status:401});return completeStudent({...session,token,identity:saved.identity},stamp);}catch(e){token='';if(![401,403].includes(e.status))throw e;rejected=true;}
     }
+    if(context&&publicConfig.privateDocsEntry){
+      const value=await raw('/access/student/link',{});
+      if(stamp!==epoch)throw changed();
+      if(value.choiceRequired||fresh||!matchesRemembered(value.identity))return chooseStudent(root,stamp,value);
+      return completeStudent(value,stamp);
+    }
     if(!fresh&&!rejected){
       try{
         const value=await raw('/access/student/restore',{});
@@ -145,7 +151,8 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
           const selection={classId:row.classId,studentRef:row.studentRef,
             ...(ready?.selfMatch?{selfMatchToken:ready.selfMatch.token}:{})};
           const value=ready?.choiceRequired
-            ? await raw(credential?'/access/student/login':'/access/student/restore',{...selection,...(credential?{credential}:{})})
+            ? await raw(publicConfig.privateDocsEntry?'/access/student/link':credential?'/access/student/login':'/access/student/restore',
+              {...selection,...(credential?{credential}:{})})
             : ready;
           if(value?.identity?.ownerId!==row.studentRef||value.identity.courseId!==row.classId)
             throw Error('Phiên Homework chưa khớp tên đã chọn. Hãy mở lại từ Docs của bạn.');
