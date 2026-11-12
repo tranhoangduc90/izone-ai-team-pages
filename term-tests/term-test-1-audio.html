@@ -31,10 +31,12 @@
 </head>
 <body>
   <div class="container" id="mainContainer">
-    <div id="status">⏳ Đang tải audio...</div>
+    <div id="status" role="status">⏳ Đang tải audio...</div>
+    <p id="audioSource"></p>
     <div id="progress-wrapper"><div id="progress-bar"></div></div>
     <span id="progress-text">Đã tải: 0% (0 MB / 0 MB)</span>
 
+    <button id="audioRetry" type="button" style="background:#152b4e" hidden>Thử tải lại audio</button>
     <button id="btnCheckVol" disabled>🔊 THỬ ÂM LƯỢNG TRƯỚC KHI THI</button>
     <span id="timeNotice" class="time-notice">Nút Phát Audio chỉ mở từ 18h45 - 19h00</span>
     <button id="btnPlayMain" disabled>PHÁT AUDIO THI THẬT</button>
@@ -52,10 +54,8 @@
   <audio id="audioTest"></audio>
   <audio id="audioMain"></audio>
 
-  <script>
-    // ĐIỀN LINK CLOUDINARY HOẶC HOST CỦA BẠN VÀO ĐÂY
-    const AUDIO_URL = "https://res.cloudinary.com/dhvgrthes/video/upload/v1774448643/Term_Test_1_-_Audio_zn5d4w.mp3";
-
+  <script type="module">
+    import { mountPaperAudio } from './k67-shared/paper-audio.mjs?v=20261112-k67-paper-audio';
     const audioTest = document.getElementById('audioTest');
     const audioMain = document.getElementById('audioMain');
 
@@ -68,46 +68,9 @@
     const btnConfirmVol = document.getElementById('btnConfirmVol');
     const testStatus = document.getElementById('testStatus');
     const statusDiv = document.getElementById('status');
-    const progressBar = document.getElementById('progress-bar');
     const progressText = document.getElementById('progress-text');
 
     let isAudioFullyLoaded = false;
-
-    // 1. Logic ép tải Blob
-    function loadAudioBlob() {
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', AUDIO_URL, true);
-      xhr.responseType = 'blob';
-
-      xhr.onprogress = function(event) {
-        if (event.lengthComputable) {
-          const percent = (event.loaded / event.total) * 100;
-          progressBar.style.width = percent + '%';
-          progressText.innerText = `Đã tải: ${Math.round(percent)}% (${(event.loaded/1048576).toFixed(1)} MB / ${(event.total/1048576).toFixed(1)} MB)`;
-        }
-      };
-
-      xhr.onload = function() {
-        if (this.status >= 200 && this.status < 300) {
-          const objectUrl = URL.createObjectURL(this.response);
-          audioTest.src = objectUrl;
-          audioMain.src = objectUrl;
-
-          isAudioFullyLoaded = true;
-          statusDiv.innerHTML = "✅ Tải xong 100%. Đã sẵn sàng!";
-          progressBar.style.backgroundColor = "#4CAF50";
-
-          btnCheckVol.disabled = false; // Luôn mở nút thử âm thanh
-          checkTimeWindow(); // Kiểm tra giờ để mở nút thi thật
-        } else {
-          statusDiv.innerHTML = "❌ Không tải được audio. Vui lòng kiểm tra lại link.";
-        }
-      };
-      xhr.onerror = function() {
-        statusDiv.innerHTML = "❌ Lỗi mạng khi tải audio. Vui lòng thử lại.";
-      };
-      xhr.send();
-    }
 
     // 2. Logic kiểm tra thời gian (18:45 -> 19:00)
     function checkTimeWindow() {
@@ -187,7 +150,16 @@
     });
 
     // Khởi động
-    loadAudioBlob();
+    mountPaperAudio({
+      slug: 'term-test-1',
+      onReady(objectUrl) {
+        audioTest.src = objectUrl;
+        audioMain.src = objectUrl;
+        isAudioFullyLoaded = true;
+        btnCheckVol.disabled = false;
+        checkTimeWindow();
+      }
+    });
   </script>
 </body>
 </html>

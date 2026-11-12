@@ -30,10 +30,12 @@
 </head>
 <body>
   <div class="container" id="mainContainer">
-    <div id="status">⏳ Đang tải audio...</div>
+    <div id="status" role="status">⏳ Đang tải audio...</div>
+    <p id="audioSource"></p>
     <div id="progress-wrapper"><div id="progress-bar"></div></div>
     <span id="progress-text">Đã tải: 0% (0 MB / 0 MB)</span>
 
+    <button id="audioRetry" type="button" style="background:#152b4e" hidden>Thử tải lại audio</button>
     <button id="btnCheckVol" disabled>🔊 THỬ ÂM LƯỢNG TRƯỚC KHI THI</button>
     <button id="btnPlayMain" disabled>PHÁT AUDIO THI THẬT</button>
   </div>
@@ -50,9 +52,8 @@
   <audio id="audioTest"></audio>
   <audio id="audioMain"></audio>
 
-  <script>
-    // Link audio
-    const AUDIO_URL = "https://res.cloudinary.com/dhvgrthes/video/upload/v1783656299/Mini_Test_Audio_p4yshw.mp3";
+  <script type="module">
+    import { mountPaperAudio } from './k67-shared/paper-audio.mjs?v=20261112-k67-paper-audio';
 
     const audioTest = document.getElementById('audioTest');
     const audioMain = document.getElementById('audioMain');
@@ -65,49 +66,9 @@
     const btnConfirmVol = document.getElementById('btnConfirmVol');
     const testStatus = document.getElementById('testStatus');
     const statusDiv = document.getElementById('status');
-    const progressBar = document.getElementById('progress-bar');
     const progressText = document.getElementById('progress-text');
 
     let isAudioFullyLoaded = false;
-
-    // 1. Logic ép tải Blob
-    function loadAudioBlob() {
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', AUDIO_URL, true);
-      xhr.responseType = 'blob';
-
-      xhr.onprogress = function(event) {
-        if (event.lengthComputable) {
-          const percent = (event.loaded / event.total) * 100;
-          progressBar.style.width = percent + '%';
-          progressText.innerText = `Đã tải: ${Math.round(percent)}% (${(event.loaded/1048576).toFixed(1)} MB / ${(event.total/1048576).toFixed(1)} MB)`;
-        }
-      };
-
-      xhr.onload = function() {
-        if (this.status >= 200 && this.status < 300) {
-          const objectUrl = URL.createObjectURL(this.response);
-          audioTest.src = objectUrl;
-          audioMain.src = objectUrl;
-
-          isAudioFullyLoaded = true;
-          statusDiv.innerHTML = "✅ Tải xong 100%. Đã sẵn sàng!";
-          progressBar.style.backgroundColor = "#4CAF50";
-
-          // Sau khi tải xong audio, mở cả nút thử âm lượng và nút phát bài chính
-          btnCheckVol.disabled = false;
-          btnPlayMain.disabled = false;
-        } else {
-          statusDiv.innerHTML = "❌ Không tải được audio. Vui lòng kiểm tra lại link.";
-        }
-      };
-
-      xhr.onerror = function() {
-        statusDiv.innerHTML = "❌ Lỗi mạng khi tải audio. Vui lòng thử lại.";
-      };
-
-      xhr.send();
-    }
 
     // 2. Logic Thử Âm Lượng (Popup)
     btnCheckVol.addEventListener('click', () => {
@@ -164,7 +125,15 @@
     });
 
     // Khởi động
-    loadAudioBlob();
+    mountPaperAudio({
+      slug: 'mini-test-lesson-5',
+      onReady(objectUrl) {
+        audioTest.src = objectUrl;
+        audioMain.src = objectUrl;
+        btnCheckVol.disabled = false;
+        btnPlayMain.disabled = false;
+      }
+    });
   </script>
 </body>
 </html>
