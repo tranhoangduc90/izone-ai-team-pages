@@ -18,9 +18,12 @@ if (nativeFile) {
   migration = await readFile(process.env.K56_MINI_RECOVERY_MIGRATION, 'utf8');
 }
 
-for (const [mode, reloadWhilePlaying] of [['lis_first',false], ['read_first',false], ['lis_first',true]]) {
+for (const [mode, reloadWhilePlaying, viewLoadFails] of [
+  ['lis_first',false], ['read_first',false], ['lis_first',true], ['lis_first',false,true]
+]) {
   const result = reloadWhilePlaying ? 'a second reload after playback counts as interrupted' : 'reaches the Listening receipt';
-  test(`Mini K56 retries a blocked start and ${result} (${mode})`, {timeout: fullAudio ? 540000 : 120000}, async t => {
+  const cause = viewLoadFails ? 'a Listening view load failure' : 'a blocked start';
+  test(`Mini K56 retries ${cause} and ${result} (${mode})`, {timeout: fullAudio ? 540000 : 120000}, async t => {
     const native = await nativeFixture?.(mode, false, {realtime:true, listeningInterruption:true});
     if (native) {
       t.after(() => native.close());
@@ -43,7 +46,17 @@ for (const [mode, reloadWhilePlaying] of [['lis_first',false], ['read_first',fal
       f.controls.loseAck = true;
       await p.click('#bootstrapPreview');
       await wait(p, () => !document.querySelector('#bootstrapStart').disabled, 'Đã đủ thời gian nghe thử');
-      await p.evaluate(() => {
+      if (viewLoadFails) await p.evaluate(() => {
+        const append = document.body.append;
+        document.body.append = function (...nodes) {
+          const app = nodes.find(node => node instanceof HTMLScriptElement &&
+            new URL(node.src).pathname.endsWith('/k56-mini-shared/app.js'));
+          if (!app) return append.apply(this,nodes);
+          document.body.append = append;
+          app.dispatchEvent(new Event('error'));
+        };
+      });
+      else await p.evaluate(() => {
         const play = HTMLMediaElement.prototype.play;
         HTMLMediaElement.prototype.play = function () {
           HTMLMediaElement.prototype.play = play;
@@ -52,11 +65,13 @@ for (const [mode, reloadWhilePlaying] of [['lis_first',false], ['read_first',fal
       });
       await p.click('#bootstrapStart');
       const playButton = p.getByRole('button', {name:'Phát audio', exact:true});
-      await playButton.waitFor();
+      if (viewLoadFails) await p.locator('#bootstrapNotice').filter({hasText:'Chưa thể bắt đầu'}).waitFor();
+      else await playButton.waitFor();
       const attempt = await p.evaluate(() => {
         const runtime = window.K56_MINI_OFFLINE;
+        const player = runtime.player ?? window.TERM_TEST_BOOTSTRAP.officialAudioElement;
         return {id:runtime.record.prepared.attemptToken, startedAt:runtime.record.sections.listening.startedAt,
-          time:runtime.player.currentTime, paused:runtime.player.paused};
+          time:player.currentTime, paused:player.paused};
       });
       assert.ok(attempt.startedAt && attempt.paused);
       assert.equal(attempt.time, 0);
@@ -64,7 +79,7 @@ for (const [mode, reloadWhilePlaying] of [['lis_first',false], ['read_first',fal
       await wait(p, () => document.querySelector('#offlineListeningInterrupted[open]') ||
         (window.K56_MINI_OFFLINE?.playerReady && !document.querySelector('.cbt-audio-play')?.hidden), 'Listening recovery', 20000);
       assert.equal(await p.locator('#offlineListeningInterrupted[open]').count(), 0,
-        'A rejected play at time zero must not be recorded as interrupted');
+        'A failed start at time zero must not be recorded as interrupted');
       assert.equal(await p.evaluate(() => window.K56_MINI_OFFLINE.player.paused &&
         window.K56_MINI_OFFLINE.player.currentTime === 0), true, 'Reload waits for an explicit play click');
       await playButton.click();

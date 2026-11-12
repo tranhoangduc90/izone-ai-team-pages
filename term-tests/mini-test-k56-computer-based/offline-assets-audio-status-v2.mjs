@@ -272,7 +272,7 @@ export const ASSET_HASHES={
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/demo-store-audio-status-v1.mjs": "90b3a6d83ccecb6f404b370cf6ed85ebb285bcbccff4cf40a098703aa3311cb8",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
-  "../k56-offline-shared/runtime-recovery-v1.mjs": "a2177849e0e928cc43bbcc6fe5dec3c5a87e55480f873b1dd0c08ba1d7b6ffce",
+  "../k56-offline-shared/runtime-recovery-v1.mjs": "af12d4506b3b4fcf3a1ebaa38b0777cedf56473cefdc26105a23092415e4e283",
   "../k56-offline-shared/whole-audio-audio-status-v1.mjs": "891ef93aee9fedd15af83a6f7559fe850837fcf352cde05ac684364955282965",
   "../k56-offline-shared/worker-audio-status-v2.mjs": "e62a3d0ed96706a8e7c736bdda262a66262d63248cd52c892bbe43b0dfd94679",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
@@ -328,16 +328,16 @@ export const ASSET_HASHES={
   "annotations.js": "47360f47eac16dc08256fe1fcea82f0906ebd29502ee4a87f79436bad2306013",
   "audio-loader-audio-status-v1.js": "e0d861e5b0f26fa1985326d7038b6ab2e3ab5dfe4121abae2802b9a178de5aa6",
   "audio-whole-audio-status-v1.mjs": "59ae81b3fffe09ba68bb090fd9e59b4cb418e52c738161ede99f74ba74b7f9cb",
-  "bootstrap-audio-status-v2.js": "97a4e3940e075501cc1c1dbbfd395a580cab796ad7419d053c19e00d13882735",
+  "bootstrap-audio-status-v2.js": "e9e50066ebcebd104536d5d44ebbe07a2c92251d645cc7a9e66d7460d595ddde",
   "content.js": "63c3c0b8ea82c8c5cb8e47c28b031bf758051f545e8e37e911f1da0e23440bce",
   "demo-reset.css": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035",
   "demo-reset.js": "298c0fab15fe45739ad3b19094c71876cc7cb04d9dc2a2922d3d3381221e9dd3",
   "enhance.js": "9c92b053441d8fb7e543cb2798620c6f79b50bc0d59dcf8ef33f9afc6d875cfc",
   "exam.css": "12a46e66c5cce7095e5bb41c0cc8166c99e10fa74036fd176ecd87b231cd2939",
-  "index-audio-status-v2.html": "b522cb996b7758851d7149193c2f5cf468fbe949cd2cfee6c32b8c9e60510ba9",
+  "index-audio-status-v2.html": "38a9ed36271cf45b82fc12e7803f9fbd6aeba0a089682cc3511c8fc7c4357bf6",
   "offline-audio-status-v2.mjs": "35072bec289b7ad6a9d01fd0445f2f0f0859f1446d97b73818f5658108e967d2",
   "offline-worker-audio-status-v2.js": "6ed8cf1e8d7e5e30138ad329722eb76c6e0d767a370b8d997db33076748fe154",
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff"
 };
-export const ASSET_BUILD_ID="e8da74550f4041f0e3d2230194b0f71188d8add9dfdb17d38ae8e7e5415cfdcc";
+export const ASSET_BUILD_ID="154eb26f509f3a3176b53b926104e98c39776a1326a0f8bfa343a775819ea15e";
