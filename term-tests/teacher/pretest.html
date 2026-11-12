@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Bảng kết quả bài test dành cho giảng viên">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://izone-audio-delivery-stage.tranhoangduc90.workers.dev https://izone-audio-delivery.tranhoangduc90.workers.dev https://ducizone.ddns.net https://ducizone.ddns.net:18869 https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://ducizone.ddns.net https://ducizone.ddns.net:18869 https://*.googleusercontent.com; media-src 'self' blob:; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; base-uri 'none'; form-action 'self'">
+    <title>Kết quả bài test của lớp</title>
+    <link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg?v=20261105">
+    <link rel="stylesheet" href="../shared/styles.css?rev=20261003-writing-save-cas-v1">
+    <link rel="stylesheet" href="styles.css?rev=20260922-admin-access-v1">
+    <link rel="stylesheet" href="reading-appearance.css?rev=20261016-v1">
+    <link rel="stylesheet" href="../shared/teacher-saved-progress.css?rev=20261019-v1">
+    <link rel="stylesheet" href="../k67-shared/answer-explanations.css?rev=20261021-term2-audio-v2">
+    <script src="../../shared/teacher-single-sign-on.js?v=20261026-startup2&startup=20261026-v2" data-izone-teacher-product="term67"></script>
+    <link rel="stylesheet" href="../k67-design/master170-font-colors.css?rev=20261023-v3">
+  <link rel="stylesheet" href="../../shared/master170/assessment-v1.1.css?v=20261029-approved-r3">
+  <script type="module" src="../../shared/master170/assessment-v1.1.mjs?v=20261029-approved-r3"></script>
+<script defer src="../../shared/red-focus-glow.js?v=20261102-r1"></script>
+</head>
+  <body data-izone-design="master170@1.1" data-izone-ui-profile="exam-compact" data-izone-consumer="term-mini-k67" class="teacher-reading">
+    <header class="topbar teacher-topbar">
+      <div>
+        <img class="m170-logo" src="../../shared/master170/assets/izone-logo-color.png" alt="IZONE · IELTS Chiến lược" width="145" height="48">
+        <p class="eyebrow">IZONE · Dành cho giảng viên</p>
+        <h1>Kết quả bài test của lớp</h1>
+        <p>Xem kết quả Listening, Reading và theo dõi tiến độ chấm từng bài Writing.</p>
+      </div>
+      <div class="teacher-topbar-actions">
+        <span class="teacher-login-badge" id="loginBadge">Đang xác minh đăng nhập…</span>
+        <button class="button button-secondary" id="refreshButton" type="button" hidden>Làm mới dữ liệu</button>
+        <button class="button button-secondary" id="logoutButton" type="button" hidden>Đăng xuất</button>
+      </div>
+    </header>
+
+    <main class="page-shell teacher-page-shell">
+      <div class="notice" id="notice" role="status">Đang khôi phục đăng nhập của bạn…</div>
+
+      <section class="panel teacher-access" id="accessView" hidden>
+        <div>
+          <p class="eyebrow">Quyền truy cập</p>
+          <h2>Đăng nhập tài khoản giảng viên</h2>
+          <p>Chỉ tài khoản đã được quản trị viên cấp quyền cho lớp mới xem được tên và kết quả học viên.</p>
+          <p>Đăng nhập một lần để dùng các sản phẩm IZONE trên trình duyệt này. Phiên được ghi nhớ 90 ngày không hoạt động.</p>
+          <label class="teacher-login-remember"><input id="rememberTeacherLogin" type="checkbox"> Tự đăng nhập Google trên thiết bị này</label>
+        </div>
+        <div id="googleSignInButton"></div>
+      </section>
+
+      <section id="dashboardView" hidden>
+        <div class="panel teacher-toolbar">
+          <label>
+            Lớp
+            <select id="classSelect"></select>
+          </label>
+          <label>
+            Bài test
+            <select id="testSelect"></select>
+          </label>
+          <div class="teacher-context">
+            <span>Tài khoản <span class="teacher-role-badge" id="reviewerRoleBadge"></span></span>
+            <strong id="reviewerName">—</strong>
+          </div>
+        </div>
+
+        <aside class="teacher-access-notice" id="classAccessNotice" role="status" aria-live="polite" hidden>
+          <div class="teacher-access-notice-icon" aria-hidden="true">🛡</div>
+          <div>
+            <strong id="classAccessTitle"></strong>
+            <p id="classAccessMessage"></p>
+          </div>
+        </aside>
+
+        <div class="teacher-tabs-shell">
+          <button class="teacher-tabs-scroll teacher-tabs-scroll-prev" id="teacherTabsPrev" type="button" aria-label="Xem các tab phía trước" hidden>‹</button>
+          <nav class="teacher-tabs" id="teacherTabs" role="tablist" aria-label="Tổng quan và kết quả từng học viên"></nav>
+          <button class="teacher-tabs-scroll teacher-tabs-scroll-next" id="teacherTabsNext" type="button" aria-label="Xem các tab tiếp theo" hidden>›</button>
+        </div>
+
+        <section class="panel teacher-overview" id="overviewView">
+          <div class="teacher-section-heading">
+            <div>
+              <p class="eyebrow">Tổng quan chung</p>
+              <h2 id="overviewTitle">Kết quả của lớp</h2>
+            </div>
+            <span class="teacher-result-count" id="resultCount">0 học viên</span>
+          </div>
+          <div class="teacher-summary-grid" id="classSummary"></div>
+          <div class="teacher-table-wrap">
+            <table class="teacher-table">
+              <thead>
+                <tr>
+                  <th>Học viên</th>
+                  <th>Listening</th>
+                  <th>Reading</th>
+                  <th data-teacher-writing-heading>Writing</th>
+                  <th>Trạng thái</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="overviewBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="studentView" hidden></section>
+      </section>
+    </main>
+
+    <script src="../k67-shared/config.js?rev=20261006-k67-backend"></script>
+    <script src="../shared/attempt-review.js?rev=20260909-k67-update-v1"></script>
+    <script src="../k67-shared/review-audio.js?rev=20261026-term1-replay1"></script>
+    <script src="../k67-shared/answer-explanations-private-audio-v1.js?rev=20261026-term1-replay1&journal=20261024-startup-v2&resilience=20261027-v1&audio=20261028-part-rescue-v1"></script>
+    <script type="module" src="app-pretest-v1.js?rev=20261019-saved-progress-v1&amp;startup=20261026-v2&amp;resilience=20261027-v1&amp;history=20261102-1&amp;tracking=20261103-3&amp;detailScope=20261108-v1"></script>
+  </body>
+</html>
