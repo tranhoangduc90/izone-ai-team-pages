@@ -54,11 +54,11 @@ export const ASSETS=[
   "../k67-shared/config.js",
   "../k67-shared/review-audio.js",
   "../mini-test-lesson-5-computer-based/resilience.mjs",
-  "../shared/app.js",
+  "../shared/app-mini-paper-k67-submission-recovery-v1.js",
   "../shared/attempt-review.js",
   "../shared/exam-clock.js",
   "../shared/exam-order.js",
-  "../shared/section-submission.mjs",
+  "../shared/section-submission-k67-paper-v1.mjs",
   "../shared/styles.css",
   "../shared/teacher-audio-recovery.css",
   "../shared/teacher-audio-recovery.js",
@@ -74,8 +74,8 @@ export const ASSETS=[
   "../teacher/reading-appearance.css",
   "../teacher/styles.css",
   "index.html",
+  "offline-submission-recovery-v1.mjs",
   "offline-worker.js",
-  "offline.mjs",
   "test-config.js"
 ];
 export const ASSET_HASHES={
@@ -129,15 +129,15 @@ export const ASSET_HASHES={
   "../k67-design/assets/SourceSans3-Variable.woff2": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8",
   "../k67-design/master170-font-colors.css": "6ab8b61f5dba39037b62d94b656522692ef450a9f60bc01c0848526fed315063",
   "../k67-shared/answer-explanations.css": "94df8adc3ed8c8ca7ffcb3eaa5b3022ab2eab0c6bc63f10f5168a3b57ed74d24",
-  "../k67-shared/answer-explanations.js": "9760a6122a1f0f0205c4808f7f8db712fc0e5883bae601d44608ec1dfae7a3e6",
+  "../k67-shared/answer-explanations.js": "9bdd5c7f3a9a15d9157a79ecdbf5bd6c3ec8544a0405fd692661fc1ed132c045",
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
-  "../shared/app.js": "f3b62122a43c8912ff767e5f4d076098c48e527d8aa32aa9275ac3ce6feabdcb",
+  "../shared/app-mini-paper-k67-submission-recovery-v1.js": "7026aaa2ca2c3226c449586dfde70fdd138347f89f724f6deedb3775b0f205fb",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/exam-clock.js": "54e54acbe25ceea6670cf96afb683d583430e088eac28a753a8f028775072fbd",
   "../shared/exam-order.js": "b8bfff8d4e8e16fd487db614423ec1e83230196695b7572b48ef284a3faebd88",
-  "../shared/section-submission.mjs": "f0e91d30ebe25e921c33e6f89ecb33cdf6f3cf8da0168301665f0d634faf6baf",
+  "../shared/section-submission-k67-paper-v1.mjs": "e60b3c241a9e74c615de5685d12088ce12faa2c0cfe97818d27a8867ba4bc7ff",
   "../shared/styles.css": "e19be7903218548bc254d0ceca072fa999dbf42a654585bf10e93dfafbc13ec5",
   "../shared/teacher-audio-recovery.css": "cc53a29792f4ada666cc5c440b1d544ae70f8d14e2910262b4465a4247d979b4",
   "../shared/teacher-audio-recovery.js": "feefd9156426976d8b642db0045da1a00107b9ab7934121083b67bbd9c4ce1d6",
@@ -152,9 +152,9 @@ export const ASSET_HASHES={
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
-  "index.html": "2d3181df51352e240ddfb46625ebe3c53468a1859c01f7355ccc21960a6f6a3c",
+  "index.html": "cb6d816b3f0ab1bb85b3b8e62cc4446a5f064a5fb4ab37ec5a92115523d204d8",
+  "offline-submission-recovery-v1.mjs": "bf127629d9ded297e528d4f7264de5f2fd97ca0ee002c317b10ed6f052591f4c",
   "offline-worker.js": "e9bf2e2725c942f484c01f1822c5dbf1b5fa50fa09eeadf4eac9970097efd880",
-  "offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
   "test-config.js": "ad6f4db2ae4dec2ee39e6c3fdc62f02dd073862f8c1355008b9913dc6291521c"
 };
-export const ASSET_BUILD_ID="263b7fcdc25d100ec84d4c8e211701a53e2dd9082e310a28da4e3b2a79ca6ca9";
+export const ASSET_BUILD_ID="dbbfa92cfd4b993aaec15b06db40083eb369c5ac5ed3cbf446df7d35c3edc0bb";
