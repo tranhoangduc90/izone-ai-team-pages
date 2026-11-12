@@ -1500,6 +1500,11 @@
       stopTimer();
       visibilityObserver.disconnect();
     });
+    window.addEventListener('pageshow', event => {
+      if (!event.persisted) return;
+      visibilityObserver.observe(readingForm.form, { attributes: true, attributeFilter: ['hidden'] });
+      startTimer();
+    });
     startTimer();
   }
 
@@ -1614,6 +1619,11 @@
     window.addEventListener('pagehide', () => {
       stopTimer();
       visibilityObserver.disconnect();
+    });
+    window.addEventListener('pageshow', event => {
+      if (!event.persisted) return;
+      visibilityObserver.observe(form, { attributes: true, attributeFilter: ['hidden'] });
+      startTimer();
     });
     startTimer();
   }
