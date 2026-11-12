@@ -872,7 +872,7 @@
   }
 
   async function enterOfflineListening() {
-    const runtime=miniOffline, prepared=runtime.record.prepared;
+    const runtime=miniOffline, run=runtime.record, prepared=run.prepared;
     let audio;
     if (!runtime.record.sections.listening?.startedAt) {
       if (!preparedPlayer?.ready) throw new Error('Trình phát chính chưa sẵn sàng.');
@@ -890,8 +890,20 @@
     const started=await runtime.start('listening');
     state.preparedAttempt={...prepared,...started};
     saveState({...started,studentRef:runtime.record.studentRef,identityConfirmed:true});
-    await enterExam({...prepared,...started},audio);
-    if (!runtime.playerReady) throw new Error('Bộ điều khiển audio chưa sẵn sàng. Bài được giữ.');
+    try {
+      await enterExam({...prepared,...started},audio);
+      if (!runtime.playerReady) throw new Error('Bộ điều khiển audio chưa sẵn sàng. Bài được giữ.');
+    } catch (error) {
+      const listening=run.sections.listening;
+      // Only the current attempt with no attached player can prove this startup failed before play.
+      if (runtime.record!==run || !runtime.owned || runtime.playerReady || !listening?.startedAt
+          || listening.sealed || listening.interrupted || run.player.ended || !audio.paused || audio.currentTime!==0) throw error;
+      run.player.initialPlayBlocked=true;
+      runtime.observe('audio_diagnostic',{event:'view_load_failed_before_play',position:0});
+      try { await runtime.persist(true); }
+      catch { throw error; }
+      throw new Error('Chưa mở được giao diện Listening. Hãy tải lại trang để tiếp tục lượt.',{cause:error});
+    }
     if (!runtime.record.sections.listening.sealed && !runtime.record.player.ended && !runtime.record.player.held) {
       const controller = window.K56_LISTENING_AUDIO;
       if (runtime.record.player.initialPlayBlocked === true) controller.playBlocked();

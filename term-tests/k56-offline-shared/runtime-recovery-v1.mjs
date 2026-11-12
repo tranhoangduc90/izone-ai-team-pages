@@ -637,7 +637,7 @@ export function withListeningContinuity(OfflineRuntime) {
    if (started || terminal) return;
    resumeButton.textContent = 'Phát audio';
    resumeButton.hidden = false;
-   update('Trình duyệt chưa cho phát. Hãy bấm Phát audio');
+   update('Audio chưa phát. Hãy bấm Phát audio');
   };
   const canStart = () => this.record === run && this.owned && this.player === audio
    && !started && !terminal && !run.sections.listening?.sealed && !run.sections.listening?.interrupted;
@@ -646,7 +646,7 @@ export function withListeningContinuity(OfflineRuntime) {
    playPending = true;
    resumeButton.disabled = true;
    try {
-    // A reload can retry only a confirmed rejection. Consume that evidence before calling play again.
+    // Consume the saved proof of a failed start before issuing another play command.
     if (run.player.initialPlayBlocked === true) {
      delete run.player.initialPlayBlocked;
      try { await this.persist(true); }
