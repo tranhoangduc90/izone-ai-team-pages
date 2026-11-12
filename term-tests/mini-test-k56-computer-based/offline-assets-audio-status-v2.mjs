@@ -328,16 +328,16 @@ export const ASSET_HASHES={
   "annotations.js": "47360f47eac16dc08256fe1fcea82f0906ebd29502ee4a87f79436bad2306013",
   "audio-loader-audio-status-v1.js": "e0d861e5b0f26fa1985326d7038b6ab2e3ab5dfe4121abae2802b9a178de5aa6",
   "audio-whole-audio-status-v1.mjs": "59ae81b3fffe09ba68bb090fd9e59b4cb418e52c738161ede99f74ba74b7f9cb",
-  "bootstrap-audio-status-v2.js": "e9e50066ebcebd104536d5d44ebbe07a2c92251d645cc7a9e66d7460d595ddde",
+  "bootstrap-audio-status-v2.js": "4990db20b8b045afbcac5241bc76929fae4dd2d6ed741fd22082ee3d5490cc5d",
   "content.js": "63c3c0b8ea82c8c5cb8e47c28b031bf758051f545e8e37e911f1da0e23440bce",
   "demo-reset.css": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035",
   "demo-reset.js": "298c0fab15fe45739ad3b19094c71876cc7cb04d9dc2a2922d3d3381221e9dd3",
   "enhance.js": "9c92b053441d8fb7e543cb2798620c6f79b50bc0d59dcf8ef33f9afc6d875cfc",
   "exam.css": "12a46e66c5cce7095e5bb41c0cc8166c99e10fa74036fd176ecd87b231cd2939",
-  "index-audio-status-v2.html": "38a9ed36271cf45b82fc12e7803f9fbd6aeba0a089682cc3511c8fc7c4357bf6",
+  "index-audio-status-v2.html": "4864dfd0c08dee677d9f67c150504a597137ecb07de6371bbd89bdd14d76ffe2",
   "offline-audio-status-v2.mjs": "35072bec289b7ad6a9d01fd0445f2f0f0859f1446d97b73818f5658108e967d2",
   "offline-worker-audio-status-v2.js": "6ed8cf1e8d7e5e30138ad329722eb76c6e0d767a370b8d997db33076748fe154",
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff"
 };
-export const ASSET_BUILD_ID="154eb26f509f3a3176b53b926104e98c39776a1326a0f8bfa343a775819ea15e";
+export const ASSET_BUILD_ID="3c3f253b1098c77f072c692a9f191f5098d88d88002e31f8bf80eb9f6dfbd6ea";
