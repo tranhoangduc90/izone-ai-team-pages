@@ -53,9 +53,12 @@ export function studentViewHtml({ me, model, assignments, isLocked, feedback, de
   const introduction=a.writingPart==='introduction';
   const compactRevision=compactStatus&&model.kind==='revision';
   const showRevisionGuide=compactRevision&&!!state.publication&&!isLocked;
+  const cleanLanguage=state.publication?.result?.languageOutcome==='no_sentence_changes';
   const editorLabel = `<label class="editor-label" for="essay">${model.kind === 'revision' ? 'Bản sửa của em'+(model.revisionRound>1?' · Lượt '+model.revisionRound:'') : introduction?'Phần mở bài của em':'Bài viết bằng tiếng Anh'}${isLocked?'<small>Bản đã nhận · chỉ đọc</small>':compactRevision?'':'<small>Em tự diễn đạt ý của mình</small>'}</label>`;
   const revisionTask=showRevisionGuide
-    ? '<aside class="revision-task" aria-label="Việc cần làm"><div><strong>Sửa và nộp lại mở bài</strong><p>Đọc nhận xét về nội dung và gợi ý sửa từng câu trước khi viết bản sửa.</p></div><a class="revision-task-link" href="#essay" data-go-to-revision>Đến ô viết bản sửa <span aria-hidden="true">→</span></a></aside>'
+    ? '<aside class="revision-task" aria-label="Việc cần làm"><div><strong>Sửa và nộp lại mở bài</strong><p>'+
+      (cleanLanguage?'Dựa vào nhận xét của GV để chỉnh phần trả lời đề và mạch ý.':'Đọc nhận xét về nội dung và gợi ý sửa từng câu trước khi viết bản sửa.')+
+      '</p></div><a class="revision-task-link" href="#essay" data-go-to-revision>Đến ô viết bản sửa <span aria-hidden="true">→</span></a></aside>'
     : '';
   const saveLabel = model.backupError ? 'Chưa lưu được dự phòng trên thiết bị' : model.text !== model.lastSavedText ? 'Đã khôi phục bản trên thiết bị · chưa đồng bộ' : model.baseRevision ? 'Đã lưu nháp trên hệ thống · bản ' + model.baseRevision : 'Chưa có bản lưu';
   const status = state.publication?'returned':lesson3Status(state.submission);

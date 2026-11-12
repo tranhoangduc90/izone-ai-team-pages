@@ -28,7 +28,7 @@ export function feedbackTabsHtml(result, { esc, marked, editable = false }) {
   </div>${editable ? '' : teacherCommentsHtml(result.teacherComments, esc,result.teacherHighlights)}`;
 }
 
-export function setupFeedbackTabs(root, { storageKey, onSelect } = {}) {
+export function setupFeedbackTabs(root, { storageKey, onSelect, initialTab } = {}) {
   root?.querySelectorAll('[data-feedback-preview]').forEach(preview=>{
     const input=root.querySelector('#'+preview.dataset.feedbackPreview);
     input?.addEventListener('input',()=>{if(input.dataset.richSync)return;preview.innerHTML=feedbackTextHtml(input.value);});
@@ -64,5 +64,5 @@ export function setupFeedbackTabs(root, { storageKey, onSelect } = {}) {
     if (destination === undefined) return;
     e.preventDefault(); select(tabs[destination].dataset.feedbackTab, true);
   });
-  select(initial);
+  select(initialTab ?? initial);
 }

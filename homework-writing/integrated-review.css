@@ -13,6 +13,8 @@
 .integrated-trcc .ProseMirror{min-height:210px}
 .integrated-review .ProseMirror p{margin:0 0 .7em}
 .integrated-review .ProseMirror p:last-child{margin-bottom:0}
+.integrated-review .clean-language-summary{min-height:0}
+.integrated-review .clean-language-summary .review-next-step{margin-top:14px}
 .integrated-review .ProseMirror:focus{outline:2px solid #db0829;outline-offset:-2px}
 .integrated-review .ProseMirror mark{background:#d8eefc;text-decoration:underline dashed #2b729a;text-underline-offset:3px;color:inherit}
 .integrated-review .ProseMirror a{color:#1554a2;text-decoration:underline}
