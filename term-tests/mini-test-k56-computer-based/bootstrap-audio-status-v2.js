@@ -981,6 +981,7 @@
       return;
     }
     previewAudio.currentTime = 0;
+    previewAudio.volume = Number(elements.bootstrapVolume.value) || 1;
     try {
       await previewAudio.play();
       previewHeard = false;
