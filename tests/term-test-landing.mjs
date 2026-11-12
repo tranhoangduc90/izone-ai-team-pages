@@ -21,16 +21,17 @@ const { chromium } = require('playwright');
 test('các bài test có đủ computer-based, answer sheet và Listening audio', async () => {
   const html = await readFile(join(repoRoot, 'term-tests/index.html'), 'utf8');
   const styles = await readFile(join(repoRoot, 'term-tests/shared/styles.css'), 'utf8');
-  const computer = 'data-test="term-test-2-computer-based">Term Test 2';
-  const answer = 'data-test="term-test-2">Term Test 2';
-  assert.ok(html.indexOf(computer) >= 0 && html.indexOf(computer) < html.indexOf(answer));
-  for (const [href, label] of [
-    ['term-test-1-audio.html', 'Term Test 1 · Audio'],
-    ['term-test-2-audio.html', 'Term Test 2 · Audio'],
-    ['mini-test-listening-audio.html', 'Mini Test Buổi 5 · Audio']
+  for (const [slug, label] of [
+    ['term-test-1', 'Term Test 1'],
+    ['term-test-2', 'Term Test 2'],
+    ['mini-test-lesson-5', 'Mini Test Buổi 5']
   ]) {
-    assert.match(html, new RegExp(`href="${href}">${label}`));
+    assert.match(html, new RegExp(`data-pick="${slug}">${label}`));
   }
+  assert.match(html, /id="testActions" aria-labelledby="chosenName" hidden/);
+  assert.match(html, /id="paperAudio" target="_blank"/);
+  assert.match(html, /id="backupAudio" target="_blank"/);
+  assert.match(html, /id="answerSheet" target="_blank"/);
   assert.match(html, /accounts\.google\.com/);
   assert.match(html, /type="module" src="shared\/landing\.js/);
   assert.match(styles, /\.landing-actions \.button \{[^}]*min-height: 62px/);
@@ -161,10 +162,26 @@ test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đ
     await page.locator('#classSelect').waitFor({ state: 'visible' });
     assert.deepEqual(await page.locator('#classSelect option').allTextContents(), ['IC2172', 'IC3000', 'IC9999']);
     assert.match(receivedCookie, /fixture_teacher_session=active/u);
-    for(const group of await page.locator('.landing-actions').all()) {
+    assert.equal(await page.locator('#classCodeLabel').getAttribute('for'), 'classSelect');
+    for (const width of [1440, 1024, 768, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      const select = await page.locator('#classSelect').boundingBox();
+      const results = await page.locator('#teacherDashboard').boundingBox();
+      assert.equal(select.y, results.y);
+      assert.equal(select.height, results.height);
+      assert.ok(Math.abs(select.width / results.width - 2) < 0.01);
+    }
+    await page.setViewportSize({ width: 1280, height: 900 });
+    for(const group of await page.locator('#testPicker .landing-actions').all()) {
       const heights = await group.locator('.button').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().height));
       assert.equal(new Set(heights.map(Math.round)).size, 1, 'Nút trong cùng nhóm phải cao bằng nhau');
     }
+    await page.getByRole('button', { name: 'Term Test 1', exact: true }).click();
+    assert.match(await page.locator('#studentLink').inputValue(), /class=IC2172&mode=lis_first$/);
+    await page.locator('#classSelect').selectOption('IC3000');
+    assert.match(await page.locator('#studentLink').inputValue(), /class=IC3000&mode=lis_first$/);
+    await page.reload();
+    await page.locator('#classSelect').waitFor({ state: 'visible' });
     await page.getByRole('button', { name: 'Đăng xuất' }).click();
     await page.locator('#loginStatus').filter({ hasText: 'Đã đăng xuất' }).waitFor();
     assert.equal(await page.locator('#classCode').isVisible(), true);
