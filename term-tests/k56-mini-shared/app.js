@@ -22,7 +22,7 @@
   let paperRuntime=null;
   if(paperMini&&!demoMode&&classCode&&classCode!=='CODEXDEMO56'&&navigator.locks?.request&&navigator.serviceWorker&&globalThis.crypto?.subtle){
     try{
-      const {OfflineRuntime,ExamStore}=await import('../mini-test-k56/offline.mjs?v=20261107-mini-v1');
+      const {OfflineRuntime,ExamStore}=await import('../mini-test-k56/offline.mjs?release=20261112-mini-recovery&v=20261107-mini-v1');
       paperRuntime=new OfflineRuntime({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
       await paperRuntime.open();
       if(paperRuntime.active)offline=paperRuntime;
@@ -153,10 +153,11 @@
   // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
   let examJournal = null;
   if (appConfig.EXAM_JOURNAL_ENABLED === true) {
-    void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&miniAudio=20261108-v1').then(({ connectExamJournal }) => {
+    void import('../shared/exam-journal/bridge-recovery-v1.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&miniAudio=20261108-v1').then(({ connectExamJournal }) => {
       examJournal = connectExamJournal({ enabled: true,
         endpoint: appConfig.EXAM_JOURNAL_BASE_URL || appConfig.API_BASE_URL + '/api/term-tests/' + testConfig.slug,
         testSlug: testConfig.slug, build: offline?.build || appConfig.EXAM_JOURNAL_BUILD || 'unknown',
+        submissionMetadataOnly: offline?.submissionRecovery === true,
         getState: () => ({ ...state, classCode,
           generation: typeof miniGeneration === 'number' ? miniGeneration : Number(state.generation || 0),
           clientRunId: window.TERM_TEST_BOOTSTRAP?.clientRunId || '', examSessionId: window.TERM_TEST_BOOTSTRAP?.examSessionId || '', historyEpoch: window.TERM_TEST_BOOTSTRAP?.historyEpoch || '' })
@@ -3014,7 +3015,11 @@
     else showSectionReady(skill);
     elements.listeningView.addEventListener('term-test:listening-interrupted', showListeningInterruption);
     showListeningInterruption();
+    if(offline.submissionRecovery&&examJournal&&!examJournal.metadataOnlySubmission){
+      void examJournal.stop().catch(()=>{});examJournal=null;
+    }
     if(examJournal)offline.setJournal(examJournal);
+    else if(offline.submissionRecovery)offline.connectRecoveryJournal();
     offline.addEventListener('change', () => {
       const { notice } = elements;
       if (!notice.hidden && notice.hasAttribute('data-offline-status') && notice.textContent !== offline.message) {
