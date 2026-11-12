@@ -27,7 +27,7 @@
   if (!testConfig || !appConfig || !root) return;
   let recoveryClient;
   const loadRecoveryClient=()=>recoveryClient??=
-    import('../substitute-shared/submission-recovery-v1.mjs?v=20261112-v3').then(({createSubmissionRecoveryClient})=>
+    import('../substitute-shared/submission-recovery-v1.mjs?v=20261113-capacity-v1').then(({createSubmissionRecoveryClient})=>
       createSubmissionRecoveryClient({apiRequest,journalSubmissionOwner,sectionDefinition,taskNumber:1}));
   const { createWritingSubmission } = await import('../shared/writing-submission.mjs?v=20261105-writing-submit-v1');
 
@@ -783,6 +783,7 @@
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
         requestError.code = String(data.code || data.error || 'HTTP_ERROR'); requestError.status = response.status;
         if(data.submissionHold)requestError.submissionHold=data.submissionHold;
+        if(data.submissionRecoveryError)requestError.submissionRecoveryError=data.submissionRecoveryError;
         if(requestError.code==='HISTORY_EPOCH_CONFLICT')window.SUBSTITUTE_STATE.stop();
         throw requestError;
       }
