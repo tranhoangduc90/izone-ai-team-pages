@@ -20,6 +20,7 @@
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
   const listeningOnly = retakeConfig.mode === 'listening-only';
   const writingConfig = listeningOnly ? null : (window.TERM_TEST_CONTENT?.writing || null);
+  const waitForJourneyReceipt = Boolean(writingConfig) || testConfig?.slug === 'pretest-lesson-16';
   const deferResultsUntilComplete = listeningOnly ? false : Boolean(window.TERM_TEST_CONTENT?.deferResultsUntilComplete);
   const readingMinutes = Math.max(1, Number(window.TERM_TEST_CONTENT?.timing?.readingMinutes) || 60);
   const writingMinutes = Math.max(1, Number(window.TERM_TEST_CONTENT?.timing?.writingMinutes) || 60);
@@ -889,7 +890,7 @@
   let journeyResultReadyCopy;
   function updateJourneyResultReady() {
     const card = elements.resultReadyView;
-    if (!miniJourney || !writingConfig || card.hidden) return;
+    if (!miniJourney || !waitForJourneyReceipt || card.hidden) return;
     const waiting = !miniJourney.resultToken();
     if (card.dataset.awaitingReceipt === String(waiting)) return;
     const fields = [card.querySelector('.eyebrow'), card.querySelector('h2'), card.querySelector('p:not(.eyebrow)')];
@@ -3175,7 +3176,7 @@
   }
 
   async function loadResult(button) {
-    if (miniJourney && writingConfig && !miniJourney.resultToken()) {
+    if (miniJourney && waitForJourneyReceipt && !miniJourney.resultToken()) {
       updateJourneyResultReady();
       return;
     }
@@ -4338,7 +4339,7 @@
       }
     });
     if (!miniJourney.paper) miniJourney.changed.addEventListener('change', updateListeningSavedCopy);
-    if (writingConfig) miniJourney.changed.addEventListener('change', updateJourneyResultReady);
+    if (waitForJourneyReceipt) miniJourney.changed.addEventListener('change', updateJourneyResultReady);
     if(view.needsListeningAcknowledgment)await showJourneyInterruption();
     else if(view.nextSection==='listening')await showJourneyListening(window.TERM_TEST_BOOTSTRAP?.playNewListening === true);
     else if(view.nextSection==='reading'){
