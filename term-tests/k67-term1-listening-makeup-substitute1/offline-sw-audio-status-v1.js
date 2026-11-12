@@ -1,5 +1,5 @@
-const CACHE='k67-listening-makeup-shell-v1-20261111-audio-status-v1';
-const PREVIOUS_CACHE='k67-listening-makeup-shell-v1';
+const CACHE='k67-listening-makeup-shell-v1-20261111-audio-status-v1-20261112-submission-reconciliation';
+const PREVIOUS_CACHES=['k67-listening-makeup-shell-v1-20261111-audio-status-v1','k67-listening-makeup-shell-v1'];
 const shell=new URL('./',self.location.href);
 const project=new URL('../../',shell);
 const preparedMarker=new URL('offline-sw-audio-status-v1.js?shell-prepared=1',shell);
@@ -29,15 +29,20 @@ self.addEventListener('fetch',event=>{
  event.respondWith(fetch(request).catch(async error=>{
   const cache=await caches.open(CACHE);
   if(entry&&!await cache.match(preparedMarker)){
-   const previousEntry=await caches.match(shell.href,{cacheName:PREVIOUS_CACHE});
-   if(previousEntry)return previousEntry;
+   for(const cacheName of PREVIOUS_CACHES){
+    if(cacheName===PREVIOUS_CACHES[0]&&!await caches.match(preparedMarker,{cacheName}))continue;
+    const previousEntry=await caches.match(shell.href,{cacheName});
+    if(previousEntry)return previousEntry;
+   }
   }
   const cached=await cache.match(entry?shell.href:request);
   if(cached)return cached;
   // Match the exact original asset URL for tabs opened before the update.
   if(!entry){
-   const previous=await caches.match(request,{cacheName:PREVIOUS_CACHE});
-   if(previous)return previous;
+   for(const cacheName of PREVIOUS_CACHES){
+    const previous=await caches.match(request,{cacheName});
+    if(previous)return previous;
+   }
   }
   throw error;
  }));

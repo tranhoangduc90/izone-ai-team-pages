@@ -1,4 +1,4 @@
-export const BUILD = 'k67-listening-makeup-20261111-v1';
+export const BUILD = 'k67-listening-makeup-20261112-submission-reconciliation';
 export const API = 'https://ducizone.ddns.net/api/k67-listening-makeup/v1';
 export const PRODUCT = 'k67-term1-listening-makeup';
 export const SLUG = 'k67-term1-listening-makeup-substitute1';

@@ -46,6 +46,15 @@ function appendCells(body, cells) {
   return row;
 }
 
+async function flushSubmissionJournal(state) {
+  const { Telemetry } = skill === 'reading'
+    ? await import('../ic2311-reading-retake-substitute1-k56/telemetry.mjs')
+    : await import('../ic2311-listening-retake-substitute1-k56/telemetry.mjs?v=20261112-submission-reconciliation');
+  const journal = new Telemetry({tabId:crypto.randomUUID(),ownerId:state.identity.ownerId,audioOwnerId:state.identity.audioOwnerId});
+  journal.bind(state.identity,state.permit,{background:false});
+  await journal.flush();
+}
+
 function submission(state) {
   if (state?.phase !== 'submitted' || !state.serverConfirmed || state.pending || !state.permit || !state.identity) return null;
   const receiptId = typeof state.receipt === 'string' ? state.receipt : state.receipt?.receiptId;
@@ -201,6 +210,7 @@ async function load() {
     }
     controller.signal.throwIfAborted();
     render(review);
+    void flushSubmissionJournal(latest).catch(() => {});
     status.textContent = review.bundle ? '' : 'Đã tải điểm và đáp án. Lời giải chi tiết đang được chuẩn bị.';
     retry.hidden = !!review.bundle;
     await storage.put(cacheKey, { review }).catch(() => {});
