@@ -103,10 +103,7 @@ async function submitRecovered({ row, body, read, fromStatus, verifySaved, send,
       return finish(receipt, await fromStatus(status));
     }
     if (status?.state === 'held' && validHold(status.submissionHold)) return status;
-    if (status?.state === 'missing') return status;
-    if (status?.state === 'expired') {
-      throw codedError('SUBMISSION_HOLD_EXPIRED', 'Bản giữ trên máy chủ đã hết hạn. Hãy tải bản trên máy để đối soát.');
-    }
+    if (status?.state === 'missing' || status?.state === 'expired') return status;
     throw codedError('SUBMISSION_STATUS_MISMATCH', 'Trạng thái máy chủ chưa khớp bản chốt. Hãy tải bài để đối soát.');
   }
 
@@ -186,7 +183,9 @@ export function createSubmissionRecoveryClient({apiRequest,journalSubmissionOwne
     } catch (error) {
       assertOwner();
       error.offlineQueued = true;
-      const retryAt=Date.parse(error.submissionHold?.retryAt||'');
+      const refusal=error.submissionRecoveryError;
+      const matchesSeal=refusal?.version===1 && refusal.operationId===row.recovery.operationId && refusal.section===skill;
+      const retryAt=Date.parse(error.submissionHold?.retryAt || (matchesSeal ? refusal.retryAt : '') || '');
       if(error.code==='LISTENING_REVIEW_IN_PROGRESS' && Number.isFinite(retryAt)
         && scheduledListeningRetry!==row.recovery.operationId){
         scheduledListeningRetry=row.recovery.operationId;
