@@ -12,6 +12,7 @@ import { extname, join, normalize } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { sortClassesNewestFirst } from '../term-tests/shared/landing-model.js';
+import { ASSETS } from '../shared/audio/catalog.mjs';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const require = createRequire('file:///C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json');
@@ -37,20 +38,23 @@ test('các bài test có đủ computer-based, answer sheet và Listening audio'
   assert.match(styles, /#teacherDashboard \{ grid-column: 1 \/ -1; \}/);
 });
 
-test('ba trang Listening audio giữ đúng nguồn âm thanh và cổng phát', async () => {
+test('ba trang Listening audio dùng đúng tài sản K67 và giữ cổng phát', async () => {
   const pages = [
-    ['term-test-1-audio.html', 'Term_Test_1_-_Audio_zn5d4w.mp3', true],
-    ['term-test-2-audio.html', 'Term_Test_2_Audio_fty6pd.mp3', true],
-    ['mini-test-listening-audio.html', 'Mini_Test_Audio_p4yshw.mp3', false]
+    ['term-test-1-audio.html', 'term-test-1', true],
+    ['term-test-2-audio.html', 'term-test-2', true],
+    ['mini-test-listening-audio.html', 'mini-test-lesson-5', false]
   ];
-  for (const [fileName, audioFile, hasTimeWindow] of pages) {
+  for (const [fileName, slug, hasTimeWindow] of pages) {
     const html = await readFile(join(repoRoot, 'term-tests', fileName), 'utf8');
-    assert.match(html, new RegExp(audioFile.replaceAll('.', '\\.')));
+    assert.match(html, /k67-shared\/paper-audio\.mjs/);
+    assert.match(html, new RegExp(`slug: '${slug}'`));
+    assert.equal(ASSETS[slug].id, slug);
+    assert.match(ASSETS[slug].url, /\/k67-audio-assets\//);
     assert.match(html, /THỬ ÂM LƯỢNG TRƯỚC KHI THI/);
     assert.match(html, /PHÁT AUDIO THI THẬT/);
     assert.match(html, /audioTest\.currentTime >= 30/);
-    assert.match(html, /Không tải được audio/);
-    assert.match(html, /Lỗi mạng khi tải audio/);
+    assert.match(html, /id="audioRetry"/);
+    assert.doesNotMatch(html, /res\.cloudinary\.com/);
     assert.equal(html.includes('function checkTimeWindow()'), hasTimeWindow);
   }
   const termTest1 = await readFile(join(repoRoot, 'term-tests', 'term-test-1-audio.html'), 'utf8');
