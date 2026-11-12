@@ -30,7 +30,12 @@ export function schemaFieldIssues(issues,definition){
  }).filter(issue=>issue.field);
 }
 const bindings=new WeakMap();
-export function showAuthoringIssues(root,issues,{focus=false,getIssues}={}){
+export function focusAuthoringIssue(target){
+ if(!target?.isConnected)return;
+ target.scrollIntoView({block:'center'});
+ target.focus({preventScroll:true});
+}
+export function showAuthoringIssues(root,issues,{focus=false,getIssues,onTarget}={}){
  bindings.get(root)?.abort();const controller=new AbortController();bindings.set(root,controller);
  for(const e of root.querySelectorAll('.thuy-field-error'))e.remove();
  for(const e of root.querySelectorAll('[data-validation-error]')){e.removeAttribute('aria-invalid');e.removeAttribute('data-validation-error');e.removeAttribute('aria-errormessage');}
@@ -40,6 +45,9 @@ export function showAuthoringIssues(root,issues,{focus=false,getIssues}={}){
   if(!card)continue;
   const exact=issue.rowId?'[data-answer-row="'+CSS.escape(issue.rowId)+'"]':issue.blankId?'[data-blank-group="'+CSS.escape(issue.blankId)+'"] input':issue.optionId?'[data-option="'+CSS.escape(issue.optionId)+'"]':'[data-validation-field="'+CSS.escape(issue.field)+'"]';
   const input=card.querySelector(exact)||(issue.slot!=null?card.querySelectorAll('.thuy-answer-group input')[issue.slot]:null)||card.querySelector('input,textarea,select')||card;
+  const target=input.matches('input,textarea,select,[contenteditable=true],button')?input:
+    (issue.field==='answer'&&card.querySelector('[data-answer-control]'))||card.querySelector('input,textarea,select')||input;
+  onTarget?.(issue,target);
   if(input.dataset.validationError)continue;
   const message=document.createElement('p');message.className='thuy-field-error';message.id='authoring-error-'+index;message.textContent=issue.message==='Cần bổ sung thông tin này'||issue.code==='too_small'?'Cần bổ sung thông tin này':issue.message||'Cần bổ sung thông tin này';
   input.setAttribute('aria-invalid','true');input.setAttribute('aria-errormessage',message.id);input.dataset.validationError='true';
@@ -51,8 +59,8 @@ export function showAuthoringIssues(root,issues,{focus=false,getIssues}={}){
   };
   input.addEventListener('input',clear,{signal:controller.signal});
   if(issue.field==='answer')card.addEventListener('change',clear,{signal:controller.signal});
-  first??=input.matches('input,textarea,select,[contenteditable=true]')?input:card.querySelector('input,textarea,select')||input;
+  first??=target;
  }
- if(focus&&first)requestAnimationFrame(()=>{first.scrollIntoView({block:'center'});first.focus({preventScroll:true});});
+ if(focus&&first)requestAnimationFrame(()=>focusAuthoringIssue(first));
  return first;
 }

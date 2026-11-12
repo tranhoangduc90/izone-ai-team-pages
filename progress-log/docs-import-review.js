@@ -29,6 +29,7 @@ export function importReviewCard(review,{item,gradingKey,onChange,readonly=false
           delete review.reviewedContent;onChange();};card.append(apply);}
     }
     const confirm=node('button','Tôi đã xử lý và xác nhận key / chế độ không chấm');confirm.type='button';confirm.className='button';
+    confirm.dataset.validationField='importReview';
     confirm.disabled=resolved||(item.graderType!=='none'&&!gradingKey.items[item.itemVersionId]);
     confirm.onclick=()=>{review.reviewedContent=reviewContent(item,gradingKey);onChange();};card.append(confirm);
   }

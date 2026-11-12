@@ -4,7 +4,7 @@
 import {createFormLibrary} from './teacher-form-library.js?rev=20261105-class-scope-v1';
 import {bindDialogDismiss} from './session-comments.js';
 import {openWorksheetPreview} from './worksheet-preview.js?rev=20261030-personal-assign-v1';
-import {importReviewCard} from './docs-import-review.js?rev=20261025-docs-import-v1';
+import {importReviewCard} from './docs-import-review.js?rev=20261112-lead-review-v1';
 import {createDocsBatchImporter} from './docs-batch-import.js?rev=20261029-authoring-actions-v2';
 import {PART_TYPES,PART_SKILLS,selectedLimit,preparePartItem,missingSkills} from './authoring-parts.js?rev=20261028-the15-v1';
 import {editorItemKind} from './item-kind.js?rev=20261028-the15-v1';
@@ -12,7 +12,7 @@ import {changeQuestionKind,incompleteAnswerRows} from './authoring-answers.js?re
 import {mountGapAuthoring,mountSlotAnswers} from './gap-authoring.js?rev=20261030-the22-23-v1';
 import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261105-ic-order-v1';
 import {authoringAction} from './authoring-action.js?rev=20261029-authoring-actions-v2';
-import {collectPublishIssues,schemaFieldIssues,showAuthoringIssues} from './authoring-validation.js?rev=20261030-the22-23-v1';
+import {collectPublishIssues,focusAuthoringIssue,schemaFieldIssues,showAuthoringIssues} from './authoring-validation.js?rev=20261112-lead-review-v1';
 import {AI_IMPORT_EXAMPLE} from './ai-import-example.js?rev=20261030-the22-23-v1';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
   ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],
@@ -82,9 +82,9 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   let gapWidgets=[],thuyActionButtons,backgroundCompletion,queuedForeground=false,aiView=null,aiApplied=null;const previews=new Set();
   const skillErrors=new Set();
   let publishAttempted=false;
-  function checkPublishFields(){
+  function checkPublishFields({deferAnswers=false}={}){
     publishAttempted=true;
-    const issues=collectPublishIssues(payload());if(!issues.length)return;
+    const issues=collectPublishIssues(payload()).filter(issue=>!deferAnswers||issue.field!=='answer');if(!issues.length)return;
     showAuthoringIssues(editor,issues,{focus:true,getIssues:()=>collectPublishIssues(payload())});const error=Error('Cần bổ sung thông tin ở các trường được đánh dấu.');error.editorValidation=true;throw error;
   }
   function checkSkills({focus=true}={}) {
@@ -106,8 +106,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     sourceSelect=el('select'),draftList=el('div'),editor=el('div'),actions=el('div',undefined,{className:'editor-actions'});
   const assignmentDialog=createAssignmentDialog({request,getClasses:()=>assignmentClasses,getPreferredClass:()=>classSelect.value,
     getClassStatus:()=>assignmentClassStatus,onAssigned:value=>{onPublished(value);library?.setUsed(assignments);}});
-  const notice=message=>{status.textContent=message;status.hidden=libraryEnabled&&!saveFailed&&/^(Đã lưu nháp|Có thay đổi chưa lưu|Chọn lớp để soạn)/u.test(message);if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}if(libraryEnabled)paintSaveState();};
-  function paintSaveState(){saveState.textContent=!draft?'':busy?(backgroundBusy?'Đang lưu…':'Đang xử lý…'):saveFailed?'Lưu lỗi':draft.status==='published'?'Đã xuất bản':dirty?'Chưa lưu':'Đã lưu';}
+  const notice=message=>{status.textContent=message;status.hidden=libraryEnabled&&!saveFailed&&/^(Đã lưu nháp · bản|Có thay đổi chưa lưu|Chọn lớp để soạn)/u.test(message);if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}if(libraryEnabled)paintSaveState();};
+  function paintSaveState(){saveState.textContent=!draft?'':busy?(backgroundBusy?'Đang lưu…':'Đang xử lý…'):saveFailed?'Lưu lỗi':draft.status==='published'?'Đã xuất bản':dirty||!draft.id?'Chưa lưu':'Đã lưu nháp';}
   function field(parent,label,value,onChange,{kind='text',options=null,min,max,disabled=false}={}) {
     const wrap=el('label',undefined,{className:'field'});wrap.append(el('span',label));
     const input=options?el('select'):el(kind==='textarea'?'textarea':'input');
@@ -143,18 +143,27 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       lockedControls.clear();session.disabled=Boolean(draft&&(reviewMode||draft.status==='published'));
     }
   }
-  async function run(action,{background=false}={}) {
+  async function run(action,{background=false,reviewAction=''}={}) {
     if(busy){
       if(!libraryEnabled||!backgroundBusy||background||queuedForeground)return false;
       const waitingGeneration=generation,queued={generation};queuedForeground=queued;paintActions();await backgroundCompletion;if(queuedForeground===queued)queuedForeground=false;
       if(waitingGeneration!==generation||!draft)return false;
-      return run(action);
+      return run(action,{reviewAction});
     }
     let releaseBackground;if(background)backgroundCompletion=new Promise(done=>{releaseBackground=done;});
     busy=true;backgroundBusy=background;paintActions();lockControls();const current=generation,requestedDefinition=draft&&JSON.stringify(draft.definition);
     try {await action(current);} catch(error) {if(current===generation){saveFailed=!error.editorValidation&&(background||action===save||error.editorSaveFailure)&&!conflict;notice(error.name==='AbortError'?'Thao tác quá lâu. Nội dung vẫn còn; hãy thử lại.':error.message);
       const issues=draft&&(!background||requestedDefinition===JSON.stringify(draft.definition))?schemaFieldIssues(error.issues,draft.definition):[];
-      if(issues.length)showAuthoringIssues(editor,issues,{focus:!background,getIssues:()=>collectPublishIssues(payload())});
+      if(issues.length){
+        const answerIssues=reviewAction?issues.filter(issue=>issue.itemVersionId&&['answer','importReview'].includes(issue.field)):[];
+        if(answerIssues.length){
+          const saved=!reviewMode&&draft.id&&!dirty&&!saveFailed?'Đã lưu nháp. ':'';
+          notice(saved+reviewAction+' '+error.message);
+        }
+        showAuthoringIssues(editor,issues,{focus:!background,getIssues:()=>collectPublishIssues(payload()),onTarget(issue,target){
+          if(answerIssues.includes(issue))status.append(document.createElement('br'),button(issue.message,()=>focusAuthoringIssue(target)));
+        }});
+      }
       else if(!background&&!error.editorValidation)requestAnimationFrame(()=>(editor.querySelector('.editor-conflict')||status).scrollIntoView({block:'center'}));}}
     finally {if(current===generation){busy=false;backgroundBusy=false;lockControls();paintActions();if(background&&dirty&&!conflict&&!saveFailed){clearTimeout(autosaveTimer);autosaveTimer=setTimeout(()=>void run(()=>save({background:true}),{background:true}),1800);}}releaseBackground?.();}
   }
@@ -293,18 +302,23 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     });
     const saveButton=button('Lưu nháp',()=>void run(save),busy||readonly);
     const submitReview=button('Gửi duyệt',()=>void run(async current=>{
-      checkPublishFields();checkAnswerRows();checkSkills();
+      checkPublishFields({deferAnswers:true});checkSkills();
       if(dirty||!draft.id)await save();
       if(current!==generation)return;
       const result=await request('/teacher/form-drafts/'+draft.id+'/request-review',{method:'POST',body:{expectedRevision:draft.revision}});
       if(current===generation){adopt(result.draft);notice('Đã gửi bản này duyệt.');}
-    }));
+    },{reviewAction:'Chưa gửi duyệt.'}));
     const approve=button('Duyệt bản này',()=>void run(async current=>{
+      if(!reviewMode){
+        checkPublishFields({deferAnswers:true});checkSkills();
+        if(dirty||!draft.id)await save();
+        if(current!==generation)return;
+      }
       const result=await request('/teacher/form-drafts/'+draft.id+'/approve',{method:'POST',body:{expectedRevision:draft.revision,expectedHash:draft.contentHash}});
       if(current!==generation)return;
       if(reviewMode){draft=null;authoring=false;paint();await library.refresh();notice('Đã duyệt bản này. Người soạn có thể xuất bản.');}
       else {adopt(result.draft);notice('Đã duyệt bản này. Bạn có thể xuất bản.');}
-    }));
+    },{reviewAction:'Chưa duyệt.'}));
     const publish=button('Xuất bản',()=>void run(async current=>{
       checkPublishFields();
       checkAnswerRows();
@@ -332,13 +346,16 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     if(preview.parentElement!==actions||submitReview.isConnected!==shared)
       actions.replaceChildren(preview,saveButton,...(shared?[submitReview,approve]:[]),publish);
     const scored=draft.definition.blocks.some(block=>block.items.some(item=>item.maxScore>0||item.graderType!=='none'));
+    const selfApprover=!reviewMode&&library.sharedAccess().selfApproveCourses.includes(course);
+    const canApproveDraft=selfApprover&&!readonly&&(draft.status==='draft'||dirty);
+    const canApprovePending=draft.status==='pending_review'&&!dirty&&(reviewMode||!scored||selfApprover);
     preview.disabled=blocked||reviewMode||shared&&!course||!draft.definition.blocks.some(b=>b.items.length);
     saveButton.hidden=shared&&reviewMode;
     saveButton.disabled=blocked||readonly||shared&&!course;
-    submitReview.hidden=!shared||readonly||draft.status!=='draft'&&!dirty;
+    submitReview.hidden=!shared||readonly||selfApprover||draft.status!=='draft'&&!dirty;
     submitReview.disabled=blocked||!course;
-    approve.hidden=!shared||draft.status!=='pending_review'||dirty||!reviewMode&&scored&&!library.sharedAccess().selfApproveCourses.includes(course);
-    approve.disabled=blocked;
+    approve.hidden=!shared||!(canApproveDraft||canApprovePending);
+    approve.disabled=blocked||!course;
     publish.hidden=shared&&(reviewMode||draft.status!=='approved'||dirty);
     publish.disabled=blocked||readonly;
     actions.setAttribute('aria-busy',String(busy));
@@ -496,7 +513,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       const answerLabel=el('p',objective?'Các lựa chọn · Đánh dấu đáp án đúng':'Các lựa chọn',{className:'thuy-editor-options-label'});answerLabel.dataset.validationField='answer';card.append(answerLabel);
       for(const [j,option]of item.options.entries()){
         const row=el('div',undefined,{className:'thuy-editor-option'}),single=['mcq','dropdown'].includes(type),checked=single?draft.gradingKey.items[item.itemVersionId]?.expectedOptionId===option.id:draft.gradingKey.items[item.itemVersionId]?.expectedOptionIds?.includes(option.id);
-        if(objective){const input=el('input',undefined,{type:single?'radio':'checkbox',name:'key-'+item.itemVersionId,checked:Boolean(checked)});input.setAttribute('aria-label','Đáp án đúng '+String.fromCharCode(65+j)+' câu '+item.position);input.addEventListener('change',()=>{
+        if(objective){const input=el('input',undefined,{type:single?'radio':'checkbox',name:'key-'+item.itemVersionId,checked:Boolean(checked)});input.dataset.answerControl='true';input.setAttribute('aria-label','Đáp án đúng '+String.fromCharCode(65+j)+' câu '+item.position);input.addEventListener('change',()=>{
           if(single)draft.gradingKey.items[item.itemVersionId]={graderType:'exact_option',expectedOptionId:option.id};
           else{const selected=new Set(draft.gradingKey.items[item.itemVersionId]?.expectedOptionIds||[]);if(input.checked)selected.add(option.id);else selected.delete(option.id);if(selected.size)draft.gradingKey.items[item.itemVersionId]={graderType:'exact_option_set',expectedOptionIds:[...selected]};else delete draft.gradingKey.items[item.itemVersionId];}
           selectedLimit(item,draft.gradingKey.items[item.itemVersionId],kind);markDirty();
