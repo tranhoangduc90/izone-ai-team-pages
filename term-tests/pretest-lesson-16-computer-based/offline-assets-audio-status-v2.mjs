@@ -112,7 +112,8 @@ export const ASSETS = [
   "../term-test-2-computer-based/journey-ui.css",
   "../term-test-2-computer-based/styles.css",
   "index-audio-status-v2.html",
-  "offline-worker-audio-status-v2.js"
+  "offline-worker-audio-status-v2.js",
+  "question-layout.js"
 ];
 export const ASSET_HASHES = {
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -220,13 +221,14 @@ export const ASSET_HASHES = {
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-test-2-computer-based/audio-loader-audio-status-v1.js": "a7399bba30177f98a291033678c0cd4d41909b5ea499c162f1b15a4b9c0eead3",
-  "../term-test-2-computer-based/bootstrap-terms-cbt-audio-status-v4.js": "fdcfae1fb3aa683eefd17f07d92674e8faa00d662bf988dae861c8cd29d37aa5",
+  "../term-test-2-computer-based/bootstrap-terms-cbt-audio-status-v4.js": "79217ebe557f93ba1f51e2dac8be9bfc6b66ffbf56c9ad881a15a1f8dc5bd9c0",
   "../term-test-2-computer-based/enhance-terms-cbt.js": "456ed5aa3a11497ca1e32338108bc31c9ce7996f182dc2ce8a533e95dce82424",
   "../term-test-2-computer-based/enhance.js": "b2fa19b00fb7f2615207a4b3a03deb8baae8d258a8d2abec26be39d3b3fc7883",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index-audio-status-v2.html": "28509425b288edd13fb8c31c3fb3f72a6204c525f279024c8ab93a4131006b3b",
-  "offline-worker-audio-status-v2.js": "370001bffd5c76b68c5f448feb443f66dfa4bb002768ce7e1dc7fc2862b73ee9"
+  "index-audio-status-v2.html": "84675737b00a3f9b13fbf3d2cf5e46e38818533c925684954e75396464429b13",
+  "offline-worker-audio-status-v2.js": "370001bffd5c76b68c5f448feb443f66dfa4bb002768ce7e1dc7fc2862b73ee9",
+  "question-layout.js": "aa755b6da9d4ae60ad85688cc2fad16b055a988fd7b4a9a159054f305ce53d1e"
 };
-export const ASSET_BUILD_ID = "04e9e5a4a2307b5b5f0d9e5be758e4a9850a3e97e15cc2569833b4b651e008b8";
+export const ASSET_BUILD_ID = "14f08ada1eec4c808bf61984878edb3c9b5eb5ab8c10cdf169997a108d241896";

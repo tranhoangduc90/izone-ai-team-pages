@@ -965,7 +965,8 @@
   }
 
   async function enterExam(started, audioElement = null, offlineSection = '', journey = null, playNewListening = false) {
-    window.TERM_TEST_CONTENT = Object.freeze(started.content);
+    const content = window.K67_PRETEST_QUESTION_LAYOUT?.(started.content) ?? started.content;
+    window.TERM_TEST_CONTENT = Object.freeze(content);
     const boundIdentity = (sharedIdentity || (demoJourneyEntry && journey)) && started.examSessionToken === state.examSessionToken
       && isUuid(state.examSessionToken) && isUuid(state.studentRef) && started.studentName
       ? Object.freeze({ testSlug: testConfig.slug, classCode, studentRef: state.studentRef,
