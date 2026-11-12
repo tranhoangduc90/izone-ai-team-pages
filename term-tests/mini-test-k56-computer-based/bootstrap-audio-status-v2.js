@@ -893,7 +893,9 @@
     await enterExam({...prepared,...started},audio);
     if (!runtime.playerReady) throw new Error('Bộ điều khiển audio chưa sẵn sàng. Bài được giữ.');
     if (!runtime.record.sections.listening.sealed && !runtime.record.player.ended && !runtime.record.player.held) {
-      try { await audio.play(); } catch { window.K56_LISTENING_AUDIO?.playBlocked(); }
+      const controller = window.K56_LISTENING_AUDIO;
+      if (runtime.record.player.initialPlayBlocked === true) controller.playBlocked();
+      else await controller.playInitial();
     } else if(runtime.record.player.ended&&!runtime.record.sections.listening.sealed) {
       const form=document.getElementById('listeningView'),submit=document.createElement('button');submit.type='submit';submit.hidden=true;submit.dataset.autoSubmit='true';form.append(submit);form.requestSubmit(submit);
     }
@@ -902,7 +904,8 @@
   async function restoreOffline(preparationStatus) {
     const runtime=miniOffline;
     const listening = runtime.record.sections.listening;
-    if (listening?.startedAt && !listening.sealed && !listening.interrupted && !runtime.record.player.ended) {
+    if (listening?.startedAt && !listening.sealed && !listening.interrupted && !runtime.record.player.ended
+        && runtime.record.player.initialPlayBlocked !== true) {
       await runtime.interruptListening('page_interrupted');
     }
     const p=runtime.record.prepared,current=runtime.sectionResponse();

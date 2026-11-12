@@ -34,7 +34,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,port=0,
  if(profileDir){context=await chromium.launchPersistentContext(profileDir,{...launchOptions,...contextOptions});browser=context.browser();}
  else{browser=await chromium.launch(launchOptions);context=await browser.newContext(contextOptions);}
  page=await context.newPage();
- const id=native?.a||randomUUID(),session=native?.s||randomUUID(),student=randomUUID(),receipts=new Map(),calls=[],errors=[];let disconnected=false,fixtureContent;
+ const id=native?.a||randomUUID(),session=native?.s||randomUUID(),student=native?.student||randomUUID(),receipts=new Map(),calls=[],errors=[];let disconnected=false,fixtureContent;
  function handleDialog(dialog){
   if(dialog.type()==='confirm'&&controls.dismissNextConfirmation){controls.dismissNextConfirmation=false;return dialog.dismiss();}
   return dialog.accept();
