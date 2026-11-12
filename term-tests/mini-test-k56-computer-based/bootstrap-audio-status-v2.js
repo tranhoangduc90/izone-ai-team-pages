@@ -29,7 +29,7 @@
   let miniOffline = null;
   const supportsOffline=Boolean(navigator.locks?.request&&navigator.serviceWorker&&globalThis.crypto?.subtle);
   if (supportsOffline && !localDemo && classCode && (classCode !== 'CODEXDEMO56' || demoOfflineEntry)) {
-    const {OfflineRuntime, ExamStore} = await import('./offline-audio-status-v2.mjs?v=20261107-mini-v1&miniAudio=20261108-v1');
+    const {OfflineRuntime, ExamStore} = await import('./offline-audio-status-v2.mjs?release=20261112-mini-recovery&v=20261107-mini-v1&miniAudio=20261108-v1');
     const store=demoOfflineEntry
       ? (await import('../k56-offline-shared/demo-store-audio-status-v1.mjs?v=20261111-mini-cbt-v1')).createDemoStore(ExamStore,testConfig.slug,classCode,query,cbtStorageKey)
       : new ExamStore();
@@ -58,7 +58,7 @@
     Promise.resolve()
       .then(() => loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=mini-20261107-v1&miniAudio=20261108-v1&offlineNotice=20261108-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1&miniAudio=20261108-v1'))
-      .then(() => loadScript('enhance.js?offline=mini-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&miniAudio=20261108-v1&previewWait=20261109-preview-10s-v1'))
+      .then(() => loadScript('enhance.js?release=20261112-mini-recovery&offline=mini-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&miniAudio=20261108-v1&previewWait=20261109-preview-10s-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -103,7 +103,7 @@
   }
   // Entry không có mã lớp có thể vừa được identity resolver gắn đúng lớp.
   if(supportsOffline&&!miniOffline&&!localDemo&&classCode&&classCode!=='CODEXDEMO56'){
-    const {OfflineRuntime,ExamStore}=await import('./offline-audio-status-v2.mjs?v=20261107-mini-v1&miniAudio=20261108-v1');
+    const {OfflineRuntime,ExamStore}=await import('./offline-audio-status-v2.mjs?release=20261112-mini-recovery&v=20261107-mini-v1&miniAudio=20261108-v1');
     miniOffline=new OfflineRuntime({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
     try{await miniOffline.open();window.K56_MINI_OFFLINE=miniOffline;}catch(error){root.textContent=error.message;return;}
   }
@@ -867,7 +867,7 @@
       }
     }
     await loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1&miniAudio=20261108-v1');
-    await loadScript('enhance.js?offline=mini-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&miniAudio=20261108-v1&previewWait=20261109-preview-10s-v1');
+    await loadScript('enhance.js?release=20261112-mini-recovery&offline=mini-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&miniAudio=20261108-v1&previewWait=20261109-preview-10s-v1');
     await loadScript('annotations.js?v=20261018-identity-v1');
   }
 
@@ -914,6 +914,9 @@
     if (current.nextSection==='listening' && runtime.record.sections.listening?.startedAt) { await enterOfflineListening(); return; }
     state.preparedAttempt={...p,...current};
     if (current.nextSection!=='listening') { await enterExam({...p,...current});return; }
+    if (runtime.submissionRecovery && runtime.pending) {
+      runtime.mount({snapshot:()=>runtime.record.snapshot||{},host:root.querySelector('.page-shell')||root});
+    }
     const audioStatus = preparationStatus || beginAudioDownloadStatus(elements.bootstrapDownloadStatus,
       elements.bootstrapDownloadProgress, {formatBytes, preparing:true});
     try {

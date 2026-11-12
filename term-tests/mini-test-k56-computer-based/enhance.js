@@ -1486,11 +1486,18 @@
       if (readingForm.form.hidden) stopTimer();
       else startTimer();
     });
-    visibilityObserver.observe(readingForm.form, { attributes: true, attributeFilter: ['hidden'] });
+    const observeVisibility = () => visibilityObserver.observe(readingForm.form, { attributes: true, attributeFilter: ['hidden'] });
+    observeVisibility();
     readingForm.form.addEventListener('term-test:reading-submitted', stopTimer);
     window.addEventListener('pagehide', () => {
       stopTimer();
       visibilityObserver.disconnect();
+    });
+    window.addEventListener('pageshow', event => {
+      if (!event.persisted) return;
+      window.K56_MINI_OFFLINE?.resumeDeadline?.('reading');
+      observeVisibility();
+      startTimer();
     });
     startTimer();
   }
@@ -1604,11 +1611,18 @@
       if (form.hidden) stopTimer();
       else startTimer();
     });
-    visibilityObserver.observe(form, { attributes: true, attributeFilter: ['hidden'] });
+    const observeVisibility = () => visibilityObserver.observe(form, { attributes: true, attributeFilter: ['hidden'] });
+    observeVisibility();
     form.addEventListener('term-test:writing-submitted', stopTimer);
     window.addEventListener('pagehide', () => {
       stopTimer();
       visibilityObserver.disconnect();
+    });
+    window.addEventListener('pageshow', event => {
+      if (!event.persisted) return;
+      window.K56_MINI_OFFLINE?.resumeDeadline?.('writing');
+      observeVisibility();
+      startTimer();
     });
     startTimer();
   }

@@ -1,4 +1,3 @@
-// Tạo từ byte public Git/Pages (text LF); không chứa đáp án hoặc quyền.
 export const ASSETS=[
   "../../shared/audio/catalog.mjs",
   "../../shared/audio/chunks.mjs",
@@ -99,7 +98,7 @@ export const ASSETS=[
   "../k56-mini-shared/config.js",
   "../k56-mini-shared/styles.css",
   "../k56-offline-shared/profiles.mjs",
-  "../k56-offline-shared/runtime.mjs",
+  "../k56-offline-shared/runtime-recovery-v1.mjs",
   "../k56-offline-shared/whole-audio.mjs",
   "../k56-offline-shared/worker.mjs",
   "../k56-shared/config.js",
@@ -247,11 +246,11 @@ export const ASSET_HASHES={
   "../k56-exam-integrity/app.js": "ac6c9207775d9dcb4877f06f5da6b3c706a9b92ba26ac253eff17f10f66b513f",
   "../k56-exam-integrity/styles.css": "a19764edbec0b712c585402eec5f36b78570e44004f8d73f04df09f88058064a",
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
-  "../k56-mini-shared/app.js": "fe1a474902ccb370370432d40c8f83cc259ea77938fc03573e20b1153d22880e",
+  "../k56-mini-shared/app.js": "f9294bef1ee8f3ff57590af1d0f3fec9fbf72600e24111450642ce3943c0d5cf",
   "../k56-mini-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
-  "../k56-offline-shared/runtime.mjs": "ba73039f50c6fea64c141cc8c070e94789464dac64f74c24301cc4b6cfe95838",
+  "../k56-offline-shared/runtime-recovery-v1.mjs": "7cc7dc29ffe77848fe4dcd6a0e40fc3747232f46551c9f065f6403bc5742cdbc",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
@@ -261,7 +260,7 @@ export const ASSET_HASHES={
   "../k67-design/assets/SourceSans3-Variable.woff2": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8",
   "../k67-design/master170-font-colors.css": "6ab8b61f5dba39037b62d94b656522692ef450a9f60bc01c0848526fed315063",
   "../k67-shared/answer-explanations.css": "94df8adc3ed8c8ca7ffcb3eaa5b3022ab2eab0c6bc63f10f5168a3b57ed74d24",
-  "../k67-shared/answer-explanations.js": "9760a6122a1f0f0205c4808f7f8db712fc0e5883bae601d44608ec1dfae7a3e6",
+  "../k67-shared/answer-explanations.js": "9bdd5c7f3a9a15d9157a79ecdbf5bd6c3ec8544a0405fd692661fc1ed132c045",
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
@@ -276,7 +275,7 @@ export const ASSET_HASHES={
   "../shared/exam-clock.js": "54e54acbe25ceea6670cf96afb683d583430e088eac28a753a8f028775072fbd",
   "../shared/exam-order.js": "b8bfff8d4e8e16fd487db614423ec1e83230196695b7572b48ef284a3faebd88",
   "../shared/landing-model.js": "040a785315efcd45415c9df3539bcce03c16ad5436fbb21eaedd5caea67ead89",
-  "../shared/landing.js": "1426b994a816cdfc790f300b0c0f590aa9ce77ae03a8837e26046182f9db4ce6",
+  "../shared/landing.js": "d0ee67d7f89e4e882c96236e0e378b9cf6fb06e54d4eb9442032f661a18c78f1",
   "../shared/section-submission.mjs": "f0e91d30ebe25e921c33e6f89ecb33cdf6f3cf8da0168301665f0d634faf6baf",
   "../shared/styles.css": "e19be7903218548bc254d0ceca072fa999dbf42a654585bf10e93dfafbc13ec5",
   "../shared/teacher-audio-recovery.css": "cc53a29792f4ada666cc5c440b1d544ae70f8d14e2910262b4465a4247d979b4",
@@ -298,9 +297,9 @@ export const ASSET_HASHES={
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
-  "index.html": "6dc3c56422bc9948cbb7e627895ce7ef92aa048d82660f58cb8328fe1233a01e",
+  "index.html": "c2b813a208d5065523470371b86a352ae0ccab26c12d6dd60b9bb21bfe54e7d7",
   "offline-worker.js": "20e6437ed9a17c55e9a95bb821a6f38111c861ec32659e9fe236f1babcecbde7",
-  "offline.mjs": "eaad6811b24c1e5ccf4ccf46489e53317fee901864635e3269a8cae9cd86714b",
+  "offline.mjs": "5af4a7a82c7222456cee53a6e415fc31fdbf8f07b3bf1930fe6031d6c26f91da",
   "test-config.js": "0629f850b5571a83c272322c0d9ecc22bcda2dc5c48ecfe24af4600f0ad3d7ca"
 };
-export const ASSET_BUILD_ID="4f5f8814855f1755de8655633f941ef2f49912c7defc0badc2268bbcdef39cf2";
+export const ASSET_BUILD_ID="dd4a1c3892982b7b0512f1320224e6b816a298e9246cd2d36002fa3832ca5517";
