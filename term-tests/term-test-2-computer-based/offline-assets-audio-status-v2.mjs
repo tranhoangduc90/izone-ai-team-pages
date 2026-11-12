@@ -100,8 +100,8 @@ export const ASSETS=[
   "../term-test-2/test-config.js",
   "audio-loader-audio-status-v1.js",
   "bootstrap-audio-status-v2.js",
-  "bootstrap-terms-cbt-audio-status-v2.js",
-  "enhance-terms-cbt.js",
+  "bootstrap-term2-k67-recovery-v1.js",
+  "enhance-term2-k67-recovery-v1.js",
   "enhance.js",
   "index-audio-status-v2.html",
   "interaction-tools.js",
@@ -211,13 +211,13 @@ export const ASSET_HASHES={
   "../term-test-2/test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8",
   "audio-loader-audio-status-v1.js": "a7399bba30177f98a291033678c0cd4d41909b5ea499c162f1b15a4b9c0eead3",
   "bootstrap-audio-status-v2.js": "129dded9216b6e1f3b9999e133c215ce839778a495c0d62f53af78974ef9f4c8",
-  "bootstrap-terms-cbt-audio-status-v2.js": "acbff2c11dd79492ca17c211fd44fd2bbe37ce965dcfd6c9992d6da6ff43270e",
-  "enhance-terms-cbt.js": "93841c658460d78061a6a6b2ff1807bc28e28138de383c7da5327bbc55b54197",
+  "bootstrap-term2-k67-recovery-v1.js": "2dedbe8bf9c9b311e09ec280b7d5f1614e65e0bd2ff2462bb6c9c694f8909235",
+  "enhance-term2-k67-recovery-v1.js": "93841c658460d78061a6a6b2ff1807bc28e28138de383c7da5327bbc55b54197",
   "enhance.js": "b2fa19b00fb7f2615207a4b3a03deb8baae8d258a8d2abec26be39d3b3fc7883",
-  "index-audio-status-v2.html": "dab5404583d43aaf38df73deb0898b5e67fa29fe40a37c028512703f67d2ee60",
+  "index-audio-status-v2.html": "7ddebd8bfa593dc85f613c5a8f550ce349c8dc172dc78f37f175af6f0e456eb9",
   "interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "offline-worker-audio-status-v2.js": "40cd4445d60bf60cbef329a4b3920cebda9d0c8f36038b12a0f48d720feca1be",
   "styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3"
 };
-export const ASSET_BUILD_ID="9a1b78a46e49d1b53ea3682689ae8ed1ebb1be0edd3af0e47fa4c71442636145";
+export const ASSET_BUILD_ID="c6e04af6597d6c0b499d0062391225c1cf933de698d8880c35641f5d7d9ed4bc";
