@@ -623,7 +623,8 @@ export function withListeningContinuity(OfflineRuntime) {
   let terminal = '';
   let interrupting = false;
   let playPending = false;
-  const update = (message = 'Đang phát bài thi') => render(message, audio.currentTime, audio.duration);
+  const update = (message = started && audio.paused && !audio.ended ? 'Audio đang bị gián đoạn' : 'Đang phát bài thi') =>
+   render(message, audio.currentTime, audio.duration);
   const submit = () => {
    const button = document.createElement('button');
    button.type = 'submit';
@@ -685,6 +686,11 @@ export function withListeningContinuity(OfflineRuntime) {
    if (!terminal) update();
   });
   audio.addEventListener('timeupdate', () => { if (!terminal) update(); });
+  audio.addEventListener('pause', () => {
+   if (this.record !== run || this.player !== audio || !started || terminal || audio.ended || !audio.paused) return;
+   update();
+   this.observe('audio_diagnostic', { event: 'unexpected_pause', position: audio.currentTime });
+  });
   for (const event of ['waiting', 'error']) audio.addEventListener(event, () => {
    if (!terminal) this.observe('audio_diagnostic', { event, position: audio.currentTime });
   });
