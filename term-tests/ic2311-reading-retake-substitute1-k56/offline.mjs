@@ -1,7 +1,7 @@
 import {BUILD} from './config.mjs';
 export async function prepareOffline({onProgress=()=>{},journal}){
  if(!('serviceWorker' in navigator)||!('caches' in window))throw Object.assign(Error(),{code:'CACHE_UNAVAILABLE'});
- const workerUrl=new URL('sw.js?v=20261111-cohort',location.href);
+ const workerUrl=new URL('sw.js?v='+BUILD,location.href);
  const registration=await navigator.serviceWorker.getRegistration(new URL('./',location.href));
  if(navigator.onLine||!registration)await navigator.serviceWorker.register(workerUrl,{scope:'./'});
  const controlled=()=>navigator.serviceWorker.controller?.scriptURL===workerUrl.href;

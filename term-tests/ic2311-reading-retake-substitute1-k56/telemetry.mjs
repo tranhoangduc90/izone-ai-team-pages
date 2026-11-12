@@ -4,7 +4,7 @@ const K='izone-reading-retake:log:v1:';
 const code=v=>typeof v==='string'&&/^[A-Z][A-Z0-9_]{1,79}$/.test(v)?v:'UNCLASSIFIED_EXCEPTION';
 export class Telemetry{
  constructor({tabId,ownerId}){this.base={attemptId:null,classCode:'IC2311',schemaVersion:1,buildVersion:BUILD,product:PRODUCT,testSlug:SLUG,tabId,ownerId,pageInstanceId:crypto.randomUUID()};this.key=K+'initial:'+ownerId;this.rows=[];try{this.rows=JSON.parse(localStorage.getItem(this.key)||'[]');}catch{}this.sequence=Math.max(0,...this.rows.map(r=>r.sequence||0));this.retryAt=0;this.failures=0;this.busy=false;this.dropped=null;this.snapshot=()=>({});this.activeRequests=new Map();addEventListener('pagehide',()=>{for(const stop of this.activeRequests.values())stop('NAVIGATION_ABORTED');});}
- bind(identity,permit){this.base={...this.base,...Object.fromEntries(['classCode','attemptId','generation','ownerId','studentInternalId'].map(k=>[k,identity[k]]))};this.permit=permit;this.key=K+identity.attemptId;try{const old=JSON.parse(localStorage.getItem(this.key)||'[]');this.rows=[...new Map([...old,...this.rows].map(r=>[r.eventId,r])).values()].slice(-1000);}catch{}this.persist();clearInterval(this.timer);this.timer=setInterval(()=>void this.flush(),5000);addEventListener('online',()=>{this.retryAt=0;void this.flush();});}
+ bind(identity,permit,{background=true}={}){this.base={...this.base,...Object.fromEntries(['classCode','attemptId','generation','ownerId','studentInternalId'].map(k=>[k,identity[k]]))};this.permit=permit;this.key=K+identity.attemptId;try{const old=JSON.parse(localStorage.getItem(this.key)||'[]');this.rows=[...new Map([...old,...this.rows].map(r=>[r.eventId,r])).values()].slice(-1000);}catch{}this.persist();clearInterval(this.timer);if(background){this.timer=setInterval(()=>void this.flush(),5000);addEventListener('online',()=>{this.retryAt=0;void this.flush();});}}
  emit(eventName,fields={}){
   for(const k of ['stateBefore','stateAfter'])if(fields[k])fields[k]={...fields[k],serverAckedElapsedMs:this.serverAckedElapsedMs??null,serverAckedAt:this.serverAckedAt??null};
   const row=sanitize({...this.base,eventId:crypto.randomUUID(),eventName,occurredAt:new Date().toISOString(),clientMonoMs:performance.now(),sequence:++this.sequence,phase:this.snapshot().controllerStateBefore||'initialization',recoveryId:this.recoveryId,...fields});
@@ -29,12 +29,12 @@ export class Telemetry{
    const r=await fetch(API+endpoint,{method,credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json','X-Request-Id':requestId,...operationId?{'X-Operation-Id':operationId}:{},...permit?{Authorization:'Bearer '+permit}:{}},...method==='GET'?{}:{body:JSON.stringify(body??{})},signal:controller.signal});
    const headerElapsedMs=performance.now()-start;let value;try{value=await r.json();}catch{throw Object.assign(Error(),{code:r.ok?'API_CONTRACT_MISMATCH':'HTTP_ERROR',httpStatus:r.status,errorOrigin:r.ok?'client_transport':'proxy_or_api'});}
    this.emit('client_response_received',{requestId,operationId,recoveryId,httpStatus:r.status,headerElapsedMs,elapsedMs:performance.now()-start,revisionReceived:value.revision??null});
-   if(!r.ok||value.ok!==true)throw Object.assign(Error(),{code:code(value.error||'HTTP_ERROR'),httpStatus:r.status,errorOrigin:['api','db','proxy'].includes(value.errorOrigin)?value.errorOrigin:'proxy_or_api'});
+   if(!r.ok||value.ok!==true)throw Object.assign(Error(),{code:code(value.error||'HTTP_ERROR'),httpStatus:r.status,errorOrigin:['api','db','proxy'].includes(value.errorOrigin)?value.errorOrigin:'proxy_or_api',held:value.held});
    completedEvent({outcome:'success',httpStatus:r.status});return {value,requestId};
   }catch(error){
    const errorCode=why||error.code||(!navigator.onLine?'NETWORK_UNREACHABLE':'FETCH_FAILED_UNCLASSIFIED');
    completedEvent({outcome:why==='CLIENT_TIMEOUT'?'timeout':why?'aborted':error.httpStatus?'http_error':'network_failure',errorCode:code(errorCode),errorOrigin:error.errorOrigin||'client_transport',exceptionName:['AbortError','TimeoutError','TypeError','Error'].includes(error.name)?error.name:'OtherError',abortReason:why||undefined,httpStatus:error.httpStatus??null,stateAfter:this.snapshot()});
-   throw Object.assign(Error(code(errorCode)),{code:code(errorCode),requestId,httpStatus:error.httpStatus});
+   throw Object.assign(Error(code(errorCode)),{code:code(errorCode),requestId,httpStatus:error.httpStatus,held:why?undefined:error.held});
   }finally{clearTimeout(timer);signal?.removeEventListener('abort',stop);this.activeRequests.delete(requestId);}
  }
  decision(requestId,operationId,applied,fields={}){this.emit(applied?'client_response_applied':'client_response_ignored',{requestId,operationId,...fields,stateAfter:this.snapshot()});}

@@ -147,6 +147,11 @@ async function load() {
     const {review} = await response.json();
     if (!matchingReview(review, state, submitted.receiptId)) throw new Error('REVIEW_SCOPE_MISMATCH');
     render(review);
+    void import('./telemetry.mjs?v=20261112-submission-reconciliation').then(({Telemetry})=>{
+      const journal=new Telemetry({tabId:crypto.randomUUID(),audioOwnerId:state.identity.audioOwnerId});
+      journal.bind(state.identity,state.permit,{background:false});
+      return journal.flush();
+    }).catch(()=>{});
     status.textContent = 'Máy chủ đã xác nhận bài và điểm Listening.';
   } catch {
     byId('result-student').textContent = 'Chưa tải được kết quả';

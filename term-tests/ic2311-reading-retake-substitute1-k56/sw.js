@@ -1,4 +1,5 @@
-const BUILD = 'reading-retake-20261111-cohort';
+const BUILD = 'reading-retake-20261112-reconciliation';
+const PREVIOUS_CACHE = 'reading-retake:reading-retake-20261111-cohort';
 const LEGACY_CACHE = 'reading-retake:reading-retake-20261106-v1';
 const CACHE = 'reading-retake:' + BUILD;
 const BASE = new URL('./', self.location).href;
@@ -99,7 +100,9 @@ self.addEventListener('fetch', event => {
       }
     }
     const cache = await caches.open(CACHE);
-    const offlineCache = await cache.match(VERIFIED) ? cache : await caches.open(LEGACY_CACHE);
+    const previous = await caches.open(PREVIOUS_CACHE);
+    const offlineCache = await cache.match(VERIFIED) ? cache
+      : await previous.match(VERIFIED) ? previous : await caches.open(LEGACY_CACHE);
     const page = await offlineCache.match(navigation ? BASE + 'index.html' : url.href);
     if (!page) return Response.error();
     return navigation && isExamPage(url) ? withReviewBridge(page) : page;
