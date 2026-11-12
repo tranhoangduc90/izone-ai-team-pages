@@ -174,7 +174,7 @@ export const ASSET_HASHES = {
   "../k67-design/assets/SourceSans3-Italic-Variable.woff2": "2cac627e742dec5b6fa73a0ad243a97e189c362ea11ae85c22b2e52b214d00a3",
   "../k67-design/assets/SourceSans3-Variable.woff2": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8",
   "../k67-design/master170-font-colors.css": "6ab8b61f5dba39037b62d94b656522692ef450a9f60bc01c0848526fed315063",
-  "../k67-shared/answer-explanations-private-audio-v1.js": "8c7c0a42a562499aa5d9a66ad7bdbacfd98530bd7e65fa5c300a6d1c7aac6800",
+  "../k67-shared/answer-explanations-private-audio-v1.js": "fb0dde314813ccda41a499126dd707412ce50af5c37248693320bf7dffc1d796",
   "../k67-shared/answer-explanations.css": "94df8adc3ed8c8ca7ffcb3eaa5b3022ab2eab0c6bc63f10f5168a3b57ed74d24",
   "../k67-shared/audio-environment.js": "1d41b41b48f4d78f6f88ceb214e31597ebb873242aaf23811cd9c550b4854e54",
   "../k67-shared/audio-owner.js": "ce609e325abf7c16de1a03daff6d4b44b7826878cd23834e4974902aa500f5b5",
@@ -227,8 +227,8 @@ export const ASSET_HASHES = {
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index-audio-status-v2.html": "84675737b00a3f9b13fbf3d2cf5e46e38818533c925684954e75396464429b13",
+  "index-audio-status-v2.html": "c1883f36865e431e75f93443cbdb8b6c24df04cff8d74f1e6e898ffee3cc2c04",
   "offline-worker-audio-status-v2.js": "370001bffd5c76b68c5f448feb443f66dfa4bb002768ce7e1dc7fc2862b73ee9",
   "question-layout.js": "aa755b6da9d4ae60ad85688cc2fad16b055a988fd7b4a9a159054f305ce53d1e"
 };
-export const ASSET_BUILD_ID = "14f08ada1eec4c808bf61984878edb3c9b5eb5ab8c10cdf169997a108d241896";
+export const ASSET_BUILD_ID = "3676a491f192d32d8dd75c190cf63b56a2fff07c73487ee337fdd323e51bf8dd";

@@ -248,21 +248,16 @@
     const studentAnswer = row?.studentAnswer ?? review.answers?.[skill]?.[number] ?? '';
     const outcome = ['correct', 'incorrect', 'blank'].includes(row?.result) ? row.result : 'unknown';
     const evidenceText = new Set(entry.evidence.map(p => text([p])));
-    const excerptMap = new Map();
-    Object.values(entries).filter(e => e.section === entry.section).forEach(e => e.blocks.forEach(b => {
-      b.evidence.forEach(p => { const key = text([p]); if (key.trim()) excerptMap.set(key, p); });
-    }));
-    // Các câu khác chỉ làm ngữ cảnh. Nếu dùng chung trích dẫn, lấy màu của đúng câu đang mở.
-    const currentExcerpts = new Map(entry.blocks.flatMap(b => b.evidence).map(p => [text([p]), p]));
-    for (const [key, p] of currentExcerpts) if (excerptMap.has(key)) excerptMap.set(key, p);
     const fullTranscript = !isReading && Array.isArray(section.transcript);
-    const left = isReading ? passageHtml(section.passageHtml) : fullTranscript ? paragraphs(section.transcript, false) : [...excerptMap].map(([key, p]) =>
-      `<div class="cbt-passage-paragraph${evidenceText.has(key) ? ' explanation-active-paragraph' : ''}">${paragraphs([p], currentExcerpts.has(key))}</div>`).join('');
+    const left = isReading ? passageHtml(section.passageHtml) : fullTranscript ? paragraphs(section.transcript, false) : entry.evidence.map(p => {
+      const highlighted = p.some(run => run.foreground || run.background);
+      return `<div class="cbt-passage-paragraph${highlighted ? ' explanation-active-paragraph' : ''}">${paragraphs([p])}</div>`;
+    }).join('');
     const analysis = entry.blocks.map(block => {
-      const quotes = paragraphs(block.evidence);
-      const primary = block.evidence.some(p => evidenceText.has(text([p])));
-      return `<div class="explanation-source-block">${paragraphs(block.analysis)}${quotes
-        ? primary ? `<blockquote>${quotes}${replayButtons(block.replay)}</blockquote>` : `<details class="explanation-option-quote"><summary>Xem trích dẫn</summary><blockquote>${quotes}${replayButtons(block.replay)}</blockquote></details>` : ''}</div>`;
+      const extraEvidence = block.evidence.filter(p => !evidenceText.has(text([p])));
+      const extraClips = (block.replay || []).filter(clip => !entry.replay?.some(primary => primary.id === clip.id));
+      const extra = extraEvidence.length ? `<details class="explanation-option-quote"><summary>Xem trích dẫn</summary><blockquote>${paragraphs(extraEvidence)}${replayButtons(extraClips)}</blockquote></details>` : '';
+      return `<div class="explanation-source-block">${paragraphs(block.analysis)}${extra}</div>`;
     }).join('');
     const index = numbers.indexOf(number);
     const d = ensureDialog();
@@ -291,8 +286,10 @@
     requestAnimationFrame(() => {
       if (!d.open || context?.review !== review || context?.skill !== skill || number !== renderedNumber) return;
       const pane = d.querySelector('.explanation-dialog-passage-scroll');
-      if (isReading || fullTranscript) markReadingEvidence(pane, entry);
-      scrollToEvidence(pane);
+      if (isReading || fullTranscript) {
+        markReadingEvidence(pane, entry);
+        scrollToEvidence(pane);
+      }
     });
   }
   function attach({ container, payload, attemptToken, reviewKey = attemptToken, testSlug, title, request,
