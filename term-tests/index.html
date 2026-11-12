@@ -8,7 +8,7 @@
     <title>Bài test Khóa 67 · IZONE</title>
     <link rel="icon" type="image/svg+xml" href="../shared/izone-favicon.svg?v=20261105">
     <link rel="stylesheet" href="shared/styles.css?rev=20261003-writing-save-cas-v1">
-    <link rel="stylesheet" href="k67-landing.css?rev=20261014-order-v1">
+    <link rel="stylesheet" href="k67-landing.css?rev=20261112-k67-guided">
     <link rel="stylesheet" href="reading-landing.css?rev=20261016-reading-v1">
     <link rel="stylesheet" href="k67-design/master170-font-colors.css?rev=20261023-v3">
   <script defer src="../shared/red-focus-glow.js?v=20261102-r1"></script>
@@ -30,42 +30,72 @@
         </section>
         <div class="landing-class-field">
           <label id="classCodeLabel" for="classCode">Mã lớp</label>
-          <input id="classCode" autocomplete="off" placeholder="Ví dụ: IC2139" maxlength="32">
-          <select id="classSelect" aria-labelledby="classCodeLabel" hidden></select>
+          <div class="class-and-results">
+            <input id="classCode" autocomplete="off" placeholder="Ví dụ: IC2139" maxlength="32">
+            <select id="classSelect" aria-labelledby="classCodeLabel" hidden></select>
+            <button class="button button-secondary" id="teacherDashboard" type="button">Giảng viên xem kết quả</button>
+          </div>
           <p class="landing-class-help" id="classHelp">Bạn vẫn có thể nhập mã lớp khi chưa đăng nhập.</p>
         </div>
-        <fieldset class="landing-order">
-          <legend>Thứ tự làm bài</legend>
-          <div class="landing-actions">
-            <button class="button button-secondary order-choice" type="button" data-exam-mode="lis_first" aria-pressed="true">Listening trước</button>
-            <button class="button button-secondary order-choice" type="button" data-exam-mode="read_first" aria-pressed="false">Reading trước</button>
-          </div>
-        </fieldset>
-        <section class="landing-link-group"><h2>Bài thi trên máy</h2>
+        <section class="landing-link-group" id="testPicker" aria-labelledby="pickHeading">
+          <h2 id="pickHeading">Chọn bài test</h2>
           <div class="landing-actions landing-actions-three">
-            <button class="button button-primary" data-test="term-test-1-computer-based">Term Test 1</button>
-            <button class="button button-primary" data-test="term-test-2-computer-based">Term Test 2</button>
-            <button class="button button-primary" data-test="mini-test-lesson-5-computer-based">Mini Test Buổi 5</button>
+            <button class="button button-primary" type="button" data-pick="term-test-1">Term Test 1</button>
+            <button class="button button-primary" type="button" data-pick="term-test-2">Term Test 2</button>
+            <button class="button button-primary" type="button" data-pick="mini-test-lesson-5">Mini Test Buổi 5</button>
           </div>
         </section>
-        <section class="landing-link-group"><h2>Audio Backup</h2>
-          <div class="landing-actions landing-actions-three">
-            <a class="button button-secondary" href="term-test-1-audio.html">Term Test 1 · Audio</a>
-            <a class="button button-secondary" href="term-test-2-audio.html">Term Test 2 · Audio</a>
-            <a class="button button-secondary" href="mini-test-listening-audio.html">Mini Test Buổi 5 · Audio</a>
+        <section class="landing-link-group" id="testActions" aria-labelledby="chosenName" hidden>
+          <div class="test-context">
+            <div>
+              <p>Bài test đang chọn</p>
+              <h2 id="chosenName" tabindex="-1"></h2>
+            </div>
+            <button class="button button-secondary" id="changeTest" type="button">Đổi bài test</button>
           </div>
-        </section>
-        <section class="landing-link-group"><h2>Answer Sheet dự phòng</h2>
-          <div class="landing-actions landing-actions-three">
-            <button class="button button-secondary" data-test="term-test-1">Term Test 1</button>
-            <button class="button button-secondary" data-test="term-test-2">Term Test 2</button>
-            <button class="button button-secondary" data-test="mini-test-lesson-5">Mini Test Buổi 5</button>
+          <fieldset class="landing-order">
+            <legend>Thứ tự làm bài</legend>
+            <div class="landing-actions">
+              <button class="button button-secondary order-choice" type="button" data-exam-mode="lis_first" aria-pressed="true">Listening trước</button>
+              <button class="button button-secondary order-choice" type="button" data-exam-mode="read_first" aria-pressed="false">Reading trước</button>
+            </div>
+          </fieldset>
+          <div class="exam-layout">
+            <section class="landing-link-group" aria-labelledby="examHeading">
+              <h2 id="examHeading">Bài thi trên máy</h2>
+              <div class="student-link-panel">
+                <label for="studentLink">Đường dẫn gửi học viên</label>
+                <div class="student-link-field">
+                  <input id="studentLink" type="text" readonly spellcheck="false" autocomplete="off" placeholder="Nhập hoặc chọn mã lớp">
+                  <svg class="copy-link-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="8" y="8" width="12" height="12" rx="2"/>
+                    <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>
+                  </svg>
+                </div>
+                <p id="copyStatus" class="copy-status" role="status"></p>
+              </div>
+              <a class="button button-primary exam-link" id="openExam" target="_blank" rel="noopener noreferrer">Mở bài DEMO</a>
+            </section>
+            <section class="landing-link-group" aria-labelledby="paperHeading">
+              <h2 id="paperHeading">Bài thi trên giấy</h2>
+              <a class="button button-secondary exam-link" id="paperAudio" target="_blank" rel="noopener noreferrer">Audio bật chung cho lớp</a>
+            </section>
           </div>
+          <details class="rescue" id="rescue">
+            <summary>Xử lý sự cố</summary>
+            <div class="rescue-body">
+              <a class="button button-secondary rescue-link" id="backupAudio" target="_blank" rel="noopener noreferrer">
+                <strong>Audio Backup</strong><small>Nguồn audio thay thế cho phần Listening.</small>
+              </a>
+              <a class="button button-secondary rescue-link" id="answerSheet" target="_blank" rel="noopener noreferrer">
+                <strong>Answer Sheet dự phòng</strong><small>Phiếu trả lời để học viên nhập đáp án.</small>
+              </a>
+            </div>
+          </details>
         </section>
-        <div class="landing-result-action"><button class="button button-secondary" id="teacherDashboard" type="button">Giảng viên xem kết quả</button></div>
       </section>
     </main>
     <script src="k67-shared/config.js?rev=20261006-k67-backend"></script>
-    <script type="module" src="shared/landing.js?rev=20261014-order-v1&startup=20261026-v2"></script>
+    <script type="module" src="shared/landing.js?rev=20261112-k67-guided&startup=20261026-v2"></script>
   </body>
 </html>

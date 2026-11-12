@@ -7,5 +7,141 @@
 .k67-landing .landing-order { border:0; padding:0; margin:24px 0; }
 .k67-landing .landing-order legend { font-weight:700; margin-bottom:12px; }
 .k67-landing .order-choice[aria-pressed="true"] { background:#2f6df1; color:white; border-color:#2f6df1; }
-.k67-landing .landing-result-action { margin-top:28px; }
 @media(max-width:700px) { .k67-landing .landing-actions-three { grid-template-columns:1fr; } }
+
+.reading-landing .landing-shell { align-items: start; }
+
+.class-and-results {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+.class-and-results > * { min-width: 0; }
+.class-and-results input { min-height: 44px; }
+.class-and-results #teacherDashboard { grid-column: 2; padding-inline: 8px; }
+.reading-landing .class-and-results #teacherDashboard {
+  color: #fff;
+  background: var(--red);
+  border-color: var(--red);
+}
+.reading-landing .class-and-results #teacherDashboard:hover {
+  background: #b50723;
+  border-color: #b50723;
+}
+.k67-landing .test-context {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+body.k67-landing .test-context h2 { font-size: 22px; }
+.test-context p { margin: 0; color: var(--muted); font-size: 13px; }
+.reading-landing .landing-order .landing-actions { margin-top: 0; }
+.exam-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.exam-layout .landing-link-group { margin-top: 0; min-width: 0; }
+.exam-layout .exam-link {
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  margin-top: 12px;
+  text-align: center;
+  text-decoration: none;
+}
+.student-link-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+.student-link-panel label { color: var(--ink); font-size: 14px; margin-bottom: 8px; }
+.student-link-field { position: relative; }
+.student-link-field input {
+  display: block;
+  padding-inline-end: 38px;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  cursor: copy;
+}
+.student-link-field input:placeholder-shown { cursor: default; }
+.student-link-panel input::placeholder { font-size: 13px; }
+.copy-link-icon {
+  position: absolute;
+  inset-inline-end: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--green);
+  visibility: hidden;
+  pointer-events: none;
+}
+.reading-landing .student-link-field input:not(:placeholder-shown):is(:hover, :focus-visible) {
+  background-color: var(--k67-success);
+  border-color: var(--green);
+}
+.student-link-field input:not(:placeholder-shown):is(:hover, :focus-visible) + .copy-link-icon {
+  visibility: visible;
+}
+@media (hover: none) {
+  .student-link-field input:not(:placeholder-shown) + .copy-link-icon { visibility: visible; }
+}
+.copy-status { margin: 0; font-size: 13px; color: var(--muted); }
+.copy-status:not(:empty) { margin-top: 8px; }
+.copy-status[data-success="true"]:not(:empty) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #a5d5b3;
+  border-radius: 8px;
+  background: var(--k67-success);
+  color: var(--green);
+  font-weight: 700;
+  line-height: 1.35;
+}
+.copy-status[data-success="true"]:not(:empty)::before {
+  content: "";
+  flex: 0 0 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--green) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m3.5 8 3 3 6-6' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 13px no-repeat;
+}
+
+.rescue {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+.rescue > summary {
+  padding: 12px 16px;
+  min-height: 44px;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.reading-landing summary:focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+.rescue-body { display: grid; gap: 8px; padding: 0 16px 16px; }
+.rescue-link { display: grid; gap: 2px; min-height: 56px; text-decoration: none; cursor: pointer; }
+.rescue-link small { font-size: 13px; font-weight: 400; }
+.rescue-link[aria-disabled="true"] { opacity: .68; }
+
+@media (max-width: 480px) {
+  .class-and-results { gap: 8px; }
+  .class-and-results #teacherDashboard { padding: 5px 3px; }
+  .class-and-results > :is(input, select, button) { min-height: 50px; }
+  .exam-layout { gap: 8px; }
+  body.k67-landing .exam-layout h2 { font-size: 16px; }
+  .exam-layout .exam-link { padding-inline: 6px; }
+  .student-link-panel { padding: 8px; }
+}

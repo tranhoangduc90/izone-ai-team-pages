@@ -19,6 +19,24 @@ const loginStatus = document.getElementById('loginStatus');
 const googleSignInButton = document.getElementById('googleSignInButton');
 const logoutButton = document.getElementById('logoutButton');
 const rememberTeacherLogin = document.getElementById('rememberTeacherLogin');
+const classLabel = document.getElementById('classCodeLabel');
+const picker = document.getElementById('testPicker');
+const actions = document.getElementById('testActions');
+const chosenName = document.getElementById('chosenName');
+const rescue = document.getElementById('rescue');
+const studentLink = document.getElementById('studentLink');
+const copyStatus = document.getElementById('copyStatus');
+const openExam = document.getElementById('openExam');
+const paperAudio = document.getElementById('paperAudio');
+const backupAudio = document.getElementById('backupAudio');
+const answerSheet = document.getElementById('answerSheet');
+const audioRoutes = {
+  'term-test-1': 'term-test-1-audio.html',
+  'term-test-2': 'term-test-2-audio.html',
+  'mini-test-lesson-5': 'mini-test-listening-audio.html'
+};
+let selectedButton;
+let copyVersion = 0;
 const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 const sessionClient = createTeacherSessionClient({
   apiBaseUrl: appConfig.API_BASE_URL,
@@ -34,7 +52,11 @@ const orderButtons = [...document.querySelectorAll('[data-exam-mode]')];
 function showOrder() {
   orderButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.examMode === examMode)));
 }
-orderButtons.forEach(button => button.addEventListener('click', () => { examMode = button.dataset.examMode; showOrder(); }));
+orderButtons.forEach(button => button.addEventListener('click', () => {
+  examMode = button.dataset.examMode;
+  showOrder();
+  refreshLinks();
+}));
 showOrder();
 
 function selectedClassCode() {
@@ -54,6 +76,8 @@ function showManualEntry(message = 'Bạn vẫn có thể nhập mã lớp khi c
   loginBadge.textContent = 'Giảng viên chưa đăng nhập';
   logoutButton.hidden = true;
   googleSignInButton.hidden = false;
+  classLabel.htmlFor = 'classCode';
+  refreshLinks();
 }
 
 function showAuthorizedClasses(payload) {
@@ -70,12 +94,14 @@ function showAuthorizedClasses(payload) {
   classSelect.value = matchingClass?.name || classes[0].name;
   input.hidden = true;
   classSelect.hidden = false;
+  classLabel.htmlFor = 'classSelect';
   classHelp.textContent = 'Chỉ hiển thị các lớp tài khoản này được cấp quyền; lớp mới hơn nằm trên.';
   const reviewerName = payload.reviewer?.displayName || payload.reviewer?.email || 'Giảng viên';
   loginBadge.textContent = `Đã đăng nhập: ${reviewerName}`;
   loginStatus.textContent = `Đã tải ${classes.length} lớp.`;
   logoutButton.hidden = false;
   googleSignInButton.hidden = true;authView.ready();
+  refreshLinks();
 }
 
 async function loadAuthorizedClasses() {
@@ -149,17 +175,97 @@ function setupGoogleSignIn() {
   document.head.append(script);
 }
 
-document.querySelectorAll('[data-test]').forEach(button => {
-  button.addEventListener('click', () => {
-    const classCode = selectedClassCode();
-    if (!validClassCode(classCode)) {
-      input.setCustomValidity('Hãy nhập hoặc chọn mã lớp hợp lệ.');
-      input.reportValidity();
+function testUrl(route, code) {
+  const url = new URL(route, location.href);
+  url.search = new URLSearchParams({ class: code, mode: examMode });
+  return url.href;
+}
+
+function refreshLinks() {
+  if (!selectedButton) return;
+  const slug = selectedButton.dataset.pick;
+  const code = selectedClassCode();
+  const valid = validClassCode(code);
+  studentLink.value = valid ? testUrl(slug + '-computer-based/', code) : '';
+  studentLink.title = studentLink.value;
+  openExam.href = testUrl(slug + '-computer-based/', 'CODEXDEMO806');
+  paperAudio.href = audioRoutes[slug];
+  backupAudio.href = audioRoutes[slug];
+  if (valid) answerSheet.href = testUrl(slug + '/', code);
+  else answerSheet.removeAttribute('href');
+  answerSheet.setAttribute('aria-disabled', String(!valid));
+  copyVersion++;
+  copyStatus.textContent = '';
+  delete copyStatus.dataset.success;
+}
+
+function reportMissingClass() {
+  input.setCustomValidity('Hãy nhập hoặc chọn mã lớp hợp lệ.');
+  input.reportValidity();
+}
+
+async function copyStudentLink() {
+  const url = studentLink.value;
+  if (!url) {
+    reportMissingClass();
+    return;
+  }
+  const version = ++copyVersion;
+  copyStatus.textContent = '';
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
+    await navigator.clipboard.writeText(url);
+  } catch {
+    if (version !== copyVersion) return;
+    studentLink.select();
+    let copied = false;
+    try { copied = document.execCommand('copy'); } catch { /* URL remains selected. */ }
+    if (!copied) {
+      delete copyStatus.dataset.success;
+      copyStatus.textContent = 'Hãy nhấn Ctrl+C hoặc ⌘C để sao chép đường dẫn đã chọn.';
       return;
     }
-    input.setCustomValidity('');
-    window.location.href = `${button.dataset.test}/?class=${encodeURIComponent(classCode)}&mode=${examMode}`;
+  }
+  if (version !== copyVersion) return;
+  copyStatus.dataset.success = 'true';
+  copyStatus.textContent = 'Link đã được copy, sẵn sàng gửi cho học viên.';
+}
+
+picker.querySelectorAll('[data-pick]').forEach(button => {
+  button.addEventListener('click', () => {
+    selectedButton = button;
+    chosenName.textContent = button.textContent.trim();
+    rescue.open = false;
+    refreshLinks();
+    picker.hidden = true;
+    actions.hidden = false;
+    chosenName.focus();
   });
+});
+document.getElementById('changeTest').addEventListener('click', () => {
+  rescue.open = false;
+  copyVersion++;
+  actions.hidden = true;
+  picker.hidden = false;
+  selectedButton.focus();
+  selectedButton = undefined;
+});
+input.addEventListener('input', () => {
+  input.setCustomValidity('');
+  refreshLinks();
+});
+classSelect.addEventListener('change', refreshLinks);
+studentLink.addEventListener('click', copyStudentLink);
+studentLink.addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    void copyStudentLink();
+  }
+});
+answerSheet.addEventListener('click', event => {
+  if (answerSheet.hasAttribute('href')) return;
+  event.preventDefault();
+  reportMissingClass();
 });
 
 document.getElementById('teacherDashboard')?.addEventListener('click', () => {
