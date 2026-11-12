@@ -618,9 +618,11 @@ export function withListeningContinuity(OfflineRuntime) {
   }
 
  attachPlayer({ audio, resumeButton, manualButton, render, form, observeListening }) {
+  const run = this.record;
   let started = false;
   let terminal = '';
   let interrupting = false;
+  let playPending = false;
   const update = (message = 'Đang phát bài thi') => render(message, audio.currentTime, audio.duration);
   const submit = () => {
    const button = document.createElement('button');
@@ -637,9 +639,44 @@ export function withListeningContinuity(OfflineRuntime) {
    resumeButton.hidden = false;
    update('Trình duyệt chưa cho phát. Hãy bấm Phát audio');
   };
-  resumeButton.addEventListener('click', () => {
-   if (!started && !terminal) void audio.play().catch(playBlocked);
-  });
+  const canStart = () => this.record === run && this.owned && this.player === audio
+   && !started && !terminal && !run.sections.listening?.sealed && !run.sections.listening?.interrupted;
+  const playInitial = async () => {
+   if (playPending || !canStart()) return;
+   playPending = true;
+   resumeButton.disabled = true;
+   try {
+    // A reload can retry only a confirmed rejection. Consume that evidence before calling play again.
+    if (run.player.initialPlayBlocked === true) {
+     delete run.player.initialPlayBlocked;
+     try { await this.persist(true); }
+     catch {
+      if (canStart()) {
+       run.player.initialPlayBlocked = true;
+       playBlocked();
+       update('Chưa lưu được lần thử phát. Hãy bấm Phát audio để thử lại.');
+      }
+      return;
+     }
+    }
+    if (!canStart()) return;
+    try { await audio.play(); }
+    catch (error) {
+     if (!canStart()) return;
+     if (error?.name === 'NotAllowedError' && audio.paused && audio.currentTime === 0) {
+      run.player.initialPlayBlocked = true;
+      this.observe('audio_diagnostic', { event: 'play_blocked_before_start', position: 0 });
+      try { await this.persist(true); }
+      catch { /* The same tab can retry. A reload only trusts evidence that was saved. */ }
+     }
+     if (canStart()) playBlocked();
+    }
+   } finally {
+    playPending = false;
+    if (canStart()) resumeButton.disabled = false;
+   }
+  };
+  resumeButton.addEventListener('click', () => { void playInitial(); });
   audio.addEventListener('playing', () => {
    if (!started) this.observe('audio_playing', { position: audio.currentTime,
     ...(this.listeningStartIntent === undefined ? {} : { elapsedMs: performance.now() - this.listeningStartIntent }) });
@@ -679,6 +716,7 @@ export function withListeningContinuity(OfflineRuntime) {
   });
   const controller = {
    playBlocked,
+   playInitial,
    beforeAutoSubmit: async () => ({ submit: Boolean(this.record.player.ended), deadlineChanged: !this.record.player.ended }),
    submitting: () => {
     if (terminal) return;
