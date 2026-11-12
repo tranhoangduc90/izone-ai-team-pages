@@ -1,0 +1,66 @@
+{
+  "testId": "substitute-test-2-k56-writing-makeup",
+  "build": "issue611-ddc510a10a6d49cf",
+  "assets": [
+    {
+      "path": "index.html",
+      "sha256": "5d536d4aa50fce7bd76fa1966e93e739186409bdb17732148057dbea53b1c02f"
+    },
+    {
+      "path": "sw.js",
+      "sha256": "e68ca9c30de8ddf77715fcf0a86025f2400ef0b37d1d28f82d6ba3f35dabe3cb"
+    },
+    {
+      "path": "../substitute-skill-shared/offline-worker.js",
+      "sha256": "454ae6856478457e7b73ea18d5bbbfd6234ab6caf1324882261f85168805e09b"
+    },
+    {
+      "path": "../substitute-skill-shared/offline.mjs",
+      "sha256": "1aa9bbbbbb34d29edab98e01473f2a74042e354aa4797fc30ee23d26dc2abd54"
+    },
+    {
+      "path": "../substitute-skill-shared/writing.mjs",
+      "sha256": "4bdad94ebfd46db77d26e7c8d58244d4125d593daeaeee5eeb68655a43127d84"
+    },
+    {
+      "path": "../substitute-skill-shared/native-writing.mjs",
+      "sha256": "a0df6ba5dec98750ecbac2db5c4424bcd76ffaeab8f78b475551e09823769201"
+    },
+    {
+      "path": "../substitute-skill-shared/storage.mjs",
+      "sha256": "2ea5c91610cc40ea39c95608c26a6bea1f85360f547b265010552ebba4fcf9e3"
+    },
+    {
+      "path": "../substitute-skill-shared/writing.css",
+      "sha256": "7f385efa099e446163e7cc5563441651d83ce23141b803aed7a3267b0eee974e"
+    },
+    {
+      "path": "../substitute-k56-shared/styles.css",
+      "sha256": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e"
+    },
+    {
+      "path": "../substitute-test-1-k56-computer-based/styles.css",
+      "sha256": "0111d675e284bc779e0940a129a6f392cca66b352ce598b5b5ed92c5ac2134ef"
+    },
+    {
+      "path": "../substitute-shared/izone-logo-color.png",
+      "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
+    },
+    {
+      "path": "../../shared/izone-favicon.svg",
+      "sha256": "dccacd0f15fb7b10cb6a95f1ef91484bc6bca1fb9b0863a3382e0ac2e91f0df1"
+    },
+    {
+      "path": "../../shared/master170/assets/SourceSans3-Variable.woff2",
+      "sha256": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8"
+    },
+    {
+      "path": "../substitute-test-2-k56-computer-based/assets/figures/pizza-revenue-2017.png",
+      "sha256": "dd99ec7321930e537be88b5f5fd478d6459fb4c9f3efafba41433617e153dd71"
+    },
+    {
+      "path": "../substitute-skill-shared/portal-status.mjs",
+      "sha256": "4ce87f53cd948ccf73a46a53355ed2de1500f15e8d3dca5caa31ed764f4e07db"
+    }
+  ]
+}
