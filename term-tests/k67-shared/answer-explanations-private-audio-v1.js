@@ -228,11 +228,26 @@
       p.classList.add('explanation-active-paragraph'); colorEvidence(p, entry.evidence);
     }
   }
-  // Cuộn chính vùng đọc đến chữ dẫn chứng, kể cả khi nó nằm cuối một đoạn dài.
-  function scrollToEvidence(pane) {
-    const first = pane.querySelector('.explanation-active-paragraph [class*="ex-bg-"], .explanation-active-paragraph [class*="ex-fg-"]')
-      || pane.querySelector('.explanation-active-paragraph');
+  function scrollToEvidence(pane, wholeTurn) {
+    const paragraph = pane.querySelector('.explanation-active-paragraph');
+    const first = wholeTurn ? paragraph
+      : pane.querySelector('.explanation-active-paragraph [class*="ex-bg-"], .explanation-active-paragraph [class*="ex-fg-"]') || paragraph;
     if (first) pane.scrollTop += first.getBoundingClientRect().top - pane.getBoundingClientRect().top - 24;
+  }
+  function transcriptExcerpts(entries, section, currentEvidence) {
+    const excerpts = new Map();
+    for (const item of entries) {
+      if (item.section !== section) continue;
+      for (const paragraph of item.evidence) {
+        const key = text([paragraph]);
+        if (!excerpts.has(key)) excerpts.set(key, paragraph);
+      }
+    }
+    return Array.from(excerpts, ([key, paragraph]) => {
+      const current = currentEvidence.get(key);
+      const highlighted = current?.some(run => run.foreground || run.background);
+      return `<div class="cbt-passage-paragraph${highlighted ? ' explanation-active-paragraph' : ''}">${paragraphs([current || paragraph], Boolean(current))}</div>`;
+    }).join('');
   }
   function render() {
     player?.stop('', 'change-question');
@@ -247,14 +262,12 @@
     const correctAnswer = (entry.gradingNote ? null : row?.correctAnswer) || entry.answers.join(entry.pairNumbers ? ' + ' : ' / ');
     const studentAnswer = row?.studentAnswer ?? review.answers?.[skill]?.[number] ?? '';
     const outcome = ['correct', 'incorrect', 'blank'].includes(row?.result) ? row.result : 'unknown';
-    const evidenceText = new Set(entry.evidence.map(p => text([p])));
+    const currentEvidence = new Map(entry.evidence.map(p => [text([p]), p]));
     const fullTranscript = !isReading && Array.isArray(section.transcript);
-    const left = isReading ? passageHtml(section.passageHtml) : fullTranscript ? paragraphs(section.transcript, false) : entry.evidence.map(p => {
-      const highlighted = p.some(run => run.foreground || run.background);
-      return `<div class="cbt-passage-paragraph${highlighted ? ' explanation-active-paragraph' : ''}">${paragraphs([p])}</div>`;
-    }).join('');
+    const left = isReading ? passageHtml(section.passageHtml) : fullTranscript ? paragraphs(section.transcript, false)
+      : transcriptExcerpts(numbers.map(question => entries[question]), entry.section, currentEvidence);
     const analysis = entry.blocks.map(block => {
-      const extraEvidence = block.evidence.filter(p => !evidenceText.has(text([p])));
+      const extraEvidence = block.evidence.filter(p => !currentEvidence.has(text([p])));
       const extraClips = (block.replay || []).filter(clip => !entry.replay?.some(primary => primary.id === clip.id));
       const extra = extraEvidence.length ? `<details class="explanation-option-quote"><summary>Xem trích dẫn</summary><blockquote>${paragraphs(extraEvidence)}${replayButtons(extraClips)}</blockquote></details>` : '';
       return `<div class="explanation-source-block">${paragraphs(block.analysis)}${extra}</div>`;
@@ -286,10 +299,8 @@
     requestAnimationFrame(() => {
       if (!d.open || context?.review !== review || context?.skill !== skill || number !== renderedNumber) return;
       const pane = d.querySelector('.explanation-dialog-passage-scroll');
-      if (isReading || fullTranscript) {
-        markReadingEvidence(pane, entry);
-        scrollToEvidence(pane);
-      }
+      if (isReading || fullTranscript) markReadingEvidence(pane, entry);
+      scrollToEvidence(pane, !isReading && !fullTranscript);
     });
   }
   function attach({ container, payload, attemptToken, reviewKey = attemptToken, testSlug, title, request,
