@@ -1,4 +1,4 @@
-import { createOfflineRuntime } from '../k56-offline-shared/runtime-recovery-v1.mjs?v=20261107-mini-v3';
+import { createOfflineRuntime } from '../k56-offline-shared/runtime-term2-k67-recovery-v1.mjs?v=20261107-mini-v3';
 import { downloadTermAudio } from '../k56-offline-shared/whole-audio-terms-cbt-audio-status-v1.mjs?v=20261111-audio-milestones-v2';
 import { mountOfflineListeningPlayer, prepareContinuityAudio, mountContinuityListeningPlayer } from '../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v2';
 
