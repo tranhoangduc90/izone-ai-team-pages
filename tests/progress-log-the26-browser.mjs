@@ -49,10 +49,12 @@ test('Thẻ 26: Kho chung dùng cùng bộ soạn, admin xuất bản đúng ngu
   await page.waitForFunction(()=>document.querySelector('.thuy-library-heading button')?.title==='Tạo bài trong Kho chung');
   await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();await page.getByLabel('Tên bài tập',{exact:true}).fill('Bài chung kiểm Thẻ 26');await page.getByLabel('Khóa',{exact:true}).selectOption('56');
   await page.getByRole('button',{name:'+ Trả lời mở',exact:true}).click();await page.getByLabel('Kỹ năng câu 1',{exact:true}).selectOption('general');await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Câu phản hồi thử');
-  await page.getByRole('button',{name:'Gửi duyệt',exact:true}).click();await page.getByRole('button',{name:'Duyệt bản này',exact:true}).click();
+  assert.equal(await page.getByRole('button',{name:'Gửi duyệt',exact:true}).isVisible(),false);
+  await page.getByRole('button',{name:'Duyệt bản này',exact:true}).click();
   await page.getByRole('button',{name:'Xuất bản',exact:true}).click();await page.getByRole('button',{name:'Bài chung kiểm Thẻ 26',exact:true}).waitFor();
   assert.equal(await page.evaluate(()=>window.calls26.find(c=>c.path==='/teacher/form-drafts')?.body.scope),'izone');
   assert.equal(await page.evaluate(()=>window.calls26.some(c=>c.path==='/teacher/form-library')),false);
+  assert.equal(await page.evaluate(()=>window.calls26.some(c=>c.path.endsWith('/request-review'))),false);
   page.on('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Xóa bài',exact:true}).click();await page.waitForFunction(()=>window.entries26.length===0);assert.equal(await page.locator('dialog[open]').count(),0);
  }finally{await browser.close();await f.close();}
 });

@@ -375,8 +375,13 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     assert.match(JSON.stringify(grade),/"verdict":"correct"/u);
     await page.getByRole('dialog').getByRole('button',{name:'Đóng xem trước',exact:true}).click();
     await api('/teacher/form-drafts/'+sharedDraft.id+'/publish-library').send({expectedRevision:1,operationId:randomUUID()}).expect(409);
-    await page.getByRole('button',{name:'Gửi duyệt',exact:true}).click();
-    await page.getByRole('button',{name:'Duyệt bản này',exact:true}).click();
+    const directApprove=page.getByRole('button',{name:'Duyệt bản này',exact:true});
+    assert.equal(await directApprove.isVisible(),true,'Lead can approve their own draft immediately');
+    assert.equal(await page.getByRole('button',{name:'Gửi duyệt',exact:true}).isVisible(),false);
+    assert.equal(await page.getByRole('button',{name:'Xuất bản',exact:true}).isVisible(),false);
+    await directApprove.click();
+    await page.getByText('Đã duyệt bản này. Bạn có thể xuất bản.',{exact:true}).waitFor();
+    assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_publication WHERE source_draft_id=$1',[sharedDraft.id])).rows[0].n,0);
     await page.getByRole('button',{name:'Xuất bản',exact:true}).click();
     await page.locator('.thuy-publication-notice').filter({hasText:'Đã xuất bản thành công vào Kho chung'}).waitFor();
     const sharedPublication=(await sourceDb.query('SELECT id,source_revision FROM learning.form_publication WHERE source_draft_id=$1',[sharedDraft.id])).rows[0];

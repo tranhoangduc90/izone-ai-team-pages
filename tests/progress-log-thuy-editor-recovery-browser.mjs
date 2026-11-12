@@ -53,7 +53,7 @@ test('Thủy editor: đúng lớp, tự lưu, mất phản hồi, giữ node qua
   await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Nội dung mới sau khi mất phản hồi');
   await page.getByRole('button',{name:'Thử lưu lại',exact:true}).click();
   await page.waitForFunction(()=>window.savedDraft.definition.blocks[0].items[0].prompt==='Nội dung mới sau khi mất phản hồi');
-  assert.equal(await page.locator('.thuy-editor-save-state').textContent(),'Đã lưu');
+  assert.equal(await page.locator('.thuy-editor-save-state').textContent(),'Đã lưu nháp');
   const state=await page.evaluate(()=>({draft:window.savedDraft,calls:window.calls.map(c=>({path:c.path,body:c.body,method:c.method})),keys:[...Object.keys(localStorage),...Object.keys(sessionStorage)]}));
   assert.equal(state.draft.classId,'1294');assert.equal(state.draft.sessionNumber,11);assert.equal(state.draft.definition.blocks[0].items[0].prompt,'Nội dung mới sau khi mất phản hồi');
   const creates=state.calls.filter(c=>c.path==='/teacher/form-drafts'&&c.method==='POST');assert.equal(creates.length,2);assert.deepEqual(creates[0].body,creates[1].body);assert.deepEqual(state.keys,[]);
