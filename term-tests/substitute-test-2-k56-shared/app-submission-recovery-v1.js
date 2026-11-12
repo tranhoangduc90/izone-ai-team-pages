@@ -1,0 +1,3232 @@
+(async function () {
+  'use strict';
+
+  const testConfig = window.TERM_TEST_CONFIG;
+  const appConfig = window.TERM_TEST_APP_CONFIG;
+  const root = document.getElementById('app');
+  const query = new URLSearchParams(window.location.search);
+  const classHint = (query.get('class') || '').trim().toUpperCase();
+  const classCode = query.get('demo') === 'exam' && query.get('grading') === 'server'
+    ? window.SUBSTITUTE_STATE.resolveClass(classHint) : classHint;
+  const requestedDemo = query.get('demo') || '';
+  const writingConfig = window.TERM_TEST_CONTENT?.writing || null;
+  const demoMode = window.TERM_TEST_CONTENT?.variant === 'semantic-html'
+    && ['complete', 'listening-only', 'writing-prep', 'writing', 'exam'].includes(requestedDemo)
+    ? requestedDemo
+    : '';
+  const serverGradingMode = demoMode === 'exam' && query.get('grading') === 'server';
+  const readingFirst = serverGradingMode && window.TERM_TEST_BOOTSTRAP?.examOrder === 'reading-first';
+  const listeningContinuity=serverGradingMode&&window.TERM_TEST_BOOTSTRAP?.listeningContinuityVersion===1;
+  let listeningInterruption=window.TERM_TEST_BOOTSTRAP?.listeningInterruption||null;
+  let recordingInterruption=false;
+  const sectionDefinition='substitute-test-2-k56:answer-key-v1';
+  const sealedSubmissions=serverGradingMode && window.TERM_TEST_BOOTSTRAP?.submissionRecoveryVersion===1;
+  let sealedWriting=null;
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
+  if (!testConfig || !appConfig || !root) return;
+  let recoveryClient;
+  const loadRecoveryClient=()=>recoveryClient??=
+    import('../substitute-shared/submission-recovery-v1.mjs?v=20261112-v3').then(({createSubmissionRecoveryClient})=>
+      createSubmissionRecoveryClient({apiRequest,journalSubmissionOwner,sectionDefinition,taskNumber:1}));
+  const { createWritingSubmission } = await import('../shared/writing-submission.mjs?v=20261105-writing-submit-v1');
+
+  if(serverGradingMode)window.SUBSTITUTE_STATE.bind({...window.TERM_TEST_BOOTSTRAP,classCode});
+  const storageKey = serverGradingMode ? window.SUBSTITUTE_STATE.key('izone-test:',classCode) : `izone-test:${testConfig.slug}:${classCode}${demoMode ? ':preview:'+demoMode : ''}`;
+  if (serverGradingMode && query.get('reset') === '1' && !window.TERM_TEST_BOOTSTRAP) {
+    const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}:server-grade`;
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
+      try {
+        storage.removeItem(storageKey);
+        storage.removeItem(uiStorageKey);
+      } catch {
+        // Không cản mở lượt test mới nếu trình duyệt chặn storage.
+      }
+    }
+    query.delete('reset');
+    const nextQuery = query.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`);
+  }
+  const persistedSession = readSession();
+  const incomingSession = window.TERM_TEST_BOOTSTRAP?.sessionState;
+  // Nhận state RAM chỉ khi cùng người/lượt/lịch sử đã được bootstrap kiểm.
+  // Bộ nhớ bị chặn vẫn mở được bài; không lấy người từ bộ nhớ chung để cấp quyền.
+  const restoredSession = serverGradingMode && incomingSession
+    && window.SUBSTITUTE_STATE.accept(incomingSession, window.TERM_TEST_BOOTSTRAP)
+    ? { ...incomingSession, ...persistedSession } : persistedSession;
+  const state = {
+    stage: 'loading',
+    roster: [],
+    className: classCode,
+    studentRef: '',
+    studentName: '',
+    clientSubmissionId: '',
+    examSessionToken: '',
+    attemptToken: '',
+    listeningStartedAt: '',
+    examOrder: 'listening-first',
+    readingStartedAt: '',
+    writingStartedAt: '',
+    listeningDeadlineAt: '',
+    readingDeadlineAt: '',
+    writingDeadlineAt: '',
+    serverTimeOffsetMs: 0,
+    audioVolume: 1,
+    completed: false,
+    writingStarted: false,
+    writingSubmitted: false,
+    writingDirty: false,
+    writingRevision: 0,
+    writingAckRevision: 0,
+    writingServerRevision: null,
+    writingConfirmedDraft: null,
+    writingConflict: null,
+    writingRecovery: [],
+    drafts: { listening: {}, reading: {}, writing: { outline: '', task1: '', task2: '' } },
+    writingLayout: { activeTask: writingConfig?.tasks?.[0]?.id || 'task1', splits: {} },
+    frozenAnswers: { listening: null, reading: null },
+    pendingSections: {},
+    testGrades: { listening: null, reading: null, writing: null },
+    result: null,
+    ...restoredSession,
+    drafts: {
+      listening: { ...(restoredSession.drafts?.listening || {}) },
+      reading: { ...(restoredSession.drafts?.reading || {}) },
+      writing: {
+        outline: String(restoredSession.drafts?.writing?.outline || ''),
+        task1: String(restoredSession.drafts?.writing?.task1 || ''),
+        task2: String(restoredSession.drafts?.writing?.task2 || '')
+      }
+    },
+    writingLayout: {
+      activeTask: String(restoredSession.writingLayout?.activeTask || writingConfig?.tasks?.[0]?.id || 'task1'),
+      splits: { ...(restoredSession.writingLayout?.splits || {}) }
+    },
+    frozenAnswers: {
+      listening: restoredSession.frozenAnswers?.listening || null,
+      reading: restoredSession.frozenAnswers?.reading || null
+    },
+    pendingSections: {...(restoredSession.pendingSections||{})},
+    testGrades: {
+      listening: restoredSession.testGrades?.listening || null,
+      reading: restoredSession.testGrades?.reading || null,
+      writing: restoredSession.testGrades?.writing || null
+    },
+    writingRevision: Number(restoredSession.writingRevision) || 0,
+    writingAckRevision: Number(restoredSession.writingAckRevision) || 0,
+    writingServerRevision: Number.isSafeInteger(restoredSession.writingServerRevision)
+      && restoredSession.writingServerRevision >= 0 ? restoredSession.writingServerRevision : null,
+    writingRecovery: Array.isArray(restoredSession.writingRecovery) ? restoredSession.writingRecovery.slice(0, 5) : []
+  };
+
+  if (window.TERM_TEST_BOOTSTRAP?.studentRef) {
+    state.studentRef = String(window.TERM_TEST_BOOTSTRAP.studentRef);
+    state.studentName = String(window.TERM_TEST_BOOTSTRAP.studentName || 'Học viên Demo');
+    state.className = String(window.TERM_TEST_BOOTSTRAP.classCode || classCode);
+    state.identityConfirmed = true;
+    state.listeningStartedAt ||= window.TERM_TEST_BOOTSTRAP.listeningStartedAt || '';
+    state.examOrder = readingFirst ? 'reading-first' : 'listening-first';
+    state.readingStartedAt ||= window.TERM_TEST_BOOTSTRAP.readingStartedAt || '';
+    state.readingDeadlineAt ||= window.TERM_TEST_BOOTSTRAP.readingDeadlineAt || '';
+    state.listeningDeadlineAt ||= window.TERM_TEST_BOOTSTRAP.listeningDeadlineAt || '';
+  }
+
+  // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
+  let examJournal = null, journalConnection = null;
+  if (appConfig.EXAM_JOURNAL_ENABLED === true) {
+    journalConnection = import('../shared/exam-journal/bridge-substitute-recovery-v1.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&eofLog=20261108-v1&continuity=20261110-listening-observations-v1&continuity=20261110-listening-observations-v1&submission=20261112-v2').then(({ connectExamJournal }) => {
+      examJournal = connectExamJournal({ enabled: true,
+        endpoint: appConfig.EXAM_JOURNAL_BASE_URL || new URL(appConfig.API_BASE_URL).origin + '/substitute-journal-api/' + testConfig.slug,
+        testSlug: testConfig.slug, build: appConfig.EXAM_JOURNAL_BUILD || 'unknown',
+        submissionMetadataOnly:sealedSubmissions,
+        getState: () => ({ ...state, classCode,
+          generation: sealedSubmissions ? Number(window.TERM_TEST_BOOTSTRAP?.offlineGeneration ?? 0)
+            : typeof miniGeneration === 'number' ? miniGeneration : Number(state.generation || 0),
+          clientRunId: window.TERM_TEST_BOOTSTRAP?.clientRunId || '', examSessionId: window.TERM_TEST_BOOTSTRAP?.examSessionId || '', historyEpoch: window.TERM_TEST_BOOTSTRAP?.historyEpoch || '' })
+      });
+    }).catch(() => {});
+  }
+
+  function readSession() {
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
+      try {
+        const restored = JSON.parse(storage.getItem(storageKey) || '{}');
+        if (Object.keys(restored).length && (!serverGradingMode || window.SUBSTITUTE_STATE.accept(restored,window.TERM_TEST_BOOTSTRAP))) return restored;
+      } catch {
+        // Bộ nhớ trình duyệt có thể bị chặn; tiếp tục với nguồn còn lại.
+      }
+    }
+    return {};
+  }
+
+  let localSaveStatus = 'Bản nháp chỉ lưu trên trình duyệt này';
+
+  function showLocalSaveWarning(message) {
+    let warning = document.getElementById('localSaveWarning');
+    if (!message) {
+      if (warning) warning.hidden = true;
+      return;
+    }
+    if (!warning) {
+      warning = document.createElement('aside');
+      warning.id = 'localSaveWarning';
+      warning.setAttribute('role', 'alert');
+      warning.style.cssText = 'padding:16px;margin:12px;border:2px solid #b42318;border-radius:8px;background:#fff0ee;color:#8a1c13;';
+      const text = document.createElement('p');
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'button button-secondary';
+      retry.textContent = 'Thử lưu lại';
+      retry.addEventListener('click', () => saveSession());
+      warning.append(text, retry);
+      root.prepend(warning);
+    }
+    warning.querySelector('p').textContent = message;
+    warning.hidden = false;
+  }
+
+  function saveSession() {
+    try { if (typeof examJournal !== 'undefined') examJournal?.stateChanged('save_requested'); } catch {}
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
+    if(serverGradingMode)window.SUBSTITUTE_STATE.bind({...state,classCode,clientRunId:window.TERM_TEST_BOOTSTRAP.clientRunId});
+    const serialized = JSON.stringify({
+      ...(serverGradingMode ? {_substitute:window.SUBSTITUTE_STATE.stamp({})._substitute,clientRunId:window.TERM_TEST_BOOTSTRAP.clientRunId,classCode}:{}),
+      studentRef: state.studentRef,
+      studentName: state.studentName,
+      clientSubmissionId: state.clientSubmissionId,
+      examSessionToken: state.examSessionToken,
+      attemptToken: state.attemptToken,
+      listeningStartedAt: state.listeningStartedAt,
+      examOrder: state.examOrder,
+      readingStartedAt: state.readingStartedAt,
+      readingStartedAt: state.readingStartedAt,
+      writingStartedAt: state.writingStartedAt,
+      listeningDeadlineAt: state.listeningDeadlineAt,
+      readingDeadlineAt: state.readingDeadlineAt,
+      writingDeadlineAt: state.writingDeadlineAt,
+      serverTimeOffsetMs: state.serverTimeOffsetMs,
+      audioVolume: state.audioVolume,
+      annotationRunId: state.annotationRunId,
+      identityConfirmed: state.identityConfirmed,
+      completed: state.completed,
+      writingStarted: state.writingStarted,
+      writingSubmitted: state.writingSubmitted,
+      writingDirty: state.writingDirty,
+      writingAckRevision: state.writingAckRevision,
+      writingRevision: state.writingRevision,
+      writingServerRevision: state.writingServerRevision,
+      writingConfirmedDraft: state.writingConfirmedDraft,
+      writingConflict: state.writingConflict,
+      writingRecovery: state.writingRecovery,
+      drafts: state.drafts,
+      writingLayout: state.writingLayout,
+      resultDetailsOpen: state.resultDetailsOpen,
+      frozenAnswers: state.frozenAnswers,
+      pendingSections: state.pendingSections,
+      ...(state.listeningInterruptionConfirmed?{listeningInterruptionConfirmed:true}:{}),
+      testGrades: state.testGrades
+    });
+    let saved = 0;
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
+      try {
+        storage.setItem(storageKey, serialized);
+        if (storage.getItem(storageKey) === serialized) saved += 1;
+      } catch {
+        // Không coi thao tác lưu thất bại là đã lưu thành công.
+      }
+    }
+    if(serverGradingMode&&window.SUBSTITUTE_OFFLINE)
+      void window.SUBSTITUTE_OFFLINE.saveSnapshot('app',JSON.parse(serialized)).catch(()=>{
+        window.SUBSTITUTE_OFFLINE_STATUS='checkpoint_failed';
+      });
+    localSaveStatus = saved === 2
+      ? 'Đã lưu trên trình duyệt này'
+      : saved === 1
+        ? 'Chỉ lưu được một bản dự phòng · hãy sao chép bài trước khi đóng trang'
+        : 'Chưa lưu được bản nháp · không đóng hoặc tải lại trang';
+    showLocalSaveWarning(saved === 2 ? '' : saved === 1
+      ? 'Một vùng lưu trữ của trình duyệt không hoạt động. Hãy sao chép bài làm ra nơi an toàn trước khi đóng hoặc tải lại trang, rồi thử lưu lại.'
+      : 'Không lưu được bản nháp vì bộ nhớ trình duyệt đầy hoặc bị chặn. Đừng đóng hoặc tải lại trang. Hãy sao chép bài làm ra nơi an toàn và bấm Thử lưu lại.');
+    if (demoMode) setWritingSaveStatus(localSaveStatus);
+    return saved > 0;
+  }
+
+  const progressMarkup = writingConfig
+    ? `<div class="progress-step" data-progress="${readingFirst?'reading':'listening'}">1. ${readingFirst?'Reading':'Listening'}</div>
+        <div class="progress-step" data-progress="${readingFirst?'listening':'reading'}">2. ${readingFirst?'Listening':'Reading'}</div>
+        <div class="progress-step" data-progress="writing">3. Writing</div>
+        <div class="progress-step" data-progress="result">4. Kết quả</div>`
+    : `<div class="progress-step" data-progress="${readingFirst?'reading':'listening'}">1. ${readingFirst?'Reading':'Listening'}</div>
+        <div class="progress-step" data-progress="${readingFirst?'listening':'reading'}">2. ${readingFirst?'Listening':'Reading'}</div>
+        <div class="progress-step" data-progress="result">3. Kết quả</div>`;
+
+  const writingMarkup = writingConfig ? `
+      <section class="panel transition-card writing-prep-card" id="writingPrepView" hidden>
+        <div class="transition-icon">✓</div>
+        <p class="eyebrow">Reading đã được ghi nhận</p>
+        <h2>Chuẩn bị phần Writing</h2>
+        <p>Kết quả Listening và Reading đang được giữ kín. Khi sẵn sàng, hãy bắt đầu Writing ${writingConfig.tasks?.[0]?.label || ''}.</p>
+        <ul class="writing-prep-list">
+          <li>Tổng thời gian: ${writingConfig.totalMinutes || 30} phút.</li>
+          <li>${writingConfig.tasks?.[0]?.label || 'Writing'}: viết ít nhất ${writingConfig.tasks?.[0]?.minimumWords || 150} từ.</li>
+          <li>Bài viết được tự lưu trên hệ thống; đóng tab rồi mở lại vẫn có thể tiếp tục.</li>
+        </ul>
+        <button class="button button-primary" id="startWriting" type="button">Bắt đầu Writing</button>
+      </section>
+
+      <form class="panel writing-exam-view" id="writingView" hidden>
+        <header class="writing-exam-header">
+          <div>
+            <p class="eyebrow">Phần 3 · Academic Writing</p>
+            <h2>${writingConfig.tasks?.[0]?.label || 'Writing'}</h2>
+          </div>
+          <nav class="writing-task-tabs" id="writingTaskTabs" aria-label="Chọn Writing Task"></nav>
+          <button class="button button-primary writing-submit" id="submitWriting" type="submit">Nộp bài</button>
+        </header>
+        <section class="writing-save-conflict" id="writingConflict" role="status" hidden>
+          <h3>Có hai bản bài viết khác nhau</h3>
+          <p>Bài đang viết vẫn được giữ trên máy. Hãy đối chiếu bản đã lưu trước khi tiếp tục.</p>
+          <div id="writingConflictDrafts"></div>
+          <div class="form-actions">
+            <button class="button button-secondary" id="writingUseServer" type="button">Dùng bản trên hệ thống</button>
+            <button class="button button-primary" id="writingKeepLocal" type="button">Tiếp tục bản đang viết trên máy</button>
+          </div>
+        </section>
+        <div class="writing-workspace" id="writingWorkspace"></div>
+        <footer class="writing-task-footer" ${writingConfig.tasks?.length === 1 ? 'hidden' : ''}>
+          <button class="button button-secondary" id="previousWritingTask" type="button">← Previous Task</button>
+          <span id="writingTaskPosition">Task 1 · 1 / 1</span>
+          <button class="button button-primary" id="nextWritingTask" type="button">Next Task →</button>
+        </footer>
+      </form>
+      <details class="panel writing-recovery" id="writingRecovery" hidden>
+        <summary>Bản bài viết được giữ để phục hồi</summary>
+        <p>Các bản dưới đây được giữ trên thiết bị này. Bạn có thể đọc và sao chép nội dung khi cần.</p>
+        <div id="writingRecoveryDrafts"></div>
+      </details>
+  ` : '';
+
+  root.innerHTML = `
+    <header class="topbar">
+      <p class="eyebrow">IZONE · IELTS 6–7</p>
+      <h1>${testConfig.title}</h1>
+      <p>${testConfig.intro || 'Nhập đáp án từ answer sheet giấy. Listening được lưu trước, sau đó hệ thống mở Reading và chấm toàn bộ khi hoàn tất.'}</p>
+    </header>
+    <main class="page-shell">
+      <div class="progress" aria-label="Tiến độ bài test">
+        ${progressMarkup}
+      </div>
+      <div class="notice" id="notice" role="status">Đang tải danh sách lớp...</div>
+
+      <section class="panel loading-card" id="loadingView">
+        <div class="spinner" aria-hidden="true"></div>
+        <strong>Đang chuẩn bị answer sheet...</strong>
+      </section>
+
+      <section class="panel identity-panel" id="identityView" hidden>
+        <div class="identity-copy">
+          <p class="eyebrow">Thông tin học viên</p>
+          <h2 id="identityTitle">Chọn họ và tên</h2>
+          <p id="classLabel"></p>
+        </div>
+        <label>
+          Họ và tên
+          <select id="studentSelect" required>
+            <option value="">Nhấn để chọn</option>
+          </select>
+        </label>
+      </section>
+
+      <form class="panel test-panel" id="listeningView" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Phần 1</p>
+            <h2 id="listeningTitle"></h2>
+            <ul class="instructions" id="listeningInstructions"></ul>
+          </div>
+          <span class="answer-count" id="listeningCount">0/${testConfig.listening.controls.length} đã nhập</span>
+        </div>
+        <div class="questions-grid" id="listeningQuestions"></div>
+        <div class="form-actions">
+          <button class="button button-primary" id="submitListening" type="submit">Nộp bài Listening</button>
+        </div>
+      </form>
+
+      <section class="panel transition-card" id="listeningSavedView" hidden>
+        <div class="transition-icon">✓</div>
+        <p class="eyebrow">Đã chấm bài Listening</p>
+        <h2>Bài Listening đã được ghi nhận</h2>
+        <p>Hệ thống đã ghi bài Listening. Khi sẵn sàng, mở Reading để đọc passage và làm câu hỏi ngay trong giao diện.</p>
+        <div class="form-actions transition-actions">
+          <button class="button button-primary" id="startReading" type="button">Bắt đầu bài Reading</button>
+        </div>
+      </section>
+
+      <form class="panel test-panel" id="readingView" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Phần 2 · <span id="readingStudentName"></span></p>
+            <h2 id="readingTitle"></h2>
+            <ul class="instructions" id="readingInstructions"></ul>
+          </div>
+          <span class="answer-count" id="readingCount">0/${testConfig.reading.controls.length} đã nhập</span>
+        </div>
+        <div class="questions-grid" id="readingQuestions"></div>
+        <div class="form-actions">
+          <button class="button button-primary" id="submitReading" type="submit">Nộp bài Reading</button>
+        </div>
+      </form>
+
+      ${writingMarkup}
+
+      <section class="panel transition-card" id="resultReadyView" hidden>
+        <div class="transition-icon">✓</div>
+        <p class="eyebrow">${writingConfig ? 'Đã nộp Writing' : 'Đã chấm xong'}</p>
+        <h2>Kết quả của bạn đã sẵn sàng</h2>
+        <p>${writingConfig
+          ? 'Listening và Reading đã được chấm, phân tích. Writing đang được chấm riêng và sẽ hiện điểm khi đủ cả hai Task.'
+          : 'Cả Listening và Reading đã được lưu, chấm và phân tích theo từng dạng bài.'}</p>
+        <button class="button button-primary" id="viewResult" type="button">Xem kết quả</button>
+      </section>
+
+      <section class="panel result-panel" id="resultView" hidden>
+        <div class="result-heading">
+          <div>
+            <p class="eyebrow">Kết quả cá nhân</p>
+            <h2 id="resultStudentName"></h2>
+            <p id="resultMeta"></p>
+          </div>
+        </div>
+        <div class="summary-grid" id="summaryGrid"></div>
+        <p class="result-status" id="resultStatus"></p>
+        <div class="form-actions result-actions">
+          <button class="button button-primary" id="continueReadingFromResult" type="button" hidden>Tiếp tục làm Reading</button>
+        </div>
+        <div id="writingSubmissionResult" hidden></div>
+        <div id="questionDetails"></div>
+        <div class="skill-performance-list" id="skillPerformanceSections"></div>
+      </section>
+    </main>
+  `;
+
+  const elements = Object.fromEntries([
+    'notice', 'loadingView', 'identityView', 'identityTitle', 'classLabel', 'studentSelect',
+    'listeningView', 'listeningTitle', 'listeningInstructions', 'listeningQuestions', 'listeningCount', 'submitListening',
+    'listeningSavedView', 'startReading', 'readingView', 'readingTitle', 'readingInstructions',
+    'readingQuestions', 'readingCount', 'readingStudentName', 'submitReading', 'resultReadyView',
+    'viewResult', 'resultView', 'resultStudentName', 'resultMeta', 'summaryGrid',
+    'skillPerformanceSections', 'questionDetails', 'resultStatus', 'continueReadingFromResult',
+    'writingPrepView', 'startWriting', 'writingView', 'writingTaskTabs', 'writingWorkspace', 'submitWriting',
+    'previousWritingTask', 'nextWritingTask', 'writingTaskPosition', 'writingSubmissionResult',
+    'writingConflict', 'writingConflictDrafts', 'writingUseServer', 'writingKeepLocal',
+    'writingRecovery', 'writingRecoveryDrafts'
+  ].map(id => [id, document.getElementById(id)]));
+
+  const progressSteps = [...document.querySelectorAll('[data-progress]')];
+  if (typeof window.TERM_TEST_CHANGE_STUDENT === 'function') {
+    const change = document.createElement('button'); change.type = 'button';
+    change.id = 'termTestChangeStudent'; change.className = 'button button-secondary'; change.textContent = 'Đổi người học';
+    change.addEventListener('click', async () => {
+      if (!saveSession()) { showLocalSaveWarning('Chưa giữ được nháp. Hãy sao chép bài hoặc thử lưu lại trước khi đổi người.'); return; }
+      if (!await window.TERM_TEST_CHANGE_STUDENT()) showNotice('Chưa đổi được lựa chọn chung. Bài hiện tại vẫn được giữ.', 'error');
+    });
+    root.querySelector('.topbar').append(change);
+  }
+  if(serverGradingMode&&window.SUBSTITUTE_OFFLINE){
+    const download=document.createElement('button');download.type='button';
+    download.className = 'button button-secondary substitute-backup-download';
+    download.setAttribute('aria-label', 'Tải bài làm về máy');
+    const fullLabel = document.createElement('span');
+    fullLabel.className = 'substitute-backup-full';
+    fullLabel.textContent = 'Tải bài làm về máy';
+    const shortLabel = document.createElement('span');
+    shortLabel.className = 'substitute-backup-compact';
+    shortLabel.textContent = 'Tải bài';
+    download.append(fullLabel, shortLabel);
+    download.addEventListener('click',async()=>{
+      const snapshot={...state,classCode,clientRunId:window.TERM_TEST_BOOTSTRAP?.clientRunId,
+        _substitute:window.SUBSTITUTE_STATE.stamp({})._substitute};
+      try{await window.SUBSTITUTE_OFFLINE.saveSnapshot('app',snapshot);}catch{/* File vẫn lấy từ state RAM hiện tại. */}
+      try{
+        const record=await window.SUBSTITUTE_OFFLINE.makeDownload(snapshot);
+        const url=URL.createObjectURL(record.blob),anchor=document.createElement('a');
+        anchor.href=url;anchor.download=record.name;document.body.append(anchor);anchor.click();anchor.remove();
+        window.setTimeout(()=>URL.revokeObjectURL(url),60000);
+        showNotice('Đã tạo file bài làm để lưu trên máy. Hãy giữ file cho đến khi có biên nhận nộp bài.','success');
+      }catch(error){showNotice(`Chưa tạo được file: ${error.message}. Bài vẫn ở trang này.`,'error');}
+    });
+    root.querySelector('.topbar').append(download);
+  }
+  const views = [
+    elements.loadingView,
+    elements.identityView,
+    elements.listeningView,
+    elements.listeningSavedView,
+    elements.readingView,
+    elements.writingPrepView,
+    elements.writingView,
+    elements.resultReadyView,
+    elements.resultView
+  ].filter(Boolean);
+
+  function showNotice(message, kind = '') {
+    elements.notice.hidden = false;
+    elements.notice.textContent = message;
+    elements.notice.className = `notice${kind ? ` ${kind}` : ''}`;
+  }
+
+  function hideNotice() {
+    elements.notice.hidden = true;
+    elements.notice.textContent = '';
+    elements.notice.className = 'notice';
+  }
+
+  const listeningHandoffLabels = [...elements.listeningSavedView.querySelectorAll('.eyebrow, h2, h2 + p')];
+  const listeningHandoffCopy = listeningHandoffLabels.map(label => label.textContent);
+  const writingHandoffLabel = elements.writingPrepView?.querySelector('.eyebrow');
+  const writingHandoffCopy = writingHandoffLabel?.textContent;
+
+  const sectionLabel = skill => skill === 'listening' ? 'Listening' : 'Reading';
+  const pendingSectionNotice = skill => `${sectionLabel(skill)} đã được giữ trong bộ nhớ trình duyệt và đang chờ đồng bộ. Hãy giữ trang hoặc tải bài về máy; hệ thống sẽ thử lại khi có mạng.`;
+
+  function renderHandoff() {
+    if (state.stage === 'listening-saved') {
+      const copy = listeningInterruption
+        ? ['Listening gián đoạn','Chuẩn bị làm Reading','Hãy liên hệ giảng viên sau buổi thi để nhận bài Listening thay thế.']
+        : state.pendingSections.listening
+          ? ['Đã lưu bài Listening', 'Bài Listening đã lưu trên thiết bị', 'Bạn có thể tiếp tục làm Reading. Bài sẽ đồng bộ khi có mạng.']
+          : listeningHandoffCopy;
+      listeningHandoffLabels.forEach((label, index) => {
+        if (label.textContent !== copy[index]) label.textContent = copy[index];
+      });
+    }
+    if (state.stage === 'writing-prep' && writingHandoffLabel) {
+      const copy = listeningInterruption?'Listening gián đoạn · Cần bài thay thế'
+        : state.pendingSections.listening || state.pendingSections.reading
+          ? 'Bài đã lưu · Chờ đồng bộ' : writingHandoffCopy;
+      if (writingHandoffLabel.textContent !== copy) writingHandoffLabel.textContent = copy;
+    }
+  }
+
+  function setStage(stage) {
+    elements.studentSelect.disabled = Boolean(state.studentRef && (state.attemptToken || state.examSessionToken
+      || state.listeningStartedAt || state.listeningDeadlineAt));
+    state.stage = stage;
+    if (stage !== 'result') stopWritingGradingPolling();
+    for (const view of views) view.hidden = true;
+    const showConfirmedIdentity = document.body.classList.contains('cbt-mode')
+      && Boolean(state.studentRef)
+      && (!demoMode || demoMode === 'exam')
+      && !['loading', 'result-ready', 'result'].includes(stage);
+    if (showConfirmedIdentity) elements.identityView.hidden = false;
+    const activeProgress = stage === 'listening' || stage === 'listening-saved'
+      ? 'listening'
+      : stage === 'reading' ? 'reading'
+        : stage === 'writing-prep' || stage === 'writing' ? 'writing'
+          : stage === 'result-ready' || stage === 'result' ? 'result' : '';
+    const order = writingConfig ? (readingFirst?['reading','listening','writing','result']:['listening','reading','writing','result']) : (readingFirst?['reading','listening','result']:['listening','reading','result']);
+    const activeIndex = order.indexOf(activeProgress);
+    for (const step of progressSteps) {
+      const index = order.indexOf(step.dataset.progress);
+      step.classList.toggle('active', index === activeIndex);
+      const completed = step.dataset.progress === 'listening'
+        ? Boolean(state.attemptToken || state.result?.result?.listening)
+        : step.dataset.progress === 'reading'
+          ? Boolean(state.completed || state.result?.result?.reading)
+          : step.dataset.progress === 'writing'
+            ? Boolean(state.writingSubmitted)
+            : false;
+      step.classList.toggle('done', step.dataset.progress !== activeProgress && completed);
+    }
+
+    if (stage === 'loading') elements.loadingView.hidden = false;
+    if (stage === 'listening') {
+      elements.listeningView.hidden = false;
+    }
+    if (stage === 'listening-saved') elements.listeningSavedView.hidden = false;
+    if (stage === 'reading') elements.readingView.hidden = false;
+    if (stage === 'writing-prep' && elements.writingPrepView) elements.writingPrepView.hidden = false;
+    if (stage === 'writing' && elements.writingView) elements.writingView.hidden = false;
+    if (stage === 'result-ready') elements.resultReadyView.hidden = false;
+    if (stage === 'result') elements.resultView.hidden = false;
+    renderHandoff();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function nextAfterListeningInterruption(){
+    if(state.writingStarted&&writingConfig)setStage('writing');
+    else if(readingFirst||state.testGrades.reading||state.pendingSections.reading)setStage(writingConfig?'writing-prep':'result-ready');
+    else setStage(state.readingDeadlineAt?'reading':'listening-saved');
+  }
+
+  if(listeningContinuity){
+    const dialog=document.createElement('dialog');
+    dialog.id='substituteListeningInterruption';dialog.setAttribute('aria-label','Listening gián đoạn');
+    const copy=document.createElement('p');
+    copy.textContent='Bài thi listening cần được nghe liền mạch không trục trặc để đánh giá đúng năng lực thí sinh. Khi bạn không nghe được âm thanh, bạn không nên tiếp tục listening. Hãy tiếp tục làm kỹ năng tiếp theo, và sau buổi thi hãy liên hệ giảng viên để được nhận bài Listening thay thế.';
+    const status=document.createElement('p');status.setAttribute('role','status');
+    const confirm=document.createElement('button');confirm.type='button';confirm.textContent='Tôi đã hiểu. Đến phần thi tiếp theo.';
+    const retry=document.createElement('button');retry.type='button';retry.textContent='Thử lưu lại';retry.hidden=true;
+    dialog.append(copy,status,confirm,retry);document.body.append(dialog);
+    dialog.addEventListener('cancel',event=>event.preventDefault());
+    const renderStatus=()=>{status.textContent=listeningInterruption?.status==='acknowledged'
+      ?'Máy chủ đã nhận thông tin gián đoạn.':'Đã ghi nhận trên thiết bị. Thông tin sẽ đồng bộ khi có mạng.';};
+    confirm.addEventListener('click',()=>{
+      if(!listeningInterruption)return;
+      state.listeningInterruptionConfirmed=true;saveSession();dialog.close();nextAfterListeningInterruption();
+      window.SUBSTITUTE_SYNC_PENDING?.();
+    });
+    function present(){
+      setAnswerControlsLocked('listening',true);
+      elements.listeningView.dispatchEvent(new Event('term-test:listening-interrupted'));
+      if(!dialog.open)dialog.showModal();
+      confirm.disabled=!listeningInterruption;
+      if(listeningInterruption)renderStatus();
+    }
+    window.addEventListener('substitute:listening-interruption-ack',event=>{
+      if(event.detail?.operationId!==listeningInterruption?.operationId)return;
+      listeningInterruption=event.detail;renderStatus();
+      noteListeningContinuity({phase:'interrupted_ack',reason:event.detail.reason,operationId:event.detail.operationId});
+    });
+    async function report(audio){
+      if(recordingInterruption||listeningInterruption||state.testGrades.listening||state.pendingSections.listening||
+        elements.listeningView.dataset.listeningSubmitting==='true'||audio.ended)return;
+      recordingInterruption=true;
+      audio.pause();
+      retry.hidden=true;
+      present();
+      status.textContent='Đang ghi nhận trên thiết bị…';
+      try{
+        listeningInterruption=await window.SUBSTITUTE_OFFLINE.queueListeningInterruption({
+          operationId:crypto.randomUUID(),reason:'learner_report',capturedAt:window.SUBSTITUTE_EXAM.clockIso(window.TERM_TEST_BOOTSTRAP)
+        });
+        saveSession();
+        state.listeningInterrupted=true;
+        noteListeningContinuity({phase:'interrupted_local',reason:listeningInterruption.reason,operationId:listeningInterruption.operationId,
+          positionSeconds:audio.currentTime});
+        present();
+        window.SUBSTITUTE_SYNC_PENDING?.();
+      }catch(error){
+        status.textContent=error.message==='OFFLINE_LISTENING_COMPLETED'
+          ?'Lượt này đã có kết quả khác trên thiết bị. Hãy mở lại lượt thi để đọc đúng kết quả.'
+          :'Chưa ghi được trên thiết bị. Hãy thử lưu lại.';
+        if(error.message!=='OFFLINE_LISTENING_COMPLETED'){
+          retry.hidden=false;retry.onclick=()=>void report(audio);
+        }
+      }finally{recordingInterruption=false;}
+    }
+    window.addEventListener('substitute:listening-cannot-hear',event=>void report(event.detail.audio));
+    window.addEventListener('substitute:listening-resume-interrupted',()=>{
+      noteListeningContinuity({phase:'interrupted_local',reason:listeningInterruption.reason,operationId:listeningInterruption.operationId});
+      present();
+    });
+    window.addEventListener('substitute:listening-storage-error',()=>showNotice('Chưa ghi được thời điểm hết audio trên thiết bị. Hãy giữ trang và thử nộp bài.','error'));
+  }
+
+  function appendInstructions(list, instructions) {
+    list.replaceChildren(...instructions.map(text => {
+      const item = document.createElement('li');
+      item.textContent = text;
+      return item;
+    }));
+  }
+
+  function renderQuestionControls(section, container, skill) {
+    container.style.setProperty('--question-rows', String(Math.ceil(section.controls.length / 2)));
+    const controls = section.controls.map(control => {
+      const wrapper = document.createElement('label');
+      wrapper.className = 'question';
+      const number = document.createElement('span');
+      number.className = 'question-number';
+      number.textContent = `Câu ${control.number}`;
+      let field;
+      if (control.kind === 'pair') {
+        const pair = document.createElement('div');
+        pair.className = 'question-pair';
+        for (const [index, key] of control.keys.entries()) {
+          const pairField = document.createElement('input');
+          pairField.type = 'text';
+          pairField.autocomplete = 'off';
+          pairField.maxLength = 120;
+          pairField.placeholder = `Ô ${index + 1}`;
+          pairField.name = `question-${key}`;
+          pairField.dataset.number = key;
+          pairField.value = state.drafts?.[skill]?.[key] || '';
+          pairField.addEventListener('input', () => {
+            state.drafts[skill][key] = pairField.value;
+            saveSession();
+            updateAnswerCount(skill);
+            scheduleSectionDraft(skill);
+          });
+          pair.append(pairField);
+        }
+        wrapper.append(number, pair);
+        return wrapper;
+      }
+      if (control.kind === 'select') {
+        field = document.createElement('select');
+        const blank = document.createElement('option');
+        blank.value = '';
+        blank.textContent = 'Nhấn để chọn';
+        field.append(blank, ...control.options.map(value => {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = value;
+          return option;
+        }));
+      } else {
+        field = document.createElement('input');
+        field.type = 'text';
+        field.autocomplete = 'off';
+        field.maxLength = 120;
+        field.placeholder = 'Câu trả lời của bạn';
+      }
+      field.name = `question-${control.number}`;
+      field.dataset.number = String(control.number);
+      field.value = state.drafts?.[skill]?.[String(control.number)] || '';
+      field.addEventListener('input', () => {
+        state.drafts[skill][String(control.number)] = field.value;
+        saveSession();
+        updateAnswerCount(skill);
+        scheduleSectionDraft(skill);
+      });
+      wrapper.append(number, field);
+      return wrapper;
+    });
+    container.replaceChildren(...controls);
+  }
+
+  function collectAnswers(container) {
+    return Object.fromEntries([...container.querySelectorAll('[data-number]')].map(field => [
+      field.dataset.number,
+      field.value.trim()
+    ]));
+  }
+
+  function updateAnswerCount(skill) {
+    const container = skill === 'listening' ? elements.listeningQuestions : elements.readingQuestions;
+    const counter = skill === 'listening' ? elements.listeningCount : elements.readingCount;
+    const controls = skill === 'listening' ? testConfig.listening.controls : testConfig.reading.controls;
+    const answers = collectAnswers(container);
+    const answered = controls.filter(control => control.kind === 'pair'
+      ? control.keys.every(key => Boolean(answers[key]))
+      : Boolean(answers[String(control.number)]))
+      .length;
+    const total = controls.length;
+    counter.textContent = `${answered}/${total} đã nhập`;
+    return answered;
+  }
+
+  const continuityJournalPending=new Map();
+  let continuityJournalTimer=0;
+  function noteListeningContinuity(detail){
+    if(!listeningContinuity||appConfig.EXAM_JOURNAL_ENABLED!==true)return;
+    continuityJournalPending.set(detail.phase,detail);
+    if(!continuityJournalTimer)flushContinuityJournal();
+  }
+  function flushContinuityJournal(attempt=0){
+    continuityJournalTimer=0;
+    for(const [phase,detail] of continuityJournalPending){
+      try{
+        if(examJournal?.recordSubstituteListening(window.TERM_TEST_BOOTSTRAP,detail))continuityJournalPending.delete(phase);
+      }catch{}
+    }
+    if(continuityJournalPending.size&&attempt<6)continuityJournalTimer=setTimeout(()=>flushContinuityJournal(attempt+1),1000);
+  }
+  if(listeningContinuity){
+    window.addEventListener('substitute:listening-observed',event=>noteListeningContinuity(event.detail));
+    const startup=window.TERM_TEST_BOOTSTRAP.listeningStartup;
+    if(Number.isSafeInteger(startup?.verifiedAudioBytes))
+      noteListeningContinuity({phase:'download_verified',byteLength:startup.verifiedAudioBytes});
+    if(Number.isFinite(startup?.playerReadyMs))noteListeningContinuity({phase:'player_ready',elapsedMs:startup.playerReadyMs});
+    if(Number.isFinite(startup?.playbackMs))noteListeningContinuity({phase:'started',elapsedMs:startup.playbackMs});
+    if(window.TERM_TEST_BOOTSTRAP.continuityReview&&window.TERM_TEST_BOOTSTRAP.audioEndedAt)
+      noteListeningContinuity({phase:'ended',reason:'reload'});
+  }
+
+  async function apiRequest(path, options = {}, trace) {
+    let journalRequest, journalStatus;
+    try {
+      if (!trace || trace.owner === journalSubmissionOwner()) {
+        if (sealedSubmissions&&trace&&journalConnection&&!examJournal) {
+          const requestId=crypto.randomUUID();
+          const deferred=journalConnection.then(()=>trace.owner===journalSubmissionOwner()
+            ? examJournal?.startRequest(path,options,{...trace,requestId}):null).catch(()=>null);
+          journalRequest={requestId,done:(...args)=>{void deferred.then(request=>request?.done(...args)).catch(()=>{});}};
+        } else {
+          journalRequest = (typeof examJournal !== 'undefined' && examJournal?.startRequest(path, options, trace))
+            || window.EXAM_JOURNAL_STARTUP?.startRequest(path, options, trace);
+        }
+      }
+    } catch {}
+    const journalRun = async () => {
+    const controller = new AbortController();
+    const untrack=window.SUBSTITUTE_STATE?.track(controller) || (()=>{});
+    const timeout = setTimeout(() => controller.abort(), 20_000);
+    try {
+      const requestUrl = new URL(path, window.location.origin);
+      let payload = {};
+      if (typeof options.body === 'string' && options.body.trim()) payload = JSON.parse(options.body);
+      for (const [key, value] of requestUrl.searchParams) {
+        if (!(key in payload)) payload[key] = value;
+      }
+      const response = await fetch(appConfig.API_BASE_URL, {
+        method: 'POST',
+        body: JSON.stringify({ route: requestUrl.pathname, payload:serverGradingMode ? window.SUBSTITUTE_STATE.payload(payload) : payload,
+          ...(journalRequest?.requestId ? { journalRequestId:journalRequest.requestId } : {}) }),
+        signal: controller.signal,
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' }
+      });
+      journalStatus = response.status;
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.ok === false) {
+        const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
+        requestError.code = String(data.code || data.error || 'HTTP_ERROR'); requestError.status = response.status;
+        if(data.submissionHold)requestError.submissionHold=data.submissionHold;
+        if(requestError.code==='HISTORY_EPOCH_CONFLICT')window.SUBSTITUTE_STATE.stop();
+        throw requestError;
+      }
+      // HTTP 2xx không đủ: workflow có thể dừng trước khi trả biên nhận lưu bài.
+      if (serverGradingMode && requestUrl.pathname === '/api/test/exam/section-status') {
+        const expected = window.SUBSTITUTE_STATE.payload(payload);
+        if (data.testSlug !== testConfig.slug || data.classCode !== expected.classCode
+          || data.studentRef !== expected.studentRef || data.clientRunId !== expected.clientRunId
+          || data.historyEpoch !== expected.historyEpoch || data.skill !== payload.examId
+          || typeof data.persisted !== 'boolean') {
+          throw new Error('Máy chủ chưa xác nhận đúng lượt thi. Bài nháp được giữ nguyên; vui lòng thử lại.');
+        }
+      }
+      if (serverGradingMode && (requestUrl.pathname === '/api/test/grade'
+        || requestUrl.pathname === '/api/test/exam/section-status' && data.persisted === true)) {
+        const section = data?.section;
+        const expectedTotal = payload.examId === 'listening' ? 40 : testConfig.slug === 'substitute-test-1-k56' ? 26 : 40;
+        const durable = !window.TERM_TEST_BOOTSTRAP?.examSessionId || (data.persisted === true
+          && /^[a-f0-9]{64}$/.test(data.snapshotHash || '') && Number.isFinite(Date.parse(data.submittedAt)));
+        if (!durable || !section || section.total !== expectedTotal || !Number.isInteger(section.correct)
+          || section.correct < 0 || section.correct > expectedTotal || !Array.isArray(section.details)
+          || section.details.length !== expectedTotal || !Array.isArray(section.typeStats)
+          || section.details.some(detail => !detail || !Number.isInteger(detail.number) || detail.number < 1
+            || detail.number > expectedTotal || typeof detail.studentAnswer !== 'string' || typeof detail.correctAnswer !== 'string'
+            || !['correct', 'incorrect', 'blank'].includes(detail.result))
+          || new Set(section.details.map(detail => detail.number)).size !== expectedTotal
+          || section.details.filter(detail => detail.result === 'correct').length !== section.correct
+          || section.typeStats.some(stat => !stat || typeof stat.type !== 'string' || !Number.isInteger(stat.total)
+            || stat.total < 1 || !Number.isInteger(stat.correct) || stat.correct < 0 || stat.correct > stat.total
+            || !Number.isFinite(stat.percentage) || stat.percentage < 0 || stat.percentage > 1)) {
+          throw new Error('Máy chủ chưa xác nhận lưu phần thi. Bài nháp được giữ nguyên; vui lòng thử nộp lại.');
+        }
+      }
+      if (serverGradingMode && ['/api/test/writing', '/api/test/writing/status'].includes(requestUrl.pathname)
+        && (data?.accepted !== true || !data.grading || typeof data.grading.ready !== 'boolean'
+          || typeof data.grading.status !== 'string')) {
+        throw new Error('Máy chủ chưa xác nhận nhận bài Writing. Bài nháp được giữ nguyên; vui lòng thử lại.');
+      }
+      return data;
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('Máy chủ phản hồi quá chậm. Vui lòng thử lại.');
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+      untrack();
+    }
+
+    };
+    if (!journalRequest) return journalRun();
+    try { const result = await journalRun(); try { journalRequest.done(result, undefined, journalStatus); } catch {} return result; }
+    catch (error) { try { journalRequest.done(undefined, error, journalStatus); } catch {} throw error; }
+  }
+
+  function journalSubmissionOwner() {
+    const current=window.TERM_TEST_BOOTSTRAP;
+    return JSON.stringify([state.studentRef,state.historyEpoch,current?.examSessionId,current?.clientRunId]);
+  }
+
+  async function submitSection(examId, answers, automatic = false) {
+    let operationId;
+    try { operationId = crypto.randomUUID(); } catch {}
+    const owner = journalSubmissionOwner();
+    const exam=window.TERM_TEST_BOOTSTRAP;
+    if(sealedSubmissions)return submitSealedSection(exam,examId,answers,automatic,owner);
+    const continuity=exam?.listeningContinuityVersion===1;
+    const trace = phase => operationId ? { operationId, phase, owner } : undefined;
+    const options = { method: 'POST', body: JSON.stringify({ examId, answers,
+      ...(window.SUBSTITUTE_EXAM?.permit(window.TERM_TEST_BOOTSTRAP)||{}) }) };
+    if (!window.TERM_TEST_BOOTSTRAP?.examSessionId) return apiRequest('/api/test/grade', options, trace('send'));
+    let queued = false;
+    if (window.SUBSTITUTE_OFFLINE) {
+      try {
+        await window.SUBSTITUTE_OFFLINE.queueSection(examId,answers);queued=true;
+        if(continuity&&examId==='listening')window.dispatchEvent(new CustomEvent('substitute:listening-observed',{
+          detail:{phase:'submission_local',operationId}
+        }));
+      }
+      catch (error) {
+        if (continuity&&examId==='listening'&&error.message!=='OFFLINE_SUBMISSION_CONFLICT')throw error;
+        if (error.message === 'OFFLINE_SUBMISSION_CONFLICT') throw new Error('Bài đã chờ đồng bộ với nội dung khác. Hãy giữ nguyên câu trả lời và thử lại khi có mạng.');
+        window.SUBSTITUTE_OFFLINE_STATUS = 'section_queue_failed';
+      }
+    }
+    const accept = async receipt => {
+      if (receipt?.persisted && queued) {
+        try {
+          await window.SUBSTITUTE_OFFLINE.acknowledgeSection(examId,receipt);
+          if(continuity&&examId==='listening')window.dispatchEvent(new CustomEvent('substitute:listening-observed',{
+            detail:{phase:'submission_ack',operationId}
+          }));
+        }
+        catch { window.SUBSTITUTE_OFFLINE_STATUS = 'receipt_cache_failed'; }
+      }
+      return receipt;
+    };
+    const read = () => apiRequest('/api/test/exam/section-status', {
+      method: 'POST', body: JSON.stringify({ examId })
+    }, trace('readback'));
+    try {
+      if(continuity&&(examId==='listening'||exam.examOrder!=='reading-first'))
+        await window.SUBSTITUTE_EXAM.flushListeningOutcome();
+      const existing = await read();
+      if (existing.persisted) return accept(existing);
+      return accept(await apiRequest('/api/test/grade', options, trace('send')));
+    }
+    catch (error) {
+      try { const saved = await read(); if (saved.persisted) return accept(saved); } catch {}
+      if (queued) error.offlineQueued = true;
+      throw error;
+    }
+  }
+
+  function lockWritingSeal(row){
+    sealedWriting=row;
+    for(const key of ['task1','task2','outline'])state.drafts.writing[key]=String(row.payload[key]??'');
+    syncWritingEditors();
+    for(const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')){
+      editor.readOnly=true;
+    }
+  }
+
+  async function submitSealedSection(...args) {
+    return (await loadRecoveryClient()).submitSection(...args);
+  }
+
+  async function submitSealedWriting(row) {
+    const {saved,acknowledged}=await (await loadRecoveryClient()).submitWriting(row);
+    if(acknowledged)sealedWriting=acknowledged;
+    return saved;
+  }
+
+  function ensureValidAttemptToken() {
+    if (!uuidPattern.test(String(state.attemptToken || ''))) {
+      state.attemptToken = crypto.randomUUID();
+      saveSession();
+    }
+    return state.attemptToken;
+  }
+
+  window.addEventListener('term-test:listening-timing-updated', event => {
+    const deadlineAt = String(event.detail?.listeningDeadlineAt || '');
+    const serverNow = String(event.detail?.serverNow || '');
+    if (!Number.isFinite(Date.parse(deadlineAt))) return;
+    state.listeningDeadlineAt = deadlineAt;
+    if (Number.isFinite(Date.parse(serverNow))) state.serverTimeOffsetMs = Date.parse(serverNow) - Date.now();
+    saveSession();
+  });
+
+  window.addEventListener('term-test:listening-phase-started', event => {
+    const clientRunId = window.TERM_TEST_BOOTSTRAP?.clientRunId;
+    if (!readingFirst || !clientRunId || event.detail?.clientRunId !== clientRunId) return;
+    const startedAt = String(event.detail.listeningStartedAt || '');
+    if (!Number.isFinite(Date.parse(startedAt))) return;
+    state.listeningStartedAt = startedAt;
+    const serverNow = String(event.detail.serverNow || '');
+    if (Number.isFinite(Date.parse(serverNow))) {
+      state.serverTimeOffsetMs = window.IZONE_EXAM_CLOCK?.offset(serverNow) ?? (Date.parse(serverNow) - Date.now());
+    }
+    saveSession();
+  });
+
+  const sectionDraftTimers = { listening: 0, reading: 0 };
+  window.addEventListener('substitute:stopped',()=>{stopWritingGradingPolling();for(const value of Object.values(sectionDraftTimers))clearTimeout(value);clearTimeout(writingSaveTimer);clearTimeout(writingRetryTimer);clearTimeout(writingForceSaveTimer);for(const form of document.querySelectorAll('form'))for(const control of form.querySelectorAll('input,textarea,select,button'))control.disabled=true;showNotice('Lượt này đã được reset ở tab khác. Hãy tải lại trang.','error');});
+
+  async function saveSectionDraft(skill) {
+    if (demoMode) return null;
+    const container = skill === 'listening' ? elements.listeningQuestions : elements.readingQuestions;
+    const answers = collectAnswers(container);
+    const path = skill === 'listening'
+      ? `/api/term-tests/${testConfig.slug}/listening/draft`
+      : `/api/term-tests/${testConfig.slug}/reading/draft`;
+    const token = skill === 'listening'
+      ? { examSessionToken: state.examSessionToken }
+      : { attemptToken: state.attemptToken };
+    if (!Object.values(token)[0]) return null;
+    const response = await apiRequest(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...token, answers })
+    });
+    if (response.deadlineAt) {
+      if (skill === 'listening') state.listeningDeadlineAt = response.deadlineAt;
+      else state.readingDeadlineAt = response.deadlineAt;
+    }
+    if (response.serverNow) state.serverTimeOffsetMs = Date.parse(response.serverNow) - Date.now();
+    saveSession();
+    return response;
+  }
+
+  function scheduleSectionDraft(skill, delay = 600) {
+    if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
+    window.clearTimeout(sectionDraftTimers[skill]);
+    sectionDraftTimers[skill] = window.setTimeout(() => {
+      saveSectionDraft(skill).catch(() => {
+        // Bản trên máy vẫn còn; lần thay đổi hoặc nộp tiếp theo sẽ thử lại.
+      });
+    }, delay);
+  }
+
+  function setAnswerControlsLocked(skill, locked) {
+    const form = skill === 'listening' ? elements.listeningView : elements.readingView;
+    if (!form) return;
+    for (const control of form.querySelectorAll('input, select, textarea')) {
+      control.disabled = locked;
+    }
+    form.classList.toggle('is-answer-locked', locked);
+  }
+
+  function isSectionExpired(skill) {
+    const deadlineValue = skill === 'listening' ? state.listeningDeadlineAt : state.readingDeadlineAt;
+    const deadline = Date.parse(deadlineValue || '');
+    return Number.isFinite(deadline) && Date.now() + (Number(state.serverTimeOffsetMs) || 0) >= deadline;
+  }
+
+  // Giữ trạng thái nộp Writing riêng với lỗi đọc kết quả; không đổi luồng Listening/Reading.
+  let writingSubmissionRenderSignature = '';
+  const writingSubmission = createWritingSubmission({
+    owner: () => JSON.stringify([testConfig.slug,classCode,state.studentRef,state.attemptToken,state.historyEpoch,
+      window.TERM_TEST_BOOTSTRAP?.clientRunId]),
+    submitted: () => Boolean(state.writingSubmitted),
+    grading: () => state.result?.writing?.grading || state.testGrades?.writing?.grading,
+    notify: showNotice, check: () => refreshWritingGrading(),
+    hosts: () => [elements.writingView, elements.writingSubmissionResult],
+    storage: () => { try { return window.SUBSTITUTE_STATE?.storages?.() || [window.sessionStorage,window.localStorage]; } catch { return []; } }
+  });
+
+  let writingSaveTimer = 0;
+  let writingRetryTimer = 0;
+  let writingSavePromise = Promise.resolve();
+  let writingForceSaveTimer = 0; // Giữ chốt timer trong cơ chế lưu chung, kể cả client chỉ dùng timer ngắn.
+  let writingGradingPollTimer = 0;
+  let writingGradingPollStartedAt = 0;
+  let writingGradingPollCount = 0;
+  let writingGradingPollInFlight = false;
+  let resultDetailSignature = '';
+
+  function stopWritingGradingPolling() {
+    window.clearTimeout(writingGradingPollTimer);
+    writingGradingPollTimer = 0;
+    writingGradingPollStartedAt = 0;
+    writingGradingPollCount = 0;
+  }
+
+  async function refreshWritingGrading() {
+    if ((demoMode && !serverGradingMode) || !state.attemptToken || writingGradingPollInFlight) return;
+    if (document.hidden || navigator.onLine === false || (serverGradingMode && window.SUBSTITUTE_STATE.blocked)) return;
+    const requestedAttempt = state.attemptToken;
+    const requestedStudent = state.studentRef;
+    writingGradingPollInFlight = true;
+    const requestedWritingOwner = writingSubmission.owner();
+    try {
+      const wasReady = Boolean(state.result?.writing?.grading?.ready);
+      const payload = serverGradingMode
+        ? sealedSubmissions && sealedWriting?.recovery
+          ? await submitSealedWriting(sealedWriting)
+          : await apiRequest('/api/test/writing/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            classCode,
+            studentRef: state.studentRef,
+            attemptToken: state.attemptToken
+          })
+        })
+        : await apiRequest('/api/term-tests/result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attemptToken: state.attemptToken })
+        });
+      if (!writingSubmission.current(requestedWritingOwner)) return;
+      writingSubmission.readAvailable();
+      if (state.attemptToken !== requestedAttempt || state.studentRef !== requestedStudent
+        || (serverGradingMode && window.SUBSTITUTE_STATE.blocked)) return;
+      // Keep the visible answer row or heading in place when Writing adds content above it.
+      const answerDetails = elements.questionDetails;
+      const visible = node => {
+        const { top, bottom } = node.getBoundingClientRect();
+        return top < window.innerHeight && bottom > 0;
+      };
+      const focused = document.activeElement;
+      const readingAnchor = !elements.resultView.hidden
+        ? answerDetails.contains(focused) && visible(focused)
+          ? focused
+          : Array.from(answerDetails.querySelectorAll('summary, details[open] tbody tr')).find(visible)
+        : null;
+      const readingTop = readingAnchor?.getBoundingClientRect().top;
+      if (serverGradingMode) {
+        state.testGrades.writing = payload;
+        saveSession();
+        renderResult(buildDemoPayload('complete'));
+      } else {
+        applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
+        renderResult(payload);
+      }
+      const grading = serverGradingMode ? payload.grading : payload.writing?.grading;
+      if (grading?.ready) {
+        stopWritingGradingPolling();
+        if (!wasReady) showNotice(
+          payload.portalSync?.status === 'synced'
+            ? 'Bài Writing đã chấm xong và điểm thi lại đã đồng bộ lên Portal.'
+            : payload.portalSync?.status === 'blocked_missing_first_scores'
+              ? 'Bài Writing đã chấm xong. Portal chưa nhận điểm thi lại vì còn thiếu điểm lần đầu.'
+              : 'Bài Writing đã được chấm xong. Điểm và phân tích chi tiết đã hiển thị bên dưới.',
+          'success'
+        );
+      }
+      if (readingAnchor?.isConnected) {
+        const shift = readingAnchor.getBoundingClientRect().top - readingTop;
+        if (Math.abs(shift) > 0.5) window.scrollBy({ top: shift, behavior: 'instant' });
+      }
+      return grading?.ready ? 'ready' : 'pending';
+    } catch {
+      if (writingSubmission.current(requestedWritingOwner)) writingSubmission.readUnavailable();
+      // Việc chấm vẫn nằm trên máy chủ; lần kế tiếp tiếp tục kiểm tra mà không làm mất màn hình kết quả.
+      return 'unavailable';
+    } finally {
+      writingGradingPollInFlight = false;
+      if (!state.result?.writing?.grading?.ready) scheduleWritingGradingRefresh();
+    }
+  }
+
+  function scheduleWritingGradingRefresh() {
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
+    if (document.hidden || navigator.onLine === false) return;
+    const grading = state.result?.writing?.grading;
+    if (
+      (demoMode && !serverGradingMode)
+      || !state.writingSubmitted
+      || grading?.ready
+      || ['review_required', 'failed'].includes(grading?.status)
+      || writingGradingPollTimer
+    ) return;
+    if (!writingGradingPollStartedAt) writingGradingPollStartedAt = Date.now();
+    const delay = Date.now() - writingGradingPollStartedAt > 45 * 60 * 1000
+      ? 60_000 : Math.min(30_000, 8_000 + (writingGradingPollCount * 2_000));
+    writingGradingPollCount += 1;
+    writingGradingPollTimer = window.setTimeout(() => {
+      writingGradingPollTimer = 0;
+      refreshWritingGrading();
+    }, delay);
+  }
+
+  function setWritingSaveStatus(message) {
+    for (const label of document.querySelectorAll('.writing-editor-meta > span:first-child')) {
+      label.textContent = message;
+    }
+  }
+
+  // Chỉ đọc trạng thái khi quay lại tab/mạng; không nộp lại bài hoặc gọi AI.
+  function resumeWritingGrading() {
+    if (!state.writingSubmitted || state.result?.writing?.grading?.ready
+      || ['review_required', 'failed'].includes(state.result?.writing?.grading?.status)) return;
+    window.clearTimeout(writingGradingPollTimer);
+    writingGradingPollTimer = 0;
+    refreshWritingGrading();
+  }
+  document.addEventListener('visibilitychange', resumeWritingGrading);
+  window.addEventListener('online', resumeWritingGrading);
+
+  function syncWritingEditors() {
+    const outlineEditor = document.querySelector('[data-writing-outline]');
+    if (outlineEditor && outlineEditor.value !== state.drafts.writing.outline) {
+      outlineEditor.value = state.drafts.writing.outline || '';
+    }
+    for (const editor of document.querySelectorAll('[data-writing-task]')) {
+      const value = state.drafts.writing[editor.dataset.writingTask] || '';
+      if (editor.value !== value) editor.value = value;
+      const counter = editor.closest('.writing-answer-pane')?.querySelector('.writing-editor-meta strong');
+      if (counter) counter.textContent = `${countWords(value)} từ`;
+    }
+  }
+
+  // Nhận snapshot hai Task; so nguyên văn để xác nhận đúng bài, không suy từ số HTTP.
+  function writingSnapshot(value = state.drafts.writing) {
+    return { task1: String(value?.task1 || ''), task2: String(value?.task2 || '') };
+  }
+
+  function sameWriting(left, right) {
+    const a = writingSnapshot(left), b = writingSnapshot(right);
+    return a.task1 === b.task1 && a.task2 === b.task2;
+  }
+
+  function validWritingRevision(value) {
+    return Number.isSafeInteger(value) && value >= 0;
+  }
+
+  // Giữ bản trước khi đổi sang bản khác; đầu ra có thể đọc/sao chép ở mục phục hồi.
+  function preserveWritingRecovery(reason, value = state.drafts.writing) {
+    const draft = writingSnapshot(value);
+    const outline = String(value?.outline || '');
+    if (!draft.task1 && !draft.task2 && !outline) return;
+    if (!state.writingRecovery.some(item => sameWriting(item, draft) && String(item.outline || '') === outline)) {
+      state.writingRecovery.unshift({ ...draft, outline, reason, savedAt: new Date().toISOString() });
+      state.writingRecovery = state.writingRecovery.slice(0, 5);
+    }
+    renderWritingRecovery();
+  }
+
+  function appendWritingPreview(container, title, draft) {
+    const heading = document.createElement('h4'); heading.textContent = title;
+    container.append(heading);
+    for (const task of (writingConfig.tasks || [])) {
+      const label = document.createElement('label'); label.textContent = task.label || task.id;
+      const text = document.createElement('textarea');
+      text.readOnly = true; text.value = String(draft?.[task.id] || '');
+      text.setAttribute('aria-label', `${title} · ${task.label || task.id}`);
+      label.append(text); container.append(label);
+    }
+    if (draft?.outline) {
+      const label = document.createElement('label'); label.textContent = 'Dàn ý giữ trên máy';
+      const text = document.createElement('textarea'); text.readOnly = true; text.value = String(draft.outline);
+      text.setAttribute('aria-label', `${title} · Dàn ý`); label.append(text); container.append(label);
+    }
+  }
+
+  function renderWritingRecovery() {
+    if (!elements.writingRecovery) return;
+    elements.writingRecovery.hidden = state.writingRecovery.length === 0;
+    elements.writingRecoveryDrafts.replaceChildren();
+    state.writingRecovery.forEach((draft, index) => appendWritingPreview(
+      elements.writingRecoveryDrafts, `Bản giữ lại ${index + 1}`, draft
+    ));
+  }
+
+  function writingTimeExpired() {
+    return Boolean(state.writingConflict?.timedOut
+      || elements.writingView?.dataset.writingTimeExpired === 'true'
+      || (state.writingDeadlineAt && Date.now() + state.serverTimeOffsetMs > Date.parse(state.writingDeadlineAt)));
+  }
+
+  function renderWritingConflict() {
+    if (!elements.writingConflict) return;
+    elements.writingConflict.hidden = !state.writingConflict;
+    elements.writingConflictDrafts.replaceChildren();
+    if (!state.writingConflict) return;
+    appendWritingPreview(elements.writingConflictDrafts, 'Bản đang viết trên máy', state.drafts.writing);
+    appendWritingPreview(elements.writingConflictDrafts, 'Bản đã lưu trên hệ thống', state.writingConflict);
+    elements.writingKeepLocal.disabled = state.writingSubmitted || writingTimeExpired();
+  }
+
+  function setWritingConflict(writing) {
+    window.clearTimeout(writingSaveTimer); window.clearTimeout(writingForceSaveTimer);
+    window.clearTimeout(writingRetryTimer); writingForceSaveTimer = 0;
+    state.writingConflict = { ...writing, ...writingSnapshot(writing) };
+    state.writingDirty = true;
+    renderWritingConflict(); saveSession();
+    setWritingSaveStatus('Có hai bản khác nhau · bài trên máy được giữ nguyên');
+  }
+
+  function resolveWritingConflict(useServer) {
+    const server = state.writingConflict;
+    if (!server || !validWritingRevision(server.revision)) return;
+    if (!useServer && (state.writingSubmitted || writingTimeExpired())) return;
+    preserveWritingRecovery('Trước khi chọn bản bài viết');
+    preserveWritingRecovery('Bản hệ thống trước khi chọn', server);
+    state.writingConflict = null;
+    state.writingServerRevision = server.revision;
+    state.writingConfirmedDraft = writingSnapshot(server);
+    if (useServer) {
+      applyWritingFromServer(server, true);
+      setWritingSaveStatus('Đang dùng bản đã lưu trên hệ thống');
+    } else {
+      // Chỉ người học chọn rõ mới tạo ý định sửa từ phiên bản khác; không tự vượt xung đột.
+      state.writingRevision += 1; state.writingDirty = true;
+      renderWritingConflict(); saveSession(); scheduleWritingSave(0);
+    }
+  }
+
+  function applyWritingFromServer(writing, forceDrafts = false) {
+    if (!writingConfig || !writing) return;
+    const hasRevision = validWritingRevision(writing.revision);
+    const knownRevision = state.writingConflict?.revision ?? state.writingServerRevision;
+    if (hasRevision && validWritingRevision(knownRevision) && writing.revision < knownRevision) return;
+    // Bản cũ chưa có confirmed snapshot vẫn giữ bài local khác canonical để người học chọn rõ.
+    if (!state.writingConfirmedDraft && !sameWriting(state.drafts.writing, writing)
+      && (state.drafts.writing.task1 || state.drafts.writing.task2)) state.writingDirty = true;
+    state.writingStarted = Boolean(writing.started || state.writingStarted);
+    state.writingDeadlineAt = writing.deadlineAt || state.writingDeadlineAt;
+    if (writing.serverNow) state.serverTimeOffsetMs = Date.parse(writing.serverNow) - Date.now();
+    if (writing.submitted && !sameWriting(state.drafts.writing, writing)) {
+      preserveWritingRecovery('Bài trên máy khác bản đã nộp');
+    }
+    if (!forceDrafts && !writing.submitted && state.writingDirty && !sameWriting(state.drafts.writing, writing)) {
+      const basedOnKnownDraft = hasRevision && state.writingConfirmedDraft
+        && sameWriting(state.writingConfirmedDraft, writing)
+        && writing.revision === state.writingServerRevision;
+      if (!basedOnKnownDraft && hasRevision) setWritingConflict(writing);
+      renderWritingRecovery(); saveSession(); return;
+    }
+    const useServerDraft = forceDrafts || writing.submitted || !state.writingDirty;
+    if (useServerDraft) {
+      // Backend xác nhận hai Task; dàn ý vẫn thuộc bản lưu local của client này.
+      state.drafts.writing = { ...state.drafts.writing, ...writingSnapshot(writing) };
+      state.writingDirty = false;
+      state.writingConflict = null;
+    }
+    state.writingSubmitted = Boolean(writing.submitted || state.writingSubmitted);
+    if (hasRevision) {
+      state.writingServerRevision = writing.revision;
+      state.writingAckRevision = writing.revision;
+      state.writingConfirmedDraft = writingSnapshot(writing);
+    }
+    syncWritingEditors(); renderWritingConflict(); renderWritingRecovery(); saveSession();
+  }
+
+  function writingPayload(action) {
+    return { attemptToken: state.attemptToken, revision: Number(state.writingRevision) || 0,
+      ...(validWritingRevision(state.writingServerRevision) ? { baseRevision: state.writingServerRevision } : {}),
+      action, outline: String(state.drafts.writing.outline || ''), ...writingSnapshot() };
+  }
+
+  async function saveWritingToServer(action) {
+    if (demoMode) return { writing: null };
+    if (!state.attemptToken) throw new Error('Chưa có mã lượt làm để lưu Writing.');
+    window.clearTimeout(writingSaveTimer); window.clearTimeout(writingForceSaveTimer);
+    window.clearTimeout(writingRetryTimer); writingForceSaveTimer = 0;
+    const editRevision = state.writingRevision;
+    const payload = writingPayload(action);
+    const studentRef = state.studentRef;
+    // Hàng đợi bao gồm xử lý phản hồi; request kế tiếp chỉ lấy base sau khi bản trước đã được xác nhận.
+    const operation = writingSavePromise.catch(() => undefined).then(async () => {
+      if (studentRef !== state.studentRef || payload.attemptToken !== state.attemptToken) {
+        const error = new Error('Đã đổi học viên; không gửi bài của lượt trước.');
+        error.code = 'WRITING_IDENTITY_CHANGED'; throw error;
+      }
+      if (state.writingConflict && !(action === 'submit' && writingTimeExpired())) {
+        const error = new Error('Có hai bản bài viết khác nhau. Hãy chọn bản cần tiếp tục.');
+        error.code = 'WRITING_REVISION_CONFLICT'; throw error;
+      }
+      if (action !== 'start' && !validWritingRevision(state.writingServerRevision) && !writingTimeExpired()) {
+        const error = new Error('Chưa đọc được bản lưu để xác nhận. Bài vẫn được giữ trên máy; hãy tải lại trang khi kết nối ổn định.');
+        error.code = 'WRITING_CLIENT_UPDATE_REQUIRED'; throw error;
+      }
+      if (validWritingRevision(state.writingServerRevision)) payload.baseRevision = state.writingServerRevision;
+      const response = await apiRequest('/api/term-tests/writing', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      });
+      if (studentRef !== state.studentRef || payload.attemptToken !== state.attemptToken) {
+        const error = new Error('Đã đổi học viên; không dùng phản hồi của lượt trước.');
+        error.code = 'WRITING_IDENTITY_CHANGED'; throw error;
+      }
+      const writing = response.writing;
+      if (response.ok !== true || !writing || !validWritingRevision(writing.revision)
+        || typeof writing.accepted !== 'boolean') {
+        throw new Error('Chưa có xác nhận lưu bài hợp lệ. Bài vẫn được giữ trên máy.');
+      }
+      const knownRevision = state.writingConflict?.revision ?? state.writingServerRevision;
+      if (validWritingRevision(knownRevision) && writing.revision < knownRevision) {
+        throw new Error('Phản hồi là bản cũ hơn bản đã biết. Bài trên máy vẫn được giữ nguyên.');
+      }
+      if (writing.accepted && action !== 'start' && !sameWriting(payload, writing)) {
+        throw new Error('Xác nhận không khớp bài vừa gửi. Bài trên máy vẫn được giữ nguyên.');
+      }
+      if (writing.submitted) {
+        applyWritingFromServer(writing, true);
+        setWritingSaveStatus(writing.accepted ? 'Đã nộp và lưu trên hệ thống'
+          : 'Hệ thống đã chốt bản đã lưu · bản khác trên máy được giữ để phục hồi');
+      } else if (!writing.accepted) {
+        if (writing.reason === 'deadline_expired') {
+          preserveWritingRecovery('Bản chưa được nhận khi hết giờ');
+          applyWritingFromServer(writing, true);
+          setWritingSaveStatus('Đã hết giờ · hệ thống giữ bản đã lưu đúng hạn');
+        } else {
+          setWritingConflict(writing);
+        }
+      } else if (action === 'start') {
+        applyWritingFromServer(writing);
+      } else {
+        if (!sameWriting(payload, writing)) throw new Error('Xác nhận không khớp bài vừa gửi. Bài trên máy vẫn được giữ nguyên.');
+        state.writingServerRevision = writing.revision;
+        state.writingAckRevision = writing.revision;
+        state.writingConfirmedDraft = writingSnapshot(writing);
+        if (editRevision === state.writingRevision && sameWriting(state.drafts.writing, payload)) {
+          state.writingDirty = false; applyWritingFromServer(writing, true);
+        } else {
+          state.writingStarted = Boolean(writing.started || state.writingStarted); saveSession();
+        }
+        if (state.writingDirty) scheduleWritingSave(0);
+        else setWritingSaveStatus('Đã lưu trên hệ thống');
+      }
+      return response;
+    });
+    writingSavePromise = operation;
+    return operation;
+  }
+
+  function handleWritingSaveError(error) {
+    if (error.code === 'WRITING_IDENTITY_CHANGED') return;
+    if (error.code === 'WRITING_REVISION_CONFLICT') {
+      setWritingSaveStatus('Có hai bản khác nhau · hãy chọn bản cần tiếp tục'); return;
+    }
+    if (error.code === 'WRITING_CLIENT_UPDATE_REQUIRED') {
+      setWritingSaveStatus('Chưa xác nhận được · bài vẫn giữ trên máy'); showNotice(error.message, 'error'); return;
+    }
+    setWritingSaveStatus('Chưa lưu được · hệ thống sẽ tự thử lại');
+    writingRetryTimer = window.setTimeout(() => scheduleWritingSave(0), 5000);
+  }
+
+  function scheduleWritingSave(delay = 900) {
+    if (demoMode || !state.writingStarted || state.writingSubmitted || state.writingConflict) return;
+    window.clearTimeout(writingSaveTimer);
+    window.clearTimeout(writingRetryTimer);
+    setWritingSaveStatus('Đang chờ lưu trên hệ thống...');
+    const idleDelay = Number.isFinite(delay) ? Math.max(0, delay) : 900;
+    writingSaveTimer = window.setTimeout(() => {
+      setWritingSaveStatus('Đang lưu trên hệ thống...');
+      saveWritingToServer('draft').catch(handleWritingSaveError);
+    }, idleDelay);
+
+  }
+
+  elements.writingUseServer?.addEventListener('click', () => resolveWritingConflict(true));
+  elements.writingKeepLocal?.addEventListener('click', () => resolveWritingConflict(false));
+
+  async function restoreAttemptFromServer() {
+    if (!state.attemptToken) return null;
+    const payload = await apiRequest('/api/term-tests/result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attemptToken: state.attemptToken })
+    });
+    state.studentName = payload.studentName || state.studentName;
+    state.className = payload.className || state.className;
+    state.completed = Boolean(payload.completed);
+    state.examSessionToken = payload.exam?.examSessionToken || state.examSessionToken;
+    state.readingDeadlineAt = payload.exam?.readingDeadlineAt || state.readingDeadlineAt;
+    if (payload.exam?.serverNow) state.serverTimeOffsetMs = Date.parse(payload.exam.serverNow) - Date.now();
+    applyWritingFromServer(payload.writing);
+    saveSession();
+    return payload;
+  }
+
+  function populateRoster(data) {
+    state.roster = data.students || [];
+    state.className = data.class.name;
+    elements.classLabel.textContent = `Lớp ${state.className}`;
+    const options = [document.createElement('option')];
+    options[0].value = '';
+    options[0].textContent = 'Nhấn để chọn';
+    for (const student of state.roster) {
+      const option = document.createElement('option');
+      option.value = student.ref;
+      option.textContent = student.name;
+      options.push(option);
+    }
+    elements.studentSelect.replaceChildren(...options);
+    if (state.studentRef && state.roster.some(student => student.ref === state.studentRef)) {
+      elements.studentSelect.value = state.studentRef;
+    } else {
+      state.studentRef = '';
+      state.studentName = '';
+      saveSession();
+    }
+  }
+
+  function confirmIncomplete(answered, skillLabel, { force = false } = {}) {
+    const total = skillLabel === 'Listening' ? testConfig.listening.controls.length : testConfig.reading.controls.length;
+    if (answered === total && !force) return true;
+    return ((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${skillLabel} hiện có ${answered}/${total} câu đã nhập. Bạn vẫn muốn nộp bài?`);
+  }
+
+  function setBusy(button, busy, busyText, normalText) {
+    button.disabled = busy;
+    button.textContent = busy ? busyText : normalText;
+  }
+
+  function countWords(value) {
+    const normalized = String(value || '').trim();
+    return normalized ? normalized.split(/\s+/u).length : 0;
+  }
+
+  function setupWritingExam() {
+    const tasks = Array.from(writingConfig?.tasks || []);
+    if (!tasks.length || !elements.writingWorkspace || !elements.writingTaskTabs) return;
+
+    const panels = [];
+    const tabs = [];
+
+    function activateTask(index, focusEditor = false) {
+      const safeIndex = Math.min(tasks.length - 1, Math.max(0, Number(index) || 0));
+      const activeTask = tasks[safeIndex];
+      state.writingLayout.activeTask = activeTask.id;
+      panels.forEach((panel, panelIndex) => { panel.hidden = panelIndex !== safeIndex; });
+      tabs.forEach((tab, tabIndex) => {
+        const active = tabIndex === safeIndex;
+        tab.classList.toggle('is-active', active);
+        tab.setAttribute('aria-current', active ? 'true' : 'false');
+      });
+      elements.previousWritingTask.disabled = safeIndex === 0;
+      elements.nextWritingTask.disabled = safeIndex === tasks.length - 1;
+      elements.writingTaskPosition.textContent = `Task ${safeIndex + 1} / ${tasks.length}`;
+      saveSession();
+      if (focusEditor) panels[safeIndex].querySelector('[data-writing-task]')?.focus();
+    }
+
+    tasks.forEach((task, index) => {
+      const tab = makeWritingTab(task, index);
+      const panel = makeWritingPanel(task);
+      tab.addEventListener('click', () => activateTask(index, true));
+      tabs.push(tab);
+      panels.push(panel);
+      elements.writingTaskTabs.append(tab);
+      elements.writingWorkspace.append(panel);
+    });
+
+    function makeWritingTab(task, index) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'writing-task-tab';
+      button.textContent = task.label || `Task ${index + 1}`;
+      return button;
+    }
+
+    function makeWritingPanel(task) {
+      const panel = document.createElement('section');
+      panel.className = 'writing-task-panel';
+      panel.dataset.writingTaskPanel = task.id;
+
+      const split = document.createElement('div');
+      split.className = 'writing-split';
+      const initialSplit = Number(state.writingLayout.splits[task.id] || task.initialSplit || 50);
+
+      const promptPane = document.createElement('article');
+      promptPane.className = 'writing-prompt-pane';
+      const promptHeader = document.createElement('header');
+      promptHeader.className = 'writing-pane-header';
+      const promptLabel = document.createElement('span');
+      promptLabel.textContent = task.label;
+      const promptTitle = document.createElement('strong');
+      promptTitle.textContent = 'Đề bài';
+      promptHeader.append(promptTitle);
+      const promptBody = document.createElement('div');
+      promptBody.className = 'writing-prompt-body';
+      // Giữ outline cũ trong state/recovery; màn làm bài chỉ còn đề và bài viết.
+      const guidance = document.createElement('p');
+      guidance.className = 'writing-guidance';
+      guidance.textContent = `You should spend about ${task.recommendedMinutes} minutes on this task.`;
+      const instruction = document.createElement('p');
+      instruction.className = 'writing-instruction';
+      instruction.textContent = task.prompt;
+      promptBody.append(guidance, instruction);
+      if (task.followUp) {
+        const followUp = document.createElement('p');
+        followUp.className = 'writing-follow-up';
+        followUp.textContent = task.followUp;
+        promptBody.append(followUp);
+      }
+      if (task.image) {
+        const figure = document.createElement('figure');
+        figure.className = 'writing-task-figure';
+        const image = document.createElement('img');
+        image.src = task.image.src;
+        image.alt = task.image.alt;
+        figure.append(image);
+        promptBody.append(figure);
+      }
+      const minimum = document.createElement('p');
+      minimum.className = 'writing-minimum';
+      minimum.textContent = `Write at least ${task.minimumWords} words.`;
+      promptBody.append(minimum);
+      promptPane.append(promptHeader, promptBody);
+
+      const separator = document.createElement('button');
+      separator.type = 'button';
+      separator.className = 'writing-separator';
+      separator.setAttribute('role', 'separator');
+      separator.setAttribute('aria-orientation', 'vertical');
+      separator.setAttribute('aria-label', `Kéo để đổi độ rộng đề và bài làm ${task.label}`);
+      separator.setAttribute('aria-valuemin', '28');
+      separator.setAttribute('aria-valuemax', '70');
+      separator.title = 'Kéo ngang để đổi độ rộng hai khung';
+      separator.innerHTML = '<span aria-hidden="true">⋮⋮</span>';
+
+      const answerPane = document.createElement('section');
+      answerPane.className = 'writing-answer-pane';
+      const answerHeader = document.createElement('header');
+      answerHeader.className = 'writing-pane-header';
+      const answerLabel = document.createElement('span');
+      answerLabel.textContent = task.label;
+      const answerTitle = document.createElement('strong');
+      answerTitle.textContent = 'Bài làm của bạn';
+      answerHeader.append(answerTitle);
+      const editor = document.createElement('textarea');
+      editor.className = 'writing-editor';
+      editor.dataset.writingTask = task.id;
+      editor.value = state.drafts.writing[task.id] || '';
+      editor.spellcheck = false;
+      editor.autocomplete = 'off';
+      editor.setAttribute('autocapitalize', 'off');
+      editor.setAttribute('autocorrect', 'off');
+      editor.setAttribute('aria-label', `Bài làm ${task.label}`);
+      const editorMeta = document.createElement('footer');
+      editorMeta.className = 'writing-editor-meta';
+      const autosave = document.createElement('span');
+      autosave.textContent = demoMode ? localSaveStatus
+        : state.writingDirty ? 'Đang chờ lưu trên hệ thống...' : 'Tự lưu trên hệ thống';
+      const wordCount = document.createElement('strong');
+      wordCount.textContent = `${countWords(editor.value)} từ`;
+      editorMeta.append(autosave, wordCount);
+      editor.addEventListener('input', () => {
+        state.drafts.writing[task.id] = editor.value;
+        state.writingDirty = true;
+        state.writingRevision += 1;
+        wordCount.textContent = `${countWords(editor.value)} từ`;
+        saveSession();
+        scheduleWritingSave();
+      });
+      answerPane.append(answerHeader, editor, editorMeta);
+      split.append(promptPane, separator, answerPane);
+      panel.append(split);
+
+      function applySplit(value) {
+        const percentage = Math.min(70, Math.max(28, Math.round(Number(value) * 10) / 10));
+        split.style.setProperty('--writing-left', `${percentage}%`);
+        separator.setAttribute('aria-valuenow', String(Math.round(percentage)));
+        state.writingLayout.splits[task.id] = percentage;
+        saveSession();
+      }
+
+      separator.addEventListener('pointerdown', event => {
+        separator.setPointerCapture(event.pointerId);
+        separator.classList.add('is-dragging');
+      });
+      separator.addEventListener('pointermove', event => {
+        if (!separator.hasPointerCapture(event.pointerId)) return;
+        const bounds = split.getBoundingClientRect();
+        applySplit((event.clientX - bounds.left) * 100 / bounds.width);
+      });
+      const stopDragging = event => {
+        if (separator.hasPointerCapture(event.pointerId)) separator.releasePointerCapture(event.pointerId);
+        separator.classList.remove('is-dragging');
+      };
+      separator.addEventListener('pointerup', stopDragging);
+      separator.addEventListener('pointercancel', stopDragging);
+      separator.addEventListener('keydown', event => {
+        const current = Number(separator.getAttribute('aria-valuenow')) || initialSplit;
+        if (event.key === 'ArrowLeft') applySplit(current - 2);
+        else if (event.key === 'ArrowRight') applySplit(current + 2);
+        else if (event.key === 'Home') applySplit(28);
+        else if (event.key === 'End') applySplit(70);
+        else return;
+        event.preventDefault();
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
+      });
+      applySplit(initialSplit);
+      return panel;
+    }
+
+    const initialIndex = Math.max(0, tasks.findIndex(task => task.id === state.writingLayout.activeTask));
+    activateTask(initialIndex, false);
+    elements.previousWritingTask.addEventListener('click', () => {
+      const index = tasks.findIndex(task => task.id === state.writingLayout.activeTask);
+      activateTask(index - 1, true);
+    });
+    elements.nextWritingTask.addEventListener('click', () => {
+      const index = tasks.findIndex(task => task.id === state.writingLayout.activeTask);
+      activateTask(index + 1, true);
+    });
+  }
+
+  function formatBand(value) {
+    const band = Number(value);
+    return Number.isFinite(band) ? String(band) : '—';
+  }
+
+  function criterionTitle(code, taskNumber) {
+    return {
+      TA: 'Task Achievement',
+      TR: 'Task Response',
+      CC: 'Coherence & Cohesion',
+      LR: 'Lexical Resource',
+      GRA: 'Grammatical Range & Accuracy'
+    }[code] || `Task 1 · ${code}`;
+  }
+
+  function cleanWritingFeedback(value) {
+    return String(value || '')
+      .replace(/\r/g, '')
+      .replace(/^.*\]\(https:\/\/(?:docs|drive)\.google\.com\/[^)]+\).*$/gim, '')
+      .replace(/https:\/\/(?:docs|drive)\.google\.com\/\S+/gi, '')
+      .replace(/^\s*\(?\s*Xem phân tích chi tiết[^\n]*\)?\s*$/gim, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  function writingReportSummary(value) {
+    const cleaned = cleanWritingFeedback(value);
+    const markerIndex = cleaned.search(/Nhận xét từng tiêu chí/iu);
+    if (markerIndex < 0) return cleaned;
+    const separatorIndex = cleaned.lastIndexOf('---', markerIndex);
+    const headingIndex = cleaned.lastIndexOf('#', markerIndex);
+    const cutIndex = separatorIndex >= 0
+      ? separatorIndex
+      : headingIndex >= 0
+        ? headingIndex
+        : markerIndex;
+    return cleaned.slice(0, cutIndex).trim();
+  }
+
+  function looksLikeWritingHtml(value) {
+    return /<\/?[a-z][a-z0-9-]*(?:\s[^>]*)?>/i.test(String(value || ''));
+  }
+
+  function appendSanitizedWritingHtml(target, value) {
+    const allowedTags = new Set([
+      'p', 'div', 'span', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'br',
+      'blockquote', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td'
+    ]);
+    const blockedTags = new Set([
+      'script', 'style', 'template', 'iframe', 'object', 'embed', 'svg', 'math',
+      'form', 'input', 'button', 'textarea', 'select', 'option', 'link', 'meta'
+    ]);
+    // Template giữ HTML nguồn bất hoạt; chỉ đưa các node đã lọc vào giao diện.
+    // Bỏ thuộc tính thông thường trước, rồi dùng allowlist khi sao chép để chặn cả HTML méo dạng.
+    const inertHtml = String(value || '')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
+      .replace(/<([a-z][a-z0-9-]*)(?:\s+(?:[^"'<>]|"[^"]*"|'[^']*')*)?\s*\/?>/gi, '<$1>');
+    const parsed = document.createElement('template');
+    parsed.innerHTML = inertHtml;
+
+    const cloneSafeNode = node => {
+      if (node.nodeType === 3) return document.createTextNode(node.textContent || '');
+      if (node.nodeType !== 1) return null;
+      const sourceTag = String(node.tagName || '').toLowerCase();
+      if (blockedTags.has(sourceTag)) return null;
+      const outputTag = /^h[1-6]$/.test(sourceTag)
+        ? 'h5'
+        : sourceTag === 'b'
+          ? 'strong'
+          : sourceTag === 'i'
+            ? 'em'
+            : allowedTags.has(sourceTag)
+              ? sourceTag
+              : null;
+      const output = outputTag ? document.createElement(outputTag) : document.createDocumentFragment();
+      for (const child of Array.from(node.childNodes || [])) {
+        const safeChild = cloneSafeNode(child);
+        if (safeChild) output.append(safeChild);
+      }
+      return output;
+    };
+
+    for (const child of Array.from(parsed.content.childNodes || [])) {
+      const safeChild = cloneSafeNode(child);
+      if (safeChild) target.append(safeChild);
+    }
+  }
+
+  function appendSafeWritingFeedback(target, value) {
+    const appendInline = (parent, source) => {
+      const text = String(source || '');
+      const tokenPattern = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g;
+      let cursor = 0;
+      for (const match of text.matchAll(tokenPattern)) {
+        if (match.index > cursor) parent.append(document.createTextNode(text.slice(cursor, match.index)));
+        if (match[1]) {
+          const strong = document.createElement('strong');
+          strong.textContent = match[1];
+          parent.append(strong);
+        } else if (match[2]) {
+          const emphasis = document.createElement('em');
+          emphasis.textContent = match[2];
+          parent.append(emphasis);
+        } else {
+          const link = document.createElement('a');
+          link.href = match[4];
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.referrerPolicy = 'no-referrer';
+          link.textContent = match[3];
+          parent.append(link);
+        }
+        cursor = match.index + match[0].length;
+      }
+      if (cursor < text.length) parent.append(document.createTextNode(text.slice(cursor)));
+    };
+
+    const cleaned = cleanWritingFeedback(value || 'Chưa có nhận xét tổng hợp.');
+    if (looksLikeWritingHtml(cleaned)) {
+      appendSanitizedWritingHtml(target, cleaned);
+      return;
+    }
+
+    const normalized = cleaned
+      .replace(/[ \t]+(?=#{2,4}\s+\*\*)/g, '\n');
+    const lines = normalized.split('\n');
+    let index = 0;
+    while (index < lines.length) {
+      const rawLine = lines[index];
+      const line = rawLine.trim();
+      if (!line) {
+        index += 1;
+        continue;
+      }
+      const heading = line.match(/^(#{1,5})\s+(?:\*\*([^*]+)\*\*|([^#]+?))(?:\s+([\s\S]*))?$/);
+      if (heading) {
+        const title = document.createElement('h5');
+        title.textContent = String(heading[2] || heading[3] || '').trim();
+        target.append(title);
+        if (heading[4]) {
+          const paragraph = document.createElement('p');
+          appendInline(paragraph, heading[4]);
+          target.append(paragraph);
+        }
+        index += 1;
+        continue;
+      }
+
+      const listItem = line.match(/^(?:([-*])|(\d+)\.)\s+(.+)$/);
+      if (listItem) {
+        const ordered = Boolean(listItem[2]);
+        const list = document.createElement(ordered ? 'ol' : 'ul');
+        while (index < lines.length) {
+          const candidate = lines[index].trim().match(/^(?:([-*])|(\d+)\.)\s+(.+)$/);
+          if (!candidate || Boolean(candidate[2]) !== ordered) break;
+          const item = document.createElement('li');
+          appendInline(item, candidate[3]);
+          list.append(item);
+          index += 1;
+        }
+        target.append(list);
+        continue;
+      }
+
+      const paragraphLines = [line];
+      index += 1;
+      while (index < lines.length) {
+        const candidate = lines[index].trim();
+        if (!candidate) break;
+        if (/^#{1,5}\s+/.test(candidate) || /^(?:[-*]|\d+\.)\s+/.test(candidate)) break;
+        paragraphLines.push(candidate);
+        index += 1;
+      }
+      const paragraph = document.createElement('p');
+      appendInline(paragraph, paragraphLines.join(' '));
+      target.append(paragraph);
+    }
+  }
+
+  function writingCriterionConclusion(value) {
+    const cleaned = cleanWritingFeedback(value);
+    const marker = /^#{2,5}\s+(?:\*\*)?KẾT LUẬN(?:\*\*)?\s*$/im.exec(cleaned);
+    return marker ? cleaned.slice(marker.index + marker[0].length).trim() : '';
+  }
+
+  function writingCriterionSections(value) {
+    const text = cleanWritingFeedback(value);
+    if (!text) return [];
+    const sections = [];
+    let current = null;
+    for (const rawLine of text.split('\n')) {
+      const line = rawLine.trim();
+      const heading = line.match(/^#{2,5}\s+(?:\*\*)?(.+?)(?:\*\*)?\s*$/);
+      const title = String(heading?.[1] || '').replace(/\*\*/g, '').trim();
+      if (heading && /^\d+\.\s+/.test(title)) {
+        if (current) sections.push({ title: current.title, body: current.body.join('\n').trim() });
+        current = { title, body: [] };
+        continue;
+      }
+      if (heading && /KẾT LUẬN/i.test(title)) {
+        if (current) sections.push({ title: current.title, body: current.body.join('\n').trim() });
+        current = null;
+        break;
+      }
+      if (current) current.body.push(rawLine);
+    }
+    if (current) sections.push({ title: current.title, body: current.body.join('\n').trim() });
+    return sections;
+  }
+
+  function writingCriterionFallbackSummary(value) {
+    const cleaned = cleanWritingFeedback(value);
+    const beforeConclusion = cleaned.split(/^#{2,5}\s+(?:\*\*)?KẾT LUẬN/im)[0];
+    return beforeConclusion
+      .replace(/^#{1,5}\s+.*$/gm, '')
+      .replace(/^\s*\*\*[^\n]*Band[^\n]*\*\*\s*$/gim, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  function appendWritingComponent(parent, component, section, index, criterionCode, taskNumber) {
+    const aspect = document.createElement('section');
+    aspect.className = 'writing-component';
+    const title = document.createElement('h5');
+    title.textContent = section?.title || `${index + 1}. ${component?.label || component?.code || 'Khía cạnh'}`;
+    aspect.append(title);
+
+    const summaryValue = cleanWritingFeedback(component?.summary || section?.body || '');
+    if (summaryValue) {
+      const summary = document.createElement('div');
+      summary.className = 'writing-component-summary writing-feedback-richtext';
+      appendSafeWritingFeedback(summary, summaryValue);
+      aspect.append(summary);
+    }
+
+    const detailValue = cleanWritingFeedback(component?.feedback || '');
+    if (detailValue) {
+      const detailId = `writingDetail${taskNumber}${criterionCode}${index}`;
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'writing-component-toggle';
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-controls', detailId);
+      toggle.textContent = 'Xem phân tích chi tiết và cách cải thiện';
+      const detail = document.createElement('div');
+      detail.id = detailId;
+      detail.className = 'writing-component-detail writing-feedback-richtext';
+      detail.hidden = true;
+      appendSafeWritingFeedback(detail, detailValue);
+      toggle.addEventListener('click', () => {
+        const willOpen = detail.hidden;
+        detail.hidden = !willOpen;
+        toggle.setAttribute('aria-expanded', String(willOpen));
+        toggle.textContent = willOpen
+          ? 'Thu gọn phân tích chi tiết'
+          : 'Xem phân tích chi tiết và cách cải thiện';
+      });
+      aspect.append(toggle, detail);
+    }
+    parent.append(aspect);
+  }
+
+  function openWritingFeedback(taskResult) {
+    const taskNumber = Number(taskResult?.taskNumber);
+    const task = Array.from(writingConfig?.tasks || []).find(item => item.id === `task${taskNumber}`);
+    if (!task) return;
+    const essayValue = state.drafts.writing[task.id] || '';
+    const dialog = document.createElement('dialog');
+    dialog.className = 'writing-feedback-dialog';
+    dialog.setAttribute('aria-labelledby', `writingFeedbackTitle${taskNumber}`);
+
+    const shell = document.createElement('div');
+    shell.className = 'writing-feedback-shell';
+    const header = document.createElement('header');
+    header.className = 'writing-feedback-header';
+    const headerCopy = document.createElement('div');
+    const eyebrow = document.createElement('span');
+    eyebrow.textContent = `Kết quả ${task.label}`;
+    const title = document.createElement('h2');
+    title.id = `writingFeedbackTitle${taskNumber}`;
+    title.textContent = `${task.label} · Band ${formatBand(taskResult.taskScore)}`;
+    const meta = document.createElement('p');
+    meta.textContent = `${Number(taskResult.wordCount || countWords(essayValue))} từ · Chấm theo 4 tiêu chí IELTS`;
+    headerCopy.append(eyebrow, title, meta);
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'writing-feedback-close';
+    closeButton.setAttribute('aria-label', 'Đóng bài chấm Writing');
+    closeButton.textContent = '×';
+    closeButton.addEventListener('click', () => dialog.close());
+    header.append(headerCopy, closeButton);
+
+    const layout = document.createElement('div');
+    layout.className = 'writing-feedback-layout';
+    const sourcePane = document.createElement('section');
+    sourcePane.className = 'writing-feedback-source';
+    const promptTitle = document.createElement('h3');
+    promptTitle.textContent = 'Đề bài';
+    const prompt = document.createElement('p');
+    prompt.className = 'writing-feedback-prompt';
+    prompt.textContent = task.prompt || '';
+    sourcePane.append(promptTitle, prompt);
+    if (task.followUp) {
+      const followUp = document.createElement('p');
+      followUp.className = 'writing-feedback-prompt';
+      followUp.textContent = task.followUp;
+      sourcePane.append(followUp);
+    }
+    // Chỉ Task 1 có hình đề; Task 2 bỏ hoàn toàn phần ảnh, kể cả dữ liệu cũ có giá trị.
+    if (taskNumber === 1 && (typeof task.image === 'object' ? task.image?.src : task.image)) {
+      const image = document.createElement('img');
+      image.src = typeof task.image === 'object' ? task.image.src : task.image;
+      image.alt = typeof task.image === 'object' && task.image.alt
+        ? task.image.alt
+        : `Hình minh họa ${task.label}`;
+      image.className = 'writing-feedback-image';
+      sourcePane.append(image);
+    }
+    const reportSummary = writingReportSummary(taskResult.report);
+    if (reportSummary) {
+      const reportTitle = document.createElement('h3');
+      reportTitle.textContent = 'Nhận xét tổng hợp';
+      const report = document.createElement('div');
+      report.className = 'writing-feedback-text writing-feedback-richtext';
+      appendSafeWritingFeedback(report, reportSummary);
+      sourcePane.append(reportTitle, report);
+    }
+    const essayTitle = document.createElement('h3');
+    essayTitle.textContent = 'Bài viết của học viên';
+    const essay = document.createElement('div');
+    essay.className = `writing-feedback-essay${essayValue.trim() ? '' : ' is-empty'}`;
+    essay.lang = 'en';
+    essay.textContent = essayValue.trim() || 'Chưa có nội dung bài viết.';
+    sourcePane.append(essayTitle, essay);
+    const scorePane = document.createElement('section');
+    scorePane.className = 'writing-feedback-scores';
+    const scoreTitle = document.createElement('h3');
+    scoreTitle.textContent = 'Nhận xét theo tiêu chí';
+    scorePane.append(scoreTitle);
+    for (const criterion of Array.from(taskResult.criteria || [])) {
+      const card = document.createElement('article');
+      card.className = 'writing-criterion-card';
+      const criterionHeader = document.createElement('header');
+      const criterionName = document.createElement('h4');
+      criterionName.textContent = criterion.name || criterionTitle(criterion.code, taskNumber);
+      const criterionScore = document.createElement('strong');
+      criterionScore.textContent = `Band ${formatBand(criterion.bandScore)}`;
+      criterionHeader.append(criterionName, criterionScore);
+      card.append(criterionHeader);
+      const components = Array.from(criterion.components || []);
+      const sections = writingCriterionSections(criterion.feedback);
+      const componentCount = Math.max(components.length, sections.length);
+      if (componentCount) {
+        const componentList = document.createElement('div');
+        componentList.className = 'writing-component-list';
+        for (let index = 0; index < componentCount; index += 1) {
+          const section = sections[index] || (components.length === 1
+            ? { body: writingCriterionFallbackSummary(criterion.feedback) }
+            : null);
+          appendWritingComponent(componentList, components[index], section, index, criterion.code, taskNumber);
+        }
+        card.append(componentList);
+      } else {
+        const feedback = document.createElement('div');
+        feedback.className = 'writing-feedback-text writing-feedback-richtext';
+        appendSafeWritingFeedback(feedback, writingCriterionFallbackSummary(criterion.feedback));
+        card.append(feedback);
+      }
+      {
+        const conclusion = writingCriterionConclusion(criterion.feedback);
+        if (conclusion) {
+          const conclusionBlock = document.createElement('div');
+          conclusionBlock.className = 'writing-feedback-text writing-feedback-richtext';
+          const conclusionTitle = document.createElement('h5');
+          conclusionTitle.textContent = 'Kết luận và giới hạn điểm';
+          conclusionBlock.append(conclusionTitle);
+          appendSafeWritingFeedback(conclusionBlock, conclusion);
+          card.append(conclusionBlock);
+        }
+      }
+      scorePane.append(card);
+    }
+    layout.append(sourcePane, scorePane);
+    shell.append(header, layout);
+    dialog.append(shell);
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', () => dialog.remove(), { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+
+  function renderWritingSubmission() {
+    if (!writingConfig || !elements.writingSubmissionResult) return;
+    writingSubmission.sync();
+    const submissionSignature = JSON.stringify([writingSubmission.owner(),state.writingSubmitted,state.result?.writing?.grading]);
+    if (writingSubmissionRenderSignature === submissionSignature) return;
+    writingSubmissionRenderSignature = submissionSignature;
+    elements.writingSubmissionResult.hidden = !state.writingSubmitted;
+    if (!state.writingSubmitted) {
+      elements.writingSubmissionResult.replaceChildren();
+      return;
+    }
+
+    const section = document.createElement('section');
+    section.className = 'writing-result-section';
+    const grading = state.result?.writing?.grading || null;
+    const heading = document.createElement('header');
+    heading.className = 'writing-result-heading';
+    const headingCopy = document.createElement('div');
+    const eyebrow = document.createElement('span');
+    eyebrow.textContent = grading?.ready ? 'Kết quả Writing' : 'Bài Writing đã nộp';
+    const title = document.createElement('h3');
+    title.textContent = grading?.ready
+      ? 'Điểm và bài chấm Writing'
+      : grading?.status === 'review_required'
+        ? 'Bài Writing đang được kiểm tra'
+        : 'Bài Writing của bạn đang được chấm';
+    headingCopy.append(eyebrow, title);
+    const note = document.createElement('p');
+    note.textContent = grading?.ready
+      ? Array.isArray(grading.tasks) && grading.tasks.some(task => Number(task?.taskNumber) === 1)
+        ? 'Nhấn vào điểm Task 1 để xem bài chấm chi tiết.'
+        : 'Điểm đã có, nhưng bài chấm chi tiết chưa sẵn sàng. Hãy tải lại trang sau.'
+      : grading?.status === 'review_required'
+        ? 'Bài làm đã được giữ an toàn; một phần chấm cần giáo viên kiểm tra trước khi công bố.'
+        : 'Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
+    heading.append(headingCopy, note);
+
+    const gradingArea = document.createElement('div');
+    if (grading?.ready) {
+      gradingArea.className = 'writing-score-grid';
+      const tasksByNumber = new Map(Array.from(grading.tasks || []).map(task => [Number(task.taskNumber), task]));
+      for (const taskNumber of [1]) {
+        const taskResult = tasksByNumber.get(taskNumber);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'writing-score-card is-action';
+        const label = document.createElement('span');
+        label.textContent = `Writing Task ${taskNumber}`;
+        const score = document.createElement('strong');
+        score.textContent = taskResult ? `Band ${formatBand(taskResult.taskScore)}` : 'Chưa có điểm Task 1';
+        const action = document.createElement('small');
+        action.textContent = taskResult ? 'Xem bài chấm chi tiết →' : 'Chưa có bài chấm chi tiết';
+        button.append(label, score, action);
+        button.disabled = !taskResult;
+        if (taskResult) button.addEventListener('click', () => openWritingFeedback(taskResult));
+        gradingArea.append(button);
+      }
+      const overall = document.createElement('article');
+      overall.className = 'writing-score-card is-overall';
+      const overallLabel = document.createElement('span');
+      overallLabel.textContent = 'Writing tổng';
+      const overallScore = document.createElement('strong');
+      overallScore.textContent = `Band ${formatBand(grading.writingScore)}`;
+      const formula = document.createElement('small');
+      formula.textContent = 'Điểm Writing = điểm Task 1';
+      overall.append(overallLabel, overallScore, formula);
+      gradingArea.append(overall);
+    } else {
+      const needsReview = ['review_required', 'failed'].includes(grading?.status);
+      gradingArea.className = `writing-grading-status${needsReview ? ' needs-review' : ''}`;
+      const statusCopy = document.createElement('div');
+      const statusTitle = document.createElement('strong');
+      statusTitle.textContent = needsReview
+        ? 'Bài chấm đang được kiểm tra'
+        : 'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau';
+      const statusText = document.createElement('p');
+      statusText.textContent = needsReview
+        ? 'Bạn có thể đóng trang; kết quả vẫn được lưu và sẽ hiện khi hoàn chỉnh.'
+        : 'Bài làm và tiến độ chấm đã được lưu trên hệ thống. Nếu vẫn mở trang, kết quả sẽ tự cập nhật khi chấm xong.';
+      statusCopy.append(statusTitle, statusText);
+      gradingArea.append(statusCopy);
+    }
+
+    section.append(heading, gradingArea);
+    elements.writingSubmissionResult.replaceChildren(section);
+      writingSubmission.sync();
+  }
+
+  function addSummaryCard(label, value) {
+    const card = document.createElement('article');
+    card.className = 'summary-card';
+    const labelNode = document.createElement('span');
+    labelNode.textContent = label;
+    const valueNode = document.createElement('strong');
+    valueNode.textContent = value;
+    card.append(labelNode, valueNode);
+    return card;
+  }
+
+  function renderAnalysisList(container, items, emptyText) {
+    const rows = items?.length ? items : [{ type: emptyText, correct: 0, total: 0, percentage: 0 }];
+    container.replaceChildren(...rows.map(item => {
+      const node = document.createElement('li');
+      node.textContent = item.total
+        ? `${item.type}: ${item.correct}/${item.total} (${Math.round(item.percentage * 100)}%)`
+        : item.type;
+      return node;
+    }));
+  }
+
+  function splitSkillPerformance(stats) {
+    const sorted = [...(stats || [])].sort((left, right) =>
+      right.percentage - left.percentage || left.type.localeCompare(right.type, 'vi')
+    );
+    if (!sorted.length) return { best: [], needsImprovement: [] };
+    const highest = sorted[0].percentage;
+    const lowest = sorted.at(-1).percentage;
+    return {
+      best: sorted.filter(item => item.percentage === highest),
+      needsImprovement: lowest === highest ? [] : sorted.filter(item => item.percentage === lowest)
+    };
+  }
+
+  function renderSkillPerformance(label, section) {
+    const wrapper = document.createElement('section');
+    wrapper.className = 'skill-performance-section';
+    wrapper.dataset.skillPerformance = label.toLowerCase();
+
+    const heading = document.createElement('header');
+    heading.className = 'skill-performance-heading';
+    const headingCopy = document.createElement('div');
+    const eyebrow = document.createElement('span');
+    eyebrow.textContent = 'Phân tích riêng';
+    const title = document.createElement('h3');
+    title.textContent = label;
+    headingCopy.append(eyebrow, title);
+    const score = document.createElement('strong');
+    score.textContent = `${section.correct}/${section.total} câu đúng`;
+    heading.append(headingCopy, score);
+
+    const analysis = splitSkillPerformance(section.typeStats);
+    const cards = document.createElement('div');
+    cards.className = 'analysis-grid';
+    const bestCard = document.createElement('article');
+    bestCard.className = 'analysis-card best';
+    const bestTitle = document.createElement('h4');
+    bestTitle.textContent = 'Dạng làm tốt nhất';
+    const bestList = document.createElement('ul');
+    bestList.className = 'analysis-list';
+    bestCard.append(bestTitle, bestList);
+    renderAnalysisList(bestList, analysis.best, 'Chưa có dữ liệu dạng bài.');
+
+    const improveCard = document.createElement('article');
+    improveCard.className = 'analysis-card improve';
+    const improveTitle = document.createElement('h4');
+    improveTitle.textContent = 'Dạng cần cải thiện';
+    const improveList = document.createElement('ul');
+    improveList.className = 'analysis-list';
+    improveCard.append(improveTitle, improveList);
+    renderAnalysisList(improveList, analysis.needsImprovement, 'Các dạng đang có kết quả ngang nhau.');
+    cards.append(bestCard, improveCard);
+
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'detail-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'performance-table';
+    const head = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    for (const value of ['Dạng bài', 'Đúng', 'Tổng', 'Tỷ lệ']) {
+      const cell = document.createElement('th');
+      cell.textContent = value;
+      headerRow.append(cell);
+    }
+    head.append(headerRow);
+    const body = document.createElement('tbody');
+    for (const item of section.typeStats || []) {
+      const row = document.createElement('tr');
+      for (const value of [item.type, item.correct, item.total, `${Math.round(item.percentage * 100)}%`]) {
+        const cell = document.createElement('td');
+        cell.textContent = value;
+        row.append(cell);
+      }
+      body.append(row);
+    }
+    table.append(head, body);
+    tableWrap.append(table);
+    wrapper.append(heading, cards, tableWrap);
+    return wrapper;
+  }
+
+  function renderDetailBlock(title, details) {
+    const block = document.createElement('details');
+    block.className = 'detail-block';
+    const skill = title.toLowerCase();
+    block.dataset.resultSkill = skill;
+    block.open = state.resultDetailsOpen?.[skill] === true;
+    block.addEventListener('toggle', () => {
+      // Bỏ event trễ của bảng đã bị thay thế hoặc thuộc lượt trước.
+      if (!Array.from(elements.questionDetails.children).includes(block)) return;
+      state.resultDetailsOpen = { ...state.resultDetailsOpen, [skill]: block.open };
+      saveSession();
+    });
+    const summary = document.createElement('summary');
+    const detailRows = details || [];
+    summary.textContent = detailRows.length
+      ? `${title} · xem chi tiết ${detailRows.length} câu`
+      : `${title} · chưa có dữ liệu từng câu`;
+    const wrap = document.createElement('div');
+    wrap.className = 'detail-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'detail-table';
+    const head = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    for (const label of ['Câu', 'Bài làm', 'Đáp án đúng', 'Kết quả']) {
+      const cell = document.createElement('th');
+      cell.textContent = label;
+      headerRow.append(cell);
+    }
+    head.append(headerRow);
+    const body = document.createElement('tbody');
+    for (const detail of detailRows) {
+      const row = document.createElement('tr');
+      const resultMeta = {
+        correct: { icon: '✓', label: 'Đúng' },
+        incorrect: { icon: '✕', label: 'Sai' },
+        blank: { icon: '–', label: 'Bỏ trống' }
+      }[detail.result] || { icon: '?', label: detail.result || 'Chưa xác định' };
+      row.className = `detail-row detail-row-${detail.result || 'unknown'}`;
+      const labels = [
+        `${String(detail.number).padStart(2, '0')}.`,
+        detail.studentAnswer || '—',
+        detail.correctAnswer || '—'
+      ];
+      labels.forEach(value => {
+        const cell = document.createElement('td');
+        cell.textContent = value;
+        row.append(cell);
+      });
+      const resultCell = document.createElement('td');
+      resultCell.className = `detail-result-cell result-${detail.result}`;
+      const resultIcon = document.createElement('span');
+      resultIcon.className = 'detail-result-icon';
+      resultIcon.setAttribute('aria-hidden', 'true');
+      resultIcon.textContent = resultMeta.icon;
+      const resultLabel = document.createElement('span');
+      resultLabel.textContent = resultMeta.label;
+      resultCell.append(resultIcon, resultLabel);
+      row.append(resultCell);
+      body.append(row);
+    }
+    table.append(head, body);
+    wrap.append(table);
+    block.append(summary, wrap);
+    return block;
+  }
+
+  function renderScoreSummary(payload) {
+    const table=document.createElement('table');table.className='substitute-score-table';
+    const caption=document.createElement('caption');caption.textContent='Tổng hợp điểm thực tế';table.append(caption);
+    const head=document.createElement('thead'),header=document.createElement('tr');
+    for(const text of ['Kỹ năng','Điểm thực tế','Trạng thái']){const th=document.createElement('th');th.scope='col';th.textContent=text;header.append(th);}head.append(header);table.append(head);
+    const body=document.createElement('tbody'),grading=payload.writing?.grading;
+    for(const [skill,title] of [['listening','Listening'],['reading','Reading'],['writing','Writing']]){
+      const section=payload.result?.[skill],ready=skill==='writing'?grading?.ready===true&&Number.isFinite(grading.writingScore):section?.correct!=null;
+      const score=skill==='writing'?(ready?formatBand(grading.writingScore)+'/9':'—'):
+        ready?(testConfig.slug==='substitute-test-1-k56'?sectionScore(section):
+          (Number.isFinite(section.band)?formatBand(section.band)+'/9 · ':'')+sectionScore(section)):'—';
+      const row=document.createElement('tr');
+      for(const text of [title,score,ready?'Đã chấm':skill==='listening'&&listeningInterruption?'Gián đoạn · Cần bài thay thế':skill==='writing'&&state.writingSubmitted?'Đang chấm':'Chưa nộp']){const td=document.createElement('td');td.textContent=text;row.append(td);}body.append(row);
+    }
+    table.append(body);elements.summaryGrid.replaceChildren(table);
+    if(grading?.ready&&Array.isArray(grading.tasks)){
+      const criteria=document.createElement('table');criteria.className='substitute-score-table';
+      const cap=document.createElement('caption');cap.textContent='Điểm Writing theo tiêu chí';criteria.append(cap);
+      const thead=document.createElement('thead'),tr=document.createElement('tr');
+      for(const text of ['Task','TA / TR','CC','LR','GRA','Band']){const th=document.createElement('th');th.scope='col';th.textContent=text;tr.append(th);}thead.append(tr);criteria.append(thead);
+      const tbody=document.createElement('tbody');
+      for(const task of grading.tasks){const row=document.createElement('tr'),points=['TA','CC','LR','GRA'].map(key=>{const c=task.criteria?.find(c=>(c.code||c.key)===(key==='TA'&&task.taskNumber===2?'TR':key));return c?formatBand(c.bandScore??c.score):'—';});
+        for(const text of ['Task '+task.taskNumber,...points,formatBand(task.taskScore)]){const td=document.createElement('td');td.textContent=text;row.append(td);}tbody.append(row);}
+      criteria.append(tbody);elements.summaryGrid.append(criteria);
+    }
+  }
+
+  function renderResult(payload) {
+    if(serverGradingMode && !state.writingSubmitted)return;
+    const result = payload.result;
+    const hasReading = Boolean(result.reading);
+    state.result = payload;
+    elements.resultStudentName.textContent = payload.studentName;
+    elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
+    renderScoreSummary(payload);
+    elements.resultStatus.textContent = listeningInterruption?'Listening gián đoạn. Hãy liên hệ giảng viên để nhận bài thay thế.' : hasReading
+      ? payload.writing?.grading?.ready
+        ? 'Listening và Reading được phân tích riêng; điểm Writing Task 1 đã hoàn tất và có bài chấm chi tiết.'
+        : payload.writing?.grading?.status === 'review_required'
+          ? 'Listening và Reading đã chấm xong. Writing đã được nhận nhưng chưa có điểm từ workflow chấm K67.'
+          : 'Listening và Reading được phân tích riêng. Writing đang được chấm và chưa hiện điểm thành phần.'
+      : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
+    elements.continueReadingFromResult.hidden = hasReading || Boolean(demoMode);
+    renderWritingSubmission();
+    // Cùng lượt thi giữ DOM từng bảng khi dữ liệu câu không đổi, như renderer K67.
+    const identity = JSON.stringify([
+      storageKey, testConfig.slug, payload.className || classCode,
+      payload.studentRef || state.studentRef || payload.studentName,
+      payload.attemptToken || state.attemptToken
+    ]);
+    const sameAttempt = state.resultDetailsIdentity === identity;
+    if (state.resultDetailsIdentity && !sameAttempt) state.resultDetailsOpen = {};
+    const previousBlocks = sameAttempt ? Array.from(elements.questionDetails.children) : [];
+    const skills = [...(listeningInterruption?[]:[['Listening',result.listening]]),...(hasReading?[['Reading',result.reading]]:[])];
+    const detailBlocks = skills.map(([title, skill]) => {
+      const fingerprint = JSON.stringify(skill.details || []);
+      const previous = previousBlocks.find(block => block.dataset.skill === title);
+      if (previous?.dataset.details === fingerprint) return previous;
+      const block = renderDetailBlock(title, skill.details);
+      block.dataset.skill = title;
+      block.dataset.details = fingerprint;
+      if (previous) block.open = previous.open;
+      return block;
+    });
+    if (detailBlocks.length !== elements.questionDetails.children.length
+      || detailBlocks.some((block, index) => block !== elements.questionDetails.children[index])) {
+      elements.questionDetails.replaceChildren(...detailBlocks);
+    }
+    state.resultDetailsIdentity = identity;
+    // Phần tổng hợp vẫn nhận điểm mới, độc lập với bảng từng câu.
+    const detailSignature = JSON.stringify([identity, result.listening, result.reading]);
+    if (detailSignature !== resultDetailSignature) {
+      const performanceSections = listeningInterruption?[]:[renderSkillPerformance('Listening',result.listening)];
+      if (hasReading) performanceSections.push(renderSkillPerformance('Reading', result.reading));
+      elements.skillPerformanceSections.replaceChildren(...performanceSections);
+      resultDetailSignature = detailSignature;
+    }
+    if (payload.writing?.grading?.ready) stopWritingGradingPolling();
+  }
+
+  function portalNotice(status, completed) {
+    if (status === 'not_applicable') {
+      return completed
+        ? 'Bài đã được chấm và phân tích đầy đủ.'
+        : 'Listening đã được chấm và phân tích đầy đủ.';
+    }
+    if (status === 'unknown' || status === 'processing' || status === 'pending') {
+      return completed
+        ? 'Bài đã được chấm. Chưa rõ Portal đã nhận điểm hay chưa; hệ thống không tự gửi lại. Giáo viên cần kiểm tra Portal trước khi retry.'
+        : 'Listening đã được chấm. Chưa rõ Portal đã nhận điểm hay chưa; hệ thống không tự gửi lại. Giáo viên cần kiểm tra Portal trước khi retry.';
+    }
+    if (status === 'failed_response') {
+      return 'Bài đã được chấm nhưng webhook trả lỗi. Giáo viên cần kiểm tra lịch sử gửi điểm và Portal trước khi retry.';
+    }
+    return status === 'synced'
+      ? 'Đã xác nhận ba điểm Thi lại trên Portal.'
+      : 'Kết quả đã được lưu; chưa xác nhận đồng bộ Portal.';
+  }
+
+  function writingGradingNotice(grading) {
+    if (grading?.status === 'review_required') {
+      return 'Bài Writing đã được lưu an toàn và đang chờ giáo viên kiểm tra. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
+    }
+    return 'Bài Writing của bạn đang được chấm. Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
+  }
+
+  async function loadResult(button) {
+    setBusy(button, true, 'Đang tải kết quả...', button.dataset.normalText || button.textContent);
+    if (demoMode) {
+      const mode = state.completed ? 'complete' : 'listening-only';
+      renderResult(buildDemoPayload(mode));
+      showNotice(serverGradingMode
+        ? mode === 'complete'
+          ? 'Backend test: đây là điểm Listening và Reading chấm từ bài vừa nộp.'
+          : 'Backend test: đây là điểm Listening chấm từ bài vừa nộp.'
+        : mode === 'complete'
+          ? 'Bản demo: đã hoàn thành toàn bộ bài thi.'
+          : 'Bản demo: mới hoàn thành Listening.', 'success');
+      setStage('result');
+      setBusy(button, false, 'Đang tải kết quả...', button.dataset.normalText || 'Xem kết quả');
+      return;
+    }
+    try {
+      const payload = await apiRequest('/api/term-tests/result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptToken: state.attemptToken })
+      });
+      applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
+      renderResult(payload);
+      const grading = payload.writing?.grading;
+      if (payload.writing?.submitted && !grading?.ready) {
+        showNotice(writingGradingNotice(grading), 'success');
+      } else {
+        showNotice(portalNotice(payload.portalSyncStatus, payload.completed), ['unknown', 'processing', 'pending', 'failed_response'].includes(payload.portalSyncStatus) ? '' : 'success');
+      }
+      setStage('result');
+      scheduleWritingGradingRefresh();
+    } catch (error) {
+      showNotice(`Không thể tải kết quả: ${error.message}`, 'error');
+    } finally {
+      setBusy(button, false, 'Đang tải kết quả...', button.dataset.normalText || 'Xem kết quả');
+    }
+  }
+
+  function isWritingIdentityBound() {
+    return Boolean(state.studentRef && (state.attemptToken || state.examSessionToken
+      || state.listeningStartedAt || state.listeningDeadlineAt));
+  }
+
+  // Đổi tên khi chưa mở lượt: xóa riêng trạng thái Writing của người trước, không mang bài sang tên mới.
+  function resetUnboundWritingIdentity() {
+    window.clearTimeout(writingSaveTimer); window.clearTimeout(writingForceSaveTimer);
+    window.clearTimeout(writingRetryTimer); writingForceSaveTimer = 0;
+    state.writingServerRevision = null; state.writingConfirmedDraft = null;
+    state.writingConflict = null; state.writingRecovery = [];
+    state.writingRevision = 0; state.writingAckRevision = 0;
+    state.writingDirty = false; state.writingStarted = false; state.writingSubmitted = false;
+    state.writingDeadlineAt = ''; state.writingStartedAt = '';
+    state.drafts.writing = { outline: '', task1: '', task2: '' };
+    syncWritingEditors(); renderWritingConflict(); renderWritingRecovery();
+  }
+
+  elements.studentSelect.addEventListener('change', () => {
+    const previousStudentRef = state.studentRef;
+    if (elements.studentSelect.value !== previousStudentRef
+      && (isWritingIdentityBound() || (previousStudentRef && elements.studentSelect.disabled))) {
+      // Token/đồng hồ đã gắn với học viên: giữ nguyên bài và khôi phục đúng lựa chọn đang thi.
+      elements.studentSelect.value = previousStudentRef; elements.studentSelect.disabled = true;
+      showNotice('Lượt thi đang gắn với học viên đã chọn. Bài và các bản phục hồi được giữ nguyên; không đổi tên giữa lượt.', 'error');
+      return;
+    }
+    const student = state.roster.find(item => item.ref === elements.studentSelect.value);
+    state.studentRef = student?.ref || '';
+    state.studentName = student?.name || '';
+    if (previousStudentRef !== state.studentRef) resetUnboundWritingIdentity();
+    saveSession();
+  });
+
+  elements.listeningView.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (elements.listeningView.dataset.listeningSubmitting === 'true' || state.testGrades?.listening
+      ||listeningInterruption||recordingInterruption||(listeningContinuity&&state.pendingSections.listening)) return;
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
+    if (!state.studentRef) {
+      elements.studentSelect.reportValidity();
+      showNotice('Hãy chọn đúng họ và tên trước khi nộp Listening.', 'error');
+      return;
+    }
+    const automatic = event.submitter?.dataset.autoSubmit === 'true'
+      || elements.listeningView.dataset.listeningTimeExpired === 'true';
+    let answers = state.frozenAnswers.listening || collectAnswers(elements.listeningQuestions);
+    if (automatic && !state.frozenAnswers.listening) {
+      state.frozenAnswers.listening = Object.freeze({ ...answers });
+      answers = state.frozenAnswers.listening;
+    }
+    const answered = updateAnswerCount('listening');
+    const early=listeningContinuity&&!automatic&&!state.listeningDeadlineAt&&event.submitter?.dataset.retrySubmission!=='true';
+    if (!automatic && !confirmIncomplete(answered, 'Listening',{force:early})) return;
+    if(early){
+      noteListeningContinuity({phase:'early_confirmed'});
+      elements.listeningView.dispatchEvent(new Event('term-test:listening-early-confirmed'));
+    }
+    state.clientSubmissionId ||= crypto.randomUUID();
+    state.drafts.listening = answers;
+    saveSession();
+    elements.listeningView.dataset.listeningSubmitting = 'true';
+    setAnswerControlsLocked('listening', true);
+    setBusy(elements.submitListening, true, 'Đang lưu Listening...', 'Nộp bài Listening');
+    if (automatic) showNotice('Đã hết giờ. Hệ thống đang tự thu và chấm bài Listening...');
+    let submitted = false, queuedSubmission = false;
+    try {
+      if (demoMode === 'exam') {
+        if(serverGradingMode && (!window.TERM_TEST_BOOTSTRAP?.clientRunId || !(readingFirst?state.listeningStartedAt:window.TERM_TEST_BOOTSTRAP.listeningStartedAt))){showNotice('Hãy bắt đầu lượt thi từ phòng chờ.','error');return;}
+        if (serverGradingMode) {
+          const grade = await submitSection('listening', answers, automatic);
+          state.testGrades.listening = grade.section;
+        }
+        ensureValidAttemptToken();
+        state.studentName = state.studentName || 'Học viên Demo';
+        state.completed = readingFirst && Boolean(state.testGrades.reading);
+        state.frozenAnswers.listening = null;
+        saveSession();
+        submitted = true;
+        elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
+        showNotice(serverGradingMode
+          ? (readingFirst?'Đã nhận bài Listening. Hãy tiếp tục Writing.':'Đã nhận bài Listening.')
+          : 'Bản demo: Listening đã được lưu. Bạn có thể tiếp tục Reading.', 'success');
+        setStage(readingFirst?'writing-prep':'listening-saved');
+        return;
+      }
+      const response = await apiRequest(`/api/term-tests/${testConfig.slug}/listening`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classCode,
+          studentRef: state.studentRef,
+          clientSubmissionId: state.clientSubmissionId,
+          examSessionToken: state.examSessionToken || undefined,
+          answers
+        })
+      });
+      state.attemptToken = response.attemptToken;
+      state.studentName = response.studentName;
+      state.completed = Boolean(response.completed);
+      state.frozenAnswers.listening = null;
+      saveSession();
+      submitted = true;
+      elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
+      showNotice(portalNotice(response.portalSyncStatus, state.completed), ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
+      if (state.completed && writingConfig && !state.writingSubmitted) {
+        setStage(state.writingStarted ? 'writing' : 'writing-prep');
+      } else {
+        setStage(state.completed ? 'result-ready' : 'listening-saved');
+      }
+    } catch (error) {
+      queuedSubmission = Boolean(error.offlineQueued);
+      if (queuedSubmission && window.TERM_TEST_BOOTSTRAP?.offlinePermit) {
+        state.pendingSections.listening = true;
+        state.frozenAnswers.listening = {...answers};
+        saveSession();
+        elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
+        setStage(readingFirst ? 'writing-prep' : 'listening-saved');
+      }
+      showNotice(error.offlineQueued
+        ? (error.submissionHold ? error.message : pendingSectionNotice('listening'))
+        : automatic
+        ? `Hết giờ nhưng chưa thể nộp Listening: ${error.message}. Bài đã khóa và hệ thống sẽ tự thử lại.`
+        : `Không thể lưu Listening: ${error.message}`, 'error');
+    } finally {
+      delete elements.listeningView.dataset.listeningSubmitting;
+      if (!submitted && isSectionExpired('listening')) {
+        elements.listeningView.dataset.listeningTimeExpired = 'true';
+        state.frozenAnswers.listening ||= { ...answers };
+        saveSession();
+      } else if (!automatic && !submitted && !queuedSubmission) {
+        setAnswerControlsLocked('listening', false);
+      }
+      setBusy(elements.submitListening, false, 'Đang lưu Listening...', 'Nộp bài Listening');
+    }
+  });
+
+  async function startOrResumeReading(button) {
+    setBusy(button, true, 'Đang mở Reading...', button.dataset.normalText || button.textContent);
+    try {
+      if (demoMode === 'exam') {
+        state.readingDeadlineAt = new Date(Date.now() + (Number(testConfig.reading.durationMinutes) || 40) * 60_000).toISOString();
+        state.serverTimeOffsetMs = 0;
+        saveSession();
+        elements.readingStudentName.textContent = state.studentName;
+        hideNotice();
+        setStage('reading');
+        return;
+      }
+      const response = await apiRequest(`/api/term-tests/${testConfig.slug}/reading/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptToken: state.attemptToken })
+      });
+      state.readingDeadlineAt = response.readingDeadlineAt;
+      state.serverTimeOffsetMs = Date.parse(response.serverNow) - Date.now();
+      saveSession();
+      elements.readingStudentName.textContent = state.studentName;
+      hideNotice();
+      setStage('reading');
+    } catch (error) {
+      showNotice(`Chưa thể mở Reading: ${error.message}`, 'error');
+    } finally {
+      setBusy(button, false, 'Đang mở Reading...', button.dataset.normalText || 'Bắt đầu bài Reading');
+    }
+  }
+
+  elements.startReading.dataset.normalText = 'Bắt đầu bài Reading';
+  elements.continueReadingFromResult.dataset.normalText = 'Tiếp tục làm Reading';
+  elements.startReading.addEventListener('click', () => startOrResumeReading(elements.startReading));
+  elements.continueReadingFromResult.addEventListener('click', () => startOrResumeReading(elements.continueReadingFromResult));
+
+  elements.readingView.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (elements.readingView.dataset.readingSubmitting === 'true' || state.testGrades?.reading) return;
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
+    const automatic = event.submitter?.dataset.autoSubmit === 'true'
+      || elements.readingView.dataset.readingTimeExpired === 'true';
+    let answers = state.frozenAnswers.reading || collectAnswers(elements.readingQuestions);
+    if (automatic && !state.frozenAnswers.reading) {
+      state.frozenAnswers.reading = Object.freeze({ ...answers });
+      answers = state.frozenAnswers.reading;
+    }
+    const answered = updateAnswerCount('reading');
+    if (!automatic && !confirmIncomplete(answered, 'Reading')) return;
+    elements.readingView.dataset.readingSubmitting = 'true';
+    state.drafts.reading = answers;
+    saveSession();
+    setAnswerControlsLocked('reading', true);
+    setBusy(elements.submitReading, true, 'Đang lưu và chấm...', 'Nộp bài Reading');
+    if (automatic) {
+      showNotice(`Đã hết ${Number(testConfig.reading.durationMinutes) || 40} phút. Hệ thống đang tự thu và chấm bài Reading...`);
+    }
+    let submitted = false, queuedSubmission = false;
+    try {
+      if (demoMode === 'exam') {
+        if (serverGradingMode) {
+          const grade = await submitSection('reading', answers, automatic);
+          state.testGrades.reading = grade.section;
+        }
+        state.completed = !readingFirst;
+        state.frozenAnswers.reading = null;
+        saveSession();
+        submitted = true;
+        elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
+        showNotice(serverGradingMode
+          ? (readingFirst?'Đã nhận bài Reading. Hãy tiếp tục Listening.':'Đã nhận bài Reading. Hãy tiếp tục phần Writing.')
+          : 'Bản demo: Reading đã được lưu. Kết quả sẽ mở sau Writing.', 'success');
+        setStage(readingFirst?'listening':'writing-prep');
+        return;
+      }
+      const response = await apiRequest(`/api/term-tests/${testConfig.slug}/reading`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptToken: state.attemptToken, answers })
+      });
+      state.completed = true;
+      state.frozenAnswers.reading = null;
+      saveSession();
+      submitted = true;
+      elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
+      if (writingConfig) {
+        setStage('writing-prep');
+        const portalMessage = portalNotice(response.portalSyncStatus, true);
+        showNotice(`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
+      } else {
+        showNotice(portalNotice(response.portalSyncStatus, true), ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
+        setStage('result-ready');
+        if (automatic) await loadResult(elements.viewResult);
+      }
+    } catch (error) {
+      queuedSubmission = Boolean(error.offlineQueued);
+      if (queuedSubmission && window.TERM_TEST_BOOTSTRAP?.offlinePermit) {
+        state.pendingSections.reading = true;
+        state.frozenAnswers.reading = {...answers};
+        saveSession();
+        elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
+        setStage(readingFirst ? 'listening' : 'writing-prep');
+      }
+      showNotice(error.offlineQueued
+        ? (error.submissionHold ? error.message : pendingSectionNotice('reading'))
+        : automatic
+        ? `Hết giờ nhưng chưa thể nộp Reading: ${error.message}. Hệ thống sẽ tự thử lại; không làm mới trang.`
+        : `Không thể lưu Reading: ${error.message}`, 'error');
+    } finally {
+      delete elements.readingView.dataset.readingSubmitting;
+      if (!submitted && isSectionExpired('reading')) {
+        elements.readingView.dataset.readingTimeExpired = 'true';
+        state.frozenAnswers.reading ||= { ...answers };
+        saveSession();
+      } else if (!automatic && !submitted) {
+        setAnswerControlsLocked('reading', false);
+      }
+      setBusy(elements.submitReading, false, 'Đang lưu và chấm...', 'Nộp bài Reading');
+    }
+  });
+
+  if (serverGradingMode && window.SUBSTITUTE_OFFLINE) {
+    let replaying=false,retryInterruptionTimer=0;
+    const retryPendingSection = async () => {
+      if (!navigator.onLine || window.SUBSTITUTE_STATE.blocked || replaying) return;
+      replaying=true;
+      try{
+      if(listeningContinuity&&!readingFirst)await window.SUBSTITUTE_EXAM.flushListeningOutcome();
+      let pending;
+      try {
+        pending=await window.SUBSTITUTE_OFFLINE.pendingSections();
+        if(listeningContinuity&&state.pendingSections.listening&&!pending.some(item=>item.skill==='listening')){
+          const outcome=await window.SUBSTITUTE_OFFLINE.listeningOutcome();
+          if(outcome.submission)pending=[outcome.submission,...pending];
+        }
+      }catch{return;}
+      const skill = state.stage === 'reading' ? 'reading' : state.stage === 'listening' ? 'listening' : '';
+      for (const item of pending) {
+        if(item.skill===skill && !state.pendingSections[item.skill]){
+          const button = skill === 'reading' ? elements.submitReading : elements.submitListening;
+          if (!button || button.disabled) return;
+          button.dataset.retrySubmission = 'true';button.click();delete button.dataset.retrySubmission;
+          return;
+        }
+        try {
+          const receipt=await submitSection(item.skill,item.answers);
+          if(receipt.persisted){
+            state.testGrades[item.skill]=receipt.section;
+            delete state.pendingSections[item.skill];
+            saveSession();
+            renderHandoff();
+            if (!Object.values(state.pendingSections).some(Boolean)
+              && elements.notice.textContent === pendingSectionNotice(item.skill)) {
+              showNotice(`Bài ${sectionLabel(item.skill)} đã được máy chủ xác nhận.`, 'success');
+            }
+          }
+        } catch (error) {
+          if (!item.recovery || window.SUBSTITUTE_STATE.blocked) return;
+          if(error.submissionHold)showNotice(error.message, 'error');
+        }
+      }
+      if(listeningContinuity&&readingFirst)await window.SUBSTITUTE_EXAM.flushListeningOutcome();
+      if(state.stage==='writing'&&!state.writingSubmitted&&!writingSubmission.busy){
+        let writing;try{writing=sealedSubmissions?await window.SUBSTITUTE_OFFLINE.writingRecord():await window.SUBSTITUTE_OFFLINE.pendingWriting();}catch{return;}
+        if(writing&&!elements.submitWriting.disabled){
+          elements.submitWriting.dataset.retrySubmission='true';elements.submitWriting.click();
+          delete elements.submitWriting.dataset.retrySubmission;
+        }
+      }
+      }catch(error){
+        if(!error.accessDenied&&listeningContinuity){
+          clearTimeout(retryInterruptionTimer);
+          retryInterruptionTimer=setTimeout(retryPendingSection,15_000);
+        }
+      }finally{replaying=false;}
+    };
+    window.SUBSTITUTE_SYNC_PENDING=retryPendingSection;
+    window.addEventListener('online', retryPendingSection);
+    window.setTimeout(retryPendingSection, 1500);
+  }
+
+  elements.viewResult.dataset.normalText = 'Xem kết quả';
+  elements.viewResult.addEventListener('click', () => loadResult(elements.viewResult));
+
+  if (writingConfig) {
+    elements.startWriting.addEventListener('click', async () => {
+      const wasStarted = state.writingStarted;
+      state.writingStarted = true;
+      if (demoMode === 'exam') {
+        state.writingDeadlineAt = new Date(Date.now() + (Number(testConfig.writing?.durationMinutes) || 55) * 60_000).toISOString();
+        state.serverTimeOffsetMs = 0;
+      }
+      saveSession();
+      setBusy(elements.startWriting, true, 'Đang mở Writing...', 'Bắt đầu Writing');
+      try {
+        await saveWritingToServer('start');
+        hideNotice();
+        setStage('writing');
+      } catch (error) {
+        state.writingStarted = wasStarted;
+        saveSession();
+        showNotice(`Chưa thể bắt đầu Writing: ${error.message}`, 'error');
+      } finally {
+        setBusy(elements.startWriting, false, 'Đang mở Writing...', 'Bắt đầu Writing');
+      }
+    });
+
+    elements.writingView.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (writingSubmission.busy || state.writingSubmitted) { await writingSubmission.inspect(); return; }
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
+      const automatic = event.submitter?.dataset.autoSubmit === 'true'
+        || elements.writingView.dataset.writingTimeExpired === 'true';
+      const belowMinimum = Array.from(writingConfig.tasks || []).map(task => ({
+        label: task.label,
+        words: countWords(state.drafts.writing[task.id]),
+        minimum: task.minimumWords
+      })).filter(task => task.words < task.minimum);
+      if (!automatic && belowMinimum.length) {
+        const summary = belowMinimum.map(task => `${task.label}: ${task.words}/${task.minimum} từ`).join('\n');
+        if (!((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${summary}\n\nBạn vẫn muốn nộp bài Writing?`)) return;
+      }
+
+      if (serverGradingMode) ensureValidAttemptToken();
+      const writingOwner = writingSubmission.begin();
+      if (writingOwner === null) return;
+      try {
+        if (demoMode) {
+          if (serverGradingMode) {
+            try {
+              ensureValidAttemptToken();
+              const writingPayload={
+                classCode,studentRef:state.studentRef,attemptToken:state.attemptToken,
+                listeningAnswers:state.drafts.listening,readingAnswers:state.drafts.reading,
+                outline:state.drafts.writing.outline,task1:state.drafts.writing.task1,task2:state.drafts.writing.task2
+              };
+              if(sealedSubmissions){
+                const offline=window.SUBSTITUTE_OFFLINE;
+                if(!offline)throw new Error('Không thể lưu bản chốt trên thiết bị. Hãy tải bài để đối soát.');
+                const clock=window.SUBSTITUTE_EXAM.clockIso(window.TERM_TEST_BOOTSTRAP);
+                const row=await offline.queueWriting(writingPayload,{
+                  operationId:crypto.randomUUID(),revision:state.writingRevision,capturedAt:clock,automatic
+                });
+                if(!writingSubmission.current(writingOwner))return;
+                lockWritingSeal(row);
+                state.testGrades.writing=await submitSealedWriting(row);
+              }else{
+                let retainedWriting=null;
+                try{retainedWriting=await window.SUBSTITUTE_OFFLINE?.pendingWriting();}
+                catch{window.SUBSTITUTE_OFFLINE_STATUS='writing_queue_read_failed';}
+                const exactPayload=retainedWriting?.payload||writingPayload;
+                try{await window.SUBSTITUTE_OFFLINE?.queueWriting(exactPayload);}
+                catch{window.SUBSTITUTE_OFFLINE_STATUS='writing_queue_failed';}
+                if(listeningInterruption)await window.SUBSTITUTE_SYNC_PENDING?.();
+                state.testGrades.writing = await writingSubmission.submitOnline({
+                  payload:exactPayload,
+                  send: value => apiRequest('/api/test/writing', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)}),
+                  read: value => apiRequest('/api/test/writing/status', {method:'POST',headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({classCode:value.classCode,studentRef:value.studentRef,attemptToken:value.attemptToken,promptVersion:value.promptVersion})})
+                });
+                try{await window.SUBSTITUTE_OFFLINE?.acknowledgeWriting(state.testGrades.writing);}
+                catch{window.SUBSTITUTE_OFFLINE_STATUS='writing_receipt_cache_failed';}
+              }
+              if (!writingSubmission.current(writingOwner)) return;
+            } catch (error) {
+              if (!writingSubmission.current(writingOwner)) return;
+              if (state.writingSubmitted) { writingSubmission.readUnavailable(); await writingSubmission.inspect(); return; }
+              showNotice(error.submissionHold?error.message
+                : `Bài còn trên trang và đang chờ biên nhận. Bấm Tải bài để lưu một bản. ${error.message}`, 'error');
+              return;
+            }
+          }
+          state.writingSubmitted = true;
+          saveSession();
+          if(sealedSubmissions)elements.writingView.dispatchEvent(new CustomEvent('term-test:writing-submitted'));
+          renderResult(buildDemoPayload('complete'));
+          showNotice(serverGradingMode
+            ? writingSubmission.message()
+            : 'Bản demo: Writing đã nộp; kết quả Listening và Reading đã được mở.', 'success');
+          setStage('result');
+          if (serverGradingMode) scheduleWritingGradingRefresh();
+          return;
+        }
+
+        window.clearTimeout(writingSaveTimer);
+        window.clearTimeout(writingRetryTimer);
+        elements.writingView.dataset.writingSubmitting = 'true';
+        setBusy(elements.submitWriting, true, 'Đang lưu và nộp...', 'Nộp bài');
+        for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = true;
+        if (automatic) showNotice(`Đã hết ${writingConfig.totalMinutes || 30} phút. Hệ thống đang tự lưu và thu bài Writing...`);
+        try {
+          const saved = await saveWritingToServer('submit');
+          if (!writingSubmission.current(writingOwner)) return;
+          if (!saved.writing?.submitted) throw new Error('Máy chủ chưa xác nhận bài Writing đã được nộp.');
+          state.writingSubmitted = true;
+          state.writingDirty = false;
+          saveSession();
+          elements.writingView.dispatchEvent(new CustomEvent('term-test:writing-submitted'));
+          setStage('result-ready');
+          showNotice(saved.writing?.accepted === false
+            ? 'Hệ thống đã chốt bản lưu đúng hạn. Bản khác trên máy được giữ trong mục phục hồi.'
+            : automatic
+            ? `Đã hết ${writingConfig.totalMinutes || 30} phút và hệ thống đã thu bài Writing. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.`
+            : 'Đã nộp Writing thành công. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.', 'success');
+          await loadResult(elements.viewResult);
+      } catch (error) {
+        if (!writingSubmission.current(writingOwner)) return;
+        if (state.writingSubmitted) { writingSubmission.readUnavailable(); await writingSubmission.inspect(); return; }
+        showNotice(automatic
+          ? `Hết giờ nhưng chưa thể nộp Writing: ${error.message}. Bài đã được khóa và hệ thống sẽ tự thử lại; không làm mới trang.`
+          : `Không thể nộp Writing: ${error.message}. Bài vẫn được giữ trên máy để bạn thử lại.`, 'error');
+        setWritingSaveStatus(automatic
+          ? 'Hết giờ · bài đã khóa · hệ thống đang chờ thử nộp lại'
+          : 'Chưa nộp được · bài vẫn được giữ trên máy');
+      } finally {
+        delete elements.writingView.dataset.writingSubmitting;
+        const timeExpired = elements.writingView.dataset.writingTimeExpired === 'true';
+        for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = timeExpired;
+        setBusy(elements.submitWriting, false, 'Đang lưu và nộp...', 'Nộp bài');
+      }
+      } catch (error) {
+        if (!writingSubmission.current(writingOwner)) return;
+        if (state.writingSubmitted) {
+          writingSubmission.readUnavailable();
+          showNotice('Bài Writing đã được nhận. Hiện chưa mở được kết quả mới; bạn không cần nộp lại.', '');
+        } else {
+          showNotice(`Chưa xác nhận được trạng thái nộp Writing: ${error.message}. Bản đã gửi vẫn được giữ.`, 'error');
+        }
+      } finally {
+        writingSubmission.end(writingOwner);
+        if (writingSubmission.current(writingOwner) && writingSubmission.pending() && !state.writingSubmitted) {
+          for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = true;
+        }
+      }
+    });
+  }
+
+  function makeDemoSection(skill, correct, total) {
+    const types = skill === 'Listening'
+      ? ['Form completion', 'Sentence completion', 'Multiple choice', 'Map labelling']
+      : ['True / False / Not Given', 'Short answer', 'Matching headings', 'Yes / No / Not Given'];
+    return {
+      correct,
+      total,
+      answered: total,
+      details: Array.from({ length: total }, (_, index) => ({
+        number: index + 1,
+        studentAnswer: index < correct ? 'Đáp án mẫu' : 'Phương án khác',
+        correctAnswer: 'Đáp án minh họa',
+        result: index < correct ? 'correct' : 'incorrect'
+      })),
+      typeStats: types.map((type, index) => {
+        const base = Math.floor(total / types.length);
+        const typeTotal = base + (index < total % types.length ? 1 : 0);
+        const typeCorrect = Math.max(0, Math.min(typeTotal, Math.round(correct * typeTotal / total)));
+        return { type, correct: typeCorrect, total: typeTotal, percentage: typeCorrect / typeTotal };
+      })
+    };
+  }
+
+  function pendingSection(total){return {correct:null,total,details:[],typeStats:[]};}
+  function sectionScore(section){return section?.correct == null ? 'Chờ kết quả' : `${section.correct}/${section.total} câu đúng`;}
+  function buildDemoPayload(mode) {
+    const listening = state.listeningInterrupted ? null : serverGradingMode
+      ? state.testGrades.listening || pendingSection(40)
+      : makeDemoSection('Listening', 31, 40);
+    const reading = mode === 'complete'
+      ? serverGradingMode
+        ? state.testGrades.reading || pendingSection(testConfig.reading.totalQuestions)
+        : makeDemoSection('Reading', 30, testConfig.reading.totalQuestions)
+      : null;
+    const mergedStats = new Map();
+    for (const stat of [...(listening?.typeStats||[]), ...(reading?.typeStats || [])]) {
+      const current = mergedStats.get(stat.type) || { type: stat.type, correct: 0, total: 0 };
+      current.correct += stat.correct;
+      current.total += stat.total;
+      mergedStats.set(stat.type, current);
+    }
+    const typeStats = [...mergedStats.values()].map(stat => ({
+      ...stat,
+      percentage: stat.total ? stat.correct / stat.total : 0
+    }));
+    const sorted = [...typeStats].sort((left, right) => right.percentage - left.percentage);
+    const demoWriting = mode === 'complete' && serverGradingMode ? {
+      task1: state.drafts.writing.task1,
+      task2: state.drafts.writing.task2,
+      started: true,
+      submitted: true,
+      grading: state.testGrades.writing?.grading || {
+        status: 'processing',
+        ready: false,
+        taskStates: { task1: 'processing' }
+      }
+    } : mode === 'complete' ? {
+      task1: state.drafts.writing.task1,
+      task2: state.drafts.writing.task2,
+      started: true,
+      submitted: true,
+      grading: {
+        status: 'ready',
+        ready: true,
+        task1Score: 7,
+        writingScore: 7,
+        taskStates: { task1: 'complete' },
+        tasks: [
+          {
+            taskNumber: 1,
+            taskScore: 7,
+            wordCount: countWords(state.drafts.writing.task1),
+            criteria: ['TA', 'CC', 'LR', 'GRA'].map(code => ({
+              code,
+              name: criterionTitle(code, 1),
+              bandScore: 7,
+              feedback: `Nhận xét minh họa cho tiêu chí ${criterionTitle(code, 1)}.`,
+              components: [{
+                code: `${code.toLowerCase()}_demo`,
+                label: 'Nhận xét theo khía cạnh',
+                summary: 'Điểm chính trong bài làm.',
+                feedback: 'Gợi ý cụ thể để cải thiện ở lần viết tiếp theo.'
+              }]
+            }))
+          }
+        ]
+      }
+    } : undefined;
+    return {
+      studentName: state.studentName || 'Học viên Demo',
+      className: state.className || classCode || 'CODEXDEMO56SUB2',
+      completed: Boolean(reading),
+      portalSyncStatus: serverGradingMode ? state.testGrades.writing?.portalSync?.status || 'not_applicable' : 'synced',
+      writing: demoWriting,
+      result: {
+        testTitle: serverGradingMode
+          ? 'Substitute Test 2 · Khóa 56 · Backend test'
+          : 'Substitute Test 2 · Khóa 56 · Bản minh họa',
+        listening,
+        reading,
+        summary: {
+          totalCorrect: !listening || listening.correct == null || (reading && reading.correct == null) ? null : listening.correct + (reading?.correct || 0),
+          totalQuestions: (listening?.total || 0) + (reading?.total || 0),
+          averageBand: null
+        },
+        typeStats: sorted,
+        performance: {
+          best: sorted.slice(0, 1),
+          needsImprovement: sorted.slice(-1),
+          other: sorted.slice(1, -1)
+        }
+      }
+    };
+  }
+
+  async function initialize() {
+    elements.listeningTitle.textContent = testConfig.listening.title;
+    elements.readingTitle.textContent = testConfig.reading.title;
+    appendInstructions(elements.listeningInstructions, testConfig.listening.description);
+    appendInstructions(elements.readingInstructions, testConfig.reading.description);
+    renderQuestionControls(testConfig.listening, elements.listeningQuestions, 'listening');
+    renderQuestionControls(testConfig.reading, elements.readingQuestions, 'reading');
+    updateAnswerCount('listening');
+    updateAnswerCount('reading');
+    setupWritingExam();
+    // Khôi phục cả cảnh báo và bản sao khi đọc server lỗi hoặc trả bản cũ.
+    renderWritingConflict(); renderWritingRecovery();
+
+    if (demoMode) {
+      if ((demoMode === 'writing-prep' || demoMode === 'writing') && writingConfig) {
+        state.studentName = 'Học viên demo';
+        state.completed = true;
+        state.writingStarted = demoMode === 'writing';
+        state.writingSubmitted = false;
+        showNotice(demoMode === 'writing'
+          ? 'Bản demo: học viên đang làm Writing; kết quả vẫn được giữ kín.'
+          : 'Bản demo: Reading đã được chấm và ghi Portal; học viên chuẩn bị vào Writing.', 'success');
+        setStage(demoMode === 'writing' ? 'writing' : 'writing-prep');
+        return;
+      }
+      if (demoMode === 'complete' && writingConfig) {
+        state.writingSubmitted = true;
+        state.drafts.writing.task1 = 'This is a sample Task 1 response. The live page preserves the student essay exactly as typed and provides a separate copy button for each task.';
+      }
+      if (demoMode === 'exam') {
+        const bootstrappedIdentity = Boolean(window.TERM_TEST_BOOTSTRAP && state.studentRef);
+        if (bootstrappedIdentity) {
+          state.studentName = state.studentName || 'Học viên Demo';
+          state.className = classCode || 'CODEXDEMO56SUB2';
+          state.examSessionToken = state.examSessionToken || 'local-demo-session';
+          state.roster = [{ ref: state.studentRef, name: state.studentName }];
+          elements.studentSelect.replaceChildren(new Option(state.studentName, state.studentRef));
+          elements.studentSelect.value = state.studentRef;
+        } else {
+          state.roster = [{ ref: 'demo-student', name: 'Học viên Demo' }];
+          state.studentRef = 'demo-student';
+          state.studentName = 'Học viên Demo';
+          state.className = classCode || 'CODEXDEMO56SUB2';
+          state.examSessionToken = 'demo-session';
+          elements.studentSelect.replaceChildren(new Option(state.studentName, state.studentRef));
+          elements.studentSelect.value = state.studentRef;
+        }
+        if(sealedSubmissions&&window.SUBSTITUTE_OFFLINE){
+          try{
+            const saved=await window.SUBSTITUTE_OFFLINE.writingRecord();
+            if(saved?.recovery){
+              state.attemptToken=saved.payload.attemptToken;
+              state.writingStarted=true;
+              lockWritingSeal(saved);
+            }
+          }catch{window.SUBSTITUTE_OFFLINE_STATUS='writing_queue_read_failed';}
+        }
+        state.listeningInterrupted=Boolean(listeningInterruption);
+        const recoveredListening=window.TERM_TEST_BOOTSTRAP?.recoveredListeningSubmission;
+        if(listeningContinuity&&recoveredListening&&!state.testGrades.listening){
+          state.pendingSections.listening=true;
+          state.drafts.listening=recoveredListening.answers;
+          state.frozenAnswers.listening={...recoveredListening.answers};
+          saveSession();
+        }
+        if (serverGradingMode && state.writingSubmitted && (state.testGrades.listening||listeningInterruption) && state.testGrades.reading) {
+          renderResult(buildDemoPayload('complete'));
+          showNotice(state.testGrades.writing?.grading?.ready
+            ? 'Kết quả Writing đã được khôi phục.'
+            : 'Bài Writing đang được chấm; kết quả sẽ tự cập nhật khi hoàn tất.', 'success');
+          setStage('result');
+          scheduleWritingGradingRefresh();
+          return;
+        }
+        if(listeningInterruption){
+          if(state.listeningInterruptionConfirmed)nextAfterListeningInterruption();
+          else{setStage('listening');window.dispatchEvent(new Event('substitute:listening-resume-interrupted'));}
+          return;
+        }
+        if(serverGradingMode&&((readingFirst&&state.pendingSections.listening)||(!readingFirst&&state.pendingSections.reading))){
+          showNotice('Phần đã làm được giữ trên trình duyệt và đang chờ đồng bộ với máy chủ. Bạn có thể giữ nháp Writing.', 'success');
+          setStage(state.writingStarted?'writing':'writing-prep');return;
+        }
+        if (serverGradingMode && state.completed && state.testGrades.reading) {
+          showNotice('Backend test đã khôi phục bài Reading. Tiếp tục hoặc nộp Writing khi sẵn sàng.', 'success');
+          setStage(state.writingStarted ? 'writing' : 'writing-prep');
+          return;
+        }
+        if(listeningContinuity&&window.TERM_TEST_BOOTSTRAP?.continuityReview){setStage('listening');return;}
+        if(readingFirst){
+          if(state.testGrades.reading||state.pendingSections.reading){
+            showNotice('Backend test đã khôi phục bài Reading. Tiếp tục Listening từ vị trí đã nghe.', 'success');
+            setStage('listening');
+          }else{
+            elements.readingStudentName.textContent=state.studentName;
+            hideNotice();setStage('reading');
+          }
+          return;
+        }
+        if (serverGradingMode && (state.testGrades.listening||state.pendingSections.listening)) {
+          elements.readingStudentName.textContent = state.studentName;
+          showNotice('Backend test đã khôi phục điểm Listening đã nộp.', 'success');
+          setStage(state.readingDeadlineAt ? 'reading' : 'listening-saved');
+          return;
+        }
+        if (!state.listeningDeadlineAt && !window.TERM_TEST_BOOTSTRAP?.examSessionId) {
+          state.listeningDeadlineAt = new Date(Date.now() + (Number(testConfig.listening.durationSeconds) || 1848) * 1000).toISOString();
+        }
+        saveSession();
+        if (serverGradingMode) {
+          hideNotice();
+        } else {
+          hideNotice();
+        }
+        setStage('listening');
+        return;
+      }
+      if (demoMode === 'listening-only') state.writingSubmitted = false;
+      renderResult(buildDemoPayload(demoMode));
+      showNotice(demoMode === 'complete'
+        ? 'Bản demo: học viên đã hoàn thành Listening, Reading và Writing.'
+        : 'Bản demo: học viên mới nộp Listening; Reading chưa bị tính điểm.', 'success');
+      setStage('result');
+      return;
+    }
+
+    if (!/^[A-Z0-9_-]{2,32}$/.test(classCode)) {
+      elements.loadingView.hidden = true;
+      showNotice('Link chưa có mã lớp hợp lệ. Hãy dùng dạng ?class=IC2139.', 'error');
+      return;
+    }
+
+    try {
+      const roster = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
+      populateRoster(roster);
+      if (!state.roster.length) throw new Error('Lớp chưa có học viên trong hệ thống matching.');
+      if (state.attemptToken) {
+        try {
+          const resumed = await restoreAttemptFromServer();
+          if (writingConfig && state.completed && state.writingSubmitted && !resumed?.writing?.submitted) {
+            await saveWritingToServer('submit');
+          }
+        } catch (error) {
+          showNotice(`Chưa đọc được bản lưu trên hệ thống: ${error.message}. Hệ thống đang dùng bản giữ trên máy.`, 'error');
+        }
+      }
+      elements.readingStudentName.textContent = state.studentName;
+      if (state.completed && state.attemptToken) {
+        if (writingConfig && !state.writingSubmitted) {
+          setStage(state.writingStarted ? 'writing' : 'writing-prep');
+          if (state.writingStarted) hideNotice();
+          else showNotice('Bài Reading đã được ghi. Bắt đầu Writing khi bạn sẵn sàng.', 'success');
+          if (state.writingStarted && state.writingDirty) scheduleWritingSave(0);
+        } else {
+          setStage('result-ready');
+          showNotice('Lượt làm đã hoàn tất. Nhấn “Xem kết quả” để mở lại.', 'success');
+          if (writingConfig && state.writingSubmitted) await loadResult(elements.viewResult);
+        }
+      } else if (state.attemptToken) {
+        if (state.readingDeadlineAt) {
+          setStage('reading');
+          hideNotice();
+        } else {
+          setStage('listening-saved');
+          showNotice('Bài Listening đã được lưu. Bạn có thể tiếp tục Reading.', 'success');
+        }
+      } else {
+        setStage('listening');
+        hideNotice();
+      }
+    } catch (error) {
+      elements.loadingView.hidden = true;
+      showNotice(`Không thể mở bài test: ${error.message}`, 'error');
+    }
+  }
+
+
+  // Cảnh báo chỉ bảo vệ thao tác rời trang; việc lưu nháp và khóa bài vẫn do luồng hiện hành xử lý.
+  window.addEventListener('beforeunload', event => {
+    if (window.TERM_TEST_ALLOW_NAVIGATION || (demoMode && !serverGradingMode)) return;
+    const listeningActive = !listeningInterruption && !state.completed && !state.listeningSubmitted && !state.testGrades?.listening
+      && Boolean((state.examSessionToken && state.listeningDeadlineAt) || (serverGradingMode && state.listeningStartedAt));
+    const readingActive = !state.completed && !state.readingSubmitted && !state.testGrades?.reading
+      && Boolean(state.readingStartedAt || (state.attemptToken && state.readingDeadlineAt));
+    const writingActive = Boolean(state.writingStarted && !state.writingSubmitted);
+    const paperActive = !window.TERM_TEST_CONTENT && state.studentRef && !state.completed
+      && ['listening', 'reading'].includes(state.stage);
+    if (!(listeningActive || readingActive || writingActive || paperActive)) return;
+    event.preventDefault(); event.returnValue = true;
+  });
+  window.TERM_TEST_LEAVE_GUARD_READY = true;
+
+  initialize();
+  // Khi đóng tab, gửi đúng base đã biết; không ACK local hay tự vượt xung đột khi chưa có phản hồi.
+  window.addEventListener('pagehide', () => {
+    saveSession();
+    if (demoMode || !state.attemptToken || !state.writingDirty || state.writingSubmitted
+      || state.writingConflict || !validWritingRevision(state.writingServerRevision)) return;
+    fetch(appConfig.API_BASE_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({ route: '/api/term-tests/writing', payload: writingPayload('draft') }), keepalive: true
+    }).catch(() => { /* Bản local giữ nguyên để phục hồi khi mở lại. */ });
+  });
+
+})();
