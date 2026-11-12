@@ -70,7 +70,7 @@ export const ASSETS=[
   "../mini-test-lesson-5-computer-based/resilience-audio-status-v2.mjs",
   "../mini-test-lesson-5/offline.mjs",
   "../shared/app-term2-k67-recovery-v1.js",
-  "../shared/app-term2-k67-legacy-recovery-v1.js",
+  "../shared/app.js",
   "../shared/attempt-review.js",
   "../shared/audio-source-choice.js",
   "../shared/cbt-audio-download-status.css",
@@ -80,7 +80,7 @@ export const ASSETS=[
   "../shared/desktop-exam-guard.js",
   "../shared/exam-clock.js",
   "../shared/exam-order.js",
-  "../shared/section-submission-term2-k67-v1.mjs",
+  "../shared/section-submission.mjs",
   "../shared/styles.css",
   "../shared/teacher-audio-recovery.css",
   "../shared/teacher-audio-recovery.js",
@@ -180,8 +180,8 @@ export const ASSET_HASHES={
   "../mini-test-lesson-5-computer-based/journey.mjs": "e6bdb3be01b65f1acd43e40ab29e4806c7f3759860a17b5f8d0381a4ce6dae1e",
   "../mini-test-lesson-5-computer-based/resilience-audio-status-v2.mjs": "7c74293a558505055148bb239607dffc83a0883459084c7ec45489368cf5d964",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
-  "../shared/app-term2-k67-recovery-v1.js": "550baadc486315493a38da051334b737fd9c0d35ec3f73f9c74b3a1a9bae51e1",
-  "../shared/app-term2-k67-legacy-recovery-v1.js": "0505686dd18878f51ae7ef29c3b9b2245074c1fc8b059be6b7f99bce5ee50004",
+  "../shared/app-term2-k67-recovery-v1.js": "7f47c429e822eb741ed305ccb8744b051569eeb153698334b2674073647d1e32",
+  "../shared/app.js": "f3b62122a43c8912ff767e5f4d076098c48e527d8aa32aa9275ac3ce6feabdcb",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
   "../shared/cbt-audio-download-status.css": "4d62a08d3c3f93439ce977312feedecc3cfdaf5315fd9212bae7a6ca90a4a493",
@@ -191,7 +191,7 @@ export const ASSET_HASHES={
   "../shared/desktop-exam-guard.js": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460",
   "../shared/exam-clock.js": "54e54acbe25ceea6670cf96afb683d583430e088eac28a753a8f028775072fbd",
   "../shared/exam-order.js": "b8bfff8d4e8e16fd487db614423ec1e83230196695b7572b48ef284a3faebd88",
-  "../shared/section-submission-term2-k67-v1.mjs": "e60b3c241a9e74c615de5685d12088ce12faa2c0cfe97818d27a8867ba4bc7ff",
+  "../shared/section-submission.mjs": "f0e91d30ebe25e921c33e6f89ecb33cdf6f3cf8da0168301665f0d634faf6baf",
   "../shared/styles.css": "e19be7903218548bc254d0ceca072fa999dbf42a654585bf10e93dfafbc13ec5",
   "../shared/teacher-audio-recovery.css": "cc53a29792f4ada666cc5c440b1d544ae70f8d14e2910262b4465a4247d979b4",
   "../shared/teacher-audio-recovery.js": "feefd9156426976d8b642db0045da1a00107b9ab7934121083b67bbd9c4ce1d6",
@@ -210,7 +210,7 @@ export const ASSET_HASHES={
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-test-2/test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8",
   "audio-loader-audio-status-v1.js": "a7399bba30177f98a291033678c0cd4d41909b5ea499c162f1b15a4b9c0eead3",
-  "bootstrap-audio-status-v2.js": "12d0610b02db750deaab707f0347f98c5f3d058735c084cde97901e364d21701",
+  "bootstrap-audio-status-v2.js": "129dded9216b6e1f3b9999e133c215ce839778a495c0d62f53af78974ef9f4c8",
   "bootstrap-terms-cbt-audio-status-v2.js": "acbff2c11dd79492ca17c211fd44fd2bbe37ce965dcfd6c9992d6da6ff43270e",
   "enhance-terms-cbt.js": "93841c658460d78061a6a6b2ff1807bc28e28138de383c7da5327bbc55b54197",
   "enhance.js": "b2fa19b00fb7f2615207a4b3a03deb8baae8d258a8d2abec26be39d3b3fc7883",
@@ -220,4 +220,4 @@ export const ASSET_HASHES={
   "offline-worker-audio-status-v2.js": "40cd4445d60bf60cbef329a4b3920cebda9d0c8f36038b12a0f48d720feca1be",
   "styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3"
 };
-export const ASSET_BUILD_ID="1dd862d05a842396765ddc01333e93e4dfb03ea0d990694ef3b5a3140f18dbca";
+export const ASSET_BUILD_ID="9a1b78a46e49d1b53ea3682689ae8ed1ebb1be0edd3af0e47fa4c71442636145";

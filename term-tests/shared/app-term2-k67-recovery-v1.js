@@ -1069,7 +1069,7 @@
     const owner = getOwner();
     const trace = (id, phase) => id && getOwner() === owner ? { operationId: id, phase } : undefined;
     const body = { ...JSON.parse(options.body || '{}'), ...(miniAnswerSheet ? { generation: miniGeneration } : {}) };
-    const { submitSection } = await import('../shared/section-submission-term2-k67-v1.mjs?v=20261023-v1&diagnostics=20261105-v2');
+    const { submitSection } = await import('../shared/section-submission.mjs?v=20261023-v1&diagnostics=20261105-v2');
     const data = await submitSection({ state, section, body, testSlug, owner, getOwner, operationId, save: saveSession,
       send: (value, id) => rawApiRequest(path, { ...options, body: JSON.stringify(value) }, trace(id, 'send')),
       read: async (value, id) => {
