@@ -250,7 +250,7 @@ export const ASSET_HASHES={
   "../k56-mini-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
-  "../k56-offline-shared/runtime-recovery-v1.mjs": "7cc7dc29ffe77848fe4dcd6a0e40fc3747232f46551c9f065f6403bc5742cdbc",
+  "../k56-offline-shared/runtime-recovery-v1.mjs": "a2177849e0e928cc43bbcc6fe5dec3c5a87e55480f873b1dd0c08ba1d7b6ffce",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
@@ -302,4 +302,4 @@ export const ASSET_HASHES={
   "offline.mjs": "5af4a7a82c7222456cee53a6e415fc31fdbf8f07b3bf1930fe6031d6c26f91da",
   "test-config.js": "0629f850b5571a83c272322c0d9ecc22bcda2dc5c48ecfe24af4600f0ad3d7ca"
 };
-export const ASSET_BUILD_ID="dd4a1c3892982b7b0512f1320224e6b816a298e9246cd2d36002fa3832ca5517";
+export const ASSET_BUILD_ID="52a2bb8a9b92a0cdbd817c2750af0dff2acda6d4ebcd29a1554233197ad872dc";
