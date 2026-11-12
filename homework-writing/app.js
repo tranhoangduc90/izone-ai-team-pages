@@ -1,14 +1,14 @@
 import runtime from './runtime-config.js?v=20261111-student-entry-r2';
 import {frontendConfiguration,createOnlineAccess} from './online-access.js?v=20261111-doc-entry';
 import {setupRichReview} from './rich-review.js';
-import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261111-review-polish';
+import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261112-clean-language';
 import {basicSubmissionError} from './submission-check.js';
 import {vietnameseWritingError} from './submission-language.js';
-import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261111-review-polish';
+import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261112-clean-language';
 import { setupLoginForm } from './login-form.js';
 import { draftKey, loadBackup, saveBackup, flushBackups, listBackups } from './drafts.js';
 import { setupFeedbackCards } from './feedback-cards.js';
-import { feedbackTabsHtml, setupFeedbackTabs, teacherCommentsHtml } from './feedback-tabs.js?v=20261111-review-polish';
+import { feedbackTabsHtml, setupFeedbackTabs, teacherCommentsHtml } from './feedback-tabs.js?v=20261112-clean-language';
 import {feedbackBlockHtml,feedbackInlineHtml,overallFeedback} from './feedback-format.js';
 import {setupSourceVersions} from './source-versions.js';
 import { setupTeacherComments } from './teacher-comments.js';
@@ -214,6 +214,7 @@ async function openStudent(id, { resultSubmissionId = null, fromDocs = false } =
   model = { id, kind, state, storageKey, revisionRound, text: kind==='revision'?initialRevisionText(state):server.text, baseRevision: server.revision,
     confirmedOutline,
     resultSubmissionId: resultRoute,
+    showContentOnEntry:fromDocs&&compact&&showResult?.result.languageOutcome==='no_sentence_changes',
     handoutMode:showResult?'feedback':model?.id===id?model.handoutMode:'handout',
     lastSavedText: server.text, history: [], pendingSave: null, pendingSubmit: null, conflict: null, saving: null, backupError, otherBackups };
   if (backup) {
@@ -272,7 +273,11 @@ function renderStudent() {
   if (state.publication) {
     setupPublicationHistory($('#app'),state,'student',state.submission.id,generation);
     const feedbackKey = 'hw5667:feedback-card:' + JSON.stringify([me.id, model.id, state.publication.id, state.publication.review_version]);
-    setupFeedbackTabs($('#approved-feedback'), { storageKey: feedbackKey + ':tab' });
+    setupFeedbackTabs($('#approved-feedback'), {
+      storageKey: feedbackKey + ':tab',
+      initialTab: model.showContentOnEntry ? 'overall' : undefined
+    });
+    model.showContentOnEntry=false;
     if(lesson3Experience(a))mountIntegratedReview($('#approved-feedback'),{
       result:state.publication.result,storageKey:feedbackKey,
       guideStudent:true,revisionTarget:model.kind==='revision'&&!locked()?$('#essay'):null

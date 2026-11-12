@@ -14,6 +14,7 @@ export function mountIntegratedReview(root,{result,editable=false,storageKey,gui
   const overall=root?.querySelector('[data-feedback-panel="overall"]');
   const sentences=root?.querySelector('[data-feedback-panel="sentences"]');
   if(!overall||!sentences)return;
+  const cleanLanguage=guideStudent&&!editable&&result.languageOutcome==='no_sentence_changes';
   const canonical=languageCards(result);
   const sources=new Map(canonical.map(card=>[card.id,card]));
   const defaults=canonical.map(card=>({id:card.id,sourceId:card.id}));
@@ -64,7 +65,7 @@ export function mountIntegratedReview(root,{result,editable=false,storageKey,gui
     event.preventDefault();
     goToRevision();
   });
-  if(guideStudent&&cardList().length){
+  if(guideStudent&&!cleanLanguage&&cardList().length){
     appendNextStep(overall,'Chuyển sang Sửa từng câu',()=>{
       root.querySelector('[data-feedback-tab="sentences"]').click();
       sentences.focus({preventScroll:true});
@@ -74,6 +75,20 @@ export function mountIntegratedReview(root,{result,editable=false,storageKey,gui
   function renderCard(focus=false){
     closeMenu();cardEditors.splice(0).forEach(editor=>editor.destroy());
     const list=cardList();
+    if(cleanLanguage){
+      count?.remove();
+      sentences.innerHTML='<section class="integrated-editor-shell"><h3>Chúc mừng em!</h3>'+
+        '<div class="ProseMirror clean-language-summary"><p><strong>Phần diễn đạt của em rất ổn. Em không cần sửa câu nào.</strong></p>'+
+        '<p>Hãy xem nhận xét của GV về cách trả lời đề và mạch ý trong phần mở bài.</p></div></section>';
+      appendNextStep(sentences.querySelector('.clean-language-summary'),'Xem nhận xét TR/CC',()=>{
+        root.querySelector('[data-feedback-tab="overall"]').click();
+        const heading=overall.querySelector('h3');
+        heading.tabIndex=-1;
+        heading.focus({preventScroll:true});
+        heading.scrollIntoView({block:'nearest'});
+      });
+      return;
+    }
     if(count)count.textContent=list.length;
     if(!list.length){sentences.innerHTML='<p class="empty-inline">Không còn thẻ nhận xét từng câu trong bản này.</p>';placeActions();return;}
     index=Math.min(list.length-1,Math.max(0,index));
