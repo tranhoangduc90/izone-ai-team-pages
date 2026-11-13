@@ -14,7 +14,7 @@ async function until(check,message,timeout=3000){const start=performance.now();w
 
 async function fixture({libraryUnavailable=false,liveAllowed=true,questionResponses=false}={}){
   let count=14,revision=1,unavailable=false,breakNextRead=false,writeCount=0,draftText='Bản đầu';const streams=new Set(),requests=[];
-  const readViews=[];let responseReads=0;
+  const readViews=[];let responseReads=0,laggingSummary=null;
   const students=()=>Array.from({length:17},(_,i)=>({studentRef:uid(100+i),name:`Học viên ${String(i+1).padStart(2,'0')}`,
     submissionId:i<count?uid(200+i):null,checkpoints:i<count?[{blockId:block}]:[],sessionComment:null,portalSync:null}));
   const definition={title:'Phiếu kiểm cập nhật',blocks:[{blockId:block,checkpoint:1,title:'Ôn tập',items:[
@@ -45,7 +45,7 @@ async function fixture({libraryUnavailable=false,liveAllowed=true,questionRespon
             res.writeHead(200,{'Content-Type':'application/json','Content-Length':'1000'});
             res.write('{"ok":true,"update":');if(mode!=='stall')setTimeout(()=>res.destroy(),30);return;
           }
-          return unavailable?json({ok:false,message:'Nguồn cập nhật tạm lỗi'},503):json({ok:true,update:{assignmentId,revision:String(revision),generatedAt:new Date().toISOString(),full:true,changes:[],dashboard:dashboard(),...(view!=='overview'?{live:live()}:{}),...(view!=='roster'?{analytics:analytics()}: {})}});
+          return unavailable?json({ok:false,message:'Nguồn cập nhật tạm lỗi'},503):json({ok:true,update:{assignmentId,revision:String(revision),generatedAt:new Date().toISOString(),full:true,changes:[],dashboard:dashboard(),...(view!=='overview'?{live:live()}:{}),...(view!=='roster'?{analytics:laggingSummary||analytics()}: {})}});
         }
         if(path==='/teacher/options')return json({ok:true,reviewer:{name:'Giảng viên mẫu',email:'teacher@example.test'},capabilities:{liveUpdates:true,questionResponses},
           classes:[{class_id:'1294',class_name:'IC2305',class_status:'on_going'},{class_id:'1252',class_name:'IC2264',class_status:'on_going'},{class_id:'1001',class_name:'Lớp cũ',class_status:'completed'}],
@@ -53,10 +53,11 @@ async function fixture({libraryUnavailable=false,liveAllowed=true,questionRespon
         if(path==='/teacher/dashboard')return json({ok:true,dashboard:dashboard()});
         if(path==='/teacher/live-drafts')return json({ok:true,live:live()});
         if(path==='/teacher/session-comments/editor')return json({ok:true,classId:u.searchParams.get('classId'),studentRef:u.searchParams.get('studentRef'),sessionNumber:Number(u.searchParams.get('sessionNumber')),comment:null,draft:null});
-        if(path.endsWith('/question-analytics')){readViews.push(u.searchParams.get('view')||'full');return json({ok:true,analytics:analytics()});}
+        if(path.endsWith('/question-analytics')){readViews.push(u.searchParams.get('view')||'full');return json({ok:true,analytics:laggingSummary||analytics()});}
         if(path.endsWith('/responses')){
           responseReads++;
           const target=analytics().items.find(q=>path.endsWith('/'+q.itemVersionId+'/responses'));
+          laggingSummary=null;
           if(!target)return json({ok:false,error:'QUESTION_NOT_FOUND'},404);
           const rows=students().filter(s=>s.submissionId).map((s,i)=>({name:s.name,
             verdict:target.objective?(i<2?'incorrect':'correct'):'ungraded',answerState:'answered',
@@ -81,9 +82,28 @@ async function fixture({libraryUnavailable=false,liveAllowed=true,questionRespon
   await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
   return {page,origin,requests,readViews,errors,get responseReads(){return responseReads;},get writes(){return writeCount;},advance(value){count=value;revision++;draftText='Bản mới '+value;for(const stream of streams)stream.write(`event: change\ndata: ${JSON.stringify({assignmentId,revision:String(revision)})}\n\n`);},
     fail(value){unavailable=value;if(value)for(const stream of streams)stream.destroy();},
+    commitWhileSummaryIsOpen(){laggingSummary=analytics();count++;revision++;},
     breakNextRead(mode='truncated'){breakNextRead=mode;},
     async close(){await context.close();await browser.close();for(const stream of streams)stream.destroy();server.closeAllConnections();await new Promise(done=>server.close(done));}};
 }
+
+test('Tổng quan cũ hơn API chi tiết: đối chiếu lại câu đang mở mà không đợi sự kiện mới',{timeout:35000},async()=>{
+  const f=await fixture({questionResponses:true,liveAllowed:false});
+  try{
+    await f.page.goto(f.origin+'/progress-log/teacher-thuy.html#assignment='+assignmentId);
+    await f.page.locator('.thuy-roster tbody tr').first().waitFor();
+    await f.page.locator('[data-thuy-mode=results]').click();
+    const open=f.page.getByRole('button',{name:'Xem câu trả lời',exact:true});
+    await open.waitFor();
+    f.commitWhileSummaryIsOpen();
+    await open.click();
+    await until(async()=>await f.page.locator('.thuy-responses-table tbody tr').count()===15,
+      'Danh sách bị đứng khi chi tiết mới hơn thống kê',5500);
+    assert.equal(f.responseReads,2);
+    assert.equal(f.writes,0);
+    assert.deepEqual(f.errors,[]);
+  }finally{await f.close();}
+});
 
 test('Live: 14 → 15 bài cập nhật trong panel, giữ nháp/câu chọn; Làm mới cố định và phục hồi lỗi',{timeout:45000},async()=>{
   const f=await fixture();try{
@@ -205,15 +225,28 @@ for(const liveAllowed of [true,false]){
       await table.evaluate(el=>{window.savedResponseTable=el;el.focus();});
       for(let i=0;i<3;i++){
         const readCount=f.readViews.length;
+        const detailCount=f.responseReads;
         await f.page.locator('#refreshDashboardButton').evaluate(el=>el.click());
         await until(()=>f.readViews.length>readCount,'Refresh không đọc thống kê');
+        await until(()=>f.responseReads===detailCount+1,'Làm mới phải đối chiếu lại câu đang xem');
         await f.page.waitForTimeout(130);
       }
-      assert.equal(f.responseReads,1);
+      assert.equal(f.responseReads,4);
       assert.equal(await table.evaluate(el=>el===window.savedResponseTable&&el===document.activeElement),true);
+      assert.equal(await table.evaluate(el=>{
+        const range=document.createRange();
+        range.selectNodeContents(el.querySelector('tbody .thuy-response-value'));
+        const selection=document.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        return !selection.isCollapsed;
+      }),true);
       f.advance(15);
-      if(!liveAllowed)await f.page.locator('#refreshDashboardButton').click();
-      await until(()=>f.responseReads===2,'Không đọc lại câu khi bài nộp đổi');
+      if(!liveAllowed)await f.page.locator('#refreshDashboardButton').evaluate(el=>el.click());
+      const newAnswers=f.page.getByRole('button',{name:'Xem câu trả lời mới',exact:true});
+      await newAnswers.waitFor();
+      assert.equal(await table.evaluate(el=>el===window.savedResponseTable&&!document.getSelection().isCollapsed),true);
+      await newAnswers.click();
       await until(async()=>(await f.page.locator('.thuy-responses-status').textContent()).includes('15 đã chấm'),'Số liệu mới chưa khớp');
       assert.equal(await table.locator('tbody tr').count(),2);
       await f.page.locator('.thuy-question-select').filter({hasText:'Điều em đã học'}).click();

@@ -2,11 +2,12 @@
 import {questionPresentation} from './question-presentation.js?rev=20261022-parity-v1';
 import {questionReview} from './question-review.js?rev=20261030-the17-19-v1';
 const node=(tag,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
-import {createQuestionResponses} from './question-responses.js?rev=20261111-issue590';
+import {createQuestionResponses} from './question-responses.js?rev=20261114-response-sync';
 const views=new WeakMap();
 
 export function clearThuyAnalytics(root){views.get(root)?.responses.clear();}
-export function renderThuyAnalytics(root,analytics,{definition,readResponses}){
+export function refreshThuyResponses(root){views.get(root)?.responses.refresh();}
+export function renderThuyAnalytics(root,analytics,{definition,readResponses,syncResponses}){
   let view=views.get(root);
   if(!view||!view.header.isConnected||view.assignmentId!==analytics.assignmentId){
     view?.responses.clear();
@@ -29,7 +30,7 @@ export function renderThuyAnalytics(root,analytics,{definition,readResponses}){
     view.selected=id;root.dataset.selectedItem=id;
     const row=view.rows.get(id);
     if(row&&view.review.firstElementChild!==row.card)view.review.replaceChildren(row.card);
-    view.responses.select({assignmentId:analytics.assignmentId,formVersionId:analytics.formVersionId,item:row?.item,read:readResponses,open});
+    view.responses.select({assignmentId:analytics.assignmentId,formVersionId:analytics.formVersionId,item:row?.item,read:readResponses,sync:syncResponses,open});
     for(const [key,value]of view.rows){
       const pressed=String(key===id);
       if(value.choose.getAttribute('aria-pressed')!==pressed)value.choose.setAttribute('aria-pressed',pressed);

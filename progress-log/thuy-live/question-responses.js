@@ -55,14 +55,39 @@ export function createQuestionResponses() {
   let requested = false;
   let renderedVersion = null;
   let filter = 'all';
+  let reconcile;
+  let retryTimer;
+  let retries = 0;
+  let pendingDetail = null;
+  let renderedStatus = '';
+  const update = node('button', 'Xem câu trả lời mới', 'button secondary');
+  update.type = 'button';
+  update.hidden = true;
+  section.insertBefore(update, controls);
+  update.addEventListener('click', () => {
+    if (!pendingDetail || pendingDetail.responseVersion !== active?.version) return;
+    showTable(pendingDetail, true);
+    pendingDetail = null;
+    update.hidden = true;
+    renderedStatus = '';
+  });
+
+  function resetRetry() {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+    retries = 0;
+  }
 
   function clear() {
+    resetRetry();
     controller?.abort();
     controller = null;
     active = null;
     requested = false;
     renderedVersion = null;
     filter = 'all';
+    pendingDetail = null;
+    update.hidden = true;
     status.textContent = '';
     controls.replaceChildren();
     result.replaceChildren();
@@ -118,9 +143,10 @@ export function createQuestionResponses() {
     result.replaceChildren(...(rows.length ? [wrap, node('p', 'Hiển thị ' + rows.length + '/' + detail.students.length + ' học viên.')]
       : [node('p', detail.students.length ? 'Không có học viên trong nhóm này.' : 'Chưa có bài nộp cho câu này.')]));
     wrap.scrollTop = scroll;
-    status.textContent = detail.objective
+    renderedStatus = detail.objective
       ? detail.counts.correct + ' đúng · ' + detail.counts.incorrect + ' sai · ' + detail.counts.graded + ' đã chấm'
       : detail.counts.answered + '/' + detail.counts.visible + ' đã trả lời · Không chấm điểm';
+    status.textContent = renderedStatus;
   }
 
   function action(label, callback) {
@@ -130,44 +156,91 @@ export function createQuestionResponses() {
     controls.replaceChildren(button);
   }
 
-  async function load() {
-    if (controller || !active || renderedVersion === active.version) return;
+  function retry(target) {
+    if (retryTimer || !reconcile) return;
+    if (retries >= 3) {
+      status.textContent = 'Chưa đối chiếu được câu trả lời. Hãy bấm Làm mới.';
+      if (!result.firstChild) action('Thử lại', () => refresh());
+      return;
+    }
+    retryTimer = setTimeout(async () => {
+      retryTimer = null;
+      if (active !== target || document.hidden || !section.isConnected) return;
+      try { await reconcile(); } catch { /* Giữ dữ liệu đang đọc, thử lại có giới hạn. */ }
+      if (active === target && !document.hidden && section.isConnected) void load({force:true});
+    }, 350 * 2 ** retries++);
+  }
+
+  async function load({force=false} = {}) {
+    if (controller || !active || (!force && renderedVersion === active.version)) return;
     const target = active;
     const request = new AbortController();
     controller = request;
     const timer = setTimeout(() => request.abort(), 15000);
     const previous = result.querySelector('.thuy-responses-table');
     if (!previous) controls.replaceChildren();
-    status.textContent = previous ? 'Đang đối chiếu với thống kê mới…' : 'Đang đọc câu trả lời…';
+    if (!previous || !force) status.textContent = previous ? 'Đang đối chiếu với thống kê mới…' : 'Đang đọc câu trả lời…';
     try {
       const detail = await target.read(target.itemId, request.signal);
       if (active !== target || request.signal.aborted || !section.isConnected) return;
       if (detail.assignmentId !== target.assignmentId || detail.formVersionId !== target.formVersionId ||
-          detail.itemVersionId !== target.itemId || detail.responseVersion !== target.version) {
-        status.textContent = 'Có dữ liệu mới. Danh sách sẽ cập nhật cùng thống kê.';
+          detail.itemVersionId !== target.itemId) throw Error('Dữ liệu trả về sai câu.');
+      if (detail.responseVersion !== target.version) {
+        status.textContent = 'Có dữ liệu mới. Đang đối chiếu với thống kê.';
+        retry(target);
+        return;
+      }
+      resetRetry();
+      if (renderedVersion === detail.responseVersion) {
+        status.textContent = pendingDetail ? 'Có câu trả lời mới.' : renderedStatus;
         return;
       }
       renderedVersion = detail.responseVersion;
-      showTable(detail, Boolean(previous));
+      const selection = document.getSelection();
+      if (previous && selection && !selection.isCollapsed &&
+          (previous.contains(selection.anchorNode) || previous.contains(selection.focusNode))) {
+        pendingDetail = detail;
+        update.hidden = false;
+        status.textContent = 'Có câu trả lời mới.';
+      } else {
+        pendingDetail = null;
+        update.hidden = true;
+        showTable(detail, Boolean(previous));
+      }
     } catch (error) {
       if (active !== target || !section.isConnected) return;
+      if ([401,403,404].includes(error.status)) {
+        clear();
+        section.hidden = false;
+        status.textContent = 'Câu trả lời không còn trong phạm vi xem.';
+        return;
+      }
       status.textContent = error.name === 'AbortError' ? 'Đọc câu trả lời quá thời gian chờ.' : 'Chưa đọc được câu trả lời.';
-      action('Thử lại', () => void load());
+      if (!previous) action('Thử lại', () => refresh());
     } finally {
       clearTimeout(timer);
       if (controller === request) controller = null;
     }
   }
 
-  function select({assignmentId, formVersionId, item, read, open = false}) {
+  function refresh() {
+    resetRetry();
+    if (requested) void load({force:true});
+  }
+
+  function select({assignmentId, formVersionId, item, read, sync, open = false}) {
     if (!read || !item?.responseVersion) {clear();return;}
+    reconcile = sync;
     const same = active?.itemId === item.itemVersionId && active?.assignmentId === assignmentId &&
       active?.formVersionId === formVersionId;
     if (!same) clear();
     const changed = active?.version !== item.responseVersion;
     if (changed) {
+      resetRetry();
       controller?.abort();
       controller = null;
+      pendingDetail = null;
+      update.hidden = true;
       active = {assignmentId, formVersionId, itemId:item.itemVersionId, version:item.responseVersion, read};
     }
     section.hidden = false;
@@ -178,10 +251,10 @@ export function createQuestionResponses() {
       void load();
     } else if (!requested && !controls.firstChild) {
       action('Xem câu trả lời', () => {requested = true;void load();});
-    } else if (open && !controller && !renderedVersion) {
+    } else if (open && !controller && !retryTimer && !renderedVersion) {
       void load();
     }
   }
 
-  return {section, select, clear};
+  return {section, select, clear, refresh};
 }
