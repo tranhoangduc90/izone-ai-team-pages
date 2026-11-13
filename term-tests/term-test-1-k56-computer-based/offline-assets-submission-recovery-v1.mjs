@@ -86,6 +86,7 @@ export const ASSETS=[
   "../demo/model.js",
   "../demo/reset-listener.js",
   "../k56-audio-recovery.js",
+  "../k56-audio-recovery-term1-v1.js",
   "../k56-demo-reset/app.js",
   "../k56-demo-reset/styles.css",
   "../k56-design/assets/SourceSans3-Variable.woff2",
@@ -103,6 +104,7 @@ export const ASSETS=[
   "../k56-offline-shared/worker-term-submission-recovery-v1.mjs",
   "../k56-offline-shared/worker.mjs",
   "../k56-shared/app-term-submission-recovery-v1.js",
+  "../k56-shared/app-term1-audio-goal-v1.js",
   "../k56-shared/config.js",
   "../k56-shared/public-audio-audio-status-v1.mjs",
   "../k56-shared/styles.css",
@@ -258,6 +260,7 @@ export const ASSET_HASHES={
   "../demo/model.js": "fcf87b5a54be6e5a3cdcbc477c1b7a7b2198bd35a579e264498550fbb63fbe76",
   "../demo/reset-listener.js": "739a3b589d8a34419c6b31b55e35d1f9a0f5f394cc81a92a65ed75d08800e18e",
   "../k56-audio-recovery.js": "ea4ac8e3fa8c65c6aa3fb4687dbb7bddb4debaa7b2384fd6e5b479bd29bb8765",
+  "../k56-audio-recovery-term1-v1.js": "42878a6912d19eb0d66e3ccc35c7e9d6291d9a3f73c17c1757752e76ee64db50",
   "../k56-demo-reset/app.js": "38caf4e57010fbc951d78d18521117d9dd86f9303f1eb58c8218c64f6a03133e",
   "../k56-demo-reset/styles.css": "c31c8f3116187a38574b1ac32187c87af2cd5e4bd7d12f57566be64dbad42b9f",
   "../k56-design/assets/SourceSans3-Variable.woff2": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8",
@@ -275,6 +278,7 @@ export const ASSET_HASHES={
   "../k56-offline-shared/worker-term-submission-recovery-v1.mjs": "f63a7138eeacadc6335f1cb646d0b60658a5c49426bff445670f814b500451c5",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/app-term-submission-recovery-v1.js": "4fbcacc15a92414aef61c18597747fac49886242b9208660c513ed2c735e2300",
+  "../k56-shared/app-term1-audio-goal-v1.js": "f6ec23c2df86dbb7a804b790c9075252854e7e024cea19ab7cb8f5ca7bc9b938",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/public-audio-audio-status-v1.mjs": "30c109b154046f13fef9f9b53e722b35b3f268fa60d2d874b507a9fed077e24c",
   "../k56-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
@@ -333,13 +337,13 @@ export const ASSET_HASHES={
   "assets/figures/rovio.png": "9f2d562f1ffd3b98536b5b11658844b7d75655da48b4bd3ebfa04a2a3ff8cc9d",
   "audio-loader-audio-status-v1.js": "e1c66b92e2c2ef6b99448827748a293a5f6cf06341d6f04368a49d2c8b58493b",
   "audio-whole-audio-status-v1.mjs": "8f8b9258d5ff72b680e2f4c760442b326e99272e9dcf16c3e8d8675d0175d6da",
-  "bootstrap-submission-recovery-v1.js": "b491fa07406a9efef392b7031ad16b1b2b1afd72feb456fa32e835ec78785a92",
+  "bootstrap-submission-recovery-v1.js": "dcccc5c2dbb02ca3ce951a61797ebec170018a0f9573f28b7755c3886cd2a578",
   "content.js": "498e78b7e9490fc75bda0f7c47826ba69abfca64f0e46d6f0319833c7060aec3",
-  "enhance-submission-recovery-v1.js": "fb87a8c7aa32cdb5204256afced54b26260eed0072de34de7e8def48549e938d",
+  "enhance-submission-recovery-v1.js": "ec4b78acc2d11eb854689ad559d83911b2e775a535d16e1bf6d1ee867387eae1",
   "index-submission-recovery-v1.html": "a37c87a99841433df6d9c17367baa213acf886fad60bfb59ff61f6c7cd64041a",
   "layout-updates.css": "e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351",
   "offline-submission-recovery-v1.mjs": "d7d77f214471ba0d66e40dd8001d81af7bf48e5232eec9fec5e7a61d9860beef",
   "offline-worker-submission-recovery-v1.js": "868f97f66cb30c1bf417fc2b037ff5ea0dfde6e9ff0dbb87fc668f2bb6414350",
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb"
 };
-export const ASSET_BUILD_ID="0789bb12fcdf78f30110104170a1a2853d8a3592fdacc40bae68f9ab4dd50fd0";
+export const ASSET_BUILD_ID="0b24fbe7a648bb1d69d0f9c5427afd142912b421df714d86eaacb72a5e4f9c85";
