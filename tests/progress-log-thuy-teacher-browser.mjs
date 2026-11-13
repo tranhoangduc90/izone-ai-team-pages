@@ -19,6 +19,12 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
  let savedDraft=null;
  const definition={title:'Phiếu từ khóa thử',blocks:[{blockId:block,checkpoint:1,title:'Từ khóa',items:[{itemVersionId:item,position:1,prompt:'Câu 1 · Câu hỏi',displayNumber:'1',skillCodes:['reflection'],interactionType:'multi_choice_group',layoutType:'keyword_selection',options:[{id:'w1',label:'go'},{id:'w2',label:'go'},{id:'w3',label:'home?'}],interactionConfig:{maxSelections:3}}]}]};
  definition.blocks[0].items.push(...['Scanning','Skimming'].map((prompt,i)=>({itemVersionId:uid(50+i),position:2+i,displayNumber:'2',prompt,interactionType:'short_text_array',layoutType:'numbered_short_texts',groupId:'comparison-reading',interactionConfig:{responseCount:1,sentenceLines:[{title:'Mục đích',parts:['Tìm ','.']}]}})));
+ const one=uid(53),many=uid(54),open=uid(55),missingOption=uid(59);
+ const options=[{id:uid(56),label:'Nhận ra cách diễn đạt lại'},{id:uid(57),label:'Theo kịp khi đổi chủ đề'}];
+ definition.blocks[0].items.push(
+  {itemVersionId:one,position:4,prompt:'Tự nhận xét · chọn một',interactionType:'single_choice',options},
+  {itemVersionId:many,position:5,prompt:'Tự nhận xét · chọn nhiều',interactionType:'multi_choice_group',options},
+  {itemVersionId:open,position:6,prompt:'Ghi chú tự do',interactionType:'long_text'});
  const students=()=>[{studentRef:A,name:'Học viên A',checkpoints:[{blockId:block}],attendanceStatus:'self_confirmed',sessionComment:comments.get(A)||null,portalSync:{status:'complete',readbackAt:new Date().toISOString(),portalStatus:'synced'}},
  {studentRef:B,name:'Học viên B',checkpoints:[],attendanceStatus:null,sessionComment:comments.get(B)||null,portalSync:null}];
  await ctx.route('**/*',async route=>{
@@ -40,7 +46,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   if(path==='/teacher/form-drafts'||path==='/teacher/form-drafts/review-queue')return send({ok:true,drafts:path.endsWith('review-queue')||!savedDraft?[]:[savedDraft]});
   if(path==='/teacher/dashboard')return send({ok:true,dashboard:{assignmentId:id,publicToken:id,title:definition.title,classId:'1294',className:'IC2305',sessionNumber:11,definition,journeyCommentsEnabled:true,
    students:students(),blockReleases:[{blockId:block,checkpoint:1,status:'open'}],classInsights:[]}});
-  if(path==='/teacher/live-drafts')return send({ok:true,live:{assignmentId:id,generatedAt:new Date().toISOString(),students:[{studentRef:A,attemptId:uid(8),draftRevision:1,draftResponses:{[item]:['w2']},sessionComment:comments.get(A)||null}]}});
+  if(path==='/teacher/live-drafts')return send({ok:true,live:{assignmentId:id,generatedAt:new Date().toISOString(),students:[{studentRef:A,attemptId:uid(8),draftRevision:1,draftResponses:{[item]:['w2'],[one]:[options[0].id],[many]:[options[1].id,missingOption],[open]:missingOption},sessionComment:comments.get(A)||null}]}});
   if(path==='/teacher/journey-plan')return send({ok:true,plan:{classId:'1294',className:'IC2305',totalSessions:11,highestKnownSession:11,revision:1,testSessionNumbers:[],testSources:[],sessionDates:[{sessionNumber:11,date:'2026-10-22',erpSessionId:'35822'}]}});
   if(path==='/teacher/classes/1294/overview')return send({ok:true,overview:{classId:'1294',className:'IC2305',totalSessions:11,counts:{currentStudents:2,complete:0},sessions:[{sessionNumber:11,sessionDate:'2026-10-22'}],students:students().map(student=>({...student,cells:[{sessionNumber:11,status:'not_submitted',sessionComment:student.sessionComment}]}))}});
   if(path.endsWith('/question-analytics'))return send({ok:true,analytics:{assignmentId:id,submittedCount:1,rosterCount:2,items:[{itemVersionId:item,position:1,prompt:'Câu hỏi gạch chân',objective:false,counts:{roster:2,submitted:1,visible:1,hidden:0,unanswered:0,answered:1,graded:0,correct:0,incorrect:0},choices:[{label:'go',count:1}],students:[{studentRef:A,name:'Học viên A',verdict:'ungraded'}]}]}});
@@ -82,6 +88,13 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   await page.locator('[data-thuy-mode=results]').click();await page.getByRole('tab',{name:'Nhận xét cá nhân',exact:true}).click();
   await page.locator(`[data-student="${A}"]`).click();await page.locator('#draftDialog').waitFor();
   assert.equal(await page.locator('#draftDialog [data-keyword=w2]').getAttribute('aria-pressed'),'true');
+  const answers=page.locator('#draftAnswers [data-live-answers] article');
+  assert.equal(await answers.filter({hasText:'Tự nhận xét · chọn một'}).locator('p').innerText(),'Nhận ra cách diễn đạt lại');
+  const multiText=await answers.filter({hasText:'Tự nhận xét · chọn nhiều'}).locator('p').innerText();
+  assert.match(multiText,/Theo kịp khi đổi chủ đề/);
+  assert.match(multiText,/Không đối chiếu được lựa chọn/);
+  assert.ok(!multiText.includes(missingOption));
+  assert.equal(await answers.filter({hasText:'Ghi chú tự do'}).locator('p').innerText(),missingOption);
   const panelTop=await page.locator('#draftDialog').evaluate(e=>e.getBoundingClientRect().top);
   assert.ok(panelTop>=68,'Khung chi tiết phải nằm dưới thanh đầu trang');
   const draft=page.locator('#draftDialog .session-comment-editor textarea');await draft.fill('Nháp riêng của A');

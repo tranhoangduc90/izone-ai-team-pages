@@ -24,6 +24,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
   const matchedPublication=entry=>{const value=publications.get(entry.sourceDraftId||entry.draft?.id);return value&&value.revision===(entry.sourceRevision||entry.draft?.revision)?value:publicationRows.find(p=>p.libraryEntryId===entry.id||p.assignmentId===entry.id||entry.source==='used'&&entry.definition&&p.formVersionId===entry.definition.formVersionId)||entry.publication;};
   const all=()=>currentLibraryRows(entries,[...drafts,...sharedDrafts],used).map(entry=>({...entry,publication:matchedPublication(entry)}));
   const assignable=entry=>entry.source!=='used'&&!entry.draft?.reviewMode&&!(entry.source==='izone'&&entry.draft);
+  const canCopyToPersonal=entry=>entry.source==='izone'&&!entry.draft&&Boolean(entry.contentHash);
   const historyTools=node('div','','thuy-library-history');
   const publicationNotice=node('p','','notice thuy-publication-notice');publicationNotice.setAttribute('role','status');publicationNotice.hidden=true;let highlighted=null;
   const historyManagement=mountAssignmentManagement({host:historyTools,getContext:getClassContext,request,onChanged:onManagementChanged,showHistory:false});for(const control of historyTools.children)control.hidden=true;
@@ -35,7 +36,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     status.textContent=selected.length+' bài tập';
     create.hidden=scope==='used'||scope==='izone'&&!shared.createCourses.length;
     create.title=scope==='izone'?'Tạo bài trong Kho chung':'Tạo bài trong Kho cá nhân';
-    const signature=JSON.stringify([scope,canManageShared,search.value,selected.map(e=>[e.id,e.source,e.title,e.meta,e.itemCount,e.publication])]);
+    const signature=JSON.stringify([scope,canManageShared,search.value,selected.map(e=>[e.id,e.source,e.title,e.meta,e.itemCount,e.sourceRevision,e.contentHash,e.publication])]);
     if(signature===listSignature)return;listSignature=signature;list.replaceChildren();
     if(!selected.length){list.append(node('p',scope==='izone'?'Chưa có bài chuẩn trong Kho chung.':scope==='personal'?'Chưa có bài trong Kho cá nhân.':'Chưa có phiếu đã giao phù hợp.','thuy-library-empty'));return;}
     const wrap=node('div','','thuy-library-scroll'),table=node('table'),head=node('tr'),thead=node('thead'),body=node('tbody');
@@ -51,6 +52,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
       const row=node('tr'),name=node('td'),open=button(entry.title,()=>void preview(entry));row.tabIndex=0;row.dataset.entryId=entry.id;row.classList.toggle('thuy-library-published',entry.id===highlighted);row.setAttribute('aria-label','Xem '+entry.title);open.className='thuy-library-name';
       name.append(open,node('small',entry.meta||`${entry.itemCount||0} câu`));const actions=node('td');
       if(assignable(entry)){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');actions.append(assign);}
+      if(canCopyToPersonal(entry))actions.append(button('Nhân bản vào Kho cá nhân',()=>copyToPersonal(entry)));
       if(entry.source==='personal'&&!entry.draft?.reviewMode||entry.source==='izone'&&!entry.draft&&canManageShared){
         const remove=button('Xóa bài',()=>void archiveEntry(entry));actions.append(remove);
       }
@@ -119,7 +121,8 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     const close=button('×',()=>dialog.close());close.setAttribute('aria-label','Đóng');
     const edit=button('Sửa bài',async()=>{try{const result=entry.draft?await onOpenDraft(entry):entry.source==='used'?await onCopyUsed(entry):await onCopy(entry);if(result!==false)dialog.close();}catch(error){notice.textContent=error.message;}});
     head.append(node('h2',entry.title));
-    if(entry.assignment?.can_manage!==false)head.append(edit);
+    if(canCopyToPersonal(entry))head.append(button('Nhân bản vào Kho cá nhân',()=>copyToPersonal(entry,dialog)));
+    else if(entry.assignment?.can_manage!==false)head.append(edit);
     if(assignable(entry)){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');head.append(assign);}
     head.append(close);body.append(notice);dialog.append(head,body);document.body.append(dialog);dialogs.add(dialog);bindDialogDismiss(dialog);dialog.showModal();
     dialog.addEventListener('close',()=>{dialogs.delete(dialog);dialog.remove();if(opener?.isConnected)opener.focus({preventScroll:true});},{once:true});
@@ -133,6 +136,33 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
         {method:'POST',body:entry.draft?{expectedRevision:full.detail.revision}:entry.source==='used'?{assignmentId:entry.id}:{}});
       if(run!==lifecycle||!dialog.open)return;mountWorksheetFrame(body,{grant:reply.grant,title:entry.title});notice.hidden=true;
     }catch(error){notice.hidden=false;notice.textContent='Chưa mở được phiếu: '+error.message;body.append(button('Thử mở lại',()=>{dialog.close();void preview(entry);}));}
+  }
+  function copyToPersonal(entry,previewDialog){
+    const run=lifecycle,opener=document.activeElement;
+    const dialog=node('dialog','','thuy-management-dialog'),head=node('header','','thuy-management-head');
+    const form=node('form','','thuy-management-body'),label=node('label','Tên bản sao'),input=node('input');
+    const hint=node('p','Bản sao được lưu trong Kho cá nhân. Bạn chọn lớp và buổi khi giao bài.');
+    const message=node('p');message.setAttribute('role','status');
+    const confirm=node('button','Tạo bản sao và mở để sửa','button primary');confirm.type='submit';
+    const cancel=button('Hủy',()=>dialog.close());
+    input.required=true;input.maxLength=120;input.value=entry.title.slice(0,110)+' · Bản sao';
+    label.append(input);head.append(node('h2','Nhân bản vào Kho cá nhân'));
+    form.append(hint,label,message,cancel,confirm);dialog.append(head,form);document.body.append(dialog);dialogs.add(dialog);
+    dialog.setAttribute('aria-label','Nhân bản vào Kho cá nhân');
+    dialog.addEventListener('close',()=>{dialogs.delete(dialog);dialog.remove();if(opener?.isConnected)opener.focus({preventScroll:true});},{once:true});
+    dialog.addEventListener('cancel',event=>{if(confirm.disabled)event.preventDefault();});
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();const title=input.value.trim();if(!title||confirm.disabled)return;
+      confirm.disabled=cancel.disabled=input.disabled=true;message.textContent='Đang tạo bản sao…';
+      try{
+        const opened=await onCopy(entry,{title});
+        if(run!==lifecycle||!dialog.open)return;
+        if(opened){scope='personal';search.value='';paint();dialog.close();previewDialog?.close();await load();return;}
+        message.textContent='Chưa xác nhận bản sao. Bạn có thể thử lại.';
+      }catch(error){if(run===lifecycle)message.textContent=error.message;}
+      finally{confirm.disabled=cancel.disabled=input.disabled=false;}
+    });
+    dialog.showModal();input.select();
   }
   for(const [value,label]of [['izone','Kho chung'],['personal','Kho cá nhân'],['used','Phiếu đã giao']]){const b=button('',()=>{scope=value;paint();});b.setAttribute('role','tab');b.append(document.createTextNode(label+' '),node('span','0'));tabs.set(value,b);nav.append(b);}
   nav.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const keys=[...tabs.keys()],index=keys.indexOf(scope);scope=keys[event.key==='Home'?0:event.key==='End'?keys.length-1:(index+(event.key==='ArrowRight'?1:keys.length-1))%keys.length];event.preventDefault();paint();tabs.get(scope).focus();});

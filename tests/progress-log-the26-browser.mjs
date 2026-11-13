@@ -28,7 +28,7 @@ test('Thẻ 26: Kho chung dùng cùng bộ soạn, admin xuất bản đúng ngu
    document.body.className='thuy-live thuy-teacher';document.body.innerHTML='<main id="editorHost"></main>';
    const {createFormDraftEditor}=await import('/progress-log/teacher-form-editor.js');window.calls26=[];window.entries26=[];window.saved26=null;
    const request=async(path,options={})=>{window.calls26.push({path,body:options.body,method:options.method});const d=window.saved26;
-    if(path.startsWith('/teacher/form-library?'))return {canManageShared:true,entries:path.includes('izone')?window.entries26:[],
+    if(path.startsWith('/teacher/form-library?'))return {canManageShared:true,entries:path.includes('izone')?window.entries26:window.personal26?[{id:'personal-entry',editableDraftId:window.personal26.id,editableDraftRevision:window.personal26.revision,editableDraftStatus:'draft',title:window.personal26.definition.title}]:[],
       shared:{createCourses:['34','45','56','67'],reviewCourses:['56'],selfApproveCourses:['56']}};
     if(path.startsWith('/teacher/form-drafts/review-queue'))return {drafts:[]};
     if(path==='/teacher/form-publications')return {publications:[]};
@@ -37,10 +37,19 @@ test('Thẻ 26: Kho chung dùng cùng bộ soạn, admin xuất bản đúng ngu
     if(path.endsWith('/request-review')){d.status='pending_review';return {draft:structuredClone(d)};}
     if(path.endsWith('/approve')){d.status='approved';return {draft:structuredClone(d)};}
     if(path.endsWith('/publish-library')){
-      window.entries26=[{id:'60000000-0000-4000-8000-000000000026',title:d.definition.title,sourceDraftId:d.id,sourceRevision:d.revision}];
+      window.entries26=[{id:'60000000-0000-4000-8000-000000000026',title:d.definition.title,sourceDraftId:d.id,sourceRevision:d.revision,contentHash:d.contentHash}];
       return {publication:{id:'publication-26',libraryEntryId:window.entries26[0].id,draftId:d.id,formVersionId:d.definition.formVersionId,revision:d.revision}};
     }
     if(path.endsWith('/archive')){window.entries26=[];return {ok:true,archived:true};}
+    if(path.endsWith('/copy-to-personal')){
+      window.personal26={...structuredClone(d),id:'70000000-0000-4000-8000-000000000026',scope:'personal',classId:null,sessionNumber:null,status:'draft',revision:1};
+      window.personal26.definition.title=options.body.title;
+      return {draft:structuredClone(window.personal26)};
+    }
+    if(path.includes('/teacher/form-drafts/'+window.personal26?.id)){
+      if(options.method==='PUT')Object.assign(window.personal26,options.body,{revision:window.personal26.revision+1});
+      return {draft:structuredClone(window.personal26)};
+    }
     if(options.method==='PUT'){Object.assign(d,options.body,{revision:d.revision+1});return {draft:structuredClone(d)};}
     throw Error('Outside fixture: '+path);
    };
@@ -55,6 +64,20 @@ test('Thẻ 26: Kho chung dùng cùng bộ soạn, admin xuất bản đúng ngu
   assert.equal(await page.evaluate(()=>window.calls26.find(c=>c.path==='/teacher/form-drafts')?.body.scope),'izone');
   assert.equal(await page.evaluate(()=>window.calls26.some(c=>c.path==='/teacher/form-library')),false);
   assert.equal(await page.evaluate(()=>window.calls26.some(c=>c.path.endsWith('/request-review'))),false);
+  await page.getByRole('button',{name:'Nhân bản vào Kho cá nhân',exact:true}).click();
+  await page.getByLabel('Tên bản sao').fill('Bản cá nhân kiểm');
+  await page.getByRole('button',{name:'Tạo bản sao và mở để sửa',exact:true}).click();
+  const title=page.getByLabel('Tên bài tập',{exact:true});await title.waitFor();assert.equal(await title.inputValue(),'Bản cá nhân kiểm');
+  await title.fill('Bản cá nhân đã sửa');
+  await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();
+  await page.waitForFunction(()=>window.personal26.definition.title==='Bản cá nhân đã sửa');
+  const reads=await page.evaluate(()=>window.calls26.filter(c=>c.path.endsWith('/copy-to-personal')||c.method==='PUT').slice(-2));
+  assert.deepEqual(Object.keys(reads[0].body).sort(),['expectedHash','expectedRevision','operationId','title']);
+  assert.equal('sessionNumber' in reads[1].body,false);
+  await page.getByRole('button',{name:'Quay lại Quản lý bài tập',exact:true}).click();
+  await page.getByRole('button',{name:'Bản cá nhân đã sửa',exact:true}).waitFor();
+  await page.getByRole('tab',{name:/Kho chung/}).click();
+  await page.getByRole('button',{name:'Bài chung kiểm Thẻ 26',exact:true}).waitFor();
   page.on('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Xóa bài',exact:true}).click();await page.waitForFunction(()=>window.entries26.length===0);assert.equal(await page.locator('dialog[open]').count(),0);
  }finally{await browser.close();await f.close();}
 });
