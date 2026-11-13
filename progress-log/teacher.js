@@ -22,7 +22,7 @@ import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261105-ic-or
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
 import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261104-the25-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
-import {clearThuyAnalytics,renderThuyAnalytics} from './thuy-live/question-analytics.js?rev=20261111-issue590';
+import {clearThuyAnalytics,refreshThuyResponses,renderThuyAnalytics} from './thuy-live/question-analytics.js?rev=20261114-response-sync';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261030-the22-23-v1';
 import {COPY_STUDENT_LINK_LABEL,decorateCopyStudentLinkButton,studentAssignmentLink} from './student-assignment-link.js';
@@ -446,6 +446,10 @@ async function openJourneyDetail(target) {
 function paintQuestionAnalytics(analytics,assignmentId){
   const assignment=state.assignments.find(item=>item.assignment_id===assignmentId);
   (THUY_UI?renderThuyAnalytics:renderQuestionAnalytics)(elements.questionAnalytics,analytics,{definition:state.dashboard?.definition,
+    syncResponses:state.questionResponses?()=>{
+      if(elements.assignmentSelect.value!==assignmentId||thuyReadView()!=='overview')return;
+      return state.liveEnabled?liveUpdates.refresh({force:true}):loadQuestionAnalytics(assignmentId,{quiet:true});
+    }:null,
     readResponses:state.questionResponses?async(itemVersionId,signal)=>{
       const path='/teacher/assignments/'+encodeURIComponent(assignmentId)+'/question-analytics/'+encodeURIComponent(itemVersionId)+'/responses';
       try{return (await apiRequest(path,{signal})).detail;}
@@ -1963,7 +1967,12 @@ elements.refreshDashboardButton.addEventListener('click', () => {
   if(!classPortal.hidden){void loadWorkspace().catch(error=>setNotice(error.message,'error'));return;}
   if(!elements.overviewPanel.hidden){void loadCourseOverview();return;}
   if(!elements.createPanel.hidden)return;
-  if(state.liveEnabled)void liveUpdates.refresh({force:true});else void loadDashboard();
+  const assignmentId=elements.assignmentSelect.value;
+  const refresh=state.liveEnabled?liveUpdates.refresh({force:true}):loadDashboard();
+  void Promise.resolve(refresh).then(()=>{
+    if(state.questionResponses&&elements.assignmentSelect.value===assignmentId&&thuyReadView()==='overview')
+      refreshThuyResponses(elements.questionAnalytics);
+  });
   if (!state.journeyPlanDirty) void loadJourneyPlan({ force: true });
 });
 elements.openStudentFormButton.addEventListener('click', openCurrentStudentForm);
