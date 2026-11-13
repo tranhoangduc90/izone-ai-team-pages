@@ -1,10 +1,10 @@
 {
   "testId": "substitute-test-2-k67-writing-makeup",
-  "build": "issue611-9dba6c99613ea4af",
+  "build": "issue611-ab0f478d6f48967b",
   "assets": [
     {
       "path": "index.html",
-      "sha256": "c2e441a04033093effb8d7ba4bc40a264df25897bf7fb3b8c6706e8bf010a687"
+      "sha256": "d6ee47a74f268cf0a92914b9905f06e2c5c2003712bd934883b918418ed0a123"
     },
     {
       "path": "sw.js",
@@ -20,7 +20,7 @@
     },
     {
       "path": "../substitute-skill-shared/writing.mjs",
-      "sha256": "f50458bb7c70de5de5aebbb64e4a32135544db7042c5cc6f882c00ea1935d5df"
+      "sha256": "103339ccc896bacef009541288b6ae8263b59fa45bedfc787738dccee8fea676"
     },
     {
       "path": "../substitute-skill-shared/native-writing.mjs",
@@ -64,11 +64,15 @@
     },
     {
       "path": "../substitute-skill-shared/writing-result.mjs",
-      "sha256": "d0e5473551ab0b8e69d15e755f695a2a9145c09d9935450f9bab090edd48f8de"
+      "sha256": "f81be43cf1a8675db9d4b0f26643f07886480ea8c9175fd97c040b870e2b35db"
     },
     {
       "path": "../substitute-skill-shared/writing-result.css",
-      "sha256": "af7f8dd4c066a62bf2f717879ad29df057dbd672e3f538abdc8a199fa9fe988a"
+      "sha256": "3db4c29be7578ca3b11728bf2db8ec3405098b781166bd175a1dc464c224a893"
+    },
+    {
+      "path": "../substitute-skill-shared/writing-feedback.mjs",
+      "sha256": "e87113a6dc76c05449d1e1c79d6711ffc768f060bef7422b47481d93f1b65ccc"
     }
   ]
 }
