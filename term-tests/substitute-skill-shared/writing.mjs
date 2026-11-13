@@ -1,5 +1,6 @@
 import {portalStatus} from './portal-status.mjs';
-import {mountNativeWriting,appendSafeWritingFeedback,createNativeWritingFeedback} from './native-writing.mjs';
+import {mountNativeWriting} from './native-writing.mjs';
+import {renderCompleteWritingResult} from './writing-result.mjs';
 import {DurableStore} from './storage.mjs';
 import {prepareWritingOffline} from './offline.mjs';
 const $=id=>document.getElementById(id),text=(id,v)=>$(id).textContent=v,show=(id,v=true)=>$(id).hidden=!v;
@@ -18,11 +19,17 @@ async function own(){if(ownerHeld)return;if(!navigator.locks)throw Object.assign
 function freeze(){ui?.disable();$('submit').disabled=true;}
 const current=(epoch,id)=>ownerHeld&&epoch===stateEpoch&&state?.identity?.attemptId===id;
 function resultView(v){
- show('lobby',false);show('exam',false);show('finished');text('receipt',v.receipt?'Mã biên nhận: '+v.receipt.receiptId:'Bản nộp đã lưu trên thiết bị · đang chờ biên nhận');
- show('change-person',!!v.receipt);
- text('grading-status',!v.receipt?'Chưa xác nhận máy chủ đã nhận. Hãy giữ trang hoặc mở lại trên chính thiết bị này.':v.gradingState==='ready'?'Đã chấm xong.':v.gradingState==='review_required'?'Đã nhận bài · phần chấm cần giảng viên kiểm tra. Bạn không cần nộp lại.':v.gradingState==='waiting_confirmation'?'Đã nhận bài · đang xác minh kết quả chấm. Bạn không cần nộp lại.':v.gradingState==='processing'?'Đã nhận bài · đang chấm.':'Đã nhận bài · đang chờ chấm.');
+ show('lobby',false);show('exam',false);show('finished');const received=!!v.receipt,ready=received&&!!v.result;
+ text('receipt',received?'Mã biên nhận: '+v.receipt.receiptId:'Bản nộp đã lưu trên thiết bị · đang chờ biên nhận');
+ show('change-person',received);show('check-result',false);show('retry-send',false);
+ text('grading-status',ready?'':!received?'Bài đã lưu trên thiết bị · đang gửi tới hệ thống.':v.gradingState==='review_required'?'Đã nhận bài · phần chấm cần giảng viên kiểm tra. Bạn không cần nộp lại.':v.gradingState==='waiting_confirmation'?'Đã nhận bài · đang xác minh kết quả chấm. Bạn không cần nộp lại.':v.gradingState==='processing'?'Đã nhận bài · đang chấm.':'Đã nhận bài · đang chờ chấm.');
+ if($('result-progress-note'))text('result-progress-note',ready?'':received?'Kết quả và nhận xét sẽ tự hiển thị tại đây khi chấm xong.':'Hệ thống sẽ tự kiểm tra biên nhận và gửi tiếp khi kết nối trở lại. Bạn hãy giữ trang trên thiết bị này.');
+ if($('result-summary'))show('result-summary',ready);if($('feedback-title'))show('feedback-title',ready);show('portal-status',ready);
+ if(!ready)return;
  text('portal-status',portalStatus(v));
- if(v.result){text('score','Writing: '+v.result.score+' / '+v.result.max);const key=JSON.stringify(v.result);if($('feedback').dataset.result!==key){const fragment=document.createDocumentFragment();for(const task of v.result.tasks||[]){const section=document.createElement('section'),h=document.createElement('h3');h.textContent='Task '+task.taskNumber+' · '+task.taskScore+'/9';section.append(h);if(task.gradingMethod==='blank_rule'){const p=document.createElement('p');p.textContent='Task để trống khi hết giờ. Áp dụng quy tắc bài trống của đề gốc.';section.append(p);}else {const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Xem bài chấm chi tiết Task '+task.taskNumber;button.onclick=()=>createNativeWritingFeedback({writingConfig:content.writing,state:state.native}).open({...task.browserResult,taskNumber:task.taskNumber,report:task.report?.html||task.browserResult?.report||'',criteria:task.browserResult?.criteria||task.criteria.map(c=>({...c,code:c.key,bandScore:c.score}))});section.append(button);}fragment.append(section);}$('feedback').replaceChildren(fragment);$('feedback').dataset.result=key;}}
+ if($('score-value')){text('score-value',Number(v.result.score).toFixed(1));text('score-max',' / '+v.result.max);}else text('score','Writing: '+v.result.score+' / '+v.result.max);
+ if($('result-meta')){const labels=(v.result.tasks||[]).map(t=>'Task '+t.taskNumber).join(' và '),name=document.querySelector('.skill-bar h1')?.textContent?.replace(/^Writing\s*·\s*/,'')||'';text('result-meta',[labels,name].filter(Boolean).join(' · '));}
+ const key=JSON.stringify(v.result);if($('feedback').dataset.result!==key){renderCompleteWritingResult($('feedback'),v.result);$('feedback').dataset.result=key;}
 }
 async function check(){if(!ownerHeld||!state?.identity||syncing||busy)return;const epoch=stateEpoch,id=state.identity.attemptId;try{const v=await api('status',state.identity);if(!current(epoch,id))return;anchor(v);state.lastServer=v;if(v.receipt){if(state.sealed&&v.receipt.operationId!==state.sealed.operationId)throw Object.assign(Error(),{code:'SUBMISSION_CONFLICT'});state.phase='submitted';state.sealed=null;await persist();if(current(epoch,id))resultView(v);}else if(state.phase==='submitted'||state.sealed)resultView(v);}catch(e){if(current(epoch,id))fail(e);}}
 async function synchronize(){
@@ -51,13 +58,14 @@ async function start(){if(busy)return;busy=true;try{await own();const v=await ap
 $('prepare').onclick=()=>{$('confirm-name').textContent=roster.find(r=>r.studentRef===$('student').value)?.name||'';$('confirm-identity').showModal();};
 $('confirm-yes').onclick=()=>{$('confirm-identity').close();void prepare();};$('confirm-no').onclick=()=>$('confirm-identity').close();$('start').onclick=start;
 $('submit').onclick=()=>$('confirm-submit').showModal();$('cancel-submit').onclick=()=>$('confirm-submit').close();$('accept-submit').onclick=()=>{$('confirm-submit').close();void seal(false);};
-$('check-result').onclick=()=>void check();$('retry-send').onclick=()=>void synchronize();
+// Kiểm trạng thái/biên nhận bằng các vòng đọc nền; không yêu cầu học viên bấm.
 $('class').onchange=async()=>{const code=$('class').value;$('prepare').disabled=true;$('student').replaceChildren(new Option('Chọn họ tên',''));if(!code)return;try{const r=await api('roster?class='+encodeURIComponent(code),null,'GET');if($('class').value!==code)return;roster=r.students;for(const s of roster)$('student').add(new Option(s.name,s.studentRef));if(!roster.length)text('notice','Không còn học viên đủ điều kiện trong lớp này.');}catch(e){fail(e);}};
 $('student').onchange=()=>$('prepare').disabled=!$('student').value;
 async function loadClasses(){const r=await api('classes',null,'GET');$('class').replaceChildren(new Option('Chọn lớp',''));$('student').replaceChildren(new Option('Chọn họ tên',''));for(const c of r.classes)$('class').add(new Option(c.code,c.code));text('prepare-status','Chọn lớp, họ tên và xác nhận đúng người trước khi làm bài.');}
 async function archiveCurrent(){stateEpoch++;clearTimeout(saveTimer);const saved=structuredClone(state);await storage.put(testId+':history:'+(saved.identity?.attemptId||saved.prepareOperation),saved);state={};await persist();ownerHeld=false;releaseOwner?.();location.reload();}
 $('replace-attempt').onclick=async()=>{if(!ownerHeld||busy)return;busy=true;try{if(state.identity)await api('status',state.identity);else await api('prepare',{classCode:state.classCode,studentRef:state.studentRef,operationId:state.prepareOperation});text('notice','Chưa xác nhận lượt đã được cấp lại.');}catch(e){if(e.code==='SKILL_GENERATION_STALE'){try{await archiveCurrent();}catch(error){fail(error);}}else fail(e);}finally{busy=false;}};
 $('change-person').onclick=()=>{if(state?.lastServer?.receipt)$('confirm-change-person').showModal();};$('cancel-change-person').onclick=()=>$('confirm-change-person').close();$('accept-change-person').onclick=async()=>{if(!ownerHeld||busy||!state?.lastServer?.receipt)return;busy=true;try{const v=await api('receipt',state.identity);if(!v.receipt)throw Error();await archiveCurrent();}catch(e){fail(e);}finally{busy=false;}};
+addEventListener('visibilitychange',()=>{if(!document.hidden&&state?.phase==='submitted')void check();});
 addEventListener('online',()=>{if(ownerHeld){void synchronize();void check();}});addEventListener('pagehide',()=>{if(ownerHeld&&state&&storage){state.lastTime=now();void persist().catch(()=>{});}releaseOwner?.();ownerHeld=false;});addEventListener('pageshow',e=>{if(e.persisted)location.reload();});
 try{
  await own();storage=await new DurableStore().open();state=await storage.get(testId);content=state?.content;

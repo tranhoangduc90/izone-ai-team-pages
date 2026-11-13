@@ -244,7 +244,7 @@ export function appendSanitizedWritingHtml(target, value) {
       if (safeChild) target.append(safeChild);
     }
   }
-export function appendSafeWritingFeedback(target, value) {
+export function appendSafeWritingFeedback(target, value, {preserveContent=false,linksAsText=false}={}) {
     const appendInline = (parent, source) => {
       const text = String(source || '');
       const tokenPattern = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g;
@@ -259,6 +259,8 @@ export function appendSafeWritingFeedback(target, value) {
           const emphasis = document.createElement('em');
           emphasis.textContent = match[2];
           parent.append(emphasis);
+        } else if(linksAsText) {
+          parent.append(document.createTextNode(match[3]));
         } else {
           const link = document.createElement('a');
           link.href = match[4];
@@ -273,7 +275,7 @@ export function appendSafeWritingFeedback(target, value) {
       if (cursor < text.length) parent.append(document.createTextNode(text.slice(cursor)));
     };
 
-    const cleaned = cleanWritingFeedback(value || 'Chưa có nhận xét tổng hợp.');
+    const cleaned = preserveContent ? String(value ?? '').replace(/\r/g,'') : cleanWritingFeedback(value || 'Chưa có nhận xét tổng hợp.');
     if (looksLikeWritingHtml(cleaned)) {
       appendSanitizedWritingHtml(target, cleaned);
       return;
@@ -290,10 +292,13 @@ export function appendSafeWritingFeedback(target, value) {
         index += 1;
         continue;
       }
-      const heading = line.match(/^(#{1,5})\s+(?:\*\*([^*]+)\*\*|([^#]+?))(?:\s+([\s\S]*))?$/);
+      const heading = preserveContent
+        ? line.match(/^(#{1,6})\s+(.+?)(?:\s+#+)?$/)
+        : line.match(/^(#{1,5})\s+(?:\*\*([^*]+)\*\*|([^#]+?))(?:\s+([\s\S]*))?$/);
       if (heading) {
         const title = document.createElement('h5');
-        title.textContent = String(heading[2] || heading[3] || '').trim();
+        if(preserveContent)appendInline(title,heading[2]);
+        else title.textContent = String(heading[2] || heading[3] || '').trim();
         target.append(title);
         if (heading[4]) {
           const paragraph = document.createElement('p');
