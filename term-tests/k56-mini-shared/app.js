@@ -2519,7 +2519,7 @@
       answers = state.frozenAnswers.listening;
     }
     const answered = updateAnswerCount('listening');
-    if (!automatic && !confirmIncomplete(answered, 'Listening')) return;
+    if (!automatic && !offline?.record.sections.listening?.sealed && !confirmIncomplete(answered, 'Listening')) return;
     state.clientSubmissionId ||= crypto.randomUUID();
     state.drafts.listening = answers;
     saveSession();
@@ -2579,7 +2579,9 @@
         setStage(state.completed ? 'result-ready' : 'listening-saved');
       }
     } catch (error) {
-      showNotice(automatic
+      if (offline?.record.sections.listening?.sealed) {
+        showNotice('Đã khóa đáp án nhưng chưa lưu được trên thiết bị. Hãy bấm Nộp bài Listening để thử lưu lại bản đã chốt, hoặc tải bài về máy.', 'error');
+      } else showNotice(automatic
         ? `Hết giờ nhưng chưa thể nộp Listening: ${error.message}. Bài đã khóa và hệ thống sẽ tự thử lại.`
         : `Không thể lưu Listening: ${error.message}`, 'error');
     } finally {
@@ -2589,7 +2591,7 @@
         elements.listeningView.dataset.listeningTimeExpired = 'true';
         state.frozenAnswers.listening ||= { ...answers };
         saveSession();
-      } else if (!automatic && !submitted) {
+      } else if (!automatic && !submitted && !offline?.record.sections.listening?.sealed) {
         setAnswerControlsLocked('listening', false);
       }
       setBusy(elements.submitListening, false, 'Đang lưu Listening...', 'Nộp bài Listening');

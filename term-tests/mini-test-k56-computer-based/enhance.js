@@ -821,22 +821,49 @@
       setListeningVisible(true);
       const player = protectedBootstrap.officialAudioElement;
       player.volume = uiState.audio.volume;
-      const controller = window.K56AudioRecovery.create({ audio: player,
-        token: protectedBootstrap.examSessionToken, slug: testConfig.slug,
-        studentRef: protectedBootstrap.studentRef, generation: protectedBootstrap.generation,
-        apiBase: appConfig.API_BASE_URL, classCode, initial: protectedBootstrap.audioRecoveryInitial,
-        resumeButton, manualButton,
-        observeListening: detail => observeListening(player, {mode:'online',...detail}),
-        render(prefix, current, duration) {
-          playbackProgress.max = duration || 1; playbackProgress.value = current || 0;
-          examStatus.textContent = prefix + ' · ' + formatTime(current) + ' / ' + formatTime(duration);
-          uiState.audio.started = true; uiState.audio.time = Number(current) || 0; saveUiState();
+      const onlinePlayback = protectedBootstrap.onlinePlayback;
+      const answerRegions = [listeningForm.source.viewport, examRegions[1]].filter(Boolean);
+      const submitButton = listeningForm.form.querySelector('#submitListening');
+      const submitWasDisabled = submitButton?.disabled;
+      if (onlinePlayback) {
+        for (const region of answerRegions) region.inert = true;
+        if (submitButton) submitButton.disabled = true;
+        manualButton.disabled = true;
+        examStatus.textContent = 'Đang chuẩn bị phát audio…';
+      }
+      const unlockAfterPlaying = () => {
+        if (onlinePlayback && !onlinePlayback.isCurrent()) return;
+        for (const region of answerRegions) region.inert = false;
+        if (submitButton) submitButton.disabled = submitWasDisabled;
+        manualButton.disabled = false;
+      };
+      const attachController = () => {
+        if (onlinePlayback && player.paused && !player.ended) {
+          player.addEventListener('playing', unlockAfterPlaying, { once:true });
         }
-      });
+        const controller = window.K56AudioRecovery.create({ audio: player,
+          token: protectedBootstrap.examSessionToken, slug: testConfig.slug,
+          studentRef: protectedBootstrap.studentRef, generation: protectedBootstrap.generation,
+          apiBase: appConfig.API_BASE_URL, classCode, initial: protectedBootstrap.audioRecoveryInitial,
+          resumeButton, manualButton,
+          observeListening: detail => observeListening(player, {mode:'online',...detail}),
+          render(prefix, current, duration) {
+            playbackProgress.max = duration || 1; playbackProgress.value = current || 0;
+            examStatus.textContent = prefix + ' · ' + formatTime(current) + ' / ' + formatTime(duration);
+            uiState.audio.started = true; uiState.audio.time = Number(current) || 0; saveUiState();
+          }
+        });
+        if (onlinePlayback) {
+          if (player.paused && !player.ended) manualButton.disabled = true;
+          else unlockAfterPlaying();
+        }
+        listeningForm.form.addEventListener('term-test:listening-submitted', () => controller.finish());
+      };
+      if (onlinePlayback) onlinePlayback.attachController = attachController;
+      else attachController();
       examVolumeInput.addEventListener('input', () => {
         player.volume = Number(examVolumeInput.value); uiState.audio.volume = player.volume; saveUiState();
       });
-      listeningForm.form.addEventListener('term-test:listening-submitted', () => controller.finish());
       return;
     }
 

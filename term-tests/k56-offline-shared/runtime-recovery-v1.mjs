@@ -259,8 +259,13 @@ class OfflineRuntime extends EventTarget{
    ...observedContent!==undefined?{unverifiedRestoredContent:observedContent}:{},
    ...kind==='seal'?{sealed:true,operationId:op.operationId}:{},...kind==='interrupt'?{interrupted:true,operationId:op.operationId}:{}};
   if(kind==='interrupt')this.pendingInterruptionId=op.operationId;
+  const listeningSeal=mini&&!profile.paper&&section==='listening'&&kind==='seal';
+  if(listeningSeal)this.pendingListeningSealId=op.operationId;
   this.record.operations.push(op);
-  try{await this.persist(true);}
+  try{
+   await this.persist(true);
+   if(listeningSeal)this.pendingListeningSealId=null;
+  }
   catch(error){
    if(kind==='interrupt'){
     this.record.sections[section]=item;
@@ -364,7 +369,10 @@ class OfflineRuntime extends EventTarget{
   }
   if(mini&&globalThis.navigator?.onLine===false)return;
   const run=this.record;this.busy=true;
-  try{while(this.pending&&this.record.operations[0].operationId!==this.pendingInterruptionId){const op=clone(this.record.operations[0]);this.inFlight=op.operationId;
+  try{while(this.pending){
+   const next=this.record.operations[0];
+   if(next.operationId===this.pendingInterruptionId||next.operationId===this.pendingListeningSealId)break;
+   const op=clone(next);this.inFlight=op.operationId;
    const status=await this.post('/offline/status',{...this.scope,operationId:op.operationId});
    if(this.record!==run||!this.owned)return;
    if(status.held)await this.rememberHeld(run,op,status.held);
@@ -404,7 +412,7 @@ class OfflineRuntime extends EventTarget{
  async retainAfterReview(){
   const run=this.record;
   if(!this.submissionRecovery||run.prepared.offline.submissionHoldOnly!==true||globalThis.navigator?.onLine===false)return;
-  const seals=run.operations.filter(op=>op.kind==='seal'&&!run.receipts[op.operationId]
+  const seals=run.operations.filter(op=>op.kind==='seal'&&op.operationId!==this.pendingListeningSealId&&!run.receipts[op.operationId]
     &&!run.heldSubmissions?.[op.operationId]&&!run.holdOnlySkipped?.[op.operationId]);
   if(!seals.length)return;
   this.busy=true;
@@ -757,8 +765,21 @@ export function withListeningContinuity(OfflineRuntime) {
  }
 
  async seal(section, data, revision, reason) {
-  const alreadySealed = this.record.sections[section]?.sealed;
-  const response = await super.seal(section, data, revision, reason);
+  const run = this.record;
+  const alreadySealed = run.sections[section]?.sealed;
+  let response;
+  try { response = await super.seal(section, data, revision, reason); }
+  catch (error) {
+   // The first write can fail after the snapshot and operation have been frozen in memory.
+   if (section !== 'listening' || this.record !== run || !this.owned
+       || !this.pendingListeningSealId || run.sections.listening?.operationId !== this.pendingListeningSealId) throw error;
+   response = await super.seal(section, data, revision, reason);
+  }
+  if (section === 'listening' && this.record === run && this.owned
+      && this.pendingListeningSealId && run.sections.listening?.operationId === this.pendingListeningSealId) {
+   this.pendingListeningSealId = null;
+   void this.flush();
+  }
   if (section === 'listening' && !alreadySealed) {
    this.observe('listening_local_collected', { operationId: this.record.sections.listening.operationId, reason });
   }
