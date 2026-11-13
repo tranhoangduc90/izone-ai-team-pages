@@ -221,7 +221,7 @@ export const ASSET_HASHES={
   "../../shared/public-audio-audio-status-v1.mjs": "b0111fb9c2bb3e93f347a742ecc0eebb94d9c27ddebbc50de51d458978505eb2",
   "../../shared/reading-homework-journal.mjs": "9ec9b8bdd83c577b26bb9a631f3f77a68bbc005b48f9555e48edd15272721668",
   "../../shared/reading-practice-journal.mjs": "2db3d9faf1836cd63683604b57d12663f96597622a4852e0cc7f4f19568ab438",
-  "../../shared/reading-view.mjs": "7fb2b1d50efdd66311704ca8682ac5ddcb8a538e807f8039fe804587a2f5b6a5",
+  "../../shared/reading-view.mjs": "a1f5410bf3f634af3e828428a4880199c38a38aef27ebe5146286fd93b6600ec",
   "../../shared/red-focus-glow.css": "92ec0173cb14704d3d2f3beafd12356ccc3e47ca5ff9fe13a1d4c3f6aba80438",
   "../../shared/red-focus-glow.js": "21bdf68ed43d91865eb6116b03759741c54a88f2274d28e63754afc4dc34e50c",
   "../../shared/speaking-homework-journal.mjs": "afad6831244fbe29e7742afa4e52606312acf63697825a914f07916b08791d91",
@@ -334,4 +334,4 @@ export const ASSET_HASHES={
   "offline-worker-audio-status-v2.js": "a9b3282df4b4bc14278e90870e32b30b49e87cc62a9e2cc5bd79b986cc40f3c1",
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb"
 };
-export const ASSET_BUILD_ID="bc2fe59ffcc2d107ddcf54238f92c511ce3c0f53e340d4fb8167cdd8032a047b";
+export const ASSET_BUILD_ID="1fc9567ced8a41c84d3dd489073428fbe6378f74a39138afff3f7d8244374695";
