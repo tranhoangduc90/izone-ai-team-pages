@@ -27,7 +27,7 @@
     const observer = new MutationObserver(() => {
       if (!root.querySelector('#resultView')) return;
       observer.disconnect();
-      void import('./mobile-results.mjs?v=20261114-v2').then(({mountDesktopReviewLink}) => {
+      void import('./mobile-results.mjs?v=20261114-v3').then(({mountDesktopReviewLink}) => {
         mountDesktopReviewLink(async () => {
           const scope = miniCbtScope();
           const {findMiniJourney} = await import(term2JourneyModule);

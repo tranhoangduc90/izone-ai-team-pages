@@ -86,19 +86,239 @@ function score(section) {
   return `${section.correct}/${section.total}${Number.isFinite(section.band) ? ' · Band ' + section.band : ''}`;
 }
 
-function showWriting(target, writing) {
-  const grading = writing?.grading;
-  const content = [el('h3', 'Writing'), el('p', grading?.ready && grading.writingScore != null
-    ? 'Band ' + grading.writingScore : 'Đã nộp · Chưa có điểm Writing')];
-  if (grading?.ready) {
-    for (const task of grading.tasks || []) {
-      const item = el('details');
-      item.append(el('summary', 'Task ' + task.taskNumber + ' · Band ' + (task.taskScore ?? '—')));
-      if (typeof task.report === 'string' && task.report.trim()) item.append(el('p', task.report, 'mobile-writing-report'));
-      content.push(item);
+const band = value => value == null || !Number.isFinite(Number(value)) ? '—' : String(Number(value));
+
+function appendWritingText(parent, value) {
+  const tokens = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\([^)]+\)/g;
+  let end = 0;
+  for (const match of value.matchAll(tokens)) {
+    parent.append(value.slice(end, match.index));
+    parent.append(match[1] ? el('strong', match[1]) : match[2] ? el('em', match[2]) : match[3]);
+    end = match.index + match[0].length;
+  }
+  parent.append(value.slice(end));
+}
+
+function appendWritingMarkdown(target, value) {
+  let list;
+  let paragraph;
+  for (const raw of value.split('\n')) {
+    const line = raw.trim();
+    if (!line || /^-{3,}$/.test(line)) { list = paragraph = null; continue; }
+    const heading = /^#{1,6}\s+(.+)$/.exec(line);
+    const bullet = /^(?:([-*])|(\d+)\.)\s+(.+)$/.exec(line);
+    if (heading) {
+      const title = el('h5');
+      appendWritingText(title, heading[1]);
+      target.append(title);
+      list = paragraph = null;
+    } else if (bullet) {
+      const tag = bullet[2] ? 'ol' : 'ul';
+      if (list?.localName !== tag) {
+        list = el(tag);
+        if (bullet[2]) list.start = Number(bullet[2]);
+        target.append(list);
+      }
+      const item = el('li');
+      appendWritingText(item, bullet[3]);
+      list.append(item);
+      paragraph = null;
+    } else {
+      if (!paragraph) { paragraph = el('p'); target.append(paragraph); }
+      else paragraph.append(' ');
+      appendWritingText(paragraph, line);
+      list = null;
     }
   }
-  target.replaceChildren(...content);
+}
+
+const writingBlock = new Set(['p','div','ul','ol','li','blockquote','table','thead','tbody','tfoot','tr','th','td']);
+const writingInline = new Set(['strong','b','em','i','span','br']);
+const ignoredWritingTags = new Set(['script','style','template','iframe','object','embed','svg','math','form','button','textarea']);
+
+function appendWritingFeedback(target, value) {
+  const source = String(value || '').replace(/\r/g, '').trim();
+  if (!source) return;
+  // Parse in a template so report HTML is inert. Recreate only supported tags and never copy attributes.
+  const template = document.createElement('template');
+  template.innerHTML = source;
+  function copy(node, parent) {
+    if (node.nodeType === Node.TEXT_NODE) { appendWritingText(parent, node.textContent); return; }
+    if (node.nodeType !== Node.ELEMENT_NODE || ignoredWritingTags.has(node.localName)) return;
+    const tag = node.localName;
+    const safeTag = /^h[1-6]$/.test(tag) ? 'h5'
+      : writingBlock.has(tag) || writingInline.has(tag) ? tag : null;
+    const targetNode = safeTag ? el(safeTag) : parent;
+    for (const child of node.childNodes) copy(child, targetNode);
+    if (safeTag) parent.append(targetNode);
+  }
+  // Mixed legacy reports start with HTML and continue with Markdown after the score summary.
+  for (const node of template.content.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) appendWritingMarkdown(target, node.textContent);
+    else copy(node, target);
+  }
+}
+
+function writingPart(parent, value, className) {
+  if (!String(value || '').trim()) return null;
+  const part = el('div', undefined, className + ' writing-feedback-richtext');
+  appendWritingFeedback(part, value);
+  parent.append(part);
+  return part;
+}
+
+function criterionSections(value) {
+  const sections = [];
+  let current;
+  for (const line of value.split('\n')) {
+    const heading = /^#{2,6}\s+(.*)$/.exec(line)?.[1]?.replaceAll('**', '').trim();
+    if (heading && /^KẾT LUẬN/i.test(heading)) break;
+    if (heading && /^\d+\.\s/.test(heading)) {
+      current = {title:heading, lines:[]};
+      sections.push(current);
+    } else if (current) current.lines.push(line);
+  }
+  return sections;
+}
+
+function criterionCard(criterion) {
+  const card = el('article', undefined, 'writing-criterion-card');
+  const header = el('header');
+  header.append(el('h4', criterion.name || criterion.code), el('strong', 'Band ' + band(criterion.bandScore)));
+  card.append(header);
+  const feedback = String(criterion.feedback || '');
+  const components = criterion.components || [];
+  const sections = criterionSections(feedback);
+  if (!components.length && !sections.length) {
+    writingPart(card, feedback, 'writing-feedback-text');
+    return card;
+  }
+  const parts = el('div', undefined, 'writing-component-list');
+  for (let index = 0; index < Math.max(components.length, sections.length); index++) {
+    const component = components[index];
+    const section = sections[index];
+    const part = el('section', undefined, 'writing-component');
+    part.append(el('h5', section?.title || component?.label || component?.code || 'Nhận xét'));
+    writingPart(part, component?.summary || section?.lines.join('\n'), 'writing-component-summary');
+    if (component?.feedback) {
+      const detail = el('details');
+      detail.append(el('summary', 'Xem phân tích chi tiết và cách cải thiện', 'writing-component-toggle'));
+      writingPart(detail, component.feedback, 'writing-component-detail');
+      part.append(detail);
+    }
+    parts.append(part);
+  }
+  card.append(parts);
+  const conclusion = /^#{2,6}\s+(?:\*\*)?KẾT LUẬN(?:\*\*)?\s*$/im.exec(feedback);
+  if (conclusion) {
+    const text = feedback.slice(conclusion.index + conclusion[0].length).trim();
+    if (text) {
+      const block = el('section', undefined, 'writing-feedback-text');
+      block.append(el('h5', 'Kết luận và giới hạn điểm'));
+      writingPart(block, text, 'writing-feedback-text');
+      card.append(block);
+    }
+  }
+  return card;
+}
+
+function openWritingFeedback(task, opener) {
+  const label = 'Task ' + task.taskNumber;
+  const dialog = el('dialog', undefined, 'writing-feedback-dialog mobile-writing-feedback');
+  const shell = el('div', undefined, 'writing-feedback-shell');
+  const header = el('header', undefined, 'writing-feedback-header');
+  const heading = el('div');
+  const title = el('h2', label + ' · Band ' + band(task.taskScore));
+  title.id = 'mobileWritingFeedbackTitle';
+  dialog.setAttribute('aria-labelledby', title.id);
+  heading.append(el('span', 'Kết quả ' + label), title);
+  const blank = task.gradingMethod === 'blank_rule';
+  const meta = blank ? 'Điểm theo quy tắc bài trắng' : 'Chấm theo 4 tiêu chí IELTS';
+  heading.append(el('p', Number.isFinite(task.wordCount) ? task.wordCount + ' từ · ' + meta : meta));
+  const close = el('button', '×', 'writing-feedback-close');
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Đóng bài chấm Writing');
+  close.addEventListener('click', () => dialog.close());
+  header.append(heading, close);
+  const layout = el('div', undefined, 'writing-feedback-layout');
+  const scores = el('section', undefined, 'writing-feedback-scores');
+  const criteria = task.criteria || [];
+  if (criteria.length && !blank) {
+    scores.append(el('h3', 'Nhận xét theo tiêu chí'), ...criteria.map(criterionCard));
+  } else {
+    scores.append(el('h3', blank ? 'Quy tắc tính điểm' : 'Nhận xét tổng hợp'));
+    if (!writingPart(scores, task.report, 'writing-feedback-text')) {
+      scores.append(el('p', 'Chưa có nhận xét chi tiết.'));
+    }
+  }
+  layout.append(scores);
+  shell.append(header, layout);
+  dialog.append(shell);
+  let pointerDownOutside = false;
+  dialog.addEventListener('pointerdown', event => { pointerDownOutside = event.target === dialog; });
+  dialog.addEventListener('click', event => {
+    if (pointerDownOutside && event.target === dialog) dialog.close();
+  });
+  dialog.addEventListener('close', () => {
+    dialog.remove();
+    if (opener.isConnected) opener.focus({preventScroll:true});
+  }, {once:true});
+  document.body.append(dialog);
+  dialog.showModal();
+}
+
+function showWriting(target, writing, refreshResult) {
+  const grading = writing?.grading;
+  const section = el('section', undefined, 'writing-result-section');
+  const heading = el('header', undefined, 'writing-result-heading');
+  const label = el('div');
+  const needsReview = grading?.status === 'review_required';
+  label.append(el('span', grading?.ready ? 'Kết quả Writing' : 'Bài Writing đã nộp'),
+    el('h3', grading?.ready ? 'Điểm và bài chấm Writing'
+      : needsReview ? 'Bài Writing đang được kiểm tra' : 'Bài Writing của bạn đang được chấm'));
+  heading.append(label, el('p', grading?.ready ? 'Nhấn vào điểm Task 1 hoặc Task 2 để xem bài chấm chi tiết.'
+    : 'Kết quả sẽ hiển thị tại đây khi bài chấm hoàn tất.'));
+  section.append(heading);
+  if (grading?.ready) {
+    const grid = el('div', undefined, 'writing-score-grid');
+    for (const task of [...(grading.tasks || [])].sort((a,b) => a.taskNumber - b.taskNumber)) {
+      const button = el('button', undefined, 'writing-score-card is-action');
+      button.type = 'button';
+      button.append(el('span', 'Writing Task ' + task.taskNumber),
+        el('strong', 'Band ' + band(task.taskScore)), el('small', 'Xem bài chấm chi tiết →'));
+      button.onclick = () => openWritingFeedback(task, button);
+      grid.append(button);
+    }
+    const overall = el('article', undefined, 'writing-score-card is-overall');
+    overall.append(el('span', 'Writing tổng'), el('strong', 'Band ' + band(grading.writingScore)),
+      el('small', 'Task 1 × 1 · Task 2 × 2'));
+    grid.append(overall);
+    section.append(grid);
+  } else {
+    const status = el('div', undefined, 'writing-grading-status' + (needsReview ? ' needs-review' : ''));
+    const copy = el('div');
+    copy.append(el('strong', needsReview ? 'Bài chấm đang được kiểm tra' : 'Đang chấm Task 1 và Task 2'),
+      el('p', 'Bài làm đã được lưu trên hệ thống.'));
+    status.append(copy);
+    if (refreshResult) {
+      const button = el('button', 'Kiểm tra kết quả ngay', 'button button-secondary');
+      button.type = 'button';
+      button.onclick = async () => {
+        button.disabled = true;
+        try { await refreshResult(); }
+        finally { if (button.isConnected) button.disabled = false; }
+      };
+      status.append(button);
+    }
+    section.append(status);
+  }
+  target.replaceChildren(section);
+}
+
+function summaryCard(label, value) {
+  const card = el('article', undefined, 'summary-card');
+  card.append(el('span', label), el('strong', value));
+  return card;
 }
 
 function objective(title, section, payload, getReview) {
@@ -146,41 +366,59 @@ function objective(title, section, payload, getReview) {
 export function renderMobileResult(root, payload, {getReview, refreshResult, onAccessError, onClose} = {}) {
   const heading = el('h2', payload.studentName);
   heading.tabIndex = -1;
-  const scores = el('div', undefined, 'mobile-result-card');
-  scores.append(el('p', 'Listening · ' + score(payload.result.listening)), el('p', 'Reading · ' + score(payload.result.reading)));
-  const writing = el('div', undefined, 'mobile-result-card');
-  showWriting(writing, payload.writing);
+  const panel = el('section', undefined, 'panel result-panel mobile-result-panel');
+  const identity = el('header', undefined, 'result-heading');
+  const identityCopy = el('div');
+  identityCopy.append(el('p', 'Kết quả cá nhân', 'eyebrow'), heading, el('p', payload.className + ' · Term Test 2'));
+  identity.append(identityCopy);
+  const scores = el('div', undefined, 'summary-grid');
+  scores.append(summaryCard('Listening', score(payload.result.listening)), summaryCard('Reading', score(payload.result.reading)));
+  const writing = el('div');
+  showWriting(writing, payload.writing, refreshResult && updateWriting);
   const questions = el('div', undefined, 'mobile-result-questions');
   questions.append(objective('Reading', payload.result.reading, payload, getReview),
     objective('Listening', payload.result.listening, payload, getReview));
-  root.replaceChildren(heading, el('p', payload.className + ' · Term Test 2'), scores, writing, questions);
+  panel.append(identity, scores, writing, questions);
+  root.replaceChildren(panel);
   if (onClose) {
     const exit = el('button', 'Đóng kết quả', 'button outline');
     exit.type = 'button';
     exit.onclick = onClose;
-    root.append(exit);
+    panel.append(exit);
   }
-  heading.focus();
+  heading.focus({preventScroll:true, focusVisible:false});
   let timer;
   let closed = false;
   let writingFingerprint = JSON.stringify(payload.writing);
-  const refresh = async () => {
-    if (closed) return;
-    try {
-      if (!document.hidden) {
+  let pending;
+  function updateWriting() {
+    if (closed) return Promise.resolve();
+    if (!pending) pending = (async () => {
+      try {
         const fresh = await refreshResult();
         if (closed) return;
         const fingerprint = JSON.stringify(fresh.writing);
         if (fingerprint !== writingFingerprint) {
-          showWriting(writing, fresh.writing);
+          showWriting(writing, fresh.writing, updateWriting);
           writingFingerprint = fingerprint;
         }
-      }
-    } catch (error) { if (!closed) onAccessError?.(error); }
+      } catch (error) { if (!closed) onAccessError?.(error); }
+      finally { pending = undefined; }
+    })();
+    return pending;
+  }
+  const refresh = async () => {
+    if (!document.hidden) await updateWriting();
     if (!closed) timer = setTimeout(refresh, 30000);
   };
   if (refreshResult) timer = setTimeout(refresh, 30000);
-  return () => { closed = true; clearTimeout(timer); window.K67_ANSWER_EXPLANATIONS?.reset(); root.replaceChildren(); };
+  return () => {
+    closed = true;
+    clearTimeout(timer);
+    document.querySelector('dialog.mobile-writing-feedback')?.close();
+    window.K67_ANSWER_EXPLANATIONS?.reset();
+    root.replaceChildren();
+  };
 }
 
 function boot() {
@@ -217,12 +455,14 @@ function boot() {
     controller = new AbortController();
     const signal = controller.signal;
     retry.hidden = true;
+    notice.hidden = false;
     status.textContent = 'Đang tải kết quả…';
     const read = action => post(action, input, null, AbortSignal.any([signal, AbortSignal.timeout(15000)]));
     const fail = error => {
       if (signal.aborted) return;
       if ([403,409].includes(error.status)) reset();
       retry.hidden = error.status === 403;
+      notice.hidden = false;
       status.textContent = error.message || 'Chưa tải được kết quả.';
     };
     try {
@@ -234,6 +474,7 @@ function boot() {
       });
       clear = renderMobileResult(output, payload, {getReview, refreshResult:() => read('result'), onAccessError:fail});
       status.textContent = '';
+      notice.hidden = true;
     } catch (error) { fail(error); }
   }
   retry.onclick = openResult;

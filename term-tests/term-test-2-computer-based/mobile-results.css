@@ -17,7 +17,27 @@ body.term2-mobile-results .exam-device-notice { margin: 0; overflow-wrap: anywhe
 .mobile-result-card td::before { content: attr(data-label); font-weight: 650; }
 .mobile-result-card td[data-explanation-column] { display: block; margin-top: 5px; }
 .mobile-result-card .explanation-open { width: auto; }
-.mobile-writing-report { white-space: pre-wrap; overflow-wrap: anywhere; }
+body.term2-mobile-results .mobile-result-panel { padding: 18px; }
+body.term2-mobile-results .mobile-result-panel .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 18px 0; }
+body.term2-mobile-results .mobile-result-panel .summary-card { min-width: 0; }
+body.term2-mobile-results .mobile-result-panel .summary-card strong { font-size: clamp(20px, 4vw, 27px); }
+body.term2-mobile-results .writing-result-section { margin: 18px 0; }
+body.term2-mobile-results .writing-score-grid { margin-bottom: 0; }
+body.term2-mobile-results .writing-score-card { min-width: 0; }
+body.term2-mobile-results .mobile-writing-feedback { color: var(--lab-ink, #172a45); }
+body.term2-mobile-results .mobile-writing-feedback .writing-feedback-layout { display: block; overflow: auto; }
+body.term2-mobile-results .mobile-writing-feedback .writing-feedback-scores { overflow: visible; }
+body.term2-mobile-results .writing-feedback-richtext table { display: block; max-width: 100%; overflow-x: auto; }
+body.term2-mobile-results .writing-feedback-richtext { white-space: normal; overflow-wrap: anywhere; }
+body.term2-mobile-results .writing-component-toggle { align-content: center; cursor: pointer; }
+@media (max-width: 620px) {
+  body.term2-mobile-results .mobile-result-panel { padding: 14px; }
+  body.term2-mobile-results .mobile-result-panel .summary-grid { grid-template-columns: 1fr; }
+  body.term2-mobile-results .writing-result-section { padding: 14px; }
+  body.term2-mobile-results .writing-score-card { min-height: 92px; padding: 14px; }
+  body.term2-mobile-results .writing-feedback-scores { padding: 12px; }
+  body.term2-mobile-results .writing-criterion-card { padding: 12px; }
+}
 body.term2-mobile-results #explanation-dialog { width: min(100vw - 12px, 42rem); height: min(100dvh - 12px, 50rem); }
 body.term2-mobile-results #explanation-dialog .explanation-dialog-columns { display: flex; flex-direction: column; overflow: auto; }
 body.term2-mobile-results #explanation-dialog .explanation-dialog-detail { order: -1; }
