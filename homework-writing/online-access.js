@@ -227,5 +227,10 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
   async function afterLogout(){const before=active;if(before?.person.role==='student'){const current=memory.read();if(current.identity?.id===before.identity?.erpId){const forgotten=await course.forget();if(forgotten.status!=='empty')onWarning('Đã đăng xuất Homework; chưa xóa được mã đã nhớ trên thiết bị.');}try{sessionStorage.removeItem(storageKey);}catch{}if(scopedIdentity(before.identity)){try{localStorage.removeItem(scopedMemoryKey);}catch{}}}else try{localStorage.setItem('izone:teacher-sso-logout',String(Date.now()));}catch{}invalidate();const u=routeUrl(context?{assignment:context.assignmentId}:{});u.searchParams.set('fresh','1');history.replaceState(history.state,'',u);}
   memory.subscribe(record=>{if(active?.person.role==='student'&&record.identity?.id!==active.identity?.erpId)onWarning('Mã người học đã nhớ ở tab khác vừa đổi. Tab này vẫn giữ đúng người đang làm bài.');});
   addEventListener('storage',event=>{if(active&&teacherIntent()&&['izone:teacher-sso-login','izone:teacher-sso-logout'].includes(event.key))void onTeacherChanged();});
-  return {open,headers,routeUrl,invalidate,afterLogout,showError,workspace,stamp:()=>epoch,isCurrent:stamp=>stamp===epoch,get personal(){return !!context;},get intent(){return intent;}};
+  function verifiedDocsOwner(){
+    return !teacherIntent()&&active?.person?.role==='student'&&context&&entry?.assignmentId===context.assignmentId&&
+      entry?.documentId===context.documentId&&entry.studentRef===active.identity?.ownerId
+      ? entry.studentRef : null;
+  }
+  return {open,headers,routeUrl,invalidate,afterLogout,showError,workspace,verifiedDocsOwner,stamp:()=>epoch,isCurrent:stamp=>stamp===epoch,get personal(){return !!context;},get intent(){return intent;}};
 }

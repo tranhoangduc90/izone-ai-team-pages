@@ -17,6 +17,7 @@ installStyles();
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const writingHandoff=globalThis.handout67WritingHandoff;
+const verifiedOpening=writingHandoff?.verifiedDocsStudent?$('verified-handout-opening'):null;
 const api=createClient(writingHandoff?.apiBase||globalThis.handout67ApiBase||'https://ducizone.ddns.net/api/handout67/v1',writingHandoff?.request);
 let lesson=globalThis.handout67Lesson||{activity:'lesson5'};
 const courseIdentity=createCourseStudentIdentity({product:'handout67',entry:lesson.activity,requestIdentity:requestMappingStudentIdentity});
@@ -217,6 +218,12 @@ function focusSection(key){const el=$('step-'+key)||$(key);if(el){el.scrollIntoV
 
 function message(text){clearTimeout(toastTimer);$('toast').textContent=text;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},6000);}
 function note(text){$('connection-note').textContent=text;$('connection-note').hidden=!text;}
+function handoutAccessLost(){
+ const link=document.createElement('a');
+ link.href=writingHandoff.writingUrl;link.textContent='Về cửa vào Writing';
+ note('Phiên không còn quyền mở dàn ý. Bài đã lưu vẫn được giữ. ');
+ $('connection-note').append(link);
+}
 function show(view){for(const id of ['identity','confirm','workspace'])$(id).hidden=id!==view;window.scrollTo({top:0});}
 function draftKey(){return 'izone-handout67:draft:'+state.ref;}
 function keepDraft(){try{localStorage.setItem(draftKey(),JSON.stringify({ref:state.ref,changes:{...dirty},responses:{...state.responses},savedAt:Date.now()}));return true;}catch{message('Thiết bị chưa giữ được nháp. Hãy sao chép nội dung trước khi đóng trang.');return false;}}
@@ -225,6 +232,7 @@ function apply(value){state=value;render();}
 function failure(error){
 
  if(error.status===409){conflict=true;fieldControls().forEach(el=>el.disabled=true);note('Bài đã thay đổi ở tab khác. Nháp của bạn được giữ trên thiết bị. Đọc bản đã lưu trước khi tiếp tục.');$('read-latest').hidden=false;}
+ else if(verifiedOpening&&[401,403].includes(error.status))handoutAccessLost();
  else if(error.status===401){note('Phiên đã hết hạn. Hãy chọn lại tên để mở bài đã lưu.');message('Bài đã lưu trên máy chủ vẫn được giữ.');}
  else {note('Chưa kết nối được máy chủ. Nháp vẫn được giữ trên thiết bị; bạn có thể thử lại.');}
  $('save-state').textContent='Có nháp chưa lưu';
@@ -260,29 +268,59 @@ async function poll(){
     pollEtag=result.etag;
    }
   }
- }catch(error){if(epoch===generation){note('Kết nối đang gián đoạn. Bài đã gửi vẫn được giữ; trang sẽ kiểm lại.');}}
+ }catch(error){if(epoch===generation){if(verifiedOpening&&[401,403].includes(error.status))handoutAccessLost();else note('Kết nối đang gián đoạn. Bài đã gửi vẫn được giữ; trang sẽ kiểm lại.');}}
  finally{if(epoch===generation)schedulePoll();}
+}
+async function openHandout(classRef,selectedStudent,isCurrent){
+ const result=await api.open({activity:lesson.activity,classRef,studentRef:selectedStudent});
+ if(!isCurrent())return null;
+ if(!result.token||!result.session?.ref||result.session.activity!==lesson.activity||result.session.classRef!==classRef||result.session.studentRef!==selectedStudent)
+  throw Object.assign(Error('SESSION_OWNER_MISMATCH'),{status:403});
+ return result;
+}
+function displayHandout(result){
+ api.setToken(result.token);pollEtag=undefined;dirty={};conflict=false;busy=false;saveInFlight=false;editingLocked=false;serial=Promise.resolve();state=result.session;
+ $('learner-label').textContent=names[student];show('workspace');render();note('');$('read-latest').hidden=true;
+ $('save-state').textContent='Đã mở bài từ máy chủ';
+ try{$('restore-draft').hidden=!localStorage.getItem(draftKey());}catch{$('restore-draft').hidden=true;}
+ schedulePoll();
 }
 async function enter({selection=null,pinned=false}={}){
  const epoch=++generation;const button=$('confirm-button');button.disabled=true;
  const selectedStudent=student,classRef=$('class-select').value;
  const context=selection?courseIdentity.automaticContext(selection):courseIdentity.prepare(selectedStudent,'');
  try {
-  const result=await api.open({activity:lesson.activity,classRef,studentRef:selectedStudent});
-  if(epoch!==generation||student!==selectedStudent||$('class-select').value!==classRef)return;
+  const result=await openHandout(classRef,selectedStudent,()=>epoch===generation&&student===selectedStudent&&$('class-select').value===classRef);
+  if(!result)return;
   if(selection&&!courseIdentity.isCurrent(selection))throw new Error('IDENTITY_CHANGED');
-  if(!result.token||result.session?.activity!==lesson.activity||result.session.classRef!==classRef||result.session.studentRef!==selectedStudent)throw new Error('SESSION_OWNER_MISMATCH');
-  api.setToken(result.token);pollEtag=undefined;dirty={};conflict=false;busy=false;saveInFlight=false;editingLocked=false;serial=Promise.resolve();state=result.session;
   if(!pinned)await courseIdentity.commit(context,{automatic:Boolean(selection),remember:$('remember').checked}).then(value=>{
    if(!['ok','empty'].includes(value.status))message('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.');
   }).catch(()=>message('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.'));
+  if(epoch!==generation||student!==selectedStudent)return;
   courseIdentity.pin(selectedStudent,{classRef});
-  $('learner-label').textContent=names[student];show('workspace');render();note('');$('read-latest').hidden=true;
-  $('save-state').textContent='Đã mở bài từ máy chủ';
-  try{$('restore-draft').hidden=!localStorage.getItem(draftKey());}catch{$('restore-draft').hidden=true;}
-  schedulePoll();
+  displayHandout(result);
  }catch(error){message('Chưa mở được bài. Hãy thử lại; bài đã lưu vẫn được giữ.');}
  finally{button.disabled=false;}
+}
+async function openVerifiedHandout(){
+ const epoch=++generation;
+ verifiedOpening.querySelector('button')?.setAttribute('disabled','');
+ try{
+  const {classes}=await api.roster(lesson.activity);
+  if(epoch!==generation)return;
+  const room=classes?.length===1?classes[0]:null;
+  const owner=room?.students?.length===1?room.students[0]:null;
+  if(owner?.studentRef!==writingHandoff.verifiedDocsStudent||!room?.classRef||!owner.displayName)
+   throw Object.assign(Error('VERIFIED_DOCS_OWNER_MISMATCH'),{status:403});
+  const result=await openHandout(room.classRef,owner.studentRef,()=>epoch===generation);
+  if(!result)return;
+  student=owner.studentRef;names[student]=owner.displayName;
+  displayHandout(result);
+  verifiedOpening.hidden=true;
+  $('logout').hidden=true;
+ }catch(error){
+  if(epoch===generation)writingHandoff.showOpeningError(verifiedOpening,error,openVerifiedHandout);
+ }
 }
 function students(){
  const row=classes.find(c=>c.classRef===$('class-select').value);
@@ -316,6 +354,7 @@ async function changeStudent(){
  $('student-select').value='';show('identity');
 }
 async function bootstrap(){
+ if(verifiedOpening)return openVerifiedHandout();
  try {
   if(!lesson.topic&&api.lesson){lesson=(await api.lesson(lesson.activity)).lesson;descriptions.a.instruction=lesson.aInstruction;}
   const classRef=document.body?.dataset?.classRef;
@@ -331,7 +370,7 @@ $('student-select').addEventListener('change',()=>{generation++;courseIdentity.i
 $('login-form').addEventListener('submit',event=>{event.preventDefault();const val=$('student-select').value;if(!names[val])return;student=val;$('confirm-title').textContent=names[val];$('confirm-class').textContent=classes.find(c=>c.classRef===$('class-select').value)?.className;show('confirm');$('confirm-button').focus();});
 $('back').addEventListener('click',()=>show('identity'));
 $('confirm-button').addEventListener('click',enter);
-$('logout').addEventListener('click',changeStudent);
+if(!verifiedOpening)$('logout').addEventListener('click',changeStudent);
 for(const view of ['identity','confirm']){const change=document.createElement('button');change.type='button';change.className='secondary';change.textContent='Đổi người học';change.addEventListener('click',changeStudent);$(view).append(change);}
 $('read-latest').addEventListener('click',async()=>{
  if(busy||editingLocked)return;
