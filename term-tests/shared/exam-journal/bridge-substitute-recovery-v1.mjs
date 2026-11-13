@@ -65,6 +65,8 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     && /\/term-test-1-k56-computer-based(?:\/|$)/.test(win.location.pathname);
   const sampleWritingInput = fieldId => sampleTerm1Writing && fieldId === 'writing:task2';
   const audioStops = new Map();
+  let stopOfficialDiagnostics = null;
+  let diagnosticPlayer = null, diagnosticOwner = null;
   const recordedListeningEnds=new WeakMap();
   const bindingRequests=new Map(),bindingCache=new Map(),audioPending=new Set();let audioPendingBytes=0;
   const health = data => {
@@ -188,6 +190,72 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       const stop=observeAudio({recorder,audio});audioStops.set(audio,stop);stop.snapshot('attached');
     }
     for (const [audio,stop] of audioStops) if (!players.has(audio)) { stop();audioStops.delete(audio); }
+    const owner=win.TERM_TEST_BOOTSTRAP;
+    const player=substituteStartTrace&&scopedSubstitute&&owner?.listeningContinuityVersion===1
+      ?official||owner.preparedListeningPlayer:null;
+    if(player===diagnosticPlayer&&owner===diagnosticOwner)return;
+    stopOfficialDiagnostics?.();
+    diagnosticPlayer=player;diagnosticOwner=owner;
+    stopOfficialDiagnostics=player?.addEventListener?observeOfficialDiagnostics(player,owner):null;
+  }
+  function observeOfficialDiagnostics(audio,owner) {
+    let lastProgress=null, episodeOpen=false, episode=0, pauseCommand=null;
+    const lastReported=new Map();
+    const faults=new Set(['pause','waiting','stalled','error']);
+    const pauseReasons=new Set(['early_submit','learner_report','stale_start']);
+    const onPauseCommand=event=>{
+      if(event.detail?.audio!==audio||owner!==win.TERM_TEST_BOOTSTRAP||!pauseReasons.has(event.detail?.reason))return;
+      pauseCommand={reason:event.detail.reason,at:performance.now()};
+    };
+    const onMedia=event=>{
+      try{
+        if(stopped||!current||owner!==win.TERM_TEST_BOOTSTRAP||win.SUBSTITUTE_STATE?.blocked)return;
+        if(!owner.examSessionId)return;
+        if(!listeningEndNumber(audio.currentTime))return;
+        const now=performance.now(),type=event.type;
+        if(type==='playing'||type==='timeupdate'){
+          if(type==='playing')pauseCommand=null;
+          if(episodeOpen&&lastProgress&&audio.currentTime>lastProgress.position+0.05){
+            report('position_advanced',now);
+            episodeOpen=false;
+          }
+          if(type==='playing'||!lastProgress||audio.currentTime>lastProgress.position+0.05)
+            lastProgress={position:audio.currentTime,at:now};
+          return;
+        }
+        if(!lastProgress||audio.ended)return;
+        if(type==='pause'){
+          const reason=pauseCommand&&now-pauseCommand.at<3000?pauseCommand.reason:'unknown';
+          pauseCommand=null;
+          if(reason!=='unknown'){report('pause',now,reason);return;}
+        }
+        if(!episodeOpen)episode++;
+        episodeOpen=true;
+        report(type,now);
+      }catch{/* Measurements must not affect playback. */}
+    };
+    function report(phase,now,pauseReason) {
+      const key=pauseReason||phase;
+      if(now-(lastReported.get(key)??-Infinity)<15_000)return;
+      const proof=proofOf(getState()),context=bindingCache.get(ownerKey);
+      if(proof.examSessionId!==owner.examSessionId||proof.clientRunId!==owner.clientRunId
+        ||JSON.stringify(proof)!==ownerKey||context?.identityConfirmed!==true||context.bindingId!==current.bindingId)return;
+      lastReported.set(key,now);
+      recorder.record('audio_observed',{action:'substitute_media_diagnostic',
+        positionSeconds:audio.currentTime,paused:audio.paused,ended:audio.ended,
+        readyState:audio.readyState,networkState:audio.networkState,mediaErrorCode:audio.error?.code||null,
+        checkpointState:{telemetryVersion:1,phase,episode,assetId:testSlug,observedElapsedMs:Math.round(now),
+          ...(phase==='pause'?{pauseReason:pauseReason||'unknown'}:{}),
+          priorPositionSeconds:lastProgress.position,priorPositionAgeMs:Math.round(now-lastProgress.at),
+          visibility:doc.hidden?'hidden':'visible',online:win.navigator?.onLine===true}},current);
+    }
+    const types=['playing','timeupdate',...faults];
+    for(const type of types)audio.addEventListener(type,onMedia);
+    win.addEventListener('substitute:listening-pause-command',onPauseCommand);
+    return ()=>{
+      for(const type of types)audio.removeEventListener(type,onMedia);
+      win.removeEventListener('substitute:listening-pause-command',onPauseCommand);
+    };
   }
   const mutation = new win.MutationObserver(records => {
     if (!records.some(record => [...record.addedNodes,...record.removedNodes].some(node => node.nodeType === 1))) return;
@@ -446,7 +514,7 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       recorder.record('dialog_observed',{action,outcome,stage:String(state.stage || ''),viewport:viewportSnapshot(win),
         checkpointState:{presentation:'browser_confirm',visibility:'unknown'}});
     },
-    async stop() { stopped = true;clearInterval(timer);mutation.disconnect();observer.stop();for (const stop of audioStops.values()) stop();
+    async stop() { stopped = true;clearInterval(timer);mutation.disconnect();observer.stop();stopOfficialDiagnostics?.();for (const stop of audioStops.values()) stop();
       for(const discard of [...audioPending])discard();bindingCache.clear();win[registryKey]?.delete(connectionKey);
       if(win.EXAM_JOURNAL_AUDIO_TRANSFER===audioFactory)win.EXAM_JOURNAL_AUDIO_TRANSFER=previousAudioFactory;
       win.removeEventListener('error',runtimeError);win.removeEventListener('unhandledrejection',runtimeError);await recorder.idle();recorder.stop();await outbox.close(); }

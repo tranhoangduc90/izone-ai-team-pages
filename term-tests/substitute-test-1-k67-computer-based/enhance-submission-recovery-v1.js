@@ -1257,7 +1257,12 @@
           playBlocked = error?.name === 'NotAllowedError';
           throw error;
         });
-        if(!stillCurrent()){traceStart('start_discarded','scope_changed_after_play');audio.pause();return;}
+        if(!stillCurrent()){
+          traceStart('start_discarded','scope_changed_after_play');
+          notePauseCommand('stale_start');
+          audio.pause();
+          return;
+        }
         traceStart('play_resolved');
         if(!deferredPlayback)protectedBootstrap?.markListeningPlaying?.();
         const elapsedMs=deferredPlayback?.played()??performance.now()-startClicked;
@@ -1315,10 +1320,14 @@
     if (studentSelect) {
       new MutationObserver(updateStartAvailability).observe(studentSelect, { childList: true });
     }
+    function notePauseCommand(reason){
+      if(!continuity||window.TERM_TEST_BOOTSTRAP!==protectedBootstrap)return;
+      try{window.dispatchEvent(new CustomEvent('substitute:listening-pause-command',{detail:{audio,reason}}));}catch{}
+    }
     listeningForm.form.addEventListener('term-test:listening-early-confirmed',()=>{
       listeningClosed=true;
       if(!continuity)return;
-      cannotHear.disabled=true;audio.pause();
+      cannotHear.disabled=true;notePauseCommand('early_submit');audio.pause();
     });
     listeningForm.form.addEventListener('term-test:listening-interrupted',()=>{listeningClosed=true;cannotHear.disabled=true;});
     listeningForm.form.addEventListener('term-test:listening-submitted', () => {
