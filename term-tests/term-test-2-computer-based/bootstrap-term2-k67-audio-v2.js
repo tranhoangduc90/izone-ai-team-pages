@@ -6,6 +6,7 @@
   const audioLoader = window.TERM_TEST_AUDIO_LOADER;
   const root = document.getElementById('app');
   const scriptAssetBase = new URL('.', document.currentScript?.src || window.location.href).toString().replace(/\/$/, '');
+  const term2JourneyModule = "../mini-test-lesson-5-computer-based/journey-term2-k67-audio-v2.mjs?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1";
   const query = new URLSearchParams(window.location.search);
   let classCode = (query.get('class') || '').trim().toUpperCase();
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
@@ -21,6 +22,25 @@
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   if(!window.IZONE_EXAM_DEVICE_CHECKED)await loadScript('../shared/desktop-exam-guard.js?v=20261027-v1&resilience=20261027-v1');
   if(window.IZONE_EXAM_DEVICE_BLOCKED)return;
+  // The desktop button reads the current native journey binding when clicked.
+  if (testConfig.slug === 'term-test-2' && !listeningOnly) {
+    const observer = new MutationObserver(() => {
+      if (!root.querySelector('#resultView')) return;
+      observer.disconnect();
+      void import('./mobile-results.mjs?v=20261114-v1').then(({mountDesktopReviewCode}) => {
+        mountDesktopReviewCode(async () => {
+          const scope = miniCbtScope();
+          const {findMiniJourney} = await import(term2JourneyModule);
+          const saved = await findMiniJourney(scope, testConfig.slug);
+          if (!saved?.record.receipts?.writing?.attemptToken || scope.examSessionToken !== state.examSessionToken
+              || scope.studentRef !== state.studentRef || scope.generation !== (Number(state.generation) || 0)) return null;
+          return {examSessionToken:scope.examSessionToken, generation:scope.generation,
+            deviceProof:saved.record.deviceProof, permit:saved.record.package.permit};
+        });
+      }).catch(() => {});
+    });
+    observer.observe(root, {childList:true, subtree:true});
+  }
   const {beginAudioDownloadStatus} = await import('../shared/cbt-audio-download-status.mjs?v=20261111-audio-status-v1');
   if(!window.IZONE_AUDIO_SOURCE_CHOICE)await loadScript('../shared/audio-source-choice.js?v=20261027-v1&audio=20261028-part-rescue-v1&status=20261111-audio-status-v1');
   if(!window.IZONE_EXAM_CLOCK)await loadScript('../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1');
