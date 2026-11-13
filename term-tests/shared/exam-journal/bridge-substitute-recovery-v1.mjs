@@ -6,6 +6,10 @@ const copy = value => JSON.parse(JSON.stringify(value));
 const registryKey=Symbol.for('izone.examJournal.connections.v1');
 const listeningEndDecisions=new Set(['metadata_unavailable','duration_mismatch','position_outside_end','review_started','review_confirmed']);
 const listeningEndClocks=new Set(['saved_end','media_end_sample','media_end_estimate','server_ack']);
+const listeningStartPhases=new Set(['start_requested','play_requested','play_resolved','start_rejected',
+  'start_discarded','answers_unlocked']);
+const listeningStartReasons=new Set(['phase_or_player_unavailable','play_not_allowed','play_failed',
+  'scope_changed_before_play','scope_changed_after_play']);
 const listeningEndNumber=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=86400;
 const listeningEndTime=value=>typeof value==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value)&&Number.isFinite(Date.parse(value));
 export function safeRoute(path) {
@@ -35,7 +39,7 @@ export function contentFields(state) {
 
 // Nhận state qua callback chỉ đọc. Không thay fetch/confirm toàn cục, timer hoặc điều khiển bài thi.
 export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,build = 'unknown',
-  document:doc = globalThis.document,window:win = globalThis.window,onHealth = () => {},outbox:providedOutbox,fetcher = globalThis.fetch,adoptExistingState=true,submissionMetadataOnly=false }) {
+  document:doc = globalThis.document,window:win = globalThis.window,onHealth = () => {},outbox:providedOutbox,fetcher = globalThis.fetch,adoptExistingState=true,submissionMetadataOnly=false,substituteStartTrace=false }) {
   if (!enabled || win?.IZONE_EXAM_DEVICE_BLOCKED) return null;
   const target = new URL(endpoint,win.location.href);
   if (!['http:','https:'].includes(target.protocol) || target.search || target.hash || target.username || target.password) throw new Error('INVALID_JOURNAL_ENDPOINT');
@@ -50,7 +54,8 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
   const scopedSubstitute=/^substitute-test-[12]-k(?:56|67)$/.test(testSlug)
     && win.location.pathname.split('/').includes(testSlug+'-computer-based');
   const metadataOnly=k67Metadata||((scopedK56||scopedSubstitute)&&submissionMetadataOnly===true);
-  if(existing&&(!metadataOnly||existing.metadataOnlySubmission)&&(!scopedK56||existing.recordK56Submission))
+  if(existing&&(!metadataOnly||existing.metadataOnlySubmission)&&(!scopedK56||existing.recordK56Submission)
+    &&(!substituteStartTrace||existing.substituteStartTraceVersion===2))
     return adoptExistingState?existing.adopt(getState):existing;
   if(existing)void existing.stop().catch(()=>{});
   const outbox = providedOutbox || new IndexedOutbox({ name:'izone-exam-journal-v2:' + target.origin + target.pathname
@@ -213,7 +218,7 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
         ||JSON.stringify(proof)!==ownerKey||context?.identityConfirmed!==true||context.bindingId!==current.bindingId)return false;
     return Boolean(recorder.record(type,data,current));
   }
-  const api={ stateChanged,recorder,metadataOnlySubmission:metadataOnly,
+  const api={ stateChanged,recorder,metadataOnlySubmission:metadataOnly,substituteStartTraceVersion:2,
     adopt(reader){if(typeof reader==='function'){getState=reader;stateChanged('state_reader_changed');}return api;},
     recordK67Submission(owner,type,data){return k67Metadata&&recordScopedSubmission(owner,type,data);},
     recordK56Submission(owner,type,data){return scopedK56&&recordScopedSubmission(owner,type,data);},
@@ -352,8 +357,22 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       if(proof.clientRunId!==owner.clientRunId||proof.examSessionId!==owner.examSessionId
         ||JSON.stringify(proof)!==ownerKey||context?.identityConfirmed!==true||context.bindingId!==current.bindingId)return false;
       const phases=['download_verified','player_ready','started','ended','early_confirmed','interrupted_local','interrupted_ack','submission_local','submission_ack'];
-      if(!phases.includes(detail?.phase))return false;
-      const metadata={telemetryVersion:1,phase:detail.phase,assetId:testSlug};
+      const startTrace=listeningStartPhases.has(detail?.phase);
+      if(!startTrace&&!phases.includes(detail?.phase))return false;
+      const metadata={telemetryVersion:startTrace?2:1,phase:detail.phase,assetId:testSlug};
+      if(startTrace){
+        if(!Number.isSafeInteger(detail.commandSequence)||detail.commandSequence<1)return false;
+        if(!Number.isSafeInteger(detail.commandStep)||detail.commandStep<1||detail.commandStep>5)return false;
+        metadata.commandSequence=detail.commandSequence;
+        metadata.commandStep=detail.commandStep;
+        if(Number.isSafeInteger(detail.observedElapsedMs)&&detail.observedElapsedMs>=0)
+          metadata.observedElapsedMs=detail.observedElapsedMs;
+        if(['reading-first','listening-first'].includes(owner.examOrder))metadata.examOrder=owner.examOrder;
+        if(listeningStartReasons.has(detail.reason))metadata.reason=detail.reason;
+        if(Number.isInteger(detail.readyState)&&detail.readyState>=0&&detail.readyState<=4)
+          metadata.readyState=detail.readyState;
+        if(typeof detail.paused==='boolean')metadata.paused=detail.paused;
+      }
       if(Number.isSafeInteger(detail.byteLength)&&detail.byteLength>0&&detail.byteLength<=512*1024*1024)
         metadata.byteLength=detail.byteLength;
       if(typeof detail.elapsedMs==='number'&&detail.elapsedMs>=0&&detail.elapsedMs<=120_000)
