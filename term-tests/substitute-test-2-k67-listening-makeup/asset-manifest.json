@@ -1,10 +1,10 @@
 {
   "testId": "substitute-test-2-k67-listening-makeup",
-  "build": "issue611-1dfda2e9ac8d62dc",
+  "build": "issue611-afb463c4ca043bdf",
   "assets": [
     {
       "path": "index.html",
-      "sha256": "b5fbc662d90d4085468ede7f88e5ba8c422c2284aed12311c120ec1fd5051b31"
+      "sha256": "5f8817cbeb96c069b1d8707846f8b1e10a6c35e7b2a2d02f6a54ac3c0caaadae"
     },
     {
       "path": "sw.js",
@@ -19,8 +19,8 @@
       "sha256": "1aa9bbbbbb34d29edab98e01473f2a74042e354aa4797fc30ee23d26dc2abd54"
     },
     {
-      "path": "../substitute-skill-shared/objective-listening-audio-v2.mjs",
-      "sha256": "e9a38f6fbeab511ca4fc279e104ed4ceae7d63188f294253b71dffa532a5f24b"
+      "path": "../substitute-skill-shared/objective-listening-audio-v3.mjs",
+      "sha256": "aa00c2500269ed70395dcaf3f728bb867c2d7e80806b0d5e9d6f0a99ef55a536"
     },
     {
       "path": "../substitute-skill-shared/native-listening.mjs",
