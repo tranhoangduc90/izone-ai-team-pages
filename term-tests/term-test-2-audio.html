@@ -55,6 +55,7 @@
   <audio id="audioMain"></audio>
 
   <script type="module">
+    import { mountPaperPlayback } from './k67-shared/paper-playback-v1.mjs';
     import { mountPaperAudio } from './k67-shared/paper-audio.mjs?v=20261112-k67-paper-audio';
 
     const audioTest = document.getElementById('audioTest');
@@ -74,25 +75,22 @@
     let isAudioFullyLoaded = false;
 
     // 2. Chỉ cho bắt đầu bài thi từ 18:45 đến trước 19:00 theo giờ trên thiết bị.
-    function checkTimeWindow() {
-      if (!isAudioFullyLoaded) return;
-
+    function startAllowed() {
       const now = new Date();
       const currentMins = now.getHours() * 60 + now.getMinutes();
       const startMins = 18 * 60 + 45; // 18:45
       const endMins = 19 * 60;        // 19:00
 
-      if (currentMins >= startMins && currentMins < endMins) {
-        btnPlayMain.disabled = false;
-        timeNotice.style.color = "#4CAF50";
-        timeNotice.innerText = "Đã đến giờ thi. Có thể bắt đầu.";
-      } else {
-        btnPlayMain.disabled = true;
-        timeNotice.style.color = "#d32f2f";
-        timeNotice.innerText = "Nút Phát Audio chỉ mở từ 18h45 - 19h00";
-      }
+      return isAudioFullyLoaded && currentMins >= startMins && currentMins < endMins;
     }
 
+    function checkTimeWindow() {
+      if (!isAudioFullyLoaded || playback.hasStarted()) return;
+      playback.refresh();
+      const allowed = startAllowed();
+      timeNotice.style.color = allowed ? "#4CAF50" : "#d32f2f";
+      timeNotice.textContent = allowed ? "Đã đến giờ thi. Có thể bắt đầu." : "Nút Phát Audio chỉ mở từ 18h45 - 19h00";
+    }
     // Kiểm tra lại giờ mỗi 5 giây nếu học viên đang mở trang để chờ.
     setInterval(checkTimeWindow, 5000);
 
@@ -125,26 +123,15 @@
       volModal.style.display = 'none';
     });
 
-    // 4. Khi thi thật, phát từ đầu và tự chạy tiếp nếu bị tạm dừng.
-    btnPlayMain.addEventListener('click', () => {
-      audioTest.pause();
-      btnCheckVol.style.display = 'none';
-      btnPlayMain.style.display = 'none';
-      timeNotice.style.display = 'none';
-      document.getElementById('progress-wrapper').style.display = 'none';
-      progressText.style.display = 'none';
-
-      audioMain.currentTime = 0;
-      audioMain.play();
-      statusDiv.innerHTML = "🎧 Đang phát bài thi...<br><span style='font-size: 14px; color: red;'>(Tuyệt đối không làm mới trang - Không thể tạm dừng)</span>";
-    });
-
-    audioMain.addEventListener('pause', () => {
-      if (!audioMain.ended) audioMain.play();
-    });
-
-    audioMain.addEventListener('ended', () => {
-      statusDiv.innerHTML = "⏹ Bài nghe đã kết thúc. Vui lòng nộp bài.";
+    const playback = mountPaperPlayback({
+      audio: audioMain, preview: audioTest, button: btnPlayMain, status: statusDiv,
+      timeAllowed: startAllowed,
+      onStart() {
+        btnCheckVol.hidden = true;
+        document.getElementById('progress-wrapper').hidden = true;
+        progressText.hidden = true;
+        timeNotice.hidden = true;
+      }
     });
 
     // Khởi động tải audio ngay khi mở trang.
