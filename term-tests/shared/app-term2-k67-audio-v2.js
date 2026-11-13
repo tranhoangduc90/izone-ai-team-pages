@@ -4295,7 +4295,7 @@
     host.setAttribute('aria-label', 'Trạng thái audio Listening');
     const toolbar=elements.listeningQuestions.querySelector('.cbt-toolbar');
     if(toolbar)toolbar.append(host);
-    else elements.listeningView.prepend(host);
+    else elements.listeningView.querySelector('.section-heading').after(host);
     const play=autoplay=>miniJourney.mountPlayer({host,autoplay,volume:Number(state.audioVolume ?? 1),onVolume:volume=>{
       state.audioVolume = volume;
       saveSession();
