@@ -6,30 +6,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://ducizone.ddns.net; base-uri 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; base-uri 'none'; form-action 'self'">
   <title>Substitute Test · Khóa 56 và 67</title>
-  <link rel="stylesheet" href="./styles.css?v=20261105-ky-thi">
-  <script defer src="./app.js?v=20261105-ky-thi"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261113-unified">
+  <script type="module" src="./app.js?v=20261113-unified"></script>
 </head>
 <body>
   <header class="bar">
     <div class="wrap bar-inner">
       <img class="brand" src="../substitute-shared/izone-logo-color.png" width="114" height="42" alt="IZONE · IELTS Chiến lược">
-      <button id="teacher" class="teacher" type="button">
+      <div class="header-actions"><button id="catalog-open" class="teacher" type="button">Link của 12 bài</button><button id="teacher" class="teacher" type="button">
         <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
         Khu vực giảng viên
-      </button>
+      </button></div>
     </div>
   </header>
   <main class="wrap">
     <div class="hero">
       <p class="eyebrow">IZONE · Cổng thi lại</p>
       <h1>Substitute Test</h1>
-      <p class="intro">Chọn khóa và bài thi theo thông báo của IZONE.</p>
+      <p class="intro">Thi toàn bài hoặc thi riêng từng kỹ năng.</p>
     </div>
     <ol class="steps" aria-label="Các bước vào bài thi">
-      <li class="step" aria-current="step"><span aria-hidden="true">1</span> Chọn khóa</li>
-      <li class="step"><span aria-hidden="true">2</span> Chọn kì thi</li>
+      <li><button class="step" id="step-course" type="button" aria-current="step"><span aria-hidden="true">1</span><strong id="course-summary">Chọn khóa</strong></button></li>
+      <li><button class="step" id="step-test" type="button" disabled><span aria-hidden="true">2</span><strong id="test-summary">Chọn kì thi</strong></button></li>
+      <li><button class="step" id="step-type" type="button" disabled><span aria-hidden="true">3</span><strong id="type-summary">Hình thức thi</strong></button></li>
     </ol>
     <section class="panel" id="pick-course" aria-labelledby="course-heading">
       <h2 id="course-heading" tabindex="-1">Bạn đang học khóa nào?</h2>
@@ -46,25 +47,34 @@
           <span class="arrow" aria-hidden="true">→</span>
         </button>
       </div>
-      <section class="test-picker" id="test-picker" aria-labelledby="test-heading" hidden>
+      <p class="hint" id="course-hint">Mỗi khóa có đề riêng. Chọn khóa trước để xem hai bài thi của khóa đó.</p>
+    </section>
+      <section class="panel" id="test-picker" aria-labelledby="test-heading" hidden>
         <h3 id="test-heading" tabindex="-1">Bạn đang thi cho bài thi kỳ nào?</h3>
         <p class="description" id="test-course"></p>
         <div class="courses test-group" data-course="k56" hidden>
-          <a class="course test-option" href="../substitute-test-1-k56-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 1</strong><span class="arrow" aria-hidden="true">↗</span></a>
-          <a class="course test-option" href="../substitute-test-2-k56-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 2</strong><span class="arrow" aria-hidden="true">↗</span></a>
+          <a class="course test-option" data-test="1" href="../substitute-test-1-k56-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 1</strong><span class="arrow" aria-hidden="true">→</span></a>
+          <a class="course test-option" data-test="2" href="../substitute-test-2-k56-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 2</strong><span class="arrow" aria-hidden="true">→</span></a>
         </div>
         <div class="courses test-group" data-course="k67" hidden>
-          <a class="course test-option" href="../substitute-test-1-k67-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 1</strong><span class="arrow" aria-hidden="true">↗</span></a>
-          <a class="course test-option" href="../substitute-test-2-k67-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 2</strong><span class="arrow" aria-hidden="true">↗</span></a>
+          <a class="course test-option" data-test="1" href="../substitute-test-1-k67-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 1</strong><span class="arrow" aria-hidden="true">→</span></a>
+          <a class="course test-option" data-test="2" href="../substitute-test-2-k67-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 2</strong><span class="arrow" aria-hidden="true">→</span></a>
         </div>
       </section>
-      <p class="hint" id="course-hint">
-        <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 10v6m0-9v1"/></svg>
-        Mỗi khóa có đề riêng. Chọn khóa trước để xem hai bài thi của khóa đó.
-      </p>
+    <section class="panel" id="type-picker" aria-labelledby="type-heading" hidden>
+      <h2 id="type-heading" tabindex="-1">Chọn hình thức thi</h2>
+      <p class="description" id="type-context"></p>
+      <div class="types" id="types" role="radiogroup" aria-label="Hình thức thi"></div>
+      <section id="selected-test" class="selected-test" aria-labelledby="selected-title" hidden>
+        <div class="selected-heading"><h3 id="selected-title"></h3><span id="selected-status" role="status"></span></div>
+        <p id="selection-note" class="description"></p>
+        <div class="selected-actions"><a id="open-test" class="button primary" target="_blank" rel="noopener noreferrer" hidden>Vào bài thi</a><button id="copy-link" class="button secondary" type="button" disabled>Sao chép link học viên</button><button id="selection-login" class="button secondary" type="button" hidden>Đăng nhập giảng viên</button></div>
+        <label class="sr-only" for="student-url">Link bài thi đang chọn</label><input id="student-url" class="student-url" readonly hidden>
+        <p id="copy-status" class="copy-status" role="status" aria-live="polite"></p>
+      </section>
     </section>
 
-    <p class="footer">Danh sách lớp được tải từ hệ thống Substitute. Bài thi mở trong tab mới.</p>
+    <p class="footer">4 bài toàn phần · 12 bài kỹ năng · Bài thi mở trong tab mới.</p>
   </main>
 
   <dialog id="teacher-dialog" aria-labelledby="teacher-heading">
@@ -72,8 +82,9 @@
       <h2 id="teacher-heading">Khu vực giảng viên</h2>
       <button type="button" class="button secondary close" aria-label="Đóng">×</button>
     </div>
-    <p><a class="button secondary" href="teacher.html">Lấy link bài thi bù theo kỹ năng</a></p>
-    <p class="description">Lấy link và xem kết quả bằng phiên đăng nhập giảng viên hiện hành.</p>
+    <section id="teacher-auth-slot"><div id="auth-panel"><p id="auth-status" class="description" role="status">Đang khôi phục đăng nhập giảng viên…</p><div id="google" hidden></div><button id="retry-auth" class="button secondary" type="button" hidden>Thử xác minh lại</button></div></section>
+    <p id="session-status" class="description"></p><button id="logout" class="button secondary" type="button" hidden>Đăng xuất giảng viên</button>
+    <p class="description">Lấy link thi bù ngay trên trang này. Các đường xem kết quả được giữ bên dưới.</p>
     <div class="result-links">
       <div>
         <h3>Khóa 56</h3>
@@ -87,6 +98,8 @@
       </div>
     </div>
   </dialog>
+
+  <dialog id="catalog" aria-labelledby="catalog-title"><div class="dialog-head"><div><h2 id="catalog-title">Link của 12 bài kỹ năng</h2><p class="description">Chỉ sao chép bài đã mở và tài khoản được cấp quyền.</p></div><button id="catalog-close" class="button secondary close" type="button" aria-label="Đóng danh sách">×</button></div><section id="catalog-auth-slot"></section><div class="catalog-scroll"><table><thead><tr><th>Khóa / Đề</th><th>Kỹ năng</th><th>Trạng thái</th><th>Link học viên</th></tr></thead><tbody id="catalog-body"></tbody></table></div><p id="catalog-status" class="copy-status" role="status" aria-live="polite"></p></dialog>
 
 </body>
 </html>
