@@ -125,7 +125,7 @@ export const ASSET_HASHES={
   "../../shared/master170/question-layout-v1.1.css": "41c799966c2fb1b06a0d4b8a1d12c01e8c84263aba3a9bab2c51fed90108b393",
   "../../shared/master170/question-layout-v1.1.mjs": "9fdac358d2aba37b919f520dd81b0cd384310f0278216b6d122fc2a1660e02d5",
   "../../shared/master170/tokens-v1.1.css": "efa215844ed0588344d4e031460bbeaca16d40d0a8c52904632b89c437e5f540",
-  "../../shared/reading-view.mjs": "7fb2b1d50efdd66311704ca8682ac5ddcb8a538e807f8039fe804587a2f5b6a5",
+  "../../shared/reading-view.mjs": "a1f5410bf3f634af3e828428a4880199c38a38aef27ebe5146286fd93b6600ec",
   "../../shared/red-focus-glow.css": "92ec0173cb14704d3d2f3beafd12356ccc3e47ca5ff9fe13a1d4c3f6aba80438",
   "../../shared/red-focus-glow.js": "21bdf68ed43d91865eb6116b03759741c54a88f2274d28e63754afc4dc34e50c",
   "../../shared/student-identity-client.js": "494cc73bb84cb1f607fe22668715d3130e4946bad3948b6e7c659dcb7c61182d",
@@ -212,4 +212,4 @@ export const ASSET_HASHES={
   "offline-worker-audio-status-v2.js": "be14749850abdb2a519b1e44efd201386adb171378a71c938ad2fc098d319c00",
   "resilience-audio-status-v2.mjs": "7c74293a558505055148bb239607dffc83a0883459084c7ec45489368cf5d964"
 };
-export const ASSET_BUILD_ID="3cdf0d72d570a3e4821447e4406041ec82b71cc083908960e9355ed976ab014e";
+export const ASSET_BUILD_ID="4046fe7d0101908e923c608c4ed6c4100438151cc13eb2032d5871afeff379ca";

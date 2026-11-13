@@ -222,7 +222,7 @@ export const ASSET_HASHES={
   "../../shared/public-audio.mjs": "5254a73add48f3b3d9bf76340bbcd87935aa293cc9478363e81a447bb8025b9e",
   "../../shared/reading-homework-journal.mjs": "9ec9b8bdd83c577b26bb9a631f3f77a68bbc005b48f9555e48edd15272721668",
   "../../shared/reading-practice-journal.mjs": "2db3d9faf1836cd63683604b57d12663f96597622a4852e0cc7f4f19568ab438",
-  "../../shared/reading-view.mjs": "7fb2b1d50efdd66311704ca8682ac5ddcb8a538e807f8039fe804587a2f5b6a5",
+  "../../shared/reading-view.mjs": "a1f5410bf3f634af3e828428a4880199c38a38aef27ebe5146286fd93b6600ec",
   "../../shared/red-focus-glow.css": "92ec0173cb14704d3d2f3beafd12356ccc3e47ca5ff9fe13a1d4c3f6aba80438",
   "../../shared/red-focus-glow.js": "21bdf68ed43d91865eb6116b03759741c54a88f2274d28e63754afc4dc34e50c",
   "../../shared/speaking-homework-journal.mjs": "afad6831244fbe29e7742afa4e52606312acf63697825a914f07916b08791d91",
@@ -337,4 +337,4 @@ export const ASSET_HASHES={
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="0421de246d2bfa812d3eebf074cfd73d00748f7a1c662b25899e44fc23dcf601";
+export const ASSET_BUILD_ID="fcab27dfb9bd186dab70b671c63bf89421056f85f9efc21254873db0c6fe0dd4";
