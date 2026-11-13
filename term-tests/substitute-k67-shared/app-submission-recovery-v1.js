@@ -147,11 +147,11 @@
   // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
   let examJournal = null, journalConnection = null;
   if (appConfig.EXAM_JOURNAL_ENABLED === true) {
-    journalConnection = import('../shared/exam-journal/bridge-substitute-recovery-v1.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&eofLog=20261108-v1&continuity=20261110-listening-observations-v1&submission=20261112-v2').then(({ connectExamJournal }) => {
+    journalConnection = import('../shared/exam-journal/bridge-substitute-recovery-v1.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&eofLog=20261108-v1&continuity=20261110-listening-observations-v1&submission=20261112-v2&startTrace=20261114-v1').then(({ connectExamJournal }) => {
       examJournal = connectExamJournal({ enabled: true,
         endpoint: appConfig.EXAM_JOURNAL_BASE_URL || new URL(appConfig.API_BASE_URL).origin + '/substitute-journal-api/' + testConfig.slug,
-        testSlug: testConfig.slug, build: appConfig.EXAM_JOURNAL_BUILD || 'unknown',
-        submissionMetadataOnly: window.TERM_TEST_BOOTSTRAP?.submissionRecoveryVersion === 1,
+        testSlug: testConfig.slug, build: (appConfig.EXAM_JOURNAL_BUILD || 'unknown')+'+start-trace-20261114-v1',
+        submissionMetadataOnly: window.TERM_TEST_BOOTSTRAP?.submissionRecoveryVersion === 1, substituteStartTrace:listeningContinuity,
         getState: () => ({ ...state, classCode,
           generation: sealedSubmissions ? Number(window.TERM_TEST_BOOTSTRAP?.offlineGeneration ?? 0)
             : typeof miniGeneration === 'number' ? miniGeneration : Number(state.generation || 0),
@@ -738,15 +738,19 @@
   const continuityJournalPending=new Map();
   let continuityJournalTimer=0;
   function noteListeningContinuity(detail){
-    if(!listeningContinuity||appConfig.EXAM_JOURNAL_ENABLED!==true)return;
-    continuityJournalPending.set(detail.phase,detail);
+    if(!listeningContinuity||appConfig.EXAM_JOURNAL_ENABLED!==true||!detail?.phase)return;
+    const owner=window.TERM_TEST_BOOTSTRAP;
+    const key=detail.commandSequence ? detail.commandSequence+':'+detail.phase : detail.phase;
+    if(continuityJournalPending.size>=48&&!continuityJournalPending.has(key))return;
+    continuityJournalPending.set(key,{owner,detail});
     if(!continuityJournalTimer)flushContinuityJournal();
   }
   function flushContinuityJournal(attempt=0){
     continuityJournalTimer=0;
-    for(const [phase,detail] of continuityJournalPending){
+    for(const [key,{owner,detail}] of continuityJournalPending){
       try{
-        if(examJournal?.recordSubstituteListening(window.TERM_TEST_BOOTSTRAP,detail))continuityJournalPending.delete(phase);
+        if(owner!==window.TERM_TEST_BOOTSTRAP||examJournal?.recordSubstituteListening(owner,detail))
+          continuityJournalPending.delete(key);
       }catch{}
     }
     if(continuityJournalPending.size&&attempt<6)continuityJournalTimer=setTimeout(()=>flushContinuityJournal(attempt+1),1000);

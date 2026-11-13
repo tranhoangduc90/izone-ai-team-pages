@@ -1218,8 +1218,20 @@
         return;
       }
       const epoch=++startEpoch;
+      let commandStep=0;
+      const traceStart=(phase,reason)=>{
+        if(!continuity||window.TERM_TEST_BOOTSTRAP!==protectedBootstrap)return;
+        try{
+          window.dispatchEvent(new CustomEvent('substitute:listening-observed',{detail:{
+            phase,reason,commandSequence:epoch,commandStep:++commandStep,
+            observedElapsedMs:Math.round(performance.now()),positionSeconds:audio.currentTime,
+            paused:audio.paused,readyState:audio.readyState
+          }}));
+        }catch{/* Observation must not delay or interrupt the exam. */}
+      };
       const stillCurrent=()=>epoch===startEpoch&&!listeningClosed&&!window.SUBSTITUTE_STATE.blocked
         &&window.TERM_TEST_BOOTSTRAP===protectedBootstrap&&listeningForm.form.isConnected&&!listeningForm.form.hidden;
+      traceStart('start_requested');
       startPending=true;
       startButton.disabled=true;
       allowPause = true;
@@ -1228,21 +1240,25 @@
       const officialTime = !continuity&&examStarted ? uiState.audio.time : 0;
       if(!continuity)audio.currentTime = Math.min(Math.max(0, officialTime), Math.max(0, (audio.duration || 1) - 1));
       let playBlocked = false;
+      let playRequested = false;
       const startClicked=performance.now();
       try {
         deferredPlayback?.verify();
         if(protectedBootstrap?.examSessionId&&protectedBootstrap.examOrder==='reading-first'
           &&!protectedBootstrap.listeningStartedAt&&!phaseStarted){
           await window.SUBSTITUTE_EXAM.startListeningPhase(stillCurrent);
-          if(!stillCurrent())return;
+          if(!stillCurrent()){traceStart('start_discarded','scope_changed_before_play');return;}
           phaseStarted=true;
         }
-        if(!stillCurrent())return;
+        if(!stillCurrent()){traceStart('start_discarded','scope_changed_before_play');return;}
+        playRequested=true;
+        traceStart('play_requested');
         await audio.play().catch(error => {
           playBlocked = error?.name === 'NotAllowedError';
           throw error;
         });
-        if(!stillCurrent()){audio.pause();return;}
+        if(!stillCurrent()){traceStart('start_discarded','scope_changed_after_play');audio.pause();return;}
+        traceStart('play_resolved');
         if(!deferredPlayback)protectedBootstrap?.markListeningPlaying?.();
         const elapsedMs=deferredPlayback?.played()??performance.now()-startClicked;
         if(continuity)window.dispatchEvent(new CustomEvent('substitute:listening-observed',{
@@ -1257,11 +1273,16 @@
         setListeningVisible(true);
         if(submitButton)submitButton.disabled=initialSubmitDisabled;
         cannotHear.disabled=false;
+        traceStart('answers_unlocked');
         updateExamStatus('Đang phát bài thi');
         saveUiState();
       } catch {
         allowPause = false;
-        if(!stillCurrent())return;
+        if(!stillCurrent()){
+          traceStart('start_discarded',playRequested?'scope_changed_after_play':'scope_changed_before_play');
+          return;
+        }
+        traceStart('start_rejected',playBlocked?'play_not_allowed':playRequested?'play_failed':'phase_or_player_unavailable');
         if (playBlocked) {
           const label = officialTime > 0 ? 'Tiếp tục audio' : 'Phát audio';
           startButton.textContent = label;
