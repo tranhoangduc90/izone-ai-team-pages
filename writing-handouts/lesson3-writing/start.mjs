@@ -32,7 +32,7 @@ async function boot(){
       apiBase,request,writingUrl:writing.href,verifiedDocsStudent:studentRef,showOpeningError,
       rememberVersion:version=>rememberApprovedOutline(documentId,version)
     });
-    await import('../shared/loader.mjs?v=20261113-single-entry');
+    await import('../shared/loader.mjs?v=20261113-outline-save-v1');
   }
   await enter(await access.open(root));
 }

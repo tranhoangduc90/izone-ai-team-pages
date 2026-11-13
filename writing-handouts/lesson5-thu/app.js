@@ -9,7 +9,7 @@ import {outlineSections,outlineJourney} from '../shared/body-outline-ui.mjs?v=20
 import {isBodyOutline,outlineRelation,validOutlineDirection} from '../shared/workflow.mjs?v=20261109-l3-v1';
 import {wholeSections} from '../shared/whole-chain-ui.mjs';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../../shared/course-student-identity.js?v=20261018-identity-v1';
-import {patchReadingView} from '../../shared/reading-view.mjs?v=20261027-v1';
+import {patchReadingView} from '../../shared/reading-view.mjs?v=20261113-outline-save-v1';
 installStyles();
 
 // Nhận bài của người đã xác nhận, lưu ở backend riêng và hiển thị nhận xét đọc lại.

@@ -29,7 +29,8 @@ async function exercise(t,run){
   const siteOrigin=new URL(site).origin;
   const browser=await chromium.launch({channel:'chrome',headless:true});
   const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});
-  const page=await context.newPage(),calls=[],errors=[],state={rosterError:0,wrongSession:false,returned:false};
+  const page=await context.newPage(),calls=[],errors=[];
+  const state={rosterError:0,wrongSession:false,returned:false,outline:structuredClone(outline),saves:[],saveDelay:0,reads:0};
   page.setDefaultTimeout(4500);
   const writing=site+'/homework-writing/?'+query;
   await context.addInitScript(()=>{
@@ -57,7 +58,7 @@ async function exercise(t,run){
         calls.push('standalone:'+path);
         if(path==='/lessons/lesson3')return send({ok:true,lesson});
         if(path==='/roster')return send({ok:true,classes:[{classRef,className:classRef,students:[{studentRef,displayName:person.label}]}]});
-        if(path==='/sessions')return send({ok:true,token:handoutToken,session:outline});
+        if(path==='/sessions')return send({ok:true,token:handoutToken,session:state.outline});
         return send({ok:false},404);
       }
       if(!url.pathname.startsWith(prefix))return route.abort();
@@ -80,14 +81,27 @@ async function exercise(t,run){
       if(p===editor+'/sessions'){
         assert.deepEqual(req.postDataJSON(),{activity:'lesson3',classRef,studentRef});
         assert.equal(h['x-hw-csrf'],'1');
-        return send({ok:true,token:handoutToken,session:{...outline,...(state.wrongSession?{studentRef:'another-person'}:{})}});
+        return send({ok:true,token:handoutToken,session:{...state.outline,...(state.wrongSession?{studentRef:'another-person'}:{})}});
       }
       if(p===editor+'/sessions/'+ref+'/continue-writing'){
         assert.equal(h['x-hw-handout'],'Bearer '+handoutToken);
         assert.deepEqual(req.postDataJSON(),{baseVersion:8});
         return send({ok:true,url:writing});
       }
-      if(p===editor+'/sessions/'+ref)return send({ok:true,session:outline});
+      if(p===editor+'/sessions/'+ref+'/responses'&&req.method()==='PUT'){
+        assert.equal(h['x-hw-handout'],'Bearer '+handoutToken);
+        const {baseVersion,responses}=req.postDataJSON();
+        assert.equal(baseVersion,state.outline.version);
+        state.saves.push({baseVersion,responses});
+        await new Promise(resolve=>setTimeout(resolve,state.saveDelay));
+        Object.assign(state.outline.responses,responses);
+        state.outline.version++;
+        return send({ok:true,session:state.outline});
+      }
+      if(p===editor+'/sessions/'+ref){
+        state.reads++;
+        return send({ok:true,session:state.outline});
+      }
       return send({message:'Unmodeled fixture route'},404);
     });
     async function enter(){
@@ -133,6 +147,42 @@ test('Handout retries a temporary roster failure and restores the same learner a
   assert.equal(await page.locator('#learner-label').innerText(),person.label);
   assert.equal(calls.filter(p=>p==='/access/student/link').length,1);
   assert.equal(calls.includes('mapping'),false);
+  assert.deepEqual(errors,[]);
+}));
+
+test('Fast Food saves a focused blank outline field, keeps the caret through background reads, and restores both edits',async t=>exercise(t,async({page,enter,state,errors})=>{
+  const field='body1_idea1';
+  const first='Một ý đang được gõ thử';
+  const continued=first+' tiếp tục';
+  state.outline.steps.body1_topic.status='draft';
+  state.outline.steps.body2_topic.status='pending';
+  state.saveDelay=700;
+  await enter();
+  const input=page.locator('#field-'+field);
+  await input.click();
+  const original=await input.elementHandle();
+  await page.keyboard.insertText(first);
+  await page.waitForFunction(()=>document.getElementById('save-state').textContent==='Đã lưu trên máy chủ');
+  assert.deepEqual(state.saves,[{baseVersion:8,responses:{[field]:first}}]);
+  assert.equal(state.outline.responses[field],first);
+  const checkFocusedValue=async()=>assert.deepEqual(await original.evaluate(node=>({
+    value:node.value,focused:document.activeElement===node,selection:node.selectionStart,connected:node.isConnected
+  })),{value:first,focused:true,selection:first.length,connected:true});
+  await checkFocusedValue();
+
+  state.outline.steps.body2_topic.status='passed';
+  await page.waitForFunction(()=>document.getElementById('body2').dataset.status==='passed');
+  await page.waitForTimeout(8500);
+  assert.ok(state.reads>=3,'Wait through at least three background reads');
+  await checkFocusedValue();
+  assert.equal(await page.locator('#field-body1_topicSentence').inputValue(),'Dàn ý đã lưu của đúng học viên');
+
+  await page.keyboard.insertText(' tiếp tục');
+  await page.waitForFunction(()=>document.getElementById('save-state').textContent==='Đã lưu trên máy chủ');
+  assert.deepEqual(state.saves.at(-1),{baseVersion:9,responses:{[field]:continued}});
+  await page.reload();
+  await input.waitFor();
+  assert.equal(await input.inputValue(),continued);
   assert.deepEqual(errors,[]);
 }));
 
