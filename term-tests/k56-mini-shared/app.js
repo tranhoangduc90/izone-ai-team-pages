@@ -280,6 +280,7 @@
       state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(serverNow) ?? (Date.parse(serverNow) - Date.now()));
     }
     if (detail.audioRecoveryVersion === 2 && !state.listeningSubmitted
+        && !state.pendingSubmissions?.listening
         && elements.listeningView.dataset.listeningSubmitting !== 'true'
         && (window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + state.serverTimeOffsetMs)) < Date.parse(state.listeningDeadlineAt)) {
       delete elements.listeningView.dataset.listeningTimeExpired;
@@ -628,7 +629,9 @@
     } else {
       showSectionReady(response.nextSection);
     }
-    if (modeChanged || response.modeMismatch) showNotice('Lượt thi giữ thứ tự đã chọn trước đó. Link đã được cập nhật cho đúng lượt.', 'success');
+    if (window.TERM_TEST_BOOTSTRAP?.reconcileListening && state.pendingSubmissions?.listening) {
+      showNotice('Bản nộp Listening chưa được xác nhận. Hãy nhấn Nộp bài Listening để đối soát.');
+    } else if (modeChanged || response.modeMismatch) showNotice('Lượt thi giữ thứ tự đã chọn trước đó. Link đã được cập nhật cho đúng lượt.', 'success');
     else hideNotice();
     // Nháp local mới hơn bản máy chủ phải được gửi lại sau khi xác nhận đúng lượt CBT.
     for (const skill of ['listening', 'reading']) scheduleSectionDraft(skill, 0);
@@ -735,6 +738,13 @@
     if (stage === 'loading') elements.loadingView.hidden = false;
     if (stage === 'listening') {
       elements.listeningView.hidden = false;
+      if (window.TERM_TEST_BOOTSTRAP?.reconcileListening && state.pendingSubmissions?.listening) {
+        for (const field of elements.listeningQuestions.querySelectorAll('[data-number]')) {
+          field.value = state.pendingSubmissions.listening.answers[field.dataset.number] || '';
+        }
+        setAnswerControlsLocked('listening', true);
+        updateAnswerCount('listening');
+      }
     }
     if (stage === 'listening-saved') elements.listeningSavedView.hidden = false;
     if (stage === 'reading') elements.readingView.hidden = false;
@@ -950,6 +960,7 @@
 
   function sectionDraftPending(skill) {
     return !demoMode && !window.K56_DEMO_RESETTING && !sectionDraftLocked[skill] && (!paperMini || paperConfirmed)
+      && (skill !== 'listening' || !state.pendingSubmissions?.listening)
       && !state.completed && !state[skill + 'Submitted'] && Boolean(state[skill + 'StartedAt'])
       && Boolean(skill === 'listening' ? state.examSessionToken : state.attemptToken)
       && state.draftRevisions[skill] > state.draftAckRevisions[skill];
@@ -983,6 +994,7 @@
       body: JSON.stringify({ ...token, answers, revision: sentRevision })
     });
     if (studentRef !== state.studentRef || attemptToken !== state.attemptToken || epoch !== paperEpoch
+      || (skill === 'listening' && state.pendingSubmissions?.listening)
       || Object.values(token)[0] !== (skill === 'listening' ? state.examSessionToken : state.attemptToken)) return null;
     const ackRevision = response?.revision, ackDraft = response?.draft;
     const validDraft = ackDraft && typeof ackDraft === 'object' && !Array.isArray(ackDraft)
@@ -2501,11 +2513,12 @@
     }
     const automatic = event.submitter?.dataset.autoSubmit === 'true'
       || elements.listeningView.dataset.listeningTimeExpired === 'true';
-    if (automatic && window.K56_LISTENING_AUDIO) {
+    const pending = state.pendingSubmissions?.listening;
+    if (automatic && window.K56_LISTENING_AUDIO && !pending) {
       const decision = await window.K56_LISTENING_AUDIO.beforeAutoSubmit();
       if (state.listeningSubmitted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
       if (!decision.submit) {
-        if (decision.deadlineChanged) {
+        if (decision.deadlineChanged && !state.pendingSubmissions?.listening) {
           delete elements.listeningView.dataset.listeningTimeExpired;
           state.frozenAnswers.listening = null;
           setAnswerControlsLocked('listening', false);
@@ -2519,7 +2532,7 @@
       answers = state.frozenAnswers.listening;
     }
     const answered = updateAnswerCount('listening');
-    if (!automatic && !offline?.record.sections.listening?.sealed && !confirmIncomplete(answered, 'Listening')) return;
+    if (!automatic && !pending && !offline?.record.sections.listening?.sealed && !confirmIncomplete(answered, 'Listening')) return;
     state.clientSubmissionId ||= crypto.randomUUID();
     state.drafts.listening = answers;
     saveSession();
@@ -2530,6 +2543,8 @@
     if (automatic) showNotice('Đã hết giờ. Hệ thống đang tự thu và chấm bài Listening...');
     let submitted = false;
     try {
+      await window.TERM_TEST_BOOTSTRAP?.reconcileListening?.();
+      if (pending) await window.K56_LISTENING_AUDIO?.acquireForSubmission?.();
       if (demoMode === 'exam') {
         if (serverGradingMode) {
           const grade = await apiRequest('/api/test/grade', {
@@ -2581,17 +2596,20 @@
     } catch (error) {
       if (offline?.record.sections.listening?.sealed) {
         showNotice('Đã khóa đáp án nhưng chưa lưu được trên thiết bị. Hãy bấm Nộp bài Listening để thử lưu lại bản đã chốt, hoặc tải bài về máy.', 'error');
+      } else if (window.TERM_TEST_BOOTSTRAP?.reconcileListening && !state.pendingSubmissions?.listening) {
+        showNotice(`Máy chủ chưa nhận bài Listening: ${error.message}. Hãy tải lại trang để mở đúng lượt và xử lý tiếp.`, 'error');
       } else showNotice(automatic
         ? `Hết giờ nhưng chưa thể nộp Listening: ${error.message}. Bài đã khóa và hệ thống sẽ tự thử lại.`
         : `Không thể lưu Listening: ${error.message}`, 'error');
     } finally {
       delete elements.listeningView.dataset.listeningSubmitting;
-      if (!submitted) window.K56_LISTENING_AUDIO?.submitFailed();
+      if (!submitted) window.K56_LISTENING_AUDIO?.submitFailed(Boolean(state.pendingSubmissions?.listening));
       if (!submitted && isSectionExpired('listening')) {
         elements.listeningView.dataset.listeningTimeExpired = 'true';
         state.frozenAnswers.listening ||= { ...answers };
         saveSession();
-      } else if (!automatic && !submitted && !offline?.record.sections.listening?.sealed) {
+      } else if (!automatic && !submitted && !offline?.record.sections.listening?.sealed
+          && !window.TERM_TEST_BOOTSTRAP?.reconcileListening) {
         setAnswerControlsLocked('listening', false);
       }
       setBusy(elements.submitListening, false, 'Đang lưu Listening...', 'Nộp bài Listening');
