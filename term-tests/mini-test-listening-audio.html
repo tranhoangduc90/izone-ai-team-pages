@@ -53,6 +53,7 @@
   <audio id="audioMain"></audio>
 
   <script type="module">
+    import { mountPaperPlayback } from './k67-shared/paper-playback-v1.mjs';
     import { mountPaperAudio } from './k67-shared/paper-audio.mjs?v=20261112-k67-paper-audio';
 
     const audioTest = document.getElementById('audioTest');
@@ -99,29 +100,13 @@
       volModal.style.display = 'none';
     });
 
-    // 3. Logic Thi Thật (Chống Pause)
-    btnPlayMain.addEventListener('click', () => {
-      // Tắt mọi thứ khác
-      audioTest.pause();
-      btnCheckVol.style.display = 'none';
-      btnPlayMain.style.display = 'none';
-      document.getElementById('progress-wrapper').style.display = 'none';
-      progressText.style.display = 'none';
-
-      // ÉP TUA VỀ ĐẦU BÀI NGHE
-      audioMain.currentTime = 0;
-
-      // Chạy audio chính
-      audioMain.play();
-      statusDiv.innerHTML = "🎧 Đang phát bài thi...<br><span style='font-size: 14px; color: red;'>(Tuyệt đối không làm mới trang - Không thể tạm dừng)</span>";
-    });
-
-    audioMain.addEventListener('pause', () => {
-      if (!audioMain.ended) audioMain.play();
-    });
-
-    audioMain.addEventListener('ended', () => {
-      statusDiv.innerHTML = "⏹ Bài nghe đã kết thúc. Vui lòng nộp bài.";
+    const playback = mountPaperPlayback({
+      audio: audioMain, preview: audioTest, button: btnPlayMain, status: statusDiv,
+      onStart() {
+        btnCheckVol.hidden = true;
+        document.getElementById('progress-wrapper').hidden = true;
+        progressText.hidden = true;
+      }
     });
 
     // Khởi động
