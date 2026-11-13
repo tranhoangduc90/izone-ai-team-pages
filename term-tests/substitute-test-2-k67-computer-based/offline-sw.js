@@ -27,7 +27,7 @@ self.addEventListener('fetch',event=>{
    if(response.ok)void cache.put(event.request,response.clone());
    return response;
   }catch(error){
-   const cached=await cache.match(event.request,{ignoreSearch:true});
+   const cached=await cache.match(event.request)||await cache.match(event.request,{ignoreSearch:true});
    if(cached)return cached;
    if(event.request.mode==='navigate')return cache.match(SHELL.href);
    throw error;
