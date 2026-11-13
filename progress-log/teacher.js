@@ -5,6 +5,7 @@ import {contentTitle,sessionHeading} from './session-presentation.js';
 import {createTeacherLiveUpdates,paintConnection} from './teacher-live-updates.js?rev=20261023-read-recovery-v2';
 import {writingResultLink} from './student-test-results.js?rev=20261030-the22-23-v1';
 import {readLearningResponse} from './api-response.js?rev=20261030-the22-23-v1';
+import {answerOptionLabel} from './answer-option-label.js';
 import {renderTeacherClassPortal} from './teacher-class-portal.js?rev=20261105-class-scope-v1';
 import {observeSubmissionWindow, submissionWindowMessage, windowCanSubmit} from './submission-window.js?rev=20261022-official-v2';
 /*
@@ -744,12 +745,19 @@ function definitionItems() {
 }
 
 function answerText(item, value) {
+  if (['single_choice', 'multi_choice_group'].includes(item.interactionType)) {
+    const entries = Array.isArray(value) ? value : [value];
+    if (item.layoutType === 'matching_pairs') {
+      const pairs = item.interactionConfig?.matchingPrompts || [];
+      return pairs.map((prompt, index) => `${prompt} → ${answerOptionLabel(item, entries[index], '—')}`).join('\n') || '—';
+    }
+    return entries.filter(entry => entry != null && entry !== '').map(entry => answerOptionLabel(item, entry)).join(' · ') || '—';
+  }
   if (Array.isArray(value)) {
     return value.map((entry, index) => `${index + 1}. ${String(entry || '').trim() || '—'}`).join('\n');
   }
   if (value && typeof value === 'object') return `${value.correct ?? '—'} / ${value.total ?? '—'}`;
-  const option = item.options?.find(candidate => candidate.id === value);
-  return option ? option.label : String(value || '').trim() || '—';
+  return String(value ?? '').trim() ? String(value ?? '') : '—';
 }
 
 function itemApplies(item, responses) {

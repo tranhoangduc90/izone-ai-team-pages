@@ -184,7 +184,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     markDirty();paint();
   }
   function adopt(value,{review=false}={}) {publishAttempted=false;saveFailed=false;skillErrors.clear();draft=clone(value);if(publishedByDraft.has(value.id)){draft.publication=publishedByDraft.get(value.id);draft.status='published';}dirty=false;reviewMode=review;publishOperationId=null;conflict=null;importPreview=null;session.value=String(value.sessionNumber);if(value.classId)classSelect.value=String(value.classId);authoring=true;paint();}
-  function payload() {return {definition:clone(draft.definition),gradingKey:clone(draft.gradingKey),...(draft.scope==='izone'?{}:{sessionNumber:Number(session.value)})};}
+  function payload() {return {definition:clone(draft.definition),gradingKey:clone(draft.gradingKey),...(['izone','personal'].includes(draft.scope)?{}:{sessionNumber:Number(session.value)})};}
   async function refreshList() {
     const classId=classSelect.value,current=generation;if(!classId)return;
     const [own,queue,publications]=await Promise.all([request('/teacher/form-drafts?classId='+classId),request('/teacher/form-drafts/review-queue?classId='+classId),...(libraryEnabled?[request('/teacher/form-publications')]:[Promise.resolve({publications:[]})])]);
@@ -356,7 +356,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     submitReview.disabled=blocked||!course;
     approve.hidden=!shared||!(canApproveDraft||canApprovePending);
     approve.disabled=blocked||!course;
-    publish.hidden=shared&&(reviewMode||draft.status!=='approved'||dirty);
+    publish.hidden=draft.scope==='personal'||shared&&(reviewMode||draft.status!=='approved'||dirty);
     publish.disabled=blocked||readonly;
     actions.setAttribute('aria-busy',String(busy));
     paintSaveState();
@@ -822,7 +822,23 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
         if(current!==generation)return;copies.delete(key);adopt(reply.draft);await refreshList();opened=true;notice('Đã tạo bản riêng trong Kho cá nhân. Phiếu nguồn thuộc người khác được giữ nguyên.');
       }
     });return opened;
-  },onCopy:async entry=>{
+  },onCopy:async (entry,{title}={})=>{
+    if(entry.source==='izone'&&title){
+      if(!canDiscard())return false;
+      const key=JSON.stringify(['personal',entry.id,entry.sourceRevision,entry.contentHash,title]);
+      if(!copies.has(key))copies.set(key,uuid());
+      let opened=false,copyError;
+      await run(async current=>{
+        let reply;
+        try{reply=await request('/teacher/form-library/'+entry.id+'/copy-to-personal',{method:'POST',body:{
+          title,expectedRevision:entry.sourceRevision,expectedHash:entry.contentHash,operationId:copies.get(key)}});}
+        catch(error){copyError=error;return;}
+        if(current!==generation)return;
+        copies.delete(key);adopt(reply.draft);opened=true;notice('Đã tạo bản sao trong Kho cá nhân.');
+      });
+      if(copyError)throw copyError;
+      return opened;
+    }
     if(!canDiscard())return false;let copied=false;await run(async current=>{
       const key=entry.id+':'+classSelect.value+':'+session.value;if(!copies.has(key))copies.set(key,uuid());
       const reply=await request(entry.source==='personal'?'/teacher/form-drafts/'+entry.sourceDraftId+'/edit':'/teacher/form-library/'+entry.id+'/copy',{method:'POST',body:entry.source==='personal'?{operationId:copies.get(key)}:{classId:classSelect.value,sessionNumber:Number(session.value),operationId:copies.get(key)}});
