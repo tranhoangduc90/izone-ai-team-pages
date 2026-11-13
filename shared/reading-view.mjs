@@ -37,8 +37,10 @@ export function patchReadingView(root, next, {nodeKey,boundary} = {}) {
     for(const attribute of incoming.attributes) {
       if(existing.getAttribute(attribute.name)!==attribute.value)existing.setAttribute(attribute.name,attribute.value);
     }
+    // Patching children can move the textarea's text out of the incoming node.
+    const nextTextareaValue=existing instanceof HTMLTextAreaElement ? incoming.value : undefined;
     children(existing,incoming);
-    if(existing instanceof HTMLTextAreaElement && existing.value!==incoming.value)existing.value=incoming.value;
+    if(existing instanceof HTMLTextAreaElement && existing.value!==nextTextareaValue)existing.value=nextTextareaValue;
     if(existing instanceof HTMLInputElement && existing.value!==incoming.value)existing.value=incoming.value;
   }
   children(root,next);
