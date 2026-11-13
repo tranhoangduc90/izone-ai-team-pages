@@ -100,6 +100,12 @@ export function mountIntegratedReview(root,{result,editable=false,storageKey,gui
       revised:asMarked(source.revised_text,result.teacherHighlights?.['card:'+source.id+':revised']?.ranges||byField(source.revisedHighlights,'revised')),
       explanation:feedbackTextHtml(source.explanation,result.teacherHighlights?.['card:'+source.id+':explanation']?.ranges)
     };
+    const item=result.items[source.sourceIndex];
+    const confirmedKeep=teacherActions&&item.decision==='KEEP'&&
+      item.original_text.trim()&&item.original_text===item.revised_text&&source.revised_text===item.original_text&&
+      Array.isArray(item.issues)&&!item.issues.length&&!source.correctionCount&&!source.needsReview&&
+      !result.atomicReview?.items?.includes(item.item)&&!result.dropped?.some(entry=>entry.item===item.item)&&
+      card.original==null&&card.revised==null&&!result.teacherHighlights?.['card:'+source.id+':revised']?.ranges?.length;
     const position=index+1;
     const pager=`<nav class="integrated-pager" tabindex="-1" aria-label="Chuyển thẻ nhận xét · Thẻ ${position} trên ${list.length}"><button type="button" data-prev-card>‹ Trước</button><span class="integrated-card-position" aria-hidden="true">${position}/${list.length}</span><button type="button" data-next-card>Tiếp ›</button></nav>`;
     sentences.innerHTML=(editable?'<div class="integrated-sentence-actions"><div class="sentence-highlight-actions"><button type="button" data-add-mark>Thêm Highlight</button><button type="button" data-remove-mark>Xoá Highlight</button></div>'+pager+
@@ -115,10 +121,25 @@ export function mountIntegratedReview(root,{result,editable=false,storageKey,gui
       overlay.cards[index][field]=editor.getHTML();change();
     };
     let activePair;
-    for(const [selector,field,label] of [['[data-rich-source]','original','Bài làm'],['[data-rich-revision]','revised','Gợi ý chỉnh sửa']]){
+    function mountPair(selector,field,label){
       const editor=mounts(sentences.querySelector(selector),card[field]??baseline[field],label,editor=>update(field,editor),
         {rich:false,onFocus:editor=>{activePair=editor;}});
       cardEditors.push(editor);activePair=editor;
+      return editor;
+    }
+    for(const [selector,field,label] of [['[data-rich-source]','original','Bài làm'],['[data-rich-revision]','revised','Gợi ý chỉnh sửa']]){
+      if(field==='revised'&&confirmedKeep){
+        const badge=document.createElement('button');
+        badge.type='button';
+        badge.className='sentence-keep-badge';
+        badge.textContent='Không cần chỉnh sửa';
+        badge.setAttribute('aria-description','Mở ô gợi ý để chỉnh sửa câu.');
+        sentences.querySelector(selector).before(badge);
+        badge.onclick=()=>{
+          badge.remove();
+          mountPair(selector,field,label).commands.focus();
+        };
+      }else mountPair(selector,field,label);
     }
     cardEditors.push(mounts(sentences.querySelector('[data-rich-explanation]'),card.explanation??baseline.explanation,
       editable?'Giải thích':'Nhận xét',editor=>update('explanation',editor)));

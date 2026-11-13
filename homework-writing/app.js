@@ -1,7 +1,7 @@
 import runtime from './runtime-config.js?v=20261111-student-entry-r2';
 import {frontendConfiguration,createOnlineAccess} from './online-access.js?v=20261111-doc-entry';
 import {setupRichReview} from './rich-review.js';
-import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261112-clean-language';
+import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261113-confirmed-keep';
 import {basicSubmissionError} from './submission-check.js';
 import {vietnameseWritingError} from './submission-language.js';
 import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261112-clean-language';

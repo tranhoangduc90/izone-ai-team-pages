@@ -45,6 +45,13 @@
 .integrated-pair>section{min-width:0}
 .integrated-pair>section+section{border-left:1px solid #e4e5e8}
 .integrated-pair h4{font-size:15px;border-radius:0}
+.review-form .integrated-pair h4{text-align:center}
+.integrated-pair .sentence-keep-badge{
+ display:inline-block;margin:9px 16px;padding:4px 12px;min-height:0;
+ border:0;border-radius:999px;background:#e7f5e9;color:#176235;
+ font-size:14px;font-weight:700;line-height:1.4
+}
+.integrated-pair .sentence-keep-badge:hover{background:#d9efde;color:#176235}
 .integrated-pair>section:first-child h4{border-top-left-radius:11px}
 .integrated-pair>section:last-child h4{border-top-right-radius:11px}
 .integrated-explanation{margin-top:12px}
