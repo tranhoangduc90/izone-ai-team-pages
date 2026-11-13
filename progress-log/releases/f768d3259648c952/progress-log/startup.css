@@ -1,0 +1,6 @@
+/* Giữ màn chờ ngay từ HTML, kể cả trong lúc bộ nạp đang chọn phiên bản web. */
+body.progress-starting { background: #f3f4f6; }
+.progress-starting > :is(header, aside),
+.progress-starting > main > header { display: none !important; }
+.progress-starting > main { width: min(100% - 32px, 560px); margin: 0 auto; padding: 48px 0; }
+.progress-starting > main > [role="status"]:first-of-type { color: #174266; font: 16px/1.5 Arial, sans-serif; }
