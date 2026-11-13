@@ -110,7 +110,7 @@
   }catch{window.setTimeout(()=>syncProvisionalListening(bootstrap,startedAt),15000);}
   finally{syncingStarts.delete(bootstrap.clientRunId);}
  }
- async function startListeningPhase(){
+ async function startListeningPhase(isCurrent){
   const bootstrap=window.TERM_TEST_BOOTSTRAP;
   if(!bootstrap?.examSessionId||bootstrap.examOrder!=='reading-first'||window.SUBSTITUTE_STATE.blocked)throw new Error('LISTENING_PHASE_NOT_ALLOWED');
   let data;
@@ -120,6 +120,7 @@
    clientRunId:bootstrap.clientRunId,deviceId:bootstrap.offlineDeviceId||null,
    generation:bootstrap.offlineGeneration??null,...permit(bootstrap)});}
   catch(error){
+   if(isCurrent&&!isCurrent())throw Error('EXAM_OWNER_CHANGED');
    if(!bootstrap.offlinePermit||!bootstrap.offlineDeviceId||!window.SUBSTITUTE_OFFLINE)throw error;
    if(bootstrap.listeningContinuityVersion===1&&error.accessDenied){
     const pending=error.message==='READING_NOT_SUBMITTED'&&await window.SUBSTITUTE_OFFLINE.pendingSections();
@@ -132,10 +133,11 @@
    provisionalStarts.set(bootstrap.clientRunId,startedAt);
    if(bootstrap.listeningContinuityVersion!==1)window.setTimeout(()=>syncProvisionalListening(bootstrap,startedAt),1000);
   }
+  if(isCurrent&&!isCurrent())throw Error('EXAM_OWNER_CHANGED');
   if(data.clientRunId!==bootstrap.clientRunId||data.examOrder!=='reading-first'||data.timingVersion!==VERSION
    ||!Number.isFinite(Date.parse(data.listeningStartedAt||'')))throw new Error('EXAM_TIMING_CONFLICT');
   window.IZONE_EXAM_CLOCK?.observe(data);
-  window.dispatchEvent(new CustomEvent('term-test:listening-phase-started',{detail:data}));
+  window.dispatchEvent(new CustomEvent('term-test:listening-phase-started',{detail:isCurrent?{...data,playbackPending:true}:data}));
   return data;
  }
  window.addEventListener?.('online',()=>{
