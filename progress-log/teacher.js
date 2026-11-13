@@ -6,7 +6,7 @@ import {createTeacherLiveUpdates,paintConnection} from './teacher-live-updates.j
 import {writingResultLink} from './student-test-results.js?rev=20261030-the22-23-v1';
 import {readLearningResponse} from './api-response.js?rev=20261030-the22-23-v1';
 import {renderTeacherClassPortal} from './teacher-class-portal.js?rev=20261105-class-scope-v1';
-import {observeSubmissionWindow, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
+import {observeSubmissionWindow, submissionWindowMessage, windowCanSubmit} from './submission-window.js?rev=20261022-official-v2';
 /*
  * Dữ liệu nhận vào: phiên đăng nhập ứng dụng, lớp được phân quyền và thư viện câu hỏi từ backend.
  * Xử lý: giảng viên chọn 2–3 câu, gán checkpoint, phát hành form bất biến và xem trạng thái nộp/điểm danh.
@@ -1607,6 +1607,16 @@ async function saveJourneyPlan(event) {
   }
 }
 
+function renderTeacherSubmissionWindow(value) {
+  const host = document.getElementById('teacherSubmissionWindow');
+  if (!host) return;
+  const now = performance.now();
+  const window = observeSubmissionWindow(value, now);
+  const message = THUY_UI && !windowCanSubmit(window, now) ? '' : submissionWindowMessage(window, now);
+  if (host.textContent !== message) host.textContent = message;
+  host.hidden = !message;
+}
+
 function applyLiveUpdate(update){
   if(update.assignmentId!==elements.assignmentSelect.value)throw Error('Phiếu đang xem đã đổi.');
   for(const value of [update.dashboard,update.live,update.analytics])if(value&&value.assignmentId!==update.assignmentId)throw Error('Dữ liệu không cùng phiếu.');
@@ -1617,8 +1627,7 @@ function applyLiveUpdate(update){
     thuyLayout.count.textContent=state.dashboard.students.length+' học viên';
     thuyLayout.learner.href=new URL('./thuy.html#assignment='+state.dashboard.publicToken,location.href).href;
     elements.dashboardTitle.textContent=state.dashboard.title;
-    const deadlineHost=document.getElementById('teacherSubmissionWindow');
-    deadlineHost.textContent=submissionWindowMessage(observeSubmissionWindow(state.dashboard.submissionWindow,performance.now()),performance.now());deadlineHost.hidden=!deadlineHost.textContent;
+    renderTeacherSubmissionWindow(state.dashboard.submissionWindow);
     if(!THUY_UI)elements.dashboardSummary.replaceChildren(...buildSummary(state.dashboard.students));
     elements.blockControls.replaceChildren(...state.dashboard.blockReleases.map(buildBlockControl));renderClassInsights(state.dashboard.classInsights||[]);
     if(!previous||update.full||JSON.stringify(previous.submissionWindow)!==JSON.stringify(state.dashboard.submissionWindow))assignmentManagement?.refresh();
@@ -1649,6 +1658,7 @@ async function loadDashboard({ quiet = false } = {}) {
     state.dashboardGeneration += 1;
     state.liveByStudent.clear();
     elements.dashboardTitle.textContent = 'Chưa có phiếu để theo dõi';
+    renderTeacherSubmissionWindow(null);
     if(thuyLayout)thuyLayout.count.textContent='Chưa có phiếu';
     elements.dashboardSummary.replaceChildren();
     elements.studentList.replaceChildren();
@@ -1667,11 +1677,7 @@ async function loadDashboard({ quiet = false } = {}) {
     syncCopyStudentLink();
     if(THUY_UI){thuyLayout.count.textContent=state.dashboard.students.length+' học viên';thuyLayout.learner.href=new URL('./thuy.html#assignment='+state.dashboard.publicToken,location.href).href;thuyLayout.setPanel(elements.createPanel.hidden?(elements.overviewPanel.hidden?'dashboard':'overview'):'create');}
     assignmentManagement?.refresh();
-    const deadlineHost = document.getElementById('teacherSubmissionWindow');
-    if (deadlineHost) {
-      deadlineHost.textContent = submissionWindowMessage(observeSubmissionWindow(state.dashboard.submissionWindow, performance.now()), performance.now());
-      deadlineHost.hidden = !deadlineHost.textContent;
-    }
+    renderTeacherSubmissionWindow(state.dashboard.submissionWindow);
     if (previousAssignmentId !== assignmentId) {
       state.liveByStudent.clear();
       if(!THUY_UI)void loadJourneyPlan();
