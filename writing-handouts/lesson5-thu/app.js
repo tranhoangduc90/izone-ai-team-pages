@@ -36,6 +36,7 @@ if(isPrepared(lesson)){labels.outline='Kế hoạch idea hai thân bài';labels.
 if(isDiscussion(lesson)){labels.chosenSolution='Phương án bạn ủng hộ';descriptions.outline.instruction=lesson.description+' '+lesson.bodies[0].focus+' '+lesson.bodies[1].focus;}
 if(isOpinion(lesson)){labels.agreementLevel='Mức độ đồng ý với nhận định của đề bài';labels.chosenSolution='Phương án bạn ủng hộ';labels.positionLimit='Giới hạn hoặc điều kiện · Bắt buộc khi đồng ý một phần';descriptions.outline.instruction='Chọn mức độ đồng ý và phương án bạn ủng hộ. Thân bài 1 bàn phương án không ủng hộ; thân bài 2 bảo vệ phương án ủng hộ. Nếu đồng ý một phần, chỉ rõ điều kiện và phía bạn nghiêng về. Chốt hai idea mỗi đoạn; chưa viết Topic hoặc A/X/B.';}
 const outline=isBodyOutline(lesson);
+const saveLogBuild='20261113-save-log-v1';
 if(outline){
  labels.stance='Quan điểm của cả bài';
  for(const n of [1,2]){
@@ -243,14 +244,26 @@ async function flush(){
  return enqueue(async()=>{
   if(epoch!==generation||!state.ref||conflict||!Object.keys(dirty).length)return !conflict;
   const changes={...dirty};busy=true;saveInFlight=true;mutationVersion++;
+  const requestId=crypto.randomUUID();
   try {
-   const result=await api.save(state.ref,{baseVersion:state.version,requestId:crypto.randomUUID(),responses:changes});
+   const result=await api.save(state.ref,{baseVersion:state.version,requestId,responses:changes});
    if(epoch!==generation)return false;
    state.version=result.session.version;
    for(const [key,value] of Object.entries(changes))if(dirty[key]===value)delete dirty[key];
    // Không render khi nhập để giữ con trỏ; đọc lại trạng thái nghiệp vụ khi không còn nháp.
    $('save-state').textContent=Object.keys(dirty).length?'Đang lưu…':'Đã lưu trên máy chủ';
-   if(outline){state={...result.session,responses:{...result.session.responses,...dirty}};if(!editingLocked&&!Object.keys(dirty).length)render();}
+   if(outline){
+    state={...result.session,responses:{...result.session.responses,...dirty}};
+    if(!editingLocked&&!Object.keys(dirty).length){
+     const focused=document.activeElement,field=focused?.dataset?.field;
+     const expected=Object.hasOwn(changes,field)?state.responses[field]:null;
+     const observe=focused?.tagName==='TEXTAREA'&&typeof expected==='string'&&expected.length>0&&focused.value===expected;
+     render();
+     if(observe&&$('field-'+field)?.value===''){
+      void api.save(state.ref,{displayLoss:{operationId:requestId,version:state.version,field,build:saveLogBuild}}).catch(()=>{});
+     }
+    }
+   }
    if(!Object.keys(dirty).length){try{localStorage.removeItem(draftKey());}catch{}note('');}
    return true;
   }catch(error){if(epoch===generation)failure(error);return false;}

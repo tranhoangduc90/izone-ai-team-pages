@@ -30,7 +30,7 @@ async function exercise(t,run){
   const browser=await chromium.launch({channel:'chrome',headless:true});
   const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});
   const page=await context.newPage(),calls=[],errors=[];
-  const state={rosterError:0,wrongSession:false,returned:false,outline:structuredClone(outline),saves:[],saveDelay:0,reads:0};
+  const state={rosterError:0,wrongSession:false,returned:false,outline:structuredClone(outline),saves:[],saveDelay:0,reads:0,displayReports:[],breakTextareaPatch:false};
   page.setDefaultTimeout(4500);
   const writing=site+'/homework-writing/?'+query;
   await context.addInitScript(()=>{
@@ -44,7 +44,16 @@ async function exercise(t,run){
   try{
     await context.route('**/*',async route=>{
       const req=route.request(),url=new URL(req.url());
-      if(url.origin===siteOrigin)return route.continue();
+      if(url.origin===siteOrigin){
+        if(state.breakTextareaPatch&&url.pathname.endsWith('/shared/reading-view.mjs')){
+          const original=await route.fetch();
+          const code=await original.text();
+          const assignment='existing.value!==nextTextareaValue)existing.value=nextTextareaValue';
+          assert.ok(code.includes(assignment));
+          return route.fulfill({response:original,body:code.replace(assignment,'existing.value!==incoming.value)existing.value=incoming.value')});
+        }
+        return route.continue();
+      }
       const prefix='/homework-writing67-api/api';
       const headers={'access-control-allow-origin':siteOrigin,'access-control-allow-credentials':'true',
         'access-control-allow-headers':'content-type,authorization,x-hw-access,x-hw-csrf,x-hw-student,x-hw-person,x-hw-document,x-hw-assignment,x-hw-handout,if-none-match',
@@ -90,8 +99,10 @@ async function exercise(t,run){
       }
       if(p===editor+'/sessions/'+ref+'/responses'&&req.method()==='PUT'){
         assert.equal(h['x-hw-handout'],'Bearer '+handoutToken);
-        const {baseVersion,responses}=req.postDataJSON();
+        const {baseVersion,responses,requestId,displayLoss}=req.postDataJSON();
+        if(displayLoss){state.displayReports.push(displayLoss);return send({ok:true,recorded:true});}
         assert.equal(baseVersion,state.outline.version);
+        state.lastSaveId=requestId;
         state.saves.push({baseVersion,responses});
         await new Promise(resolve=>setTimeout(resolve,state.saveDelay));
         Object.assign(state.outline.responses,responses);
@@ -183,6 +194,28 @@ test('Fast Food saves a focused blank outline field, keeps the caret through bac
   await page.reload();
   await input.waitFor();
   assert.equal(await input.inputValue(),continued);
+  assert.deepEqual(state.displayReports,[]);
+  assert.deepEqual(errors,[]);
+}));
+
+test('Fast Food reports when the focused field empties after a successful save without resaving it',async t=>exercise(t,async({page,enter,state,errors})=>{
+  state.breakTextareaPatch=true;
+  state.outline.steps.body1_topic.status='draft';
+  state.outline.steps.body2_topic.status='draft';
+  const field='body1_idea1',content='Một ý đang được gõ thử';
+  await enter();
+  const input=page.locator('#field-'+field);
+  await input.click();
+  const report=page.waitForResponse(response=>response.request().method()==='PUT'&&
+    response.url().endsWith('/responses')&&!!response.request().postDataJSON().displayLoss);
+  await page.keyboard.insertText(content);
+  assert.equal((await report).status(),200);
+  assert.equal(await input.inputValue(),'');
+  assert.equal(state.outline.responses[field],content);
+  assert.deepEqual(state.displayReports,[{operationId:state.lastSaveId,version:9,field,build:'20261113-save-log-v1'}]);
+  assert.equal(state.saves.length,1);
+  await page.reload();
+  assert.equal(await input.inputValue(),content);
   assert.deepEqual(errors,[]);
 }));
 

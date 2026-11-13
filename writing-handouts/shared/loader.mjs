@@ -70,7 +70,7 @@ async function boot(){
   document.querySelector('[data-lesson-brand]')?.setAttribute('aria-label','IZONE Writing Lesson '+lesson.number);
   document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':'Lesson '+lesson.number+' · Writing · IZONE';
   const editorVersion=lesson.outlineOnly||['opinion-v1','discussion-v1'].includes(lesson.preparationKind)
-   ?'20261113-outline-save-v1':'20261109-l3-v1&check=20261101-v1&poll=20261104-v1';
+   ?'20261113-save-log-v1':'20261109-l3-v1&check=20261101-v1&poll=20261104-v1';
   await import(view==='teacher'?'../lesson5/teacher.js?v=20261109-l3-v1&startup=20261026-v2':'../lesson5-thu/app.js?v='+editorVersion);
  }catch(error){
   if(fromVerifiedDocs){
