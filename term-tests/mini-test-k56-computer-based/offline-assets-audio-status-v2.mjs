@@ -167,7 +167,8 @@ export const ASSETS=[
   "offline-audio-status-v2.mjs",
   "offline-worker-audio-status-v2.js",
   "passages.js",
-  "styles.css"
+  "styles.css",
+  "../k56-audio-recovery-mini-v1.js"
 ];
 export const ASSET_HASHES={
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -328,16 +329,17 @@ export const ASSET_HASHES={
   "annotations.js": "47360f47eac16dc08256fe1fcea82f0906ebd29502ee4a87f79436bad2306013",
   "audio-loader-audio-status-v1.js": "e0d861e5b0f26fa1985326d7038b6ab2e3ab5dfe4121abae2802b9a178de5aa6",
   "audio-whole-audio-status-v1.mjs": "59ae81b3fffe09ba68bb090fd9e59b4cb418e52c738161ede99f74ba74b7f9cb",
-  "bootstrap-audio-status-v2.js": "a31963930e1e114305018033a1bf9ef9ae496b12ed686eb149a2208dae666ee5",
+  "bootstrap-audio-status-v2.js": "05a73942f5bbbb6b3dedb7a0db84ba94fff868c2c5cc67d37005ceb85b867b10",
   "content.js": "63c3c0b8ea82c8c5cb8e47c28b031bf758051f545e8e37e911f1da0e23440bce",
   "demo-reset.css": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035",
   "demo-reset.js": "298c0fab15fe45739ad3b19094c71876cc7cb04d9dc2a2922d3d3381221e9dd3",
   "enhance.js": "3e6129e21ef1558e4bc987e656bd63a3540bc7fad66995107f939d696a091076",
   "exam.css": "12a46e66c5cce7095e5bb41c0cc8166c99e10fa74036fd176ecd87b231cd2939",
-  "index-audio-status-v2.html": "ae26c432aaacdfd96a344415a9e00e42f470c95fe0f7a1da9da8980654d4968c",
+  "index-audio-status-v2.html": "db2bf6decfc4a10323c9f44b2b6d69d08b18a0733e52e373b73798627573a4de",
   "offline-audio-status-v2.mjs": "7594c0b32000281104807f4cf8f37cc6d625ef273bf3b691608d6e50f11553ca",
   "offline-worker-audio-status-v2.js": "6ed8cf1e8d7e5e30138ad329722eb76c6e0d767a370b8d997db33076748fe154",
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
-  "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff"
+  "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff",
+  "../k56-audio-recovery-mini-v1.js": "d6082a9636dfead086fdd81166dc1e40a270c3a6228713d27d3712b360a039ee"
 };
-export const ASSET_BUILD_ID="2de86f3311b7a38712f543707ad2bab9935ec2438157e92a261227b215d2a918";
+export const ASSET_BUILD_ID="fec75fe4cb975d1b1bab649c6ebb6d36aab0791147f38d98e2b8541cd761531f";
