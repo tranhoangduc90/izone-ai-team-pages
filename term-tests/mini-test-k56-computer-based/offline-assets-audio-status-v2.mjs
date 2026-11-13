@@ -268,7 +268,7 @@ export const ASSET_HASHES={
   "../k56-exam-integrity/styles.css": "a19764edbec0b712c585402eec5f36b78570e44004f8d73f04df09f88058064a",
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
   "../k56-listening-offline-worker.js": "127318a193ed5689f1f42cc4c841582c1af4fcbe695aea9a61341cd526a10e0e",
-  "../k56-mini-shared/app.js": "68203ede1f398b122010b62469b0574ef60460ac869889faec205914ffac0fa7",
+  "../k56-mini-shared/app.js": "880dc63722c9c7b1e47fa2993ccbb664c4d6c4009fa3aa563b06f7c4be2667a3",
   "../k56-mini-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/demo-store-audio-status-v1.mjs": "90b3a6d83ccecb6f404b370cf6ed85ebb285bcbccff4cf40a098703aa3311cb8",
@@ -329,17 +329,17 @@ export const ASSET_HASHES={
   "annotations.js": "47360f47eac16dc08256fe1fcea82f0906ebd29502ee4a87f79436bad2306013",
   "audio-loader-audio-status-v1.js": "e0d861e5b0f26fa1985326d7038b6ab2e3ab5dfe4121abae2802b9a178de5aa6",
   "audio-whole-audio-status-v1.mjs": "59ae81b3fffe09ba68bb090fd9e59b4cb418e52c738161ede99f74ba74b7f9cb",
-  "bootstrap-audio-status-v2.js": "05a73942f5bbbb6b3dedb7a0db84ba94fff868c2c5cc67d37005ceb85b867b10",
+  "bootstrap-audio-status-v2.js": "0fdf7ac8abded980a85578efaff49da7f8c62a087d32432eb9e2dc9bfa681fd9",
   "content.js": "63c3c0b8ea82c8c5cb8e47c28b031bf758051f545e8e37e911f1da0e23440bce",
   "demo-reset.css": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035",
   "demo-reset.js": "298c0fab15fe45739ad3b19094c71876cc7cb04d9dc2a2922d3d3381221e9dd3",
   "enhance.js": "3e6129e21ef1558e4bc987e656bd63a3540bc7fad66995107f939d696a091076",
   "exam.css": "12a46e66c5cce7095e5bb41c0cc8166c99e10fa74036fd176ecd87b231cd2939",
-  "index-audio-status-v2.html": "db2bf6decfc4a10323c9f44b2b6d69d08b18a0733e52e373b73798627573a4de",
+  "index-audio-status-v2.html": "5ccbc0a5e5b55734c69e16932a9baf0d4d4fa3c3ec7140372e7277d3e0c93d0d",
   "offline-audio-status-v2.mjs": "7594c0b32000281104807f4cf8f37cc6d625ef273bf3b691608d6e50f11553ca",
   "offline-worker-audio-status-v2.js": "6ed8cf1e8d7e5e30138ad329722eb76c6e0d767a370b8d997db33076748fe154",
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff",
-  "../k56-audio-recovery-mini-v1.js": "d6082a9636dfead086fdd81166dc1e40a270c3a6228713d27d3712b360a039ee"
+  "../k56-audio-recovery-mini-v1.js": "ac3217b37bb3a7ea53aa304eba8a8c4224b153ccbe3d8e12d108762d00b3e4a8"
 };
-export const ASSET_BUILD_ID="fec75fe4cb975d1b1bab649c6ebb6d36aab0791147f38d98e2b8541cd761531f";
+export const ASSET_BUILD_ID="b2312697dcf382bd5c06293fe128beefa695f689100ab14ee7923db82358f826";

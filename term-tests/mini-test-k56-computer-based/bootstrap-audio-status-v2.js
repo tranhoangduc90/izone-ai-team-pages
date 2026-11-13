@@ -56,7 +56,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=mini-20261107-v1&miniAudio=20261108-v1&offlineNotice=20261108-v1&audioSeal=20261113-v1'))
+      .then(() => loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=mini-20261107-v1&miniAudio=20261108-v1&offlineNotice=20261108-v1&audioSeal=20261113-v1&pendingSeal=20261113-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1&miniAudio=20261108-v1'))
       .then(() => loadScript('enhance.js?release=20261112-mini-recovery&offline=mini-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&miniAudio=20261108-v1&previewWait=20261109-preview-10s-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
@@ -780,6 +780,16 @@
         await enterExam(prepared);
         return;
       }
+      const pendingListening = state.pendingSubmissions?.listening;
+      const owner = JSON.stringify([storageKey, studentRef, prepared.examSessionToken, prepared.attemptToken, Number(prepared.generation) || 0]);
+      if (!miniOffline?.active && pendingListening?.owner === owner) {
+        await loadScript('../k56-audio-recovery-mini-v1.js?rev=20261113-pending-seal-v1');
+        const reconcileListening = () => window.K56AudioRecovery.acquireForSubmission({ apiBase: appConfig.API_BASE_URL, classCode,
+          slug: testConfig.slug, studentRef, token: prepared.examSessionToken, generation: prepared.generation });
+        await reconcileListening();
+        await enterExam(prepared, null, null, reconcileListening);
+        return;
+      }
       if(!miniOffline?.active)await downloadForSession(prepared,undefined,retry);
     } catch (error) {
       elements.bootstrapStudent.disabled = false;
@@ -827,7 +837,7 @@
     });
   }
 
-  async function enterExam(started, audioElement = null, onlinePlayback = null) {
+  async function enterExam(started, audioElement = null, onlinePlayback = null, reconcileListening = null) {
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
       // Chỉ chuyển danh tính từ phản hồi máy chủ khớp mã lượt; không tin tên lưu cục bộ.
@@ -842,12 +852,13 @@
       generation: Number(started.generation ?? state.generation) || 0,
       audioRecoveryInitial: started,
       onlinePlayback,
+      reconcileListening,
       listeningDeadlineAt: started.listeningDeadlineAt,
       serverNow: started.serverNow,
       audioVolume: Number(state.audioVolume) || 1,
       officialAudioElement: audioElement,
       officialAudioUrl: officialObjectUrl,
-      skipListeningAudio: Boolean(started.listeningSubmitted || started.listeningInterrupted || started.nextSection === 'reading' || started.completed),
+      skipListeningAudio: Boolean(reconcileListening || started.listeningSubmitted || started.listeningInterrupted || started.nextSection === 'reading' || started.completed),
       preparedAttempt: state.preparedAttempt ? {
         ...state.preparedAttempt,
         listeningStartedAt: started.listeningStartedAt || state.listeningStartedAt || '',
@@ -859,7 +870,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=mini-20261107-v3&miniAudio=20261108-v1&offlineNotice=20261108-v1&audioSeal=20261113-v1');
+    await loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=mini-20261107-v3&miniAudio=20261108-v1&offlineNotice=20261108-v1&audioSeal=20261113-v1&pendingSeal=20261113-v1');
     if(miniOffline?.active){
       const began=performance.now();
       while(!window.K56_MINI_APP_READY){
@@ -1087,7 +1098,7 @@
         await enterExam(started, officialAudio);
         return;
       }
-      await loadScript('../k56-audio-recovery-mini-v1.js');
+      await loadScript('../k56-audio-recovery-mini-v1.js?rev=20261113-pending-seal-v1');
       const recovery = await window.K56AudioRecovery.prepare({ apiBase: appConfig.API_BASE_URL, classCode,
         slug: testConfig.slug, studentRef: state.studentRef, token: state.examSessionToken, generation: state.generation });
       const savedHeardSeconds = recovery.heardSeconds;

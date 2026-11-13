@@ -85,7 +85,7 @@
     let hardDeadline = Date.parse(options.initial.listeningHardDeadlineAt);
     let offset = (window.IZONE_EXAM_CLOCK?.offset(options.initial.serverNow) ?? (Date.parse(options.initial.serverNow) - Date.now()));
     const phaseOffset = Array.from(token).reduce((h, c) => ((h * 33) ^ c.charCodeAt(0)) >>> 0, 5381) % 5000;
-    function terminal() { return disposed || destroyed || ['submitting', 'submitted', 'ended'].includes(phase); }
+    function terminal() { return disposed || destroyed || ['submitting', 'submission_pending', 'submitted', 'ended'].includes(phase); }
     function save() {
       const latest = read(bound);
       if (latest.ownerId && latest.ownerId !== ownerId) return;
@@ -99,10 +99,10 @@
     function notice(text) {
       render(text, audio.currentTime, audio.duration);
       resumeButton.hidden = !['technical_pause', 'awaiting_user', 'sync_failed'].includes(phase);
-      manualButton.disabled = ['submitting', 'submitted', 'ended'].includes(phase);
+      manualButton.disabled = ['submitting', 'submission_pending', 'submitted', 'ended'].includes(phase);
     }
     function emit(event, extra = {}) {
-      const payload = { examSessionToken: token, event, section: 'listening', build: '20261113-mini-online-watchdog-v1',
+      const payload = { examSessionToken: token, event, section: 'listening', build: '20261113-mini-online-pending-seal-v1',
         online: navigator.onLine, occurredAt: new Date().toISOString(), revision,
         navigationType: performance.getEntriesByType('navigation')[0]?.type || 'navigate',
         heardSeconds: Math.max(0, Number(audio.currentTime) || 0), ...extra };
@@ -283,14 +283,14 @@
     window.addEventListener('pagehide', event => {
       if (disposed || destroyed) return;
       if (recoveryPromise) memory.recoveryId = uuid();
-      if (['submitted', 'ended'].includes(phase)) return;
+      if (['submitting', 'submission_pending', 'submitted', 'ended'].includes(phase)) return;
       episode('pagehide', memory.manual); navigating = true; stopWatch();
       send('pagehide', true).catch(() => null);
       emit('audio_pagehide', { persisted: event.persisted, recoveryId: memory.recoveryId });
       if (!event.persisted) disposed = true;
     });
     window.addEventListener('pageshow', event => {
-      if (!event.persisted || destroyed || ['submitted','submitting','ended'].includes(phase)) return;
+      if (!event.persisted || terminal()) return;
       disposed = false; navigating = false; startWatch();
       emit('audio_pageshow', { persisted: true, recoveryId: memory.recoveryId });
       if (audio.paused) awaitLearnerAfterPause();
@@ -306,9 +306,19 @@
         if (['submitted','submitting'].includes(phase) || destroyed) return { submit: false };
         return { submit: false, deadlineChanged: true };
       },
-      submitting() { phase = 'submitting'; stopWatch(); audio.pause(); save(); },
-      submitFailed() {
+      acquireForSubmission() { return acquire(bound); },
+      submitting() {
+        if (recoveryPromise) memory.recoveryId = uuid();
+        phase = 'submitting';
+        stopWatch(); audio.pause(); save(); notice('Đang lưu Listening…');
+      },
+      submitFailed(pending) {
         if (phase !== 'submitting') return;
+        if (pending) {
+          phase = 'submission_pending';
+          notice('Bản nộp chưa được xác nhận · nhấn Nộp bài Listening để đối soát');
+          return;
+        }
         if (audio.ended || Number.isFinite(audio.duration) && audio.duration > 0 && audio.currentTime >= audio.duration) {
           phase = 'ended'; memory.pending = false; memory.manual = false; stopWatch(); save(); notice('Đã phát xong audio'); return;
         }
@@ -335,6 +345,9 @@
     if (memory.pending && !memory.manual && phase === 'playing') recover('ready');
     return controller;
   }
+  async function acquireForSubmission(options) {
+    await acquire(identity(options));
+  }
   function journalObserver(owner,audio,mode) {
     const config=window.TERM_TEST_APP_CONFIG,slug=window.TERM_TEST_CONFIG?.slug;
     if(config?.EXAM_JOURNAL_ENABLED!==true||!['term-test-1-k56','term-test-2-k56'].includes(slug))return undefined;
@@ -347,5 +360,5 @@
       });
     } catch { return undefined; }
   }
-  window.K56AudioRecovery = Object.freeze({ version: VERSION, ownerId, prepare, beginLoading, create, journalObserver });
+  window.K56AudioRecovery = Object.freeze({ version: VERSION, ownerId, prepare, beginLoading, create, journalObserver, acquireForSubmission });
 }());
