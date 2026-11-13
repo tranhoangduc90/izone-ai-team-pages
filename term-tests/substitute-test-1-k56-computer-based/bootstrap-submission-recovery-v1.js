@@ -127,6 +127,8 @@
   const previewSeconds=()=>continuityEnabled()?10:30;
   const previewLabel=(again=false)=>(again?'Nghe lại ':'Nghe thử ')+previewSeconds()+' giây đầu';
   let preparing = false;
+  let listeningLease = null;
+  let pendingListeningLease = null;
   let downloadController = null;
   let preparedAudio = null;
   const localDemoClasses = Object.freeze([...(window.SUBSTITUTE_STATE.meta.classes || [
@@ -280,10 +282,39 @@
     return `izone-substitute-lobby-v1:${testConfig.slug}:${window.SUBSTITUTE_STATE.meta.historyEpoch}:${selectedClass}:${studentRef}`;
   }
 
+  async function acquireListeningLease(studentRef, selectedClass) {
+    if (!navigator.locks?.request) return;
+    const key = studentPointer(studentRef, selectedClass);
+    if (listeningLease?.key === key) return;
+    if (pendingListeningLease?.key === key) return pendingListeningLease.result;
+    if (listeningLease || pendingListeningLease) throw Error('Tab đang mở một lượt khác.');
+    const result = new Promise((resolve, reject) => {
+      navigator.locks.request(key, { ifAvailable: true }, lock => {
+        if (!lock) {
+          reject(Error('Bài đang mở ở tab khác. Hãy quay lại tab đó hoặc đóng tab đó trước khi thử lại.'));
+          return;
+        }
+        return new Promise(release => {
+          listeningLease = { key, release };
+          resolve();
+        });
+      }).catch(reject);
+    });
+    pendingListeningLease = { key, result };
+    try { await result; }
+    finally { pendingListeningLease = null; }
+  }
+
+  function releaseListeningLease() {
+    listeningLease?.release();
+    listeningLease = null;
+  }
+
   async function bindSelectedStudent(student) {
     const selectedClass = elements.bootstrapClass.value || classCode;
     const selectionGeneration = classLoadGeneration;
     const selectedStudentValue = elements.bootstrapStudent.value;
+    await acquireListeningLease(student.ref, selectedClass);
     let restored = null;
     // Chỉ đọc con trỏ đúng người/lớp/lịch sử; nháp đầy đủ vẫn nằm trong khóa theo lượt.
     for (const storage of window.SUBSTITUTE_STATE.storages()) {
@@ -303,7 +334,10 @@
       }catch{/* Nếu IndexedDB lỗi, vẫn dùng lượt đã xác nhận trên máy chủ. */}
     }
     if (selectionGeneration !== classLoadGeneration || elements.bootstrapClass.value !== selectedClass
-        || elements.bootstrapStudent.value !== selectedStudentValue) return false;
+        || elements.bootstrapStudent.value !== selectedStudentValue) {
+      releaseListeningLease();
+      return false;
+    }
     if (restored) {
       window.SUBSTITUTE_STATE.bind(restored);
       const ownKey = window.SUBSTITUTE_STATE.key('izone-test:', selectedClass);
@@ -335,6 +369,7 @@
   async function changeSharedStudent() {
     if ((await sharedIdentity.forget()).status !== 'empty') return false;
     window.SUBSTITUTE_STATE.stop();
+    releaseListeningLease();
     window.TERM_TEST_ALLOW_NAVIGATION = true;
     location.reload();
     return true;
@@ -752,9 +787,10 @@
     preparing = true;
     const preparationStatus = beginAudioDownloadStatus(elements.bootstrapDownloadStatus,
       elements.bootstrapDownloadProgress, {formatBytes, retry, preparing:true});
-    saveState({ studentRef, studentName: student.name, annotationRunId: state.annotationRunId || crypto.randomUUID() });
     elements.bootstrapStudent.disabled = true;
     try {
+      await acquireListeningLease(studentRef, state.classCode || classCode);
+      saveState({ studentRef, studentName: student.name, annotationRunId: state.annotationRunId || crypto.randomUUID() });
       if (localDemo) {
         if(await openRecoveredListening())return;
         if (state.attemptToken || hasSavedGradedProgress()) {
@@ -1333,7 +1369,8 @@
     }
   }
 
-  window.addEventListener('pagehide', () => {
+  window.addEventListener('pagehide', event => {
+    if (!event.persisted) releaseListeningLease();
     downloadController?.abort();
     previewAudio.pause();
     revokePreview();
