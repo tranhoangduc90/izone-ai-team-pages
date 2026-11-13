@@ -677,6 +677,7 @@
     if (!listeningForm) return;
     const protectedBootstrap = window.TERM_TEST_BOOTSTRAP || null;
     const continuity=protectedBootstrap?.listeningContinuityVersion===1;
+    const deferredPlayback=protectedBootstrap?.deferredPlayback;
     const preparedVolume = Number(protectedBootstrap?.audioVolume);
     if (Number.isFinite(preparedVolume) && preparedVolume >= 0.1 && preparedVolume <= 1) {
       uiState.audio.volume = preparedVolume;
@@ -827,7 +828,7 @@
     lobby.append(audio);
 
     let lastSavedSecond = Math.floor(uiState.audio.time);
-    let examStarted = Boolean(protectedBootstrap?.officialAudioElement || (continuity
+    let examStarted = !deferredPlayback && Boolean(protectedBootstrap?.officialAudioElement || (continuity
       ?protectedBootstrap.continuityReview:uiState.audio.started));
     let previewHeard = false;
     let previewing = false;
@@ -843,6 +844,9 @@
     let lastRecoveryAttemptAt = 0;
     let audioWatchdog = 0;
     let audioProgressQueue = Promise.resolve();
+    let startPending=false, startEpoch=0, phaseStarted=false, listeningClosed=false;
+    const submitButton=listeningForm.form.querySelector('button[type="submit"]');
+    const initialSubmitDisabled=submitButton?.disabled;
 
     function readSavedStudentRef() {
       for (const storage of window.SUBSTITUTE_STATE.storages()) {
@@ -872,7 +876,7 @@
     function updateStartAvailability() {
       const audioReady = ready && (examStarted || previewHeard);
       const identityReady = hasSelectedStudent();
-      startButton.disabled = !(audioReady && identityReady);
+      startButton.disabled = startPending || listeningClosed || !(audioReady && identityReady);
       window.IZONE_CBT_AUDIO_START_LABEL?.(startButton, previewHeard && !examStarted);
       if (audioReady && !identityReady) {
         startNotice.textContent = 'Hãy chọn họ và tên ở phía trên trước khi bắt đầu thi Listening.';
@@ -1203,8 +1207,9 @@
         previewStatus.textContent = 'Trình duyệt chưa cho phép phát. Hãy nhấn lại nút nghe thử.';
       }
     });
-    startButton.addEventListener('click', async () => {
-      if (!ready || (!examStarted && !previewHeard)) return;
+    async function startListening() {
+      if (startPending || listeningClosed || examStarted || !ready || !previewHeard
+          || listeningForm.form.hidden || window.SUBSTITUTE_STATE.blocked) return;
       if (!restoreStudentSelection()) {
         studentSelect?.reportValidity();
         studentSelect?.focus();
@@ -1212,6 +1217,11 @@
         updateStartAvailability();
         return;
       }
+      const epoch=++startEpoch;
+      const stillCurrent=()=>epoch===startEpoch&&!listeningClosed&&!window.SUBSTITUTE_STATE.blocked
+        &&window.TERM_TEST_BOOTSTRAP===protectedBootstrap&&listeningForm.form.isConnected&&!listeningForm.form.hidden;
+      startPending=true;
+      startButton.disabled=true;
       allowPause = true;
       if(!continuity)audio.pause();
       previewing = false;
@@ -1220,14 +1230,23 @@
       let playBlocked = false;
       const startClicked=performance.now();
       try {
+        deferredPlayback?.verify();
         if(protectedBootstrap?.examSessionId&&protectedBootstrap.examOrder==='reading-first'
-          &&!protectedBootstrap.listeningStartedAt)await window.SUBSTITUTE_EXAM.startListeningPhase();
+          &&!protectedBootstrap.listeningStartedAt&&!phaseStarted){
+          await window.SUBSTITUTE_EXAM.startListeningPhase(stillCurrent);
+          if(!stillCurrent())return;
+          phaseStarted=true;
+        }
+        if(!stillCurrent())return;
         await audio.play().catch(error => {
           playBlocked = error?.name === 'NotAllowedError';
           throw error;
         });
+        if(!stillCurrent()){audio.pause();return;}
+        if(!deferredPlayback)protectedBootstrap?.markListeningPlaying?.();
+        const elapsedMs=deferredPlayback?.played()??performance.now()-startClicked;
         if(continuity)window.dispatchEvent(new CustomEvent('substitute:listening-observed',{
-          detail:{phase:'started',elapsedMs:performance.now()-startClicked}
+          detail:{phase:'started',elapsedMs}
         }));
         examStarted = true;
         uiState.audio.started = true;
@@ -1236,10 +1255,13 @@
         allowPause = false;
         lockStudentSelection();
         setListeningVisible(true);
+        if(submitButton)submitButton.disabled=initialSubmitDisabled;
+        cannotHear.disabled=false;
         updateExamStatus('Đang phát bài thi');
         saveUiState();
       } catch {
         allowPause = false;
+        if(!stillCurrent())return;
         if (playBlocked) {
           const label = officialTime > 0 ? 'Tiếp tục audio' : 'Phát audio';
           startButton.textContent = label;
@@ -1247,8 +1269,12 @@
         } else {
           downloadStatus.textContent = 'Chưa mở hoặc phát được Listening. Bài Reading vẫn được giữ; hãy nhấn lại “Bắt đầu thi Listening”.';
         }
+      } finally {
+        startPending=false;
+        updateStartAvailability();
       }
-    });
+    }
+    startButton.addEventListener('click',startListening);
     resumeButton.addEventListener('click', () => recoverInterruptedAudio('pause', true));
     retryButton.addEventListener('click', downloadFullAudio);
     examRetryButton.addEventListener('click', protectedBootstrap?.officialAudioElement
@@ -1269,11 +1295,13 @@
       new MutationObserver(updateStartAvailability).observe(studentSelect, { childList: true });
     }
     listeningForm.form.addEventListener('term-test:listening-early-confirmed',()=>{
+      listeningClosed=true;
       if(!continuity)return;
       cannotHear.disabled=true;audio.pause();
     });
-    listeningForm.form.addEventListener('term-test:listening-interrupted',()=>{cannotHear.disabled=true;});
+    listeningForm.form.addEventListener('term-test:listening-interrupted',()=>{listeningClosed=true;cannotHear.disabled=true;});
     listeningForm.form.addEventListener('term-test:listening-submitted', () => {
+      listeningClosed=true;
       allowPause = true;
       window.clearInterval(audioWatchdog);
       if(!continuity){
@@ -1282,6 +1310,7 @@
       }
     });
     window.addEventListener('pagehide', () => {
+      startEpoch++;
       allowPause = true;
       window.clearInterval(audioWatchdog);
       if (!continuity&&examStarted) { rememberActualHeardPosition(true); reportAudioProgress('pagehide', true).catch(() => null); }
@@ -1294,6 +1323,27 @@
       lockStudentSelection();
       setListeningVisible(true);
       examStatus.textContent='Audio đã phát xong. Bạn có thể rà đáp án đến hết giờ.';
+    }else if(deferredPlayback){
+      ready=true;previewHeard=true;
+      setListeningVisible(false);
+      if(submitButton)submitButton.disabled=true;
+      cannotHear.disabled=true;
+      previewButton.hidden=true;
+      downloadProgress.value=1;
+      downloadStatus.textContent='Trình phát đã sẵn sàng.';
+      setStepState(downloadStep.step,'complete');
+      setStepState(previewStep.step,'complete');
+      setStepState(startStep.step,'active');
+      updateStartAvailability();
+      deferredPlayback.start=async()=>{
+        const began=performance.now();
+        while(listeningForm.form.hidden){
+          deferredPlayback.verify();
+          if(performance.now()-began>15000)throw Error('Màn làm bài Listening chưa sẵn sàng.');
+          await new Promise(resolve=>setTimeout(resolve,30));
+        }
+        await startListening();
+      };
     }else if (protectedBootstrap?.officialAudioElement) {
       ready = true;
       uiState.audio.started = true;
