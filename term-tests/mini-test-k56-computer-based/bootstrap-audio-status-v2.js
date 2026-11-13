@@ -816,7 +816,7 @@
   }
 
   function loadScript(src) {
-    if (src.includes('k56-audio-recovery.js') && window.K56AudioRecovery) return Promise.resolve();
+    if (src.includes('k56-audio-recovery') && window.K56AudioRecovery) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       const timeout=setTimeout(()=>reject(new Error(`Nạp thành phần quá lâu: ${src}`)),20000);
@@ -1087,7 +1087,7 @@
         await enterExam(started, officialAudio);
         return;
       }
-      await loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1&miniAudio=20261108-v1');
+      await loadScript('../k56-audio-recovery-mini-v1.js');
       const recovery = await window.K56AudioRecovery.prepare({ apiBase: appConfig.API_BASE_URL, classCode,
         slug: testConfig.slug, studentRef: state.studentRef, token: state.examSessionToken, generation: state.generation });
       const savedHeardSeconds = recovery.heardSeconds;
