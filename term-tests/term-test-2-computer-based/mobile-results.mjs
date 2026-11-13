@@ -26,40 +26,52 @@ async function post(action, body, permit, signal) {
   return data;
 }
 
-export function mountDesktopReviewCode(getOwner) {
+export function mountDesktopReviewLink(getOwner) {
   const result = document.getElementById('resultView');
-  if (!result || result.querySelector('[data-mobile-review-code]')) return;
+  if (!result || result.querySelector('[data-mobile-review-link]')) return;
   const group = el('section', undefined, 'mobile-result-code');
-  group.dataset.mobileReviewCode = '';
-  const button = el('button', 'Lấy mã xem trên điện thoại', 'button outline');
+  group.dataset.mobileReviewLink = '';
+  const button = el('button', 'Lấy link xem trên điện thoại', 'button outline');
   button.type = 'button';
   const message = el('p');
   message.setAttribute('role', 'status');
   const field = el('input');
   field.type = 'text'; field.readOnly = true; field.hidden = true;
-  field.setAttribute('aria-label', 'Mã xem kết quả trên điện thoại');
+  field.setAttribute('aria-label', 'Link xem kết quả trên điện thoại');
   field.addEventListener('focus', () => field.select());
-  group.append(button, message, field);
+  const open = el('a', 'Mở link kết quả'); open.hidden = true;
+  open.target = '_blank'; open.rel = 'noopener noreferrer';
+  const copy = el('button', 'Sao chép link', 'button outline'); copy.type = 'button'; copy.hidden = true;
+  copy.onclick = async () => {
+    try { await navigator.clipboard.writeText(field.value); message.textContent = 'Đã sao chép link.'; }
+    catch { field.focus(); }
+  };
+  group.append(button, message, field, copy, open);
   result.append(group);
   let generation = 0;
-  const clear = () => { generation++; field.hidden = true; field.value = ''; message.textContent = ''; button.disabled = false; };
+  const clear = () => { generation++; open.hidden = true; open.removeAttribute('href'); copy.hidden = true; field.hidden = true; field.value = ''; message.textContent = ''; button.disabled = false; };
   new MutationObserver(() => { if (result.hidden) clear(); }).observe(result, {attributes:true, attributeFilter:['hidden']});
   window.addEventListener('pagehide', clear);
   button.onclick = async () => {
     clear();
     const epoch = generation;
     button.disabled = true;
-    message.textContent = 'Đang lấy mã…';
+    message.textContent = 'Đang tạo link…';
     try {
       const owner = await getOwner();
       if (!owner) throw Error('Chưa xác nhận được lượt thi trên thiết bị này.');
       const {permit, ...scope} = owner;
       const data = await post('issue', scope, permit);
       if (epoch !== generation || result.hidden) return;
-      if (!codePattern.test(data.code || '')) throw Error('Máy chủ chưa trả mã xem hợp lệ.');
-      field.value = data.code;
+      if (!codePattern.test(data.code || '')) throw Error('Máy chủ chưa cấp được link xem.');
+      const link = new URL(location.href);
+      link.hash = 'xem=' + data.code;
+      field.value = link.href;
+      open.href = link.href;
+      open.hidden = false;
+      copy.hidden = false;
       field.hidden = false;
-      message.textContent = 'Mã có hiệu lực 24 giờ. Mở lại link thi ban đầu trên điện thoại, chọn Xem kết quả và nhập mã này.';
+      message.textContent = 'Mở link này trên điện thoại để xem ngay. Link cá nhân có hiệu lực 24 giờ.';
       field.focus();
     } catch (error) {
       if (epoch === generation) message.textContent = error.message;
@@ -131,108 +143,108 @@ function objective(title, section, payload, getReview) {
   return details;
 }
 
-function mobile() {
-  if (!window.IZONE_EXAM_DEVICE_BLOCKED || !window.TERM_TEST_APP_CONFIG) return;
-  const root = document.querySelector('#app');
-  const notice = root?.querySelector('.exam-device-notice');
-  if (!notice) return;
-  document.body.classList.add('term2-mobile-results');
-  notice.querySelector('p').textContent = 'Bắt đầu và tiếp tục thi trên máy tính. Sau khi nộp bài, bạn có thể dùng link này để xem kết quả đã công bố.';
-  const toggle = el('button', 'Xem kết quả', 'button button-primary');
-  toggle.type = 'button';
-  const form = el('form');
-  form.hidden = true;
-  const label = el('label', 'Mã xem kết quả');
-  const field = el('input');
-  field.type = 'text'; field.required = true; field.maxLength = 280; field.autocomplete = 'off';
-  field.spellcheck = false; field.autocapitalize = 'none'; field.id = 'term2MobileCode'; label.htmlFor = field.id;
-  const submit = el('button', 'Mở kết quả', 'button button-primary');
-  const message = el('p');
-  message.setAttribute('role', 'status');
-  form.append(label, field, el('p', 'Lấy mã từ màn kết quả trên máy tính đã dùng để thi.'), submit, message);
-  notice.append(toggle, form);
-  toggle.setAttribute('aria-expanded', 'false');
-  toggle.onclick = () => {
-    form.hidden = !form.hidden;
-    toggle.setAttribute('aria-expanded', String(!form.hidden));
-    if (!form.hidden) field.focus();
-  };
-  const output = el('section', undefined, 'mobile-result-output');
-  root.append(output);
-
-  const query = new URLSearchParams(location.search);
-  const classCode = query.get('class')?.trim().toUpperCase() || null;
-  const examMode = query.get('mode') || null;
-  let active, refreshTimer;
-  function reset() {
-    active?.abort(); active = null;
-    clearTimeout(refreshTimer);
-    window.K67_ANSWER_EXPLANATIONS?.reset();
-    output.replaceChildren();
-    field.value = '';
-    submit.disabled = false;
+export function renderMobileResult(root, payload, {getReview, refreshResult, onAccessError, onClose} = {}) {
+  const heading = el('h2', payload.studentName);
+  heading.tabIndex = -1;
+  const scores = el('div', undefined, 'mobile-result-card');
+  scores.append(el('p', 'Listening · ' + score(payload.result.listening)), el('p', 'Reading · ' + score(payload.result.reading)));
+  const writing = el('div', undefined, 'mobile-result-card');
+  showWriting(writing, payload.writing);
+  const questions = el('div', undefined, 'mobile-result-questions');
+  questions.append(objective('Reading', payload.result.reading, payload, getReview),
+    objective('Listening', payload.result.listening, payload, getReview));
+  root.replaceChildren(heading, el('p', payload.className + ' · Term Test 2'), scores, writing, questions);
+  if (onClose) {
+    const exit = el('button', 'Đóng kết quả', 'button outline');
+    exit.type = 'button';
+    exit.onclick = onClose;
+    root.append(exit);
   }
-  window.addEventListener('pagehide', reset);
-  form.onsubmit = async event => {
-    event.preventDefault();
-    const code = field.value.trim();
-    reset();
-    if (!codePattern.test(code)) { message.textContent = 'Mã xem chưa hợp lệ. Hãy dán đầy đủ mã.'; field.focus(); return; }
-    const controller = new AbortController();
-    active = controller;
-    const input = {code, classCode, examMode};
-    const read = action => post(action, input, null, AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]));
-    const onError = error => {
-      if (controller.signal.aborted) return;
-      if ([403,409].includes(error.status)) reset();
-      message.textContent = error.message || 'Chưa tải được kết quả.';
-    };
-    submit.disabled = true;
-    message.textContent = 'Đang xác minh mã xem…';
+  heading.focus();
+  let timer;
+  let closed = false;
+  let writingFingerprint = JSON.stringify(payload.writing);
+  const refresh = async () => {
+    if (closed) return;
     try {
-      const payload = await read('result');
-      if (controller.signal.aborted) return;
-      const heading = el('h2', payload.studentName);
-      heading.tabIndex = -1;
-      const scores = el('div', undefined, 'mobile-result-card');
-      scores.append(el('p', 'Listening · ' + score(payload.result.listening)), el('p', 'Reading · ' + score(payload.result.reading)));
-      const writing = el('div', undefined, 'mobile-result-card');
-      showWriting(writing, payload.writing);
-      const questions = el('div', undefined, 'mobile-result-questions');
-      const getReview = () => read('explanations').catch(error => {
-        if (error.status === 403) onError(error);
-        throw error;
-      });
-      questions.append(objective('Reading', payload.result.reading, payload, getReview),
-        objective('Listening', payload.result.listening, payload, getReview));
-      const exit = el('button', 'Đóng kết quả', 'button outline');
-      exit.type = 'button';
-      exit.onclick = () => {reset(); message.textContent = ''; field.focus();};
-      output.append(heading, el('p', payload.className + ' · Term Test 2'), scores, writing, questions, exit);
-      message.textContent = '';
-      heading.focus();
-      let writingFingerprint = JSON.stringify(payload.writing);
-      // Recheck access and Writing without replacing the question nodes or current dialog.
-      const refresh = async () => {
-        if (controller.signal.aborted) return;
-        try {
-          if (!document.hidden) {
-            const fresh = await read('result');
-            if (controller.signal.aborted) return;
-            const fingerprint = JSON.stringify(fresh.writing);
-            if (fingerprint !== writingFingerprint) {
-              showWriting(writing, fresh.writing);
-              writingFingerprint = fingerprint;
-            }
-          }
-        } catch (error) { onError(error); }
-        if (!controller.signal.aborted) refreshTimer = setTimeout(refresh, 30000);
-      };
-      refreshTimer = setTimeout(refresh, 30000);
-    } catch (error) { onError(error); }
-    finally { if (active === controller) submit.disabled = false; }
+      if (!document.hidden) {
+        const fresh = await refreshResult();
+        if (closed) return;
+        const fingerprint = JSON.stringify(fresh.writing);
+        if (fingerprint !== writingFingerprint) {
+          showWriting(writing, fresh.writing);
+          writingFingerprint = fingerprint;
+        }
+      }
+    } catch (error) { if (!closed) onAccessError?.(error); }
+    if (!closed) timer = setTimeout(refresh, 30000);
   };
+  if (refreshResult) timer = setTimeout(refresh, 30000);
+  return () => { closed = true; clearTimeout(timer); window.K67_ANSWER_EXPLANATIONS?.reset(); root.replaceChildren(); };
 }
 
-if (document.readyState === 'complete') mobile();
-else window.addEventListener('DOMContentLoaded', mobile, {once:true});
+function boot() {
+  if (!window.TERM_TEST_APP_CONFIG) return;
+  const root = document.querySelector('#app');
+  if (!root) return;
+  const code = new URLSearchParams(location.hash.slice(1)).get('xem');
+  if (code === null && !window.IZONE_EXAM_DEVICE_BLOCKED) return;
+  document.body.classList.add('term2-mobile-results');
+  const notice = el('section', undefined, 'exam-device-notice');
+  const status = el('p');
+  status.setAttribute('role', 'status');
+  notice.append(el('h1', code === null ? 'Bài thi cần thực hiện trên máy tính' : 'Kết quả Term Test 2'), status);
+  const output = el('section', undefined, 'mobile-result-output');
+  root.replaceChildren(notice, output);
+  if (code === null) {
+    status.textContent = 'Bắt đầu và tiếp tục thi trên máy tính. Để xem điểm và lời giải trên điện thoại, mở link cá nhân lấy từ màn kết quả trên máy tính.';
+    return;
+  }
+  if (!codePattern.test(code)) {
+    status.textContent = 'Link xem kết quả chưa đầy đủ. Hãy lấy link mới trên máy tính.';
+    return;
+  }
+  const query = new URLSearchParams(location.search);
+  const input = {code, classCode:query.get('class')?.trim().toUpperCase() || null, examMode:query.get('mode') || null};
+  let controller, clear;
+  const reset = () => { controller?.abort(); clear?.(); clear = undefined; };
+  const retry = el('button', 'Thử lại', 'button outline');
+  retry.type = 'button';
+  retry.hidden = true;
+  notice.append(retry);
+  async function openResult() {
+    reset();
+    controller = new AbortController();
+    const signal = controller.signal;
+    retry.hidden = true;
+    status.textContent = 'Đang tải kết quả…';
+    const read = action => post(action, input, null, AbortSignal.any([signal, AbortSignal.timeout(15000)]));
+    const fail = error => {
+      if (signal.aborted) return;
+      if ([403,409].includes(error.status)) reset();
+      retry.hidden = error.status === 403;
+      status.textContent = error.message || 'Chưa tải được kết quả.';
+    };
+    try {
+      const payload = await read('result');
+      if (signal.aborted) return;
+      const getReview = () => read('explanations').catch(error => {
+        if (error.status === 403) fail(error);
+        throw error;
+      });
+      clear = renderMobileResult(output, payload, {getReview, refreshResult:() => read('result'), onAccessError:fail});
+      status.textContent = '';
+    } catch (error) { fail(error); }
+  }
+  retry.onclick = openResult;
+  window.addEventListener('pagehide', reset);
+  window.addEventListener('pageshow', event => {if (event.persisted) void openResult();});
+  void openResult();
+}
+window.addEventListener('hashchange', event => {
+  const hadReview = new URLSearchParams(new URL(event.oldURL).hash.slice(1)).has('xem');
+  const hasReview = new URLSearchParams(location.hash.slice(1)).has('xem');
+  if (hadReview || hasReview) location.reload();
+});
+if (document.readyState === 'complete') boot();
+else window.addEventListener('DOMContentLoaded', boot, {once:true});

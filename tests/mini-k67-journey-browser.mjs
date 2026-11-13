@@ -139,7 +139,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       const requests = [];
       mobile.on('request',request=>{const path=new URL(request.url()).pathname;if(path.startsWith('/api/'))requests.push(path);});
       await mobile.goto(url);
-      await mobile.getByRole('button',{name:'Xem kết quả',exact:true}).waitFor();
+      await mobile.getByRole('heading',{name:'Bài thi cần thực hiện trên máy tính'}).waitFor();
       assert.equal(mobile.url(),url);
       assert.equal(await mobile.getByRole('button',{name:/Bắt đầu|Tiếp tục thi|Nghe tiếp/}).count(),0);
       assert.equal(await mobile.evaluate(()=>Boolean(window.TERM_TEST_BOOTSTRAP)),false);
@@ -428,17 +428,18 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       await page.locator('#viewResult').click();
       await page.locator('#resultView').waitFor();
       const takeCode = page.waitForResponse(response=>response.url().endsWith('/mobile-results/issue'));
-      await page.getByRole('button',{name:'Lấy mã xem trên điện thoại'}).click();
+      await page.getByRole('button',{name:'Lấy link xem trên điện thoại'}).click();
       const issued = await takeCode;
       assert.ok(issued.ok(), (await issued.json()).error);
-      const code = await page.getByRole('textbox',{name:'Mã xem kết quả trên điện thoại'}).inputValue();
+      const link = await page.getByRole('textbox',{name:'Link xem kết quả trên điện thoại'}).inputValue();
+      assert.equal(link.split('#')[0],url);
       const {phone,mobile,requests} = await checkPhone(mode === 'read_first');
       try {
-        await mobile.getByRole('button',{name:'Xem kết quả',exact:true}).click();
-        await mobile.getByLabel('Mã xem kết quả',{exact:true}).fill(code);
-        await mobile.getByRole('button',{name:'Mở kết quả'}).click();
+        await mobile.goto(link);
+        assert.equal(await mobile.getByRole('textbox').count(),0);
         await mobile.getByRole('heading',{name:studentName}).waitFor();
-        assert.equal(mobile.url(),url);
+        assert.equal(mobile.url(),link);
+        assert.equal(await mobile.evaluate(()=>Boolean(window.TERM_TEST_BOOTSTRAP)),false);
         await mobile.locator('[data-skill="Reading"] > summary').click();
         await mobile.getByRole('button',{name:/Reading câu .*Xem giải thích/}).first().click();
         await mobile.getByRole('dialog').waitFor();

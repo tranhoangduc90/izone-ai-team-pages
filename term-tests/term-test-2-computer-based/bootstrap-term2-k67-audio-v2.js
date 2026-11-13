@@ -21,14 +21,14 @@
   const demoJourneyEntry = classCode === 'CODEXDEMO806' && !demoStudentRef && !demoAttemptToken;
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   if(!window.IZONE_EXAM_DEVICE_CHECKED)await loadScript('../shared/desktop-exam-guard.js?v=20261027-v1&resilience=20261027-v1');
-  if(window.IZONE_EXAM_DEVICE_BLOCKED)return;
+  if(window.IZONE_EXAM_DEVICE_BLOCKED || new URLSearchParams(location.hash.slice(1)).has('xem'))return;
   // The desktop button reads the current native journey binding when clicked.
   if (testConfig.slug === 'term-test-2' && !listeningOnly) {
     const observer = new MutationObserver(() => {
       if (!root.querySelector('#resultView')) return;
       observer.disconnect();
-      void import('./mobile-results.mjs?v=20261114-v1').then(({mountDesktopReviewCode}) => {
-        mountDesktopReviewCode(async () => {
+      void import('./mobile-results.mjs?v=20261114-v2').then(({mountDesktopReviewLink}) => {
+        mountDesktopReviewLink(async () => {
           const scope = miniCbtScope();
           const {findMiniJourney} = await import(term2JourneyModule);
           const saved = await findMiniJourney(scope, testConfig.slug);

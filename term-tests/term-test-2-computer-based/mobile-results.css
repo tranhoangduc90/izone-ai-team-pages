@@ -21,6 +21,8 @@ body.term2-mobile-results .exam-device-notice { margin: 0; overflow-wrap: anywhe
 body.term2-mobile-results #explanation-dialog { width: min(100vw - 12px, 42rem); height: min(100dvh - 12px, 50rem); }
 body.term2-mobile-results #explanation-dialog .explanation-dialog-columns { display: flex; flex-direction: column; overflow: auto; }
 body.term2-mobile-results #explanation-dialog .explanation-dialog-detail { order: -1; }
+body.term2-mobile-results #explanation-dialog .explanation-dialog-detail,
+body.term2-mobile-results #explanation-dialog .explanation-dialog-passage { flex: none; min-height: auto; }
 body.term2-mobile-results #explanation-dialog .explanation-dialog-detail-scroll,
 body.term2-mobile-results #explanation-dialog .explanation-dialog-passage-scroll { height: auto; overflow: visible; overflow-wrap: anywhere; }
 body.term2-mobile-results #explanation-dialog .explanation-dialog-footer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }

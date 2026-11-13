@@ -213,15 +213,15 @@ export const ASSET_HASHES={
   "../term-test-2/test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8",
   "audio-loader-audio-status-v1.js": "a7399bba30177f98a291033678c0cd4d41909b5ea499c162f1b15a4b9c0eead3",
   "bootstrap-audio-status-v2.js": "129dded9216b6e1f3b9999e133c215ce839778a495c0d62f53af78974ef9f4c8",
-  "bootstrap-term2-k67-audio-v2.js": "3703ea01ef0977db53917a708a043dda09dd07b538a30de0509f7048dd936a5b",
+  "bootstrap-term2-k67-audio-v2.js": "24c3eee31961a54def15661e0c7b7311c7ef4b1a49440a9569be54d3b47316a9",
   "enhance-term2-k67-audio-v2.js": "65d6cd0b9cb8bcd03fdbabb1acbe96d3c0abbc5a42d9a2a2a8e31a9de474b330",
   "enhance.js": "b2fa19b00fb7f2615207a4b3a03deb8baae8d258a8d2abec26be39d3b3fc7883",
   "index-audio-status-v2.html": "c7f841056752f6d67d641fe8bedc62efbb651bfe609da7d3d249fcf036e84052",
   "interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
-  "mobile-results.css": "ae1d5522f353cece63f47db872c31fa3b030b506f4ba6e7ee12963f3dddf1e29",
-  "mobile-results.mjs": "5979fbb4cff3ca14db8d8546d6af2319d0a4979ccf745d3cc86467270be6f2a7",
+  "mobile-results.css": "2e65c2928788d508d42791271b760b0e2d7e9ae015596c2fc06e80346246f619",
+  "mobile-results.mjs": "21524df5516b6e61fc70c06cb5ca3c26d1ab08824a658e32cdc5505c6c236ee8",
   "offline-worker-audio-status-v2.js": "40cd4445d60bf60cbef329a4b3920cebda9d0c8f36038b12a0f48d720feca1be",
   "styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3"
 };
-export const ASSET_BUILD_ID="9f9c2271763a6de29e4d06f81490c9f6c0a64924b360b91417833eb83dddad51";
+export const ASSET_BUILD_ID="82dbdac816ec7f18e3adf39006af4e409cd37e267270099b546626b906eca3f7";
