@@ -19,7 +19,7 @@ async function own(){if(ownerHeld)return;if(!navigator.locks)throw Object.assign
 function freeze(){ui?.disable();$('submit').disabled=true;}
 const current=(epoch,id)=>ownerHeld&&epoch===stateEpoch&&state?.identity?.attemptId===id;
 function resultView(v){
- show('lobby',false);show('exam',false);show('finished');const received=!!v.receipt,ready=received&&!!v.result;
+ show('lobby',false);show('exam',false);show('finished');const received=!!v.receipt,ready=received&&!!v.result;document.body.classList.toggle('writing-result-ready',ready);
  text('receipt',received?'Mã biên nhận: '+v.receipt.receiptId:'Bản nộp đã lưu trên thiết bị · đang chờ biên nhận');
  show('change-person',received);show('check-result',false);show('retry-send',false);
  text('grading-status',ready?'':!received?'Bài đã lưu trên thiết bị · đang gửi tới hệ thống.':v.gradingState==='review_required'?'Đã nhận bài · phần chấm cần giảng viên kiểm tra. Bạn không cần nộp lại.':v.gradingState==='waiting_confirmation'?'Đã nhận bài · đang xác minh kết quả chấm. Bạn không cần nộp lại.':v.gradingState==='processing'?'Đã nhận bài · đang chấm.':'Đã nhận bài · đang chờ chấm.');
@@ -29,7 +29,7 @@ function resultView(v){
  text('portal-status',portalStatus(v));
  if($('score-value')){text('score-value',Number(v.result.score).toFixed(1));text('score-max',' / '+v.result.max);}else text('score','Writing: '+v.result.score+' / '+v.result.max);
  if($('result-meta')){const labels=(v.result.tasks||[]).map(t=>'Task '+t.taskNumber).join(' và '),name=document.querySelector('.skill-bar h1')?.textContent?.replace(/^Writing\s*·\s*/,'')||'';text('result-meta',[labels,name].filter(Boolean).join(' · '));}
- const key=JSON.stringify(v.result);if($('feedback').dataset.result!==key){renderCompleteWritingResult($('feedback'),v.result);$('feedback').dataset.result=key;}
+ const key=JSON.stringify(v.result);if($('feedback').dataset.result!==key){renderCompleteWritingResult($('feedback'),v.result,{writingConfig:content?.writing,drafts:state.native?.drafts?.writing,overviewTarget:$('criteria-summary')});$('feedback').dataset.result=key;}
 }
 async function check(){if(!ownerHeld||!state?.identity||syncing||busy)return;const epoch=stateEpoch,id=state.identity.attemptId;try{const v=await api('status',state.identity);if(!current(epoch,id))return;anchor(v);state.lastServer=v;if(v.receipt){if(state.sealed&&v.receipt.operationId!==state.sealed.operationId)throw Object.assign(Error(),{code:'SUBMISSION_CONFLICT'});state.phase='submitted';state.sealed=null;await persist();if(current(epoch,id))resultView(v);}else if(state.phase==='submitted'||state.sealed)resultView(v);}catch(e){if(current(epoch,id))fail(e);}}
 async function synchronize(){
