@@ -1,0 +1,52 @@
+
+.mobile-result-code { margin-block: 16px; }
+.mobile-result-code input { width: min(100%, 42rem); padding: 8px; }
+body.term2-mobile-results #app { max-width: 42rem; margin: auto; padding: 16px; }
+body.term2-mobile-results .exam-device-notice { margin: 0; overflow-wrap: anywhere; }
+.term2-mobile-results form { display: grid; gap: 8px; margin-top: 12px; }
+.term2-mobile-results form[hidden] { display: none; }
+.term2-mobile-results input { width: 100%; min-height: 44px; font: inherit; }
+.term2-mobile-results button, .term2-mobile-results summary { min-height: 44px; }
+.mobile-result-output:not(:empty) { margin-top: 16px; }
+.mobile-result-card { background: #fff; border: 1px solid #dce1e7; border-radius: 12px; margin-block: 8px; padding: 12px; }
+.mobile-result-card summary { display: list-item; align-content: center; cursor: pointer; font-weight: 700; }
+.mobile-result-card table, .mobile-result-card tbody, .mobile-result-card tr { display: block; width: 100%; }
+.mobile-result-card thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.mobile-result-card tr { border-top: 1px solid #dce1e7; padding-block: 8px; }
+.mobile-result-card td { display: flex; flex-wrap: wrap; column-gap: 8px; justify-content: space-between; overflow-wrap: anywhere; }
+.mobile-result-card td::before { content: attr(data-label); font-weight: 650; }
+.mobile-result-card td[data-explanation-column] { display: block; margin-top: 5px; }
+.mobile-result-card .explanation-open { width: auto; }
+body.term2-mobile-results .mobile-result-panel { padding: 18px; }
+body.term2-mobile-results .mobile-result-panel .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 18px 0; }
+body.term2-mobile-results .mobile-result-panel .summary-card { min-width: 0; }
+body.term2-mobile-results .mobile-result-panel .summary-card strong { font-size: clamp(20px, 4vw, 27px); }
+body.term2-mobile-results .writing-result-section { margin: 18px 0; }
+body.term2-mobile-results .writing-score-grid { margin-bottom: 0; }
+body.term2-mobile-results .writing-score-card { min-width: 0; }
+body.term2-mobile-results .mobile-writing-feedback { color: var(--lab-ink, #172a45); }
+body.term2-mobile-results .mobile-writing-feedback .writing-feedback-layout { display: block; overflow: auto; }
+body.term2-mobile-results .mobile-writing-feedback .writing-feedback-scores { overflow: visible; }
+body.term2-mobile-results .writing-feedback-richtext table { display: block; max-width: 100%; overflow-x: auto; }
+body.term2-mobile-results .writing-feedback-richtext { white-space: normal; overflow-wrap: anywhere; }
+body.term2-mobile-results .writing-component-toggle { align-content: center; cursor: pointer; }
+@media (max-width: 620px) {
+  body.term2-mobile-results .mobile-result-panel { padding: 14px; }
+  body.term2-mobile-results .mobile-result-panel .summary-grid { grid-template-columns: 1fr; }
+  body.term2-mobile-results .writing-result-section { padding: 14px; }
+  body.term2-mobile-results .writing-score-card { min-height: 92px; padding: 14px; }
+  body.term2-mobile-results .writing-feedback-scores { padding: 12px; }
+  body.term2-mobile-results .writing-criterion-card { padding: 12px; }
+}
+body.term2-mobile-results #explanation-dialog { width: min(100vw - 12px, 42rem); height: min(100dvh - 12px, 50rem); }
+body.term2-mobile-results #explanation-dialog .explanation-dialog-columns { display: flex; flex-direction: column; overflow: auto; }
+body.term2-mobile-results #explanation-dialog .explanation-dialog-detail { order: -1; }
+body.term2-mobile-results #explanation-dialog .explanation-dialog-detail,
+body.term2-mobile-results #explanation-dialog .explanation-dialog-passage { flex: none; min-height: auto; }
+body.term2-mobile-results #explanation-dialog .explanation-dialog-detail-scroll,
+body.term2-mobile-results #explanation-dialog .explanation-dialog-passage-scroll { height: auto; overflow: visible; overflow-wrap: anywhere; }
+body.term2-mobile-results #explanation-dialog .explanation-dialog-footer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+@media (max-width: 355px) {
+  body.term2-mobile-results #app { padding: 8px; }
+  body.term2-mobile-results #explanation-dialog .explanation-dialog-footer .button { padding-inline: 6px; }
+}

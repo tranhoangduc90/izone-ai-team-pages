@@ -18,6 +18,8 @@ const writingOnly=process.env.K67_JOURNEY_WRITING_ONLY==='1';
 const term1=process.env.K67_JOURNEY_TERM1==='1';
 const term2=process.env.K67_JOURNEY_TERM2==='1';
 const term=term1||term2;
+const mobileReview=process.env.K67_JOURNEY_TERM2_MOBILE_RESULTS==='1';
+assert.ok(!mobileReview||term2,'Mobile result pilot is limited to Term 2 K67.');
 const continuity=process.env.K67_JOURNEY_CONTINUITY||'';
 assert.ok(!continuity||['eof','manual','interrupt','reload','upgrade'].includes(continuity));
 const interrupted=['interrupt','reload'].includes(continuity);
@@ -35,7 +37,7 @@ const modes=process.env.K67_JOURNEY_ORDER?[process.env.K67_JOURNEY_ORDER]:['lis_
 const require=createRequire(resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json'));
 const {chromium}=require('playwright');
 
-for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_000:term1?8_300_000:2_650_000):writingOnly?4_200_000:upgrade?180_000:120_000},async()=>{
+for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_000:term1?8_300_000:2_650_000):writingOnly?4_200_000:(upgrade||mobileReview)?180_000:120_000},async()=>{
   assert.ok(['lis_first','read_first'].includes(mode));
   const listener=createServer().listen(0,'127.0.0.1');
   await once(listener,'listening');
@@ -45,7 +47,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
   const fixture=spawn(process.execPath,[process.env.K67_JOURNEY_PREVIEW_TOOL||'tools/preview-exam-order.mjs',pages],{cwd:backend,windowsHide:true,
     env:{...process.env,K67_ORDER_NATIVE_URL:'',K67_PREVIEW_PORT:String(port),K67_PREVIEW_MINI_CBT_JOURNEY:term?'off':'on',
       K67_PREVIEW_TERM1_CBT_JOURNEY:term1?'on':'off',
-      K67_PREVIEW_TERM2_CBT_JOURNEY:term2?'on':'off',K67_PREVIEW_LISTENING_CONTINUITY:continuity?'true':'false',
+      K67_PREVIEW_TERM2_CBT_JOURNEY:term2?'on':'off',K67_PREVIEW_TERM2_MOBILE_RESULTS:String(mobileReview),K67_PREVIEW_LISTENING_CONTINUITY:continuity?'true':'false',
       K67_PREVIEW_RESCUE_CLASS:rescueClass,
       K67_PREVIEW_AUDIO_PROTECTION:'true',K67_PREVIEW_REAL_MINI_AUDIO:full&&!term?'true':'false',
       K67_PREVIEW_REAL_TERM1_AUDIO:(full||r2Smoke)&&term1?'true':'false',K67_PREVIEW_AUDIO_SECONDS:'18',
@@ -128,6 +130,23 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       await page.getByText('Hãy mở đường dẫn chính do giảng viên gửi.',{exact:false}).waitFor();
       assert.equal(await page.locator('#bootstrapStudent').count(),0);
     }
+    const checkPhone = async (android = false) => {
+      const phone = await browser.newContext({isMobile:true,hasTouch:true,viewport:{width:390,height:844},
+        userAgent:android ? 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 Chrome/132.0.0.0 Mobile Safari/537.36'
+          : 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1'});
+      await phone.route('**/*',route=>new URL(route.request().url()).origin===base?route.continue():route.abort());
+      const mobile = await phone.newPage();
+      const requests = [];
+      mobile.on('request',request=>{const path=new URL(request.url()).pathname;if(path.startsWith('/api/'))requests.push(path);});
+      await mobile.goto(url);
+      await mobile.getByRole('heading',{name:'Bài thi cần thực hiện trên máy tính'}).waitFor();
+      assert.equal(mobile.url(),url);
+      assert.equal(await mobile.getByRole('button',{name:/Bắt đầu|Tiếp tục thi|Nghe tiếp/}).count(),0);
+      assert.equal(await mobile.evaluate(()=>Boolean(window.TERM_TEST_BOOTSTRAP)),false);
+      assert.deepEqual(requests,[]);
+      return {phone,mobile,requests};
+    };
+    if(mobileReview) { const fresh = await checkPhone(); await fresh.phone.close(); log('mobile_start_blocked'); }
     await page.goto(url);
     await page.locator('#bootstrapStudent').selectOption('11111111-1111-4111-8111-111111111111');
     const studentName=(await page.locator('#bootstrapStudent option:checked').textContent()).trim();
@@ -165,6 +184,11 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       name: mode === 'lis_first' ? confirmedStartName : startName, exact:true,
     }).click({timeout:50_000});
     log('started');
+    if(mobileReview) {
+      const during = await checkPhone(true);
+      await during.phone.close();
+      log('mobile_resume_blocked');
+    }
     await page.getByRole('button',{name:'Tải bài làm về máy'}).waitFor();
     if(eofJournal){
       for(let i=0;i<100&&!journalRows.some(row=>row.bindingId===learnerBinding&&row.event.type==='identity_observed');i++)
@@ -400,6 +424,40 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       throw new Error(`${error.message}\n${JSON.stringify({seals,rejections})}`);
     });
     assert.deepEqual(seals,order);
+    if(mobileReview) {
+      await page.locator('#viewResult').click();
+      await page.locator('#resultView').waitFor();
+      const takeCode = page.waitForResponse(response=>response.url().endsWith('/mobile-results/issue'));
+      await page.getByRole('button',{name:'Lấy link xem trên điện thoại'}).click();
+      const issued = await takeCode;
+      assert.ok(issued.ok(), (await issued.json()).error);
+      const link = await page.getByRole('textbox',{name:'Link xem kết quả trên điện thoại'}).inputValue();
+      assert.equal(link.split('#')[0],url);
+      const {phone,mobile,requests} = await checkPhone(mode === 'read_first');
+      try {
+        await mobile.goto(link);
+        assert.equal(await mobile.getByRole('textbox').count(),0);
+        await mobile.getByRole('heading',{name:studentName}).waitFor();
+        assert.equal(mobile.url(),link);
+        assert.equal(await mobile.evaluate(()=>Boolean(window.TERM_TEST_BOOTSTRAP)),false);
+        await mobile.locator('[data-skill="Reading"] > summary').click();
+        await mobile.getByRole('button',{name:/Reading câu .*Xem giải thích/}).first().click();
+        await mobile.getByRole('dialog').waitFor();
+        await mobile.getByText(/Phân tích mô phỏng cho câu/).waitFor();
+        if (process.env.K67_MOBILE_SCREENSHOT) await mobile.screenshot({path:process.env.K67_MOBILE_SCREENSHOT});
+        await mobile.getByRole('button',{name:'Đóng giải thích'}).click();
+        await mobile.locator('[data-skill="Listening"] > summary').click();
+        await mobile.getByRole('button',{name:/Listening câu .*Xem giải thích/}).first().click();
+        const clip = mobile.getByRole('button',{name:/Nghe lại dẫn chứng/});
+        await clip.click();
+        await mobile.waitForFunction(()=>{const audio=document.querySelector('audio[data-k67-review-audio]');return audio&&!audio.paused&&audio.currentTime>=1;},{},{timeout:20000});
+        await mobile.waitForFunction(()=>{const audio=document.querySelector('audio[data-k67-review-audio]');return audio?.paused&&audio.currentTime>=2.3&&audio.currentTime<3.5;},{},{timeout:7000});
+        assert.equal(await mobile.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+        assert.ok(requests.length>=2);
+        assert.ok(requests.every(path=>path.includes('/mobile-results/')),JSON.stringify(requests));
+        log('mobile_same_url_result_and_explanations');
+      } finally { await phone.close(); }
+    }
     if(continuity==='interrupt'){
       assert.equal(droppedReceipt?.outcome,'interrupted');
       assert.deepEqual(recoveredReceipts,[droppedReceipt]);
