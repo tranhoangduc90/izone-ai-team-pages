@@ -12,10 +12,9 @@ async function startLocal(){
 }
 if(local)await startLocal();
 else{
- let version=script.dataset.fallback;
- try{const response=await fetch('https://ducizone.ddns.net/mapping-api/api/learning/frontend-release',{cache:'no-store',signal:AbortSignal.timeout(5000),referrerPolicy:'no-referrer'});
-  const payload=await response.json();if(response.ok&&payload.ok&&/^[a-f0-9]{16}$/.test(payload.version))version=payload.version;
- }catch{/* Offline: use the last complete package embedded in this entry. */}
+ const version=script.dataset.fallback;
+ // Pages publishes the entry and its immutable package in the same deploy.
+ // The running app checks the independently verified version in the background.
  if(/^[a-f0-9]{16}$/.test(version||'')){
   const target=new URL('releases/'+version+'/progress-log/'+entry,root);target.search=location.search;target.hash=location.hash;location.replace(target);
  }else await startLocal();
