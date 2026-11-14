@@ -54,7 +54,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-test2-shared/app-term2-audio-goal-v1.js?audioGoal=20261113-v1&v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&termK56Audio=20261108-v2&offlineNotice=20261108-v1&writingRecovery=20261112-v1'))
+      .then(() => loadScript('../k56-test2-shared/app-term2-audio-goal-v1.js?audioGoal=20261113-v1&journalWriting=20261114-v1&v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&termK56Audio=20261108-v2&offlineNotice=20261108-v1&writingRecovery=20261112-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1&termK56Audio=20261108-v2'))
       .then(() => loadScript('enhance-submission-recovery-v1.js?audioGoal=20261113-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2&previewWait=20261109-preview-10s-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
@@ -832,7 +832,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-test2-shared/app-term2-audio-goal-v1.js?audioGoal=20261113-v1&v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&termK56Audio=20261108-v2&offlineNotice=20261108-v1&writingRecovery=20261112-v1');
+    await loadScript('../k56-test2-shared/app-term2-audio-goal-v1.js?audioGoal=20261113-v1&journalWriting=20261114-v1&v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&termK56Audio=20261108-v2&offlineNotice=20261108-v1&writingRecovery=20261112-v1');
     if (term2Offline?.active) {
       const began=performance.now();
       while (!window.K56_TERM2_APP_READY) { if(performance.now()-began>20000)throw new Error('Màn làm bài chưa sẵn sàng; audio chưa phát.');await new Promise(ok=>setTimeout(ok,30)); }
