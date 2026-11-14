@@ -1546,8 +1546,16 @@
           return;
         }
         if (Date.parse(current.listeningDeadlineAt) >= Date.parse(state.listeningDeadlineAt)) {
+          const previous = state.listeningDeadlineAt;
           state.listeningDeadlineAt = current.listeningDeadlineAt;
           state.serverTimeOffsetMs = window.IZONE_EXAM_CLOCK.offset(current.serverNow);
+          if (current.waitingForAudio) showNotice('Đang chờ giảng viên xác nhận audio đã phát xong.');
+          if (state.listeningDeadlineAt !== previous && !isSectionExpired('listening')) {
+            state.frozenAnswers.listening = null;
+            delete elements.listeningView.dataset.listeningTimeExpired;
+            setAnswerControlsLocked('listening', false);
+            hideNotice();
+          }
           render();
         }
       } catch { /* The latest acknowledged deadline stays visible during a network error. */ }

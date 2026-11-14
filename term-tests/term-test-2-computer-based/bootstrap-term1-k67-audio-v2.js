@@ -1080,7 +1080,7 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    const journeyVersion=timerOnly?'&listeningTimer=1':journey?'&offlineJourney=20261107-term1-v1':'';
+    const journeyVersion=timerOnly?'&listeningTimer=2':journey?'&offlineJourney=20261107-term1-v1':'';
     await loadScript('../shared/app-term2-k67-audio-v2.js?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v9&continuity=20261110-v1'+journeyVersion);
     await loadScript(cbtAssetUrl('enhance-term2-k67-audio-v2.js?v=20261107-terms-cbt-v1&uiRestore=20261108-v6&previewWait=20261109-preview-10s-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1')+journeyVersion);
     if (appReady) await appReady.promise;
@@ -1399,7 +1399,7 @@
     const startOwner = window.K67_AUDIO_OWNER;
     const startGeneration = Number(state.generation)||0;
     try {
-      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller-term2-audio-v2.js?rev=20261016-reading-recovery-v1&termEof=20261108-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':'&termsEof=20261107-v1'));
+      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller-term2-audio-v2.js?rev=20261016-reading-recovery-v1&termEof=20261108-v1&listeningTimer=2'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':'&termsEof=20261107-v1'));
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;

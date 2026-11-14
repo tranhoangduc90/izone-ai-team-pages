@@ -63,6 +63,18 @@
           </div>
         </div>
 
+        <details class="panel" id="term1ListeningRoom" hidden>
+          <summary>Ca Listening dùng đồng hồ chung</summary>
+          <form id="term1ListeningRoomForm">
+            <label>Giờ bắt đầu (giờ Việt Nam) <input type="datetime-local" id="term1ListeningStart" required></label>
+            <button type="submit" class="button button-primary">Lên lịch ca</button>
+          </form>
+          <p id="term1ListeningRoomStatus" role="status"></p>
+          <a id="term1ListeningRoomLink" hidden>Mở link Listening không audio</a>
+          <button id="term1ListeningHoldAudio" type="button" class="button button-secondary" hidden>Giữ giờ thu vì audio gián đoạn</button>
+          <button id="term1ListeningFinishAudio" type="button" class="button button-secondary" hidden>Đã phát xong audio</button>
+        </details>
+
         <aside class="teacher-access-notice" id="classAccessNotice" role="status" aria-live="polite" hidden>
           <div class="teacher-access-notice-icon" aria-hidden="true">🛡</div>
           <div>
@@ -111,6 +123,6 @@
     <script src="../shared/attempt-review.js?rev=20260909-k67-update-v1"></script>
     <script src="../k67-shared/review-audio.js?rev=20261026-term1-replay1"></script>
     <script src="../k67-shared/answer-explanations.js?rev=20261026-term1-replay1&journal=20261024-startup-v2&resilience=20261027-v1&audio=20261028-part-rescue-v1"></script>
-    <script type="module" src="app.js?rev=20261019-saved-progress-v1&amp;startup=20261026-v2&amp;resilience=20261027-v1&amp;history=20261102-1&amp;tracking=20261103-3&amp;detailScope=20261108-v1&amp;journal=20261114-v1"></script>
+    <script type="module" src="app.js?rev=20261019-saved-progress-v1&amp;startup=20261026-v2&amp;resilience=20261027-v1&amp;history=20261102-1&amp;tracking=20261103-3&amp;detailScope=20261108-v1&amp;journal=20261114-v1&amp;listeningTimer=2"></script>
   </body>
 </html>
