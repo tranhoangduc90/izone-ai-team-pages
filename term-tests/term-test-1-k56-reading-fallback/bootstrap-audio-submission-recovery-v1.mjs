@@ -12,6 +12,25 @@ const skill = ['listening', 'writing'].includes(document.body.dataset.term1Skill
 const listening = skill === 'listening';
 const transport = listening ? { audioTransport: 'r2-direct-v1' } : {};
 const volumeKey = 'term1-k56-skill-fallback:audio-volume';
+const pendingAudioDiagnostics = new WeakMap();
+
+function observeFallbackAudio(runtime, phase, details = {}) {
+  if (window.TERM_TEST_APP_CONFIG?.EXAM_JOURNAL_ENABLED !== true) return;
+  try {
+    const row = {phase, elapsedPageMs: Math.round(performance.now()), ...details};
+    if (!runtime.active) {
+      const pending = pendingAudioDiagnostics.get(runtime) || [];
+      if (pending.length >= 8) pending.shift();
+      pending.push(row);
+      pendingAudioDiagnostics.set(runtime, pending);
+      return;
+    }
+    const pending = pendingAudioDiagnostics.get(runtime) || [];
+    pendingAudioDiagnostics.delete(runtime);
+    for (const entry of [...pending, row])
+      runtime.observe('fallback_audio_diagnostic', {section: 'listening', ...entry});
+  } catch { /* Diagnostics never gate preparation or playback. */ }
+}
 
 function savedVolume() {
   try { return Math.min(1, Math.max(0.1, Number(localStorage.getItem(volumeKey)) || 1)); }
@@ -62,8 +81,25 @@ async function finishPreparation(runtime, opened) {
     if (response.grantId !== runtime.grantId || response.section !== skill || response.submitted) throw Error('Quyền tải audio đã thay đổi.');
     return { manifest: { envelopeVersion: 'MP3', url: AUDIO.pagesUrl, sha256: AUDIO.sha256, byteLength: AUDIO.bytes }, download: response.audioDownload };
   };
-  const blob = await downloadWhole({ audioDownload: opened ? opened.audioDownload : (await refresh()).download, refresh,
-    onProgress: audioStatus.progress, onPhase: audioStatus.phase });
+  const began = performance.now();
+  observeFallbackAudio(runtime, 'download_started');
+  let source = 'unresolved';
+  let blob;
+  try {
+    blob = await downloadWhole({ audioDownload: opened ? opened.audioDownload : (await refresh()).download, refresh,
+      onProgress: audioStatus.progress, onPhase: audioStatus.phase,
+      onMilestone(row) {
+        if (!['r2-direct', 'pages'].includes(row.source)) return;
+        if (row.phase === 'first_byte') source = row.source;
+        if (row.phase === 'source_switch_started') observeFallbackAudio(runtime, 'source_switched', {source: row.source});
+      }
+    });
+  } catch (error) {
+    observeFallbackAudio(runtime, 'download_failed', {source, elapsedMs: Math.round(performance.now()-began),
+      reason: error?.accessDenied ? 'access_denied' : 'download_or_verification_failed'});
+    throw error;
+  }
+  observeFallbackAudio(runtime, 'download_verified', {source, bytes: blob.size, elapsedMs: Math.round(performance.now()-began)});
   audioStatus.phase('Đang chuẩn bị trình phát…');
   if (!runtime.listeningContinuity) {
     const probe = await makeAudio(blob);
@@ -72,6 +108,7 @@ async function finishPreparation(runtime, opened) {
   }
   if (runtime.listeningContinuity) runtime.observe('audio_downloaded',{bytes:blob.size});
   await runtime.finishPreparation(blob);
+  observeFallbackAudio(runtime, 'offline_audio_prepared', {bytes: blob.size});
 }
 
 async function makeAudio(blob) {
@@ -105,11 +142,19 @@ async function showListening(runtime) {
     const audio = preparedPlayer?.audio ?? await makeAudio(blob);
     audio.volume = volume;
     document.body.append(audio);
+    observeFallbackAudio(runtime, 'player_ready', {positionSeconds: audio.currentTime, durationSeconds: audio.duration});
     if (!resuming) {
       if (continuity) runtime.listeningStartIntent = performance.now();
       await runtime.start('listening');
     }
     await enter(runtime, audio);
+    audio.addEventListener('ended', event => {
+      if (event.isTrusted && runtime.record.player.ended) {
+        observeFallbackAudio(runtime, 'eof_accepted', {positionSeconds: audio.currentTime,
+          durationSeconds: audio.duration, playbackRate: audio.playbackRate,
+          reviewSeconds: runtime.record.prepared.timing.listeningReviewSeconds});
+      }
+    });
     if (runtime.record.player.ended) {
       const form = document.getElementById('listeningView');
       const submit = document.createElement('button');
@@ -118,7 +163,14 @@ async function showListening(runtime) {
       return;
     }
     if (!runtime.record.player.held) {
-      try { await audio.play(); } catch { window.K56_LISTENING_AUDIO?.playBlocked(); }
+      observeFallbackAudio(runtime, 'play_called', {positionSeconds: audio.currentTime});
+      try {
+        await audio.play();
+        observeFallbackAudio(runtime, 'play_resolved', {positionSeconds: audio.currentTime});
+      } catch (error) {
+        observeFallbackAudio(runtime, 'play_rejected', {reason: error?.name === 'NotAllowedError' ? 'play_not_allowed' : 'play_failed'});
+        window.K56_LISTENING_AUDIO?.playBlocked();
+      }
     }
   }
   if (runtime.record.sections.listening?.startedAt) return begin(true);
