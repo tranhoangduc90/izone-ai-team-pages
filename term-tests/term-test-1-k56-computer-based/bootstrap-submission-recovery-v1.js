@@ -57,7 +57,7 @@
     Promise.resolve()
       .then(() => loadScript('../k56-shared/app-term1-audio-goal-v1.js?audioGoal=20261113-v1&v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=term1-20261107-v1&termK56Audio=20261108-v2&offlineNotice=20261108-v1&writingRecovery=20261112-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1&termK56Audio=20261108-v2'))
-      .then(() => loadScript('enhance-submission-recovery-journal-v1.js?journalObs=20261114-v1&audioGoal=20261113-v1&offline=term1-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2&previewWait=20261109-preview-10s-v1'))
+      .then(() => loadScript('enhance-submission-recovery-journal-v1.js?journalStart=20261114-v1&journalObs=20261114-v1&audioGoal=20261113-v1&offline=term1-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2&previewWait=20261109-preview-10s-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -958,7 +958,7 @@
         await new Promise(resolve=>setTimeout(resolve,30));
       }
     }
-    const enhance='enhance-submission-recovery-journal-v1.js?journalObs=20261114-v1&audioGoal=20261113-v1&offline=term1-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2&previewWait=20261109-preview-10s-v1';
+    const enhance='enhance-submission-recovery-journal-v1.js?journalStart=20261114-v1&journalObs=20261114-v1&audioGoal=20261113-v1&offline=term1-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2&previewWait=20261109-preview-10s-v1';
     await loadScript(onlinePlayback?enhance+'&onlineStart=20261113-v1':enhance);
     await loadScript('annotations.js?v=20261018-identity-v1');
   }
@@ -1096,6 +1096,48 @@
   });
   let onlineStartEpoch=0;
   window.addEventListener('pagehide',()=>{onlineStartEpoch++;});
+
+  function onlineStartObservation(commandSequence) {
+    if (appConfig.EXAM_JOURNAL_ENABLED !== true || localDemo) return () => {};
+    try {
+      const endpoint = appConfig.EXAM_JOURNAL_BASE_URL || appConfig.API_BASE_URL + '/api/term-tests/' + testConfig.slug;
+      const key = JSON.stringify([new URL(endpoint, location.href).href, testConfig.slug]);
+      const {examSessionToken, generation} = state;
+      const classAtStart = classCode;
+      const began = performance.now();
+      const queued = [];
+      let scheduled = false;
+      let commandStep = 0;
+      function flush() {
+        scheduled = false;
+        try {
+          const elapsedMs = performance.now() - began;
+          const owner = window.TERM_TEST_BOOTSTRAP;
+          const bridge = window[Symbol.for('izone.examJournal.connections.v1')]?.get(key);
+          if (examSessionToken && owner?.examSessionToken === examSessionToken && Number(owner.generation || 0) === Number(generation || 0)) {
+            while (queued.length && bridge?.recordK56Submission?.(owner, queued[0].type, queued[0].data)) queued.shift();
+          }
+          if (!queued.length) return;
+          if (elapsedMs < 12_000) { schedule(); return; }
+          const remaining = queued.splice(0);
+          if (classCode === classAtStart) void bridge?.recordInitialization?.(remaining, {classCode: classAtStart})?.catch(() => {});
+        } catch { /* The exam does not depend on the journal. */ }
+      }
+      function schedule() {
+        if (!scheduled) { scheduled = true; setTimeout(flush, 500); }
+      }
+      return (phase, details = {}) => {
+        try {
+          queued.push({type: 'audio_observed', data: {action: 'term_k56_media_continuity', checkpointState: {
+            telemetryVersion: 1, assetId: testConfig.slug, mode: 'online', phase, commandSequence, commandStep: ++commandStep,
+            elapsedPageMs: Math.round(performance.now()), ...details
+          }}});
+          schedule();
+        } catch { /* Diagnostics are best effort. */ }
+      };
+    } catch { return () => {}; }
+  }
+
   elements.bootstrapStart.addEventListener('click', async () => {
     if (elements.bootstrapStart.disabled || !encryptedAudio || preparing) return;
     preparing = true;
@@ -1107,6 +1149,8 @@
     const generation=Number(state.generation)||0;
     const isCurrent=()=>epoch===onlineStartEpoch&&state.attemptToken===attemptToken
       &&state.examSessionToken===examSessionToken&&(Number(state.generation)||0)===generation;
+    const observe = term1Offline?.active ? () => {} : onlineStartObservation(epoch);
+    observe('start_requested');
     previewAudio.pause();
     try {
       if (term1Offline?.active) {
@@ -1165,6 +1209,8 @@
           audioOwnerId: recovery.ownerId, audioStateRevision: recovery.revision, generation: Number(state.generation) || 0
         })
       });
+      observe('native_start_received', {requestRevision: recovery.revision,
+        serverRevision: started.audioStateRevision, requestGeneration: generation, serverGeneration: started.generation});
       if (started.audioRecoveryVersion !== 2 || !Number.isFinite(started.listeningResumeAtSeconds)
           || !Number.isFinite(Date.parse(started.listeningHardDeadlineAt))) {
         throw new Error('API chưa hỗ trợ đúng phiên bản khôi phục audio. Nháp được giữ; chưa thể tự tua theo đồng hồ.');
@@ -1194,7 +1240,11 @@
         officialAudio.load();
       });
       officialAudio.currentTime = Math.min(resumeAt, officialAudio.duration);
-      if(!isCurrent()||(Number(started.generation)||0)!==generation)throw Error('Lượt Listening đã thay đổi.');
+      if(!isCurrent()||(Number(started.generation)||0)!==generation) {
+        observe('reply_discarded', {reason: 'scope_changed_before_play', requestRevision: recovery.revision,
+          serverRevision: started.audioStateRevision, requestGeneration: generation, serverGeneration: started.generation});
+        throw Error('Lượt Listening đã thay đổi.');
+      }
       saveState({
         listeningStartedAt: started.listeningStartedAt,
         listeningDeadlineAt: started.listeningDeadlineAt,
@@ -1204,18 +1254,29 @@
         audioVolume: officialAudio.volume
       });
       legacyListeningResume = false;
-      const onlinePlayback={isCurrent};
+      let unlockRecorded = false;
+      const onlinePlayback={isCurrent,onAnswersUnlocked(){
+        if (!unlockRecorded) { unlockRecorded = true; observe('answers_unlocked'); }
+      }};
       await enterExam(started, officialAudio, onlinePlayback);
       if(!isCurrent()||!officialAudio.isConnected||typeof onlinePlayback.attachController!=='function'
           ||!document.getElementById('listeningQuestions')?.getClientRects().length)throw Error('Màn làm bài chưa sẵn sàng. Hãy tải lại để tiếp tục đúng lượt.');
       if(!loading.manual&&resumeAt<officialAudio.duration){
-        try{await officialAudio.play();}
-        catch(error){if(error?.name!=='NotAllowedError')throw error;}
+        observe('play_requested');
+        try{await officialAudio.play(); observe('play_resolved');}
+        catch(error){
+          observe('play_rejected', {reason: error?.name==='NotAllowedError' ? 'play_not_allowed' : 'play_failed'});
+          if(error?.name!=='NotAllowedError')throw error;
+        }
       }
-      if(!isCurrent())throw Error('Lượt Listening đã thay đổi.');
+      if(!isCurrent()) {
+        observe('reply_discarded', {reason: 'scope_changed_after_play', requestGeneration: generation, serverGeneration: started.generation});
+        throw Error('Lượt Listening đã thay đổi.');
+      }
       onlinePlayback.attachController();
       entered = true;
     } catch (error) {
+      if (error?.code==='AUDIO_OWNER_CONFLICT') observe('start_rejected', {reason: 'owner_conflict'});
       if (startingAudio && !entered) {
         window.K56_LISTENING_AUDIO?.dispose();
         startingAudio.pause(); startingAudio.remove();

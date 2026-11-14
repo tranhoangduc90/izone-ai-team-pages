@@ -337,13 +337,13 @@ export const ASSET_HASHES={
   "assets/figures/rovio.png": "9f2d562f1ffd3b98536b5b11658844b7d75655da48b4bd3ebfa04a2a3ff8cc9d",
   "audio-loader-audio-status-v1.js": "e1c66b92e2c2ef6b99448827748a293a5f6cf06341d6f04368a49d2c8b58493b",
   "audio-whole-audio-status-v1.mjs": "8f8b9258d5ff72b680e2f4c760442b326e99272e9dcf16c3e8d8675d0175d6da",
-  "bootstrap-submission-recovery-v1.js": "ce897ef566aab335daf931f37bebdec6c39fbb0496f2800424ca4128b962f97b",
+  "bootstrap-submission-recovery-v1.js": "38a1b1018e46df3f16b1368b8022f9d430ab55928b8835bf67e98ec417dd9043",
   "content.js": "498e78b7e9490fc75bda0f7c47826ba69abfca64f0e46d6f0319833c7060aec3",
-  "enhance-submission-recovery-journal-v1.js": "f7319e34a2bf55049767a1292404204aebc201a20f0510a63f838d51a9353e01",
-  "index-submission-recovery-v1.html": "a37c87a99841433df6d9c17367baa213acf886fad60bfb59ff61f6c7cd64041a",
+  "enhance-submission-recovery-journal-v1.js": "0fe2a98b20e1485f0b7f396c276ffe65095654b318aa06e6b82727cab4dd90e5",
+  "index-submission-recovery-v1.html": "1ff90558ba4986c8ffb2fb9478d860c5e8fe7b6afc72cc09baac08f6b53e5536",
   "layout-updates.css": "e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351",
   "offline-submission-recovery-v1.mjs": "d7d77f214471ba0d66e40dd8001d81af7bf48e5232eec9fec5e7a61d9860beef",
   "offline-worker-submission-recovery-v1.js": "868f97f66cb30c1bf417fc2b037ff5ea0dfde6e9ff0dbb87fc668f2bb6414350",
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb"
 };
-export const ASSET_BUILD_ID="af50d4006ccacf76f76f50003c2c71f321f160463d990914e1ea21899e0fba30";
+export const ASSET_BUILD_ID="481e773f8529160ad63d2dc07f3e10da2920cfe506ab3cc4544ef3769d9bf48c";
