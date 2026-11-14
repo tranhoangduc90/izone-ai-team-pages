@@ -25,8 +25,8 @@ test('Phiếu mở bản Pages trước API phiên bản; tab mở lâu cập nh
   if(url.origin===origin)return route.continue();
   if(url.pathname.endsWith('/api/learning/frontend-release')){
    versionReads++;
-   if(versionReads===1)await page.waitForTimeout(1800);
-   return route.fulfill({json:{ok:true,version:active},headers:{'cache-control':'no-store'}});
+   if(versionReads===1)await new Promise(done=>setTimeout(done,1800));
+   return route.fulfill({json:{ok:true,version:active},headers:{'cache-control':'no-store'}}).catch(()=>{});
   }
   if(url.pathname.endsWith('/api/learning/assignments/open')&&route.request().postDataJSON()?.publicToken===fakeToken){
    openingReads++;
@@ -41,12 +41,20 @@ test('Phiếu mở bản Pages trước API phiên bản; tab mở lâu cập nh
  try{
   const requests=[];
   page.on('request',request=>requests.push(new URL(request.url()).pathname));
+  // A stale route stylesheet must not hold up the redirect to the immutable package.
+  await page.route(/\/progress-log\/styles\.css\?/,async route=>{
+   if(new URL(route.request().url()).pathname.endsWith('/progress-log/styles.css')){
+    await new Promise(done=>setTimeout(done,7000));
+    return route.abort().catch(()=>{});
+   }
+   return route.continue();
+  });
   await page.goto(origin+'/izone-ai-team-pages/progress-log/index.html#assignment='+fakeToken);
-  await page.locator('#identityView').waitFor({state:'visible'});
+  await page.locator('#identityView').waitFor({state:'visible',timeout:5000});
   assert.equal(openingReads,1);
   const openingRequest=requests.findIndex(path=>path.endsWith('/assignments/open'));
-  const applicationRequest=requests.findIndex(path=>path.endsWith('/app.js'));
-  assert.ok(openingRequest>=0&&openingRequest<applicationRequest,'Mở phiếu bắt đầu trước khi tải app.js');
+  const versionRequestOnWorksheet=requests.findIndex(path=>path.endsWith('/frontend-release'));
+  assert.ok(openingRequest>=0&&openingRequest<versionRequestOnWorksheet,'Mở phiếu bắt đầu trước kiểm phiên bản nền');
   assert.ok(await page.locator('link[rel=modulepreload][href$="/session-review.js"]').count(),
    'Chrome được phát hiện các module con cùng lúc với app.js');
   requests.length=0;
