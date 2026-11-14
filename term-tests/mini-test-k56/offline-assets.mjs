@@ -250,7 +250,7 @@ export const ASSET_HASHES={
   "../k56-mini-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
-  "../k56-offline-shared/runtime-recovery-v1.mjs": "93c948cfd06bb71a6f34a9d63579a71f9ce4bf498a57edb069828e958ab09939",
+  "../k56-offline-shared/runtime-recovery-v1.mjs": "d5701713584057b07301bbc51d00885ab2e0c98cd145a4c1e4afcfabc9c83199",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
@@ -299,7 +299,7 @@ export const ASSET_HASHES={
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "index.html": "a549233ca188dd877e2c17a4a3c4a581c860fdbb51099f6632a14554b2a2fd42",
   "offline-worker.js": "20e6437ed9a17c55e9a95bb821a6f38111c861ec32659e9fe236f1babcecbde7",
-  "offline.mjs": "82091439cf7a80e6363c52bd63eacf339de468baea36101b05497f83354ea410",
+  "offline.mjs": "82f23d4662219d45c93c6fd3b6bf50f7890d4ed954be13acedf41abfc76609b3",
   "test-config.js": "0629f850b5571a83c272322c0d9ecc22bcda2dc5c48ecfe24af4600f0ad3d7ca"
 };
-export const ASSET_BUILD_ID="bc3412e16119ae9a02373f1341b47efb6cdf83ec63099df86b9a559e4e7bfb27";
+export const ASSET_BUILD_ID="be614d28ec7bc44b07a2a63aff54d3b8b606b7a33d08e133a25c7e7ce3cceaf1";

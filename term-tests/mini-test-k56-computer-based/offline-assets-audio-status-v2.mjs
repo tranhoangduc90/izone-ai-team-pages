@@ -168,7 +168,8 @@ export const ASSETS=[
   "offline-worker-audio-status-v2.js",
   "passages.js",
   "styles.css",
-  "../k56-audio-recovery-mini-v1.js"
+  "../k56-audio-recovery-mini-v1.js",
+  "enhance-mini-journal-v1.js"
 ];
 export const ASSET_HASHES={
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -273,7 +274,7 @@ export const ASSET_HASHES={
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/demo-store-audio-status-v1.mjs": "90b3a6d83ccecb6f404b370cf6ed85ebb285bcbccff4cf40a098703aa3311cb8",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
-  "../k56-offline-shared/runtime-recovery-v1.mjs": "93c948cfd06bb71a6f34a9d63579a71f9ce4bf498a57edb069828e958ab09939",
+  "../k56-offline-shared/runtime-recovery-v1.mjs": "d5701713584057b07301bbc51d00885ab2e0c98cd145a4c1e4afcfabc9c83199",
   "../k56-offline-shared/whole-audio-audio-status-v1.mjs": "891ef93aee9fedd15af83a6f7559fe850837fcf352cde05ac684364955282965",
   "../k56-offline-shared/worker-audio-status-v2.mjs": "e62a3d0ed96706a8e7c736bdda262a66262d63248cd52c892bbe43b0dfd94679",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
@@ -288,7 +289,7 @@ export const ASSET_HASHES={
   "../k67-shared/answer-explanations.js": "9bdd5c7f3a9a15d9157a79ecdbf5bd6c3ec8544a0405fd692661fc1ed132c045",
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
-  "../mini-test-k56/offline.mjs": "82091439cf7a80e6363c52bd63eacf339de468baea36101b05497f83354ea410",
+  "../mini-test-k56/offline.mjs": "82f23d4662219d45c93c6fd3b6bf50f7890d4ed954be13acedf41abfc76609b3",
   "../mini-test-k56/test-config.js": "0629f850b5571a83c272322c0d9ecc22bcda2dc5c48ecfe24af4600f0ad3d7ca",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
@@ -329,17 +330,18 @@ export const ASSET_HASHES={
   "annotations.js": "47360f47eac16dc08256fe1fcea82f0906ebd29502ee4a87f79436bad2306013",
   "audio-loader-audio-status-v1.js": "e0d861e5b0f26fa1985326d7038b6ab2e3ab5dfe4121abae2802b9a178de5aa6",
   "audio-whole-audio-status-v1.mjs": "59ae81b3fffe09ba68bb090fd9e59b4cb418e52c738161ede99f74ba74b7f9cb",
-  "bootstrap-audio-status-v2.js": "0fdf7ac8abded980a85578efaff49da7f8c62a087d32432eb9e2dc9bfa681fd9",
+  "bootstrap-audio-status-v2.js": "25e0fd6a6ab9073f0b7a7ed05791a5fbe0ebc935cdfdfde72ff09c0d8ad64741",
   "content.js": "63c3c0b8ea82c8c5cb8e47c28b031bf758051f545e8e37e911f1da0e23440bce",
   "demo-reset.css": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035",
   "demo-reset.js": "298c0fab15fe45739ad3b19094c71876cc7cb04d9dc2a2922d3d3381221e9dd3",
   "enhance.js": "3e6129e21ef1558e4bc987e656bd63a3540bc7fad66995107f939d696a091076",
   "exam.css": "12a46e66c5cce7095e5bb41c0cc8166c99e10fa74036fd176ecd87b231cd2939",
-  "index-audio-status-v2.html": "5ccbc0a5e5b55734c69e16932a9baf0d4d4fa3c3ec7140372e7277d3e0c93d0d",
-  "offline-audio-status-v2.mjs": "7594c0b32000281104807f4cf8f37cc6d625ef273bf3b691608d6e50f11553ca",
+  "index-audio-status-v2.html": "4423774906441126e6348d429c4707dba55800fe628040438c53cff2b9103c1d",
+  "offline-audio-status-v2.mjs": "a6967ffc953ca46e91028b660031582537d38e33e77ffbf1c083daedf80eb63b",
   "offline-worker-audio-status-v2.js": "6ed8cf1e8d7e5e30138ad329722eb76c6e0d767a370b8d997db33076748fe154",
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff",
-  "../k56-audio-recovery-mini-v1.js": "ac3217b37bb3a7ea53aa304eba8a8c4224b153ccbe3d8e12d108762d00b3e4a8"
+  "../k56-audio-recovery-mini-v1.js": "ac3217b37bb3a7ea53aa304eba8a8c4224b153ccbe3d8e12d108762d00b3e4a8",
+  "enhance-mini-journal-v1.js": "abf337efcae067a3ff67ad0810277162af6e239aeb785b6e9c2d04122225a58c"
 };
-export const ASSET_BUILD_ID="0bb5aacdcb31b99eec326f46393b7aa22bd3be185e8f3127be1fb9d16d8e92b0";
+export const ASSET_BUILD_ID="07e38f9f25dd8e7309fde5d2edb469f3fc031b56e33ca97f50f2215dd38b4490";
