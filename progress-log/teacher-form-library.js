@@ -51,11 +51,19 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     for(const entry of group){
       const row=node('tr'),name=node('td'),open=button(entry.title,()=>void preview(entry));row.tabIndex=0;row.dataset.entryId=entry.id;row.classList.toggle('thuy-library-published',entry.id===highlighted);row.setAttribute('aria-label','Xem '+entry.title);open.className='thuy-library-name';
       name.append(open,node('small',entry.meta||`${entry.itemCount||0} câu`));const actions=node('td');
-      if(assignable(entry)){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');actions.append(assign);}
-      if(canCopyToPersonal(entry))actions.append(button('Nhân bản vào Kho cá nhân',()=>copyToPersonal(entry)));
+      const actionGroup=node('div','','thuy-library-actions'),topActions=node('div','','thuy-library-actions-top');
+      if(assignable(entry)){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');topActions.append(assign);}
       if(entry.source==='personal'&&!entry.draft?.reviewMode||entry.source==='izone'&&!entry.draft&&canManageShared){
-        const remove=button('Xóa bài',()=>void archiveEntry(entry));actions.append(remove);
+        const remove=button('Xóa bài',()=>void archiveEntry(entry));topActions.append(remove);
       }
+      if(topActions.childElementCount)actionGroup.append(topActions);
+      if(canCopyToPersonal(entry)){
+        const copy=button('',()=>copyToPersonal(entry));
+        copy.classList.add('thuy-library-copy');
+        copy.append(node('span','Nhân bản vào'),' ',node('span','Kho cá nhân'));
+        actionGroup.append(copy);
+      }
+      if(actionGroup.childElementCount)actions.append(actionGroup);
       row.append(name,node('td',entry.source==='used'?sourceName(entry.assignment.origin_scope)||'Chưa xác định nguồn':sourceName(entry.source)),actions);
       row.addEventListener('click',event=>{if(!event.target.closest('button,a')&&!getSelection()?.toString())void preview(entry);});
       row.addEventListener('keydown',event=>{if(event.target===row&&['Enter',' '].includes(event.key)){event.preventDefault();void preview(entry);}});body.append(row);
