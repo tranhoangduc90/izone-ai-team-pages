@@ -1058,7 +1058,7 @@
       try{saved=JSON.parse(sessionStorage.getItem(storageKey)||'null');}catch{return false;}
       if(saved?.studentRef!==state.studentRef||saved?.examSessionToken!==state.examSessionToken)return false;
     }
-    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-term1-k67-audio-v2.mjs?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
+    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-term1-k67-audio-v2.mjs?journalStart=20261114-term1-v1&v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
     const scope=miniCbtScope();
     const existing=await findMiniJourney(scope,slug);
     if(!existing&&(!prepare||state.completed))return false;
@@ -1102,7 +1102,7 @@
     if(!['mini-test-lesson-5','term-test-1','term-test-2'].includes(slug)||!(sharedIdentity||demoJourneyEntry)||listeningOnly||(state.studentRef&&!demoJourneyEntry))return false;
     if(document.getElementById('miniJourneyRecovery'))return true;
     const mode=query.get('mode');
-    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-term1-k67-audio-v2.mjs?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
+    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-term1-k67-audio-v2.mjs?journalStart=20261114-term1-v1&v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
     const match=await miniJourneyRecovery(classCode,['lis_first','read_first'].includes(mode)?mode:'',slug);
     if(!match)return false;
     const form=document.createElement('form');form.id='miniJourneyRecovery';form.className='cbt-bootstrap-identity';
