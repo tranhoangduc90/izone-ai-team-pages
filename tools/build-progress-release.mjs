@@ -45,6 +45,9 @@ function collectAppImports(file){
 }
 collectAppImports('progress-log/app.js');
 const preloads=[...appModules].map(file=>`<link rel="modulepreload" href="${base}${file}">`).join('');
+const openingScript=['config.js','release-runtime.js'].map(file=>source.get('progress-log/'+file).toString()).join('\n');
+if(/<\/script/i.test(openingScript))throw Error('Invalid inline worksheet bootstrap');
+const openingHash=createHash('sha256').update(openingScript).digest('base64');
 function assetURL(file,spec){
  if(!/^\.?\.?\//.test(spec)||!/[.](?:js|mjs|css|json|svg|png|jpg|webp|woff2?|ico)(?:[?#]|$)/i.test(spec))return spec;
  const pathname=spec.split(/[?#]/)[0],resolved=path.posix.normalize(path.posix.join(path.posix.dirname(file),pathname));
@@ -63,11 +66,12 @@ for(const file of files){
    return source.has(resolved)?attr+'="'+base+resolved+'"':all;
   });
   if(entries.some(entry=>file==='progress-log/'+entry)){
-   const configTag=`<script src="${base}progress-log/config.js"></script>`;
    const runtime=`<script src="${base}progress-log/release-runtime.js"></script>`;
    if(/progress-log\/(?:index|thuy)\.html$/.test(file)){
+    if(!html.includes("script-src 'self';"))throw Error('Worksheet CSP is missing its script policy');
     html=html.replace(/^[ \t]*<script\s+src="[^"]+\/progress-log\/config\.js"><\/script>\r?\n/m,'')
-      .replace('</title>','</title>'+configTag+runtime);
+      .replace("script-src 'self';",`script-src 'self' 'sha256-${openingHash}';`)
+      .replace('</title>',`</title><script data-release-source="${base}progress-log/release-runtime.js">${openingScript}</script>`);
     html=html.replace('</head>',preloads+'</head>');
    }else html=html.replace('</head>',runtime+'</head>');
    html=html.replace('</head>',`<script type="module" src="${base}progress-log/release-updater.js"></script></head>`);
