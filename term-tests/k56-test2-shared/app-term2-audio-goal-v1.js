@@ -1308,6 +1308,11 @@
       } else if(action==='submit') {
         await offline.capture({...state,drafts:{...state.drafts,writing:data}});
         await offline.seal('writing',data,state.writingRevision,writingTimeExpired()?'deadline':'manual');
+        const saved = offline.record.sections.writing;
+        try {
+          offline.observe?.('submission_device_saved', {section:'writing',operationId:saved?.operationId,
+            revision:saved?.revision,task1Length:data.task1.length,automatic});
+        } catch { /* Writing submission does not depend on the journal. */ }
       } else await offline.draft('writing',data,state.writingRevision);
       saveSession();setWritingSaveStatus(offline.message);
       return {ok:true,localOnly:true,writing:{...data,revision:state.writingRevision,accepted:true,submitted:action==='submit',localOnly:true}};
