@@ -1652,17 +1652,17 @@
   const loadingLabel = document.querySelector('#loadingView strong');
   const listeningSavedCopy = document.querySelector('#listeningSavedView > p:not(.eyebrow)');
   if (loadingLabel) loadingLabel.textContent = 'Đang chuẩn bị đề thi HTML...';
-  if (listeningSavedCopy) listeningSavedCopy.textContent = window.K67_EXAM_ORDER?.requested() === 'read_first'
+  if (listeningSavedCopy && !window.TERM_TEST_BOOTSTRAP?.listeningTimer) listeningSavedCopy.textContent = window.K67_EXAM_ORDER?.requested() === 'read_first'
     ? 'Đồng hồ chỉ bắt đầu khi bạn nhấn Bắt đầu Reading. Listening sẽ mở sau khi nộp Reading.'
     : 'Hệ thống đã ghi bài Listening. Kết quả đang được giữ kín; khi sẵn sàng, mở Reading để tiếp tục làm bài.';
 
   const listeningInstructions = document.getElementById('listeningInstructions');
   const readingInstructions = document.getElementById('readingInstructions');
   if (listeningInstructions) replaceInstructions(listeningInstructions, contentConfig.listening.instructions);
-  if (readingInstructions) replaceInstructions(readingInstructions, contentConfig.reading.instructions);
+  if (readingInstructions && contentConfig.reading) replaceInstructions(readingInstructions, contentConfig.reading.instructions);
 
   const listeningForm = enhanceForm('listening');
-  const readingForm = enhanceForm('reading');
+  const readingForm = window.TERM_TEST_BOOTSTRAP?.listeningTimer ? null : enhanceForm('reading');
   if (window.TERM_TEST_BOOTSTRAP?.miniJourney) {
     listeningForm?.source.toolbar.classList.add('k67-single-row');
   }

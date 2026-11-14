@@ -9,6 +9,7 @@
   const query = new URLSearchParams(window.location.search);
   let classCode = (query.get('class') || '').trim().toUpperCase();
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
+  const timerOnly = testConfig?.slug === 'term-test-1' && document.body.dataset.term1ListeningTimer === '1';
   const listeningOnly = retakeConfig.mode === 'listening-only';
   const configuredRetakeGrant = String(retakeConfig.grant || '').trim();
   const retakeGrant = listeningOnly && /^[A-Za-z0-9_-]{40,1800}\.[A-Za-z0-9_-]{43}$/.test(configuredRetakeGrant)
@@ -18,7 +19,7 @@
   const demoStudentRef = classCode === 'CODEXDEMO806' ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = classCode === 'CODEXDEMO806' ? (query.get('demoAttempt') || '').trim() : '';
   const demoJourneyEntry = classCode === 'CODEXDEMO806' && !demoStudentRef && !demoAttemptToken;
-  if (!testConfig || !appConfig || !audioLoader || !root) return;
+  if (!testConfig || !appConfig || (!audioLoader && !timerOnly) || !root) return;
   if(!window.IZONE_EXAM_DEVICE_CHECKED)await loadScript('../shared/desktop-exam-guard.js?v=20261027-v1&resilience=20261027-v1');
   if(window.IZONE_EXAM_DEVICE_BLOCKED)return;
   const {beginAudioDownloadStatus} = await import('../shared/cbt-audio-download-status.mjs?v=20261111-audio-status-v1');
@@ -115,6 +116,7 @@
   let previewHeard = false;
   let journeyPlayer = null;
   let preparing = false;
+  let timerSession;
   let bootstrapSelectionBusy = false;
   let restoredIdentity = null;
   let downloadController = null;
@@ -196,9 +198,17 @@
     'bootstrapVolume', 'bootstrapPreviewStatus', 'bootstrapStartStep', 'bootstrapStartStatus',
     'bootstrapStart', 'bootstrapNotice'
   ].map(id => [id, document.getElementById(id)]));
-  const previewAudio = document.createElement('audio');
+  const previewAudio = document.createElement(timerOnly ? 'span' : 'audio');
   previewAudio.hidden = true;
   document.body.append(previewAudio);
+  if (timerOnly) {
+    elements.bootstrapPreviewStep.hidden = true;
+    elements.bootstrapDownloadProgress.hidden = true;
+    elements.bootstrapDownloadStep.querySelector('h3').textContent = 'Xác nhận lượt thi';
+    elements.bootstrapDownloadStep.querySelector('p').textContent = 'Chọn và xác nhận họ tên như trên trang thi chính.';
+    elements.bootstrapStartStep.querySelector('.cbt-lobby-step-number').textContent = '2';
+    elements.bootstrapRetry.textContent = 'Thử xác nhận lại';
+  }
   const cacheStatus = document.createElement('p');
   cacheStatus.id = 'bootstrapAudioCacheStatus'; cacheStatus.setAttribute('role', 'status');
   // Giữ nguyên phòng chờ thật; trạng thái cache được dùng nội bộ, không thêm hàng UI.
@@ -574,6 +584,12 @@
   }
 
   function setStartAvailability() {
+    if (timerOnly) {
+      elements.bootstrapStart.disabled = preparing || !timerSession || timerSession.listeningSubmitted;
+      elements.bootstrapStart.textContent = timerSession?.listeningStartedAt ? 'Tiếp tục Listening' : 'Bắt đầu Listening';
+      elements.bootstrapStartStatus.textContent = 'Đề mở theo giờ của ca thi. Đồng hồ đồng bộ với phòng thi.';
+      return;
+    }
     if (miniJourney) {
       const listeningFirst = miniJourney.view().examMode !== 'read_first';
       elements.bootstrapStart.disabled = preparing || (listeningFirst && (!previewHeard || (miniJourney.continuity() && !journeyPlayer?.canPlay)));
@@ -807,6 +823,45 @@
     const studentRef = elements.bootstrapStudent.value;
     const student = roster.find(item => item.ref === studentRef);
     if (!student || preparing) return;
+    if (timerOnly) {
+      preparing = true;
+      setStartAvailability();
+      try {
+        const key = 'izone-term1-timer-device';
+        let deviceProof = localStorage.getItem(key);
+        if (!/^[a-f0-9]{64}$/.test(deviceProof || '')) {
+          deviceProof = Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, '0')).join('');
+          localStorage.setItem(key, deviceProof);
+        }
+        saveState({ studentRef, studentName: student.name });
+        timerSession = { ...await timerRequest('prepare', { classCode, studentRef, deviceProof }), deviceProof };
+        rememberPreparedStudent(studentRef);
+        if (timerSession.listeningSubmitted) {
+          elements.bootstrapDownloadStatus.textContent = 'Máy chủ đã thu và chấm bài Listening.';
+        } else {
+          const localNewer = state.examSessionToken === timerSession.examSessionToken
+            && Number(state.draftRevisions?.listening) > timerSession.listeningDraftRevision;
+          saveState({ examSessionToken: timerSession.examSessionToken, generation: timerSession.generation,
+            listeningStartedAt: timerSession.listeningStartedAt, listeningDeadlineAt: timerSession.listeningDeadlineAt,
+            attemptToken: '', listeningSubmitted: false,
+            drafts: { listening: localNewer ? state.drafts?.listening : timerSession.listeningDraft },
+            draftRevisions: { listening: localNewer ? state.draftRevisions.listening : timerSession.listeningDraftRevision },
+            draftAckRevisions: { listening: timerSession.listeningDraftRevision } });
+          elements.bootstrapDownloadStatus.textContent = 'Đã xác nhận lượt Listening.';
+        }
+        elements.bootstrapDownloadStep.dataset.state = 'complete';
+        elements.bootstrapStartStep.dataset.state = timerSession.listeningSubmitted ? 'complete' : 'active';
+        elements.bootstrapRetry.hidden = true;
+      } catch (error) {
+        timerSession = null;
+        showNotice(error.message, true);
+        elements.bootstrapRetry.hidden = false;
+      } finally {
+        preparing = false;
+        setStartAvailability();
+      }
+      return;
+    }
     preparing = true;
     if (retry || !elements.bootstrapRetry.hidden) {
       elements.bootstrapRetry.hidden = true;
@@ -887,7 +942,7 @@
         }
       });
       window.K67_EXAM_ORDER?.apply(state, prepared);
-      if(await openJourneyLobby(true,false,preparationStatus))return;
+      if(!prepared.listeningSharedClock && await openJourneyLobby(true,false,preparationStatus))return;
       if (state.pendingSubmissions?.listening && !prepared.listeningSubmitted && !state.attemptToken) {
         await enterListeningReadback(prepared);
         return;
@@ -975,6 +1030,12 @@
     return `${base}/${fileName}?rev=${revision}`;
   }
 
+  function timerRequest(action, input, keepalive = false) {
+    return apiRequest('/api/term-tests/term-test-1/listening-timer/' + action, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), keepalive
+    });
+  }
+
   async function enterExam(started, audioElement = null, offlineSection = '', journey = null, playNewListening = false) {
     let appReady;
     const listeningScriptsReady=journey ? Promise.withResolvers() : null;
@@ -989,6 +1050,10 @@
       ? Object.freeze({ testSlug: testConfig.slug, classCode, studentRef: state.studentRef,
         studentName: started.studentName, examSessionToken: state.examSessionToken, attemptToken: state.attemptToken || '' }) : null;
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
+      listeningTimer: timerOnly ? (action, values, keepalive = false) => timerRequest(action, {
+        ...values, classCode, studentRef: state.studentRef, examSessionToken: state.examSessionToken,
+        generation: Number(state.generation), deviceProof: timerSession.deviceProof
+      }, keepalive) : null,
       restoredIdentity,
       verifiedIdentity: offlineSection ? null : boundIdentity,
       offlineSectionIdentity: offlineSection && boundIdentity ? { ...boundIdentity, section: offlineSection } : null,
@@ -1004,13 +1069,13 @@
       audioVolume: Number(state.audioVolume) || 1,
       officialAudioElement: audioElement,
       officialAudioUrl: officialObjectUrl,
-      skipListeningAudio: Boolean(offlineSection||journey||state.pendingSubmissions?.listening) || (started.examMode === 'read_first' ? started.nextSection !== 'listening' || Boolean(started.listeningSubmitted) : Boolean(state.attemptToken || started.listeningSubmitted))
+      skipListeningAudio: timerOnly || Boolean(offlineSection||journey||state.pendingSubmissions?.listening) || (started.examMode === 'read_first' ? started.nextSection !== 'listening' || Boolean(started.listeningSubmitted) : Boolean(state.attemptToken || started.listeningSubmitted))
     });
     previewAudio.remove();
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    const journeyVersion=journey?'&offlineJourney=20261107-term1-v1':'';
+    const journeyVersion=timerOnly?'&listeningTimer=1':journey?'&offlineJourney=20261107-term1-v1':'';
     await loadScript('../shared/app-term2-k67-audio-v2.js?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v9&continuity=20261110-v1'+journeyVersion);
     await loadScript(cbtAssetUrl('enhance-term2-k67-audio-v2.js?v=20261107-terms-cbt-v1&uiRestore=20261108-v6&previewWait=20261109-preview-10s-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1')+journeyVersion);
     if (appReady) await appReady.promise;
@@ -1049,6 +1114,7 @@
   }
 
   async function openJourneyLobby(prepare=false,recover=false,preparationStatus){
+    if (timerOnly) return false;
     const slug=testConfig.slug;
     if(!['mini-test-lesson-5','term-test-1','term-test-2'].includes(slug)||listeningOnly||!(sharedIdentity||demoJourneyEntry)||!isUuid(state.studentRef)||!isUuid(state.examSessionToken))return false;
     if(demoJourneyEntry&&!prepare&&!recover){
@@ -1286,6 +1352,25 @@
     saveState({ audioVolume: volume });
   });
   elements.bootstrapStart.addEventListener('click', async () => {
+    if (timerOnly) {
+      if (!timerSession || preparing) return;
+      preparing = true;
+      setStartAvailability();
+      try {
+        const started = await timerRequest('start', { classCode, studentRef: state.studentRef,
+          examSessionToken: state.examSessionToken, generation: Number(state.generation), deviceProof: timerSession.deviceProof });
+        if (started.listeningSubmitted) {
+          timerSession.listeningSubmitted = true;
+          elements.bootstrapDownloadStatus.textContent = 'Máy chủ đã thu và chấm bài Listening.';
+          return;
+        }
+        saveState({ listeningStartedAt: started.listeningStartedAt, listeningDeadlineAt: started.listeningDeadlineAt,
+          serverTimeOffsetMs: window.IZONE_EXAM_CLOCK.offset(started.serverNow) });
+        await enterExam(started);
+      } catch (error) { showNotice(error.message, true); }
+      finally { preparing = false; setStartAvailability(); }
+      return;
+    }
     if(miniJourney){
       if(preparing||elements.bootstrapStart.disabled)return;
       preparing=true;setStartAvailability();
@@ -1663,12 +1748,14 @@
     }
     try {if(await openJourneyLobby()) {setStartAvailability();return;}}
     catch(error){showNotice(error.message,true);return;}
-    if(navigator.onLine===false){try{if(await offerMiniJourneyRecovery())return;}catch{/* Keep the standard retry control. */}}
-    try { if (await resumeMiniOffline()) return; } catch { /* Standard lobby retains the local draft. */ }
+    if (!timerOnly) {
+      if(navigator.onLine===false){try{if(await offerMiniJourneyRecovery())return;}catch{/* Keep the standard retry control. */}}
+      try { if (await resumeMiniOffline()) return; } catch { /* Standard lobby retains the local draft. */ }
+    }
     let restoreError=null;
     // Có mã lượt: xác minh trực tiếp, không dựng lại danh sách cả lớp để mở lại bài.
     // Lỗi giữ nguyên token/nháp và không tự tạo lượt mới hoặc bắt đầu đồng hồ.
-    if(classCode!=='CODEXDEMO806'&&!listeningOnly
+    if(classCode!=='CODEXDEMO806'&&!listeningOnly&&!timerOnly
       &&isUuid(state.studentRef)&&isUuid(state.attemptToken)) {
       const identity=elements.bootstrapStudent.closest('.cbt-bootstrap-identity');
       identity.hidden=true;
@@ -1788,7 +1875,7 @@
         elements.bootstrapDownloadStatus.textContent = 'Đã điền sẵn họ tên. Hãy xác nhận trước khi tải audio.';
         elements.bootstrapStudent.dispatchEvent(new Event('change'));
       } else {
-        elements.bootstrapDownloadStatus.textContent = 'Hãy chọn họ và tên để bắt đầu tải audio.';
+        elements.bootstrapDownloadStatus.textContent = timerOnly ? 'Hãy chọn và xác nhận họ tên.' : 'Hãy chọn họ và tên để bắt đầu tải audio.';
         elements.bootstrapDownloadStep.dataset.state = 'active';
       }
     } catch (error) {
