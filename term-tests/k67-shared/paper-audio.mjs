@@ -4,7 +4,7 @@ import { downloadPreferred } from '../../shared/audio/transport.mjs?v=20261112-k
 const paperAssets = new Set(['term-test-1', 'term-test-2', 'mini-test-lesson-5']);
 const sourceLabels = { cloudflare: 'Cloudflare', pages: 'GitHub Pages', cache: 'bộ nhớ đệm' };
 
-export function mountPaperAudio({ slug, onReady }) {
+export function mountPaperAudio({ slug, onReady, observe = () => {} }) {
   if (!paperAssets.has(slug) || ASSETS[slug]?.id !== slug) {
     throw new Error('Bài thi giấy chưa có audio trong danh mục.');
   }
@@ -27,6 +27,7 @@ export function mountPaperAudio({ slug, onReady }) {
     loading = true;
     const start = performance.now();
     const sources = new Set();
+    report('load_requested',0);
     retry.hidden = true;
     sourceLabel.textContent = '';
     status.textContent = 'Đang tải audio…';
@@ -62,9 +63,10 @@ export function mountPaperAudio({ slug, onReady }) {
     }
 
     function report(outcome, bytes) {
-      document.dispatchEvent(new CustomEvent('k67:paper-audio-load', {
-        detail: { slug, outcome, sources: [...sources], bytes, elapsedMs: Math.round(performance.now() - start) }
-      }));
+      const detail = {slug,outcome,sources:[...sources],bytes,
+        elapsedMs:Math.round(performance.now()-start),mode:'exam',assetHash:asset.sha256};
+      try { observe(detail); } catch {}
+      document.dispatchEvent(new CustomEvent('k67:paper-audio-load',{detail}));
     }
   }
 

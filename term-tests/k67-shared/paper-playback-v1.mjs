@@ -1,12 +1,14 @@
-export function mountPaperPlayback({audio, preview, button, status, onStart, timeAllowed = () => true}) {
+export function mountPaperPlayback({audio, preview, button, status, onStart, observe = () => {}, timeAllowed = () => true}) {
   let phase = 'ready';
   let began = false;
   let pending = false;
   const initialLabel = button.textContent;
 
-  function report(outcome, errorCode) {
+  function report(outcome, errorCode, actor = 'media') {
+    const detail = {outcome, positionMs:Math.round(audio.currentTime*1000), errorCode, mode:'exam', actor};
+    try { observe(detail); } catch {}
     document.dispatchEvent(new CustomEvent('k67:paper-audio-playback', {
-      detail: {outcome, positionMs: Math.round(audio.currentTime * 1000), errorCode}
+      detail
     }));
   }
 
@@ -19,6 +21,7 @@ export function mountPaperPlayback({audio, preview, button, status, onStart, tim
 
   button.addEventListener('click', async () => {
     if (pending || phase === 'playing' || phase === 'ended' || phase === 'ready' && !timeAllowed()) return;
+    report(began ? 'resume_requested' : 'play_requested',undefined,'operator');
     preview.pause();
     pending = true;
     refresh();
@@ -29,11 +32,11 @@ export function mountPaperPlayback({audio, preview, button, status, onStart, tim
       began = true;
       phase = audio.paused ? 'paused' : 'playing';
       status.textContent = audio.paused ? 'Audio đã tạm dừng. Bấm Phát tiếp audio để tiếp tục.' : 'Đang phát audio thi.';
-      report(phase === 'playing' ? 'playing' : 'paused');
+      report(phase === 'playing' ? 'playing' : 'paused',undefined,'operator');
     } catch (error) {
       phase = began ? 'paused' : 'ready';
       status.textContent = 'Chưa phát được audio. Bấm nút phát để thử lại.';
-      report('play_rejected', error.name === 'NotAllowedError' ? 'PLAY_NOT_ALLOWED' : 'PLAY_FAILED');
+      report('play_rejected', error.name === 'NotAllowedError' ? 'PLAY_NOT_ALLOWED' : 'PLAY_FAILED','operator');
     } finally {
       pending = false;
       refresh();

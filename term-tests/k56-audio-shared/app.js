@@ -19,6 +19,12 @@
   let ready = false, volumeConfirmed = false, started = false, finished = false, disposed = false;
   let mainReady = false, loadGeneration = 0;
   const classCode = String(new URLSearchParams(location.search).get('class') || '').trim().toUpperCase();
+  const slug = String(config.src || '').split('/').pop().replace(/\.mp3$/,'');
+  const journal = window.IZONE_PUBLIC_AUDIO_JOURNAL?.open(slug,'backup');
+  const observe = (outcome, mode, fields = {}) => journal?.record(outcome,{
+    mode, assetHash:config.sha256, ...fields
+  });
+  const rejected = error => error?.name==='NotAllowedError'?'PLAY_NOT_ALLOWED':'PLAY_FAILED';
   const tabKey = 'izone:backup-listening:' + location.pathname + ':' + classCode;
   const tabState = () => { try { return sessionStorage.getItem(tabKey); } catch { return null; } };
   const remember = value => {
@@ -39,6 +45,8 @@
   }
   async function loadAudio() {
     const generation = ++loadGeneration;
+    const began = performance.now();
+    observe('load_requested','exam',{sources:['pages']});
     controller?.abort();
     controller = new AbortController();
     ready = volumeConfirmed = started = finished = false;
@@ -82,10 +90,12 @@
       progress.value = 1;
       progressText.textContent = `Đã tải: 100% (${formatBytes(loaded)})`;
       ready = true;
+      observe('ready','exam',{sources:['pages'],bytes:loaded,elapsedMs:Math.round(performance.now()-began)});
       status.textContent = '✅ Tải xong 100%. Hãy thử và xác nhận âm lượng trước khi phát.';
       refreshButtons();
     } catch (error) {
       if (error.name === 'AbortError' || disposed || generation !== loadGeneration) return;
+      observe('load_failed','exam',{sources:['pages'],errorCode:'LOAD_FAILED'});
       status.textContent = `❌ Không tải được audio: ${error.message}. Hãy tải lại.`;
       retryButton.hidden = false;
     }
@@ -97,13 +107,16 @@
     previewAudio.currentTime = 0;
     previewAudio.volume = mainAudio.volume = Number(volume.value);
     try {
+      observe('play_requested','preview',{actor:'operator',positionMs:0});
       await previewAudio.play();
+      observe('playing','preview',{actor:'operator',positionMs:Math.round(previewAudio.currentTime*1000)});
       if (disposed || !modal.open) { previewAudio.pause(); return; }
       previewStatus.textContent = 'Đang phát 30 giây đầu...';
       window.IZONE_CBT_AUDIO_WAIT_FOR_PREVIEW(previewAudio,confirmButton,()=>{
         confirmButton.disabled = false;
       });
-    } catch {
+    } catch (error) {
+      observe('play_rejected','preview',{actor:'operator',errorCode:rejected(error)});
       previewStatus.textContent = 'Chưa phát được. Hãy nhấn “Nghe lại (30 giây)”.';
     }
   }
@@ -138,14 +151,17 @@
     mainAudio.currentTime = 0;
     remember('started');
     try {
+      observe('play_requested','exam',{actor:'operator',positionMs:0});
       await mainAudio.play();
+      observe('playing','exam',{actor:'operator',positionMs:Math.round(mainAudio.currentTime*1000)});
       if (disposed) return;
       started = true;
       actions.hidden = true;
       progress.hidden = progressText.hidden = true;
       reportButton.hidden = false;
       status.textContent = '🎧 Đang phát bài thi. Không làm mới trang; audio không có nút tạm dừng.';
-    } catch {
+    } catch (error) {
+      observe('play_rejected','exam',{actor:'operator',errorCode:rejected(error)});
       remember(null);
       status.textContent = 'Trình duyệt chưa cho phép phát. Hãy nhấn “PHÁT AUDIO BÀI THI” lần nữa.';
       refreshButtons();
@@ -181,7 +197,10 @@
     refreshButtons();
   });
   mainAudio.addEventListener('pause',()=>{
-    if (started && !mainAudio.ended) status.textContent = 'Audio bị ngắt. Nếu không nghe được, hãy báo giảng viên.';
+    if (started && !mainAudio.ended) {
+      observe('paused','exam',{actor:'media',positionMs:Math.round(mainAudio.currentTime*1000)});
+      status.textContent = 'Audio bị ngắt. Nếu không nghe được, hãy báo giảng viên.';
+    }
   });
   mainAudio.addEventListener('error',()=>{
     if (started) status.textContent = 'Không đọc được audio. Hãy báo giảng viên.';
@@ -194,6 +213,7 @@
   });
   reportButton.addEventListener('click',()=>{
     if (!started || finished) return;
+    observe('reported_interrupted','exam',{actor:'operator',positionMs:Math.round(mainAudio.currentTime*1000)});
     remember('interrupted');
     showInterrupted();
     mainAudio.pause();
@@ -202,6 +222,7 @@
     if (!started || finished) return;
     finished = true;
     started = false;
+    observe('ended','exam',{actor:'media',positionMs:Math.round(mainAudio.currentTime*1000)});
     remember('ended');
     reportButton.hidden = true;
     status.textContent = '⏹ Bài nghe đã kết thúc. Vui lòng nộp bài.';
