@@ -299,7 +299,7 @@ export const ASSET_HASHES={
   "../shared/section-submission.mjs": "f0e91d30ebe25e921c33e6f89ecb33cdf6f3cf8da0168301665f0d634faf6baf",
   "../shared/styles.css": "e19be7903218548bc254d0ceca072fa999dbf42a654585bf10e93dfafbc13ec5",
   "../shared/teacher-audio-recovery.css": "cc53a29792f4ada666cc5c440b1d544ae70f8d14e2910262b4465a4247d979b4",
-  "../shared/teacher-audio-recovery.js": "feefd9156426976d8b642db0045da1a00107b9ab7934121083b67bbd9c4ce1d6",
+  "../shared/teacher-audio-recovery.js": "a3a84e1bb92462ff7efd01068cca468c01fce47a6ac8086070f21a25cee6cce4",
   "../shared/teacher-reading-state.mjs": "63635319ac4313af32ed618e6e2e8bc0d99762ed0237fde8df3f54e6514d8f9f",
   "../shared/teacher-saved-progress.css": "d740e95c983e2c16ebfedc4f9569c54923bd3e52c483146e4b69cff8b6cd8f6c",
   "../shared/teacher-saved-progress.js": "994ea9c9d0b7ca99d4b84fca451f4e6dd5bb68e83985b013256166bd589fa4da",
@@ -308,12 +308,12 @@ export const ASSET_HASHES={
   "../shared/writing-planning.js": "1ce3652cdb91ce598f50e03516318154331fb461dcd28834534ddeb599da7094",
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../substitute-test-1-k67-computer-based/assets/figures/home-improvement-store.png": "feab5540ce3cac2115201f167f1a05cf5b916021e4ec2c4f67912728290aa150",
-  "../teacher-k56/app.js": "e66b72a3068e94f1a905bda5c4595dfe1c3b407bdb8eacfbf6e544601b891daf",
-  "../teacher-k56/index.html": "9eaddf204645955ef6d7b1401f45b263d27be5d89d387a659ab51e3e6f7bcba2",
+  "../teacher-k56/app.js": "e232946c72c79ab9af04cba1100c06c699924a54bac9f393c4b3a81038204f34",
+  "../teacher-k56/index.html": "e1b56c031149f2e7c3e5b8f11f43e89a1ba669ee127fc3c06554df84d0a7e3dd",
   "../teacher-k56/model.js": "9766cea8d9ca6617d22a3fd4f947590458d4909add0d22415b2deec9e3b5a5c3",
   "../teacher-k56/styles.css": "131d01f090fc461af96f1408f90c56cec05d467420146cd799f83ea65e854aa7",
-  "../teacher/app.js": "4741c17e7beb347dbbd8d103cfcaa6a48a5717d50e0f8e08e1ecc0924272dcea",
-  "../teacher/index.html": "ddf188e44dd49af9ddcd8a17ba58476d49b39d84830c89be4c01c91a0b6b0437",
+  "../teacher/app.js": "9292035d24e0bebc11f9a3017af3c18236cac1c056f403797e9ad5e48f7891d0",
+  "../teacher/index.html": "2175ab34e2741d0f5a8f7fc4c1fde74a35fea859b3ceace20a352ba7c74885ef",
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
@@ -332,4 +332,4 @@ export const ASSET_HASHES={
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff"
 };
-export const ASSET_BUILD_ID="e83dd9b679280bb5d84c71bc8ea540f3b8e69286703da9115dda7ab7d77b4586";
+export const ASSET_BUILD_ID="21863a2ade17a716fea4c199caa5eff01709259154fe05ddbd263b9255a12590";
