@@ -38,7 +38,7 @@ class ExamStore{
   const operation=this.queue.catch(()=>{}).then(async()=>{
    let db=false;
    if(this.db)try{await new Promise((ok,no)=>{let tx;try{tx=this.db.transaction('records','readwrite',{durability:'strict'});}catch{tx=this.db.transaction('records','readwrite');}tx.oncomplete=ok;tx.onabort=no;tx.onerror=no;tx.objectStore('records').put(copy,key);});db=true;}catch{}
-   if(!local&&!db)throw failure();return copy;
+   if(!local&&!db)throw Object.assign(failure(),{storage:key.endsWith(':audio')?'indexeddb':'local_and_indexeddb'});return copy;
   });this.queue=operation;return operation;
  }
 }
@@ -98,7 +98,7 @@ class OfflineRuntime extends EventTarget{
    void this.flush();
   },5000);this.timer.unref?.();return this;
  }
- observe(action,details={}){
+ observe(action,details={},persistDiagnostic=true){
   const row={action,observedAt:new Date().toISOString(),diagnosticId:crypto.randomUUID(),...details};
   if(this.scopedSubmissionJournal){
    if(!this.active)return;
@@ -106,8 +106,8 @@ class OfflineRuntime extends EventTarget{
     const queue=this.record.submissionDiagnostics||=[];
     if(queue.length>=64){queue.shift();this.record.submissionDiagnosticsLost=(this.record.submissionDiagnosticsLost||0)+1;}
     queue.push(JSON.parse(JSON.stringify(row)));
-    void this.persist(false,true).catch(()=>{});
-    this.drainDiagnostics();
+    if(persistDiagnostic)void this.persist(false,true).catch(()=>{});
+    this.drainDiagnostics(persistDiagnostic);
    }catch{}
    return;
   }
@@ -131,7 +131,7 @@ class OfflineRuntime extends EventTarget{
       ? this.fetchImpl(url,options):globalThis.fetch(url,options)}:{})}));
    }).catch(()=>{this.journalRetryAt=performance.now()+10000;}).finally(()=>{this.journalConnecting=null;});
  }
- drainDiagnostics(){
+ drainDiagnostics(persistDiagnostic=true){
   if(this.scopedSubmissionJournal){
    if(!this.active||!this.record.submissionDiagnostics?.length)return;
    if(this.journalRun!==this.record||!this.journal?.recordK56Submission||!this.journal.metadataOnlySubmission){this.connectRecoveryJournal();return;}
@@ -145,7 +145,7 @@ class OfflineRuntime extends EventTarget{
      if(lost)delete this.record.submissionDiagnosticsLost;
      queue.shift();changed=true;
     }
-    if(changed)void this.persist(false,true).catch(()=>{});
+    if(changed&&persistDiagnostic)void this.persist(false,true).catch(()=>{});
    }catch{}
    return;
   }
@@ -215,6 +215,8 @@ class OfflineRuntime extends EventTarget{
   this.record.audioHash=audioHash;this.record.audioBytes=blob.size;
   }
   await this.prepareCache();this.record.ready=true;
+  if(!profile.paper)this.observe('mini_player_observation',{phase:'preparation_verified',section:'listening',
+   byteLength:blob.size,assetHash:this.record.audioHash});
   try{await this.persist();}catch(error){this.record.ready=false;throw error;}
  }
  async audio(){const saved=await this.store.get(this.key+':audio');if(!(saved?.blob instanceof Blob))throw Error('Thiếu file audio đã lưu. Bài làm được giữ; hãy liên hệ giảng viên.');
@@ -302,7 +304,9 @@ class OfflineRuntime extends EventTarget{
   if(!this.order().includes(section))throw Error('Kỹ năng này không thuộc lượt thi.');
   const timing=this.record.prepared.timing,start=this.now(),minutes=section==='reading'?timing?.readingDurationMinutes:timing?.writingDurationMinutes;
   this.record.sections[section]={startedAt:new Date(start).toISOString(),deadlineAt:profile.paper||section==='listening'?null:new Date(start+minutes*60000).toISOString(),sealed:false};
-  await this.enqueue(section,'start',section==='writing'?{[profile.taskId]:''}:{answers:{}},0);return this.sectionResponse();
+  const operation=await this.enqueue(section,'start',section==='writing'?{[profile.taskId]:''}:{answers:{}},0);
+  if(profile.paper)this.observe('mini_paper_transition',{phase:'section_started',section,operationId:operation.operationId});
+  return this.sectionResponse();
  }
  async draft(section,data,revision){
   if(!this.record.sections[section]?.startedAt||this.record.sections[section].sealed||this.record.sections[section].interrupted)return;
@@ -675,6 +679,8 @@ export function withListeningContinuity(OfflineRuntime) {
      if (error?.name === 'NotAllowedError' && audio.paused && audio.currentTime === 0) {
       run.player.initialPlayBlocked = true;
       this.observe('audio_diagnostic', { event: 'play_blocked_before_start', position: 0 });
+      this.observe('mini_player_observation',{phase:'play_rejected',section:'listening',
+       positionSeconds:0,reason:'play_not_allowed'});
       try { await this.persist(true); }
       catch { /* The same tab can retry. A reload only trusts evidence that was saved. */ }
      }
@@ -768,12 +774,22 @@ export function withListeningContinuity(OfflineRuntime) {
   const run = this.record;
   const alreadySealed = run.sections[section]?.sealed;
   let response;
+  const logSealFailure = (phase,error) => {
+   if (this.record!==run || !this.pendingListeningSealId) return;
+   this.observe('mini_seal_outcome',{phase,delivery:'computer',section,operationId:this.pendingListeningSealId,
+    failedStorage:error?.storage,reason:reason==='manual'?'manual':'automatic'},false);
+  };
   try { response = await super.seal(section, data, revision, reason); }
   catch (error) {
    // The first write can fail after the snapshot and operation have been frozen in memory.
    if (section !== 'listening' || this.record !== run || !this.owned
        || !this.pendingListeningSealId || run.sections.listening?.operationId !== this.pendingListeningSealId) throw error;
-   response = await super.seal(section, data, revision, reason);
+   logSealFailure('first_save_failed',error);
+   try { response = await super.seal(section, data, revision, reason); }
+   catch (retryError) {
+    logSealFailure('retry_save_failed',retryError);
+    throw retryError;
+   }
   }
   if (section === 'listening' && this.record === run && this.owned
       && this.pendingListeningSealId && run.sections.listening?.operationId === this.pendingListeningSealId) {
