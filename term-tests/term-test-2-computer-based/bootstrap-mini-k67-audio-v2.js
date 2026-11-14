@@ -1061,7 +1061,7 @@
       try{saved=JSON.parse(sessionStorage.getItem(storageKey)||'null');}catch{return false;}
       if(saved?.studentRef!==state.studentRef||saved?.examSessionToken!==state.examSessionToken)return false;
     }
-    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-mini-k67-audio-v2.mjs?v=20261110-mini-continuity-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
+    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-mini-k67-audio-v2.mjs?journalStart=20261114-mini-v1&v=20261110-mini-continuity-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
     const scope=miniCbtScope();
     const existing=await findMiniJourney(scope);
     if(!existing&&(!prepare||state.completed))return false;
@@ -1105,7 +1105,7 @@
     if(testConfig.slug!=='mini-test-lesson-5'||!(sharedIdentity||demoJourneyEntry)||listeningOnly||(state.studentRef&&!demoJourneyEntry))return false;
     if(document.getElementById('miniJourneyRecovery'))return true;
     const mode=query.get('mode');
-    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-mini-k67-audio-v2.mjs?v=20261110-mini-continuity-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
+    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-mini-k67-audio-v2.mjs?journalStart=20261114-mini-v1&v=20261110-mini-continuity-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
     const match=await miniJourneyRecovery(classCode,['lis_first','read_first'].includes(mode)?mode:'');
     if(!match)return false;
     const form=document.createElement('form');form.id='miniJourneyRecovery';

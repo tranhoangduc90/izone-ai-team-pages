@@ -1,6 +1,6 @@
 import { createOfflineRuntime } from '../k56-offline-shared/runtime-mini-k67-recovery-v1.mjs?v=20261107-mini-v3';
 import { downloadTermAudio } from '../k56-offline-shared/whole-audio-terms-cbt-audio-status-v1.mjs?v=20261111-audio-milestones-v2';
-import { mountOfflineListeningPlayer, prepareContinuityAudio, mountContinuityListeningPlayer } from '../k67-shared/offline-journey-ui-term2-audio-v2.mjs?v=20261110-continuity-v2';
+import { mountOfflineListeningPlayer, prepareContinuityAudio, mountContinuityListeningPlayer } from '../k67-shared/offline-journey-ui-term2-journal-v1.mjs?v=20261114-v1';
 
 const miniSlug='mini-test-lesson-5';
 const term1Slug='term-test-1';
@@ -192,7 +192,17 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
     timer=setInterval(reconnect,5_000);
     reconnect();
   }
-  function markListeningStart(){listeningStartIntent=performance.now();}
+  function observeListeningDecision(phase, fields = {}, persistNow = true) {
+    if (paper || slug !== miniSlug || globalThis.TERM_TEST_APP_CONFIG?.EXAM_JOURNAL_ENABLED !== true) return;
+    saveSubmissionDiagnostic('state_observed',{cause:'k67_offline_journey',checkpointState:{
+      offlineVersion:1,action:'mini_listening_decision',phase,section:'listening',
+      elapsedPageMs:Math.round(performance.now()),...fields
+    }},persistNow);
+  }
+  function markListeningStart(){
+    listeningStartIntent=performance.now();
+    observeListeningDecision('start_requested',{examMode:record.package.examMode});
+  }
   function onOnline(){retryAt=0;void flush();}
   const owner = {examSessionToken:scope.examSessionToken,generation:scope.generation};
   const save = () => store.put(key,record);
@@ -315,6 +325,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
         throw new Error('Lượt demo vừa được đặt lại. Hãy mở lại bài từ danh sách.');
       }
       record.package=bundle;record.ready=true;
+      observeListeningDecision('preparation_verified',{examMode:bundle.examMode,byteLength:manifest.byteLength},false);
       await save();
     }else if(pagesOnly&&navigator.onLine!==false&&!navigator.serviceWorker?.controller){
       // A native attempt already prepared from the primary link can also enter from the rescue link.
@@ -653,10 +664,13 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
     if(playing||next()!=='listening'||!section)return;
     const timing=record.package.timing;
     const player=continuity()
-      ? mountContinuityListeningPlayer({...options,section,timing,now,persist,observe,
+      ? mountContinuityListeningPlayer({...options,section,timing,now,persist,observe,observeDecision:observeListeningDecision,
           onPlaying:() => {
             section.playbackConfirmed=true;
-            void persist().catch(() => observe('audio_diagnostic',{event:'playback_marker_save_failed'}));
+            void persist().catch(() => {
+              observe('audio_diagnostic',{event:'playback_marker_save_failed'});
+              observeListeningDecision('playback_marker_save_failed');
+            });
             options.onPlaying?.();
           },
           entry:section.eofAt?null:await preparePlayer()})
