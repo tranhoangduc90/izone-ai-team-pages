@@ -1,14 +1,122 @@
 {
   "testId": "substitute-test-2-k67-writing-makeup",
-  "build": "issue611-ab0f478d6f48967b",
+  "build": "issue611-bb50ec19473b4d54",
   "assets": [
     {
-      "path": "index.html",
-      "sha256": "d6ee47a74f268cf0a92914b9905f06e2c5c2003712bd934883b918418ed0a123"
+      "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
+      "sha256": "35be0a8b9cc0401d66c0ee2970e7f5c5816994379e6bca1332995065c585a8f3"
     },
     {
-      "path": "sw.js",
-      "sha256": "e68ca9c30de8ddf77715fcf0a86025f2400ef0b37d1d28f82d6ba3f35dabe3cb"
+      "path": "../../recordings/assets/fonts/SourceSansPro-Regular.ttf",
+      "sha256": "34abc200f93a80cdfe82091de3f72e396e965f63f388be38f448db473c87f9cd"
+    },
+    {
+      "path": "../../shared/izone-favicon.svg",
+      "sha256": "dccacd0f15fb7b10cb6a95f1ef91484bc6bca1fb9b0863a3382e0ac2e91f0df1"
+    },
+    {
+      "path": "../../shared/master170/assessment-v1.1.css",
+      "sha256": "9a5eaebb5960eb283bfa1bd20249ea45f18c9751cfa27e99db2cebf25e87241d"
+    },
+    {
+      "path": "../../shared/master170/assets/izone-logo-color.png",
+      "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
+    },
+    {
+      "path": "../../shared/master170/assets/SourceSans3-Italic-Variable.woff2",
+      "sha256": "2cac627e742dec5b6fa73a0ad243a97e189c362ea11ae85c22b2e52b214d00a3"
+    },
+    {
+      "path": "../../shared/master170/assets/SourceSans3-Variable.woff2",
+      "sha256": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8"
+    },
+    {
+      "path": "../../shared/master170/icons/close.svg",
+      "sha256": "cb408adaa8402c80e51c58067c6ad291c6f2f3705864be9d7e8ba0cba2ca2943"
+    },
+    {
+      "path": "../../shared/master170/icons/flag.svg",
+      "sha256": "77aa08a191202b3f3e28246c253547a0cd41a1378b05c9e8122e23f50c5dde61"
+    },
+    {
+      "path": "../../shared/master170/question-layout-v1.1.css",
+      "sha256": "41c799966c2fb1b06a0d4b8a1d12c01e8c84263aba3a9bab2c51fed90108b393"
+    },
+    {
+      "path": "../../shared/master170/substitute-v1.1.css",
+      "sha256": "558c12f2a23d814d0ba650523839e07b303a60e356a87a00b4f3862252a01a79"
+    },
+    {
+      "path": "../../shared/master170/theme.css",
+      "sha256": "e494624c7588c11d0c6fb9fbf7de691893ae0c7039a13908f7c6e24bcc83f9ca"
+    },
+    {
+      "path": "../../shared/master170/tokens-v1.1.css",
+      "sha256": "efa215844ed0588344d4e031460bbeaca16d40d0a8c52904632b89c437e5f540"
+    },
+    {
+      "path": "../shared/cbt-audio-download-status.css",
+      "sha256": "4d62a08d3c3f93439ce977312feedecc3cfdaf5315fd9212bae7a6ca90a4a493"
+    },
+    {
+      "path": "../shared/desktop-exam-guard.css",
+      "sha256": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4"
+    },
+    {
+      "path": "../shared/desktop-exam-guard.js",
+      "sha256": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460"
+    },
+    {
+      "path": "../substitute-k56-shared/styles.css",
+      "sha256": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e"
+    },
+    {
+      "path": "../substitute-k67-shared/semantic-layout.css",
+      "sha256": "588ef64059cd30c77c3da4c0965ee9864a4f18ce874137203fc300890337c4db"
+    },
+    {
+      "path": "../substitute-k67-shared/styles.css",
+      "sha256": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e"
+    },
+    {
+      "path": "../substitute-shared/backup-export-submission-recovery-v1.mjs",
+      "sha256": "9921c9a5bc6f653b7bcf9a644d4359b4c57cead4066460973adf0d232c2387d1"
+    },
+    {
+      "path": "../substitute-shared/brand.css",
+      "sha256": "dbff918f7e31b60bc524fc656ed5c060ac3409c8ede58e1651f5274b8dde755f"
+    },
+    {
+      "path": "../substitute-shared/exam-controls.css",
+      "sha256": "c3104b8a4bcefdc52dbe72652151e3df9220af89f9829de4ef966eb9116fba97"
+    },
+    {
+      "path": "../substitute-shared/exam-controls.js",
+      "sha256": "7f06e285bc9044e97ef7e39b84fa251c3e27af3857820f474afca75a00cb911c"
+    },
+    {
+      "path": "../substitute-shared/izone-logo-color.png",
+      "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
+    },
+    {
+      "path": "../substitute-shared/native-exam-ui.mjs",
+      "sha256": "e832f8b3e8a08da40ed01399d5184634c9f4d78dff6e1a637c3cfd2656236a5c"
+    },
+    {
+      "path": "../substitute-skill-shared/native-reading.mjs",
+      "sha256": "3d5e3c93e8a4884ce531a812f1deed06cdb3bb775785eb43dc49069006ade6ee"
+    },
+    {
+      "path": "../substitute-skill-shared/native-shell.css",
+      "sha256": "410df13ad6d7cd225bd01614bf7f708965e51b57fed5331977172df489719adc"
+    },
+    {
+      "path": "../substitute-skill-shared/native-shell.mjs",
+      "sha256": "d84aa63c1a5541d88bc7839c4aeac5fc623dfc93e448fc86fe474039d17f1455"
+    },
+    {
+      "path": "../substitute-skill-shared/native-writing.mjs",
+      "sha256": "966c11135dcbc7a3181e4017d68421e634aa1db3a9d33913a83ffd2237fb5857"
     },
     {
       "path": "../substitute-skill-shared/offline-worker.js",
@@ -19,60 +127,80 @@
       "sha256": "1aa9bbbbbb34d29edab98e01473f2a74042e354aa4797fc30ee23d26dc2abd54"
     },
     {
-      "path": "../substitute-skill-shared/writing.mjs",
-      "sha256": "103339ccc896bacef009541288b6ae8263b59fa45bedfc787738dccee8fea676"
-    },
-    {
-      "path": "../substitute-skill-shared/native-writing.mjs",
-      "sha256": "966c11135dcbc7a3181e4017d68421e634aa1db3a9d33913a83ffd2237fb5857"
+      "path": "../substitute-skill-shared/portal-status.mjs",
+      "sha256": "4ce87f53cd948ccf73a46a53355ed2de1500f15e8d3dca5caa31ed764f4e07db"
     },
     {
       "path": "../substitute-skill-shared/storage.mjs",
       "sha256": "2ea5c91610cc40ea39c95608c26a6bea1f85360f547b265010552ebba4fcf9e3"
     },
     {
-      "path": "../substitute-skill-shared/writing.css",
-      "sha256": "7f385efa099e446163e7cc5563441651d83ce23141b803aed7a3267b0eee974e"
+      "path": "../substitute-skill-shared/writing-controller.mjs",
+      "sha256": "98456c175d8df6741c3ee6549fb58793e79dec6131fb41e85f08a7458236f0d7"
     },
     {
-      "path": "../substitute-k56-shared/styles.css",
-      "sha256": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e"
-    },
-    {
-      "path": "../substitute-test-1-k56-computer-based/styles.css",
-      "sha256": "0111d675e284bc779e0940a129a6f392cca66b352ce598b5b5ed92c5ac2134ef"
-    },
-    {
-      "path": "../substitute-shared/izone-logo-color.png",
-      "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
-    },
-    {
-      "path": "../../shared/izone-favicon.svg",
-      "sha256": "dccacd0f15fb7b10cb6a95f1ef91484bc6bca1fb9b0863a3382e0ac2e91f0df1"
-    },
-    {
-      "path": "../../shared/master170/assets/SourceSans3-Variable.woff2",
-      "sha256": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8"
-    },
-    {
-      "path": "../substitute-test-2-k67-computer-based/assets/tourist-information-2011-v2.png",
-      "sha256": "39cda26eb6a1fa504c5e61eff56966a349e0f662d1f274438502e8efcd060004"
-    },
-    {
-      "path": "../substitute-skill-shared/portal-status.mjs",
-      "sha256": "4ce87f53cd948ccf73a46a53355ed2de1500f15e8d3dca5caa31ed764f4e07db"
-    },
-    {
-      "path": "../substitute-skill-shared/writing-result.mjs",
-      "sha256": "f81be43cf1a8675db9d4b0f26643f07886480ea8c9175fd97c040b870e2b35db"
+      "path": "../substitute-skill-shared/writing-feedback.mjs",
+      "sha256": "e87113a6dc76c05449d1e1c79d6711ffc768f060bef7422b47481d93f1b65ccc"
     },
     {
       "path": "../substitute-skill-shared/writing-result.css",
       "sha256": "3db4c29be7578ca3b11728bf2db8ec3405098b781166bd175a1dc464c224a893"
     },
     {
-      "path": "../substitute-skill-shared/writing-feedback.mjs",
-      "sha256": "e87113a6dc76c05449d1e1c79d6711ffc768f060bef7422b47481d93f1b65ccc"
+      "path": "../substitute-skill-shared/writing-result.mjs",
+      "sha256": "f81be43cf1a8675db9d4b0f26643f07886480ea8c9175fd97c040b870e2b35db"
+    },
+    {
+      "path": "../substitute-skill-shared/writing.css",
+      "sha256": "7f385efa099e446163e7cc5563441651d83ce23141b803aed7a3267b0eee974e"
+    },
+    {
+      "path": "../substitute-skill-shared/writing.mjs",
+      "sha256": "ffc3378db1ddf037770ec480712cf15d5a035a9bd9f7dcbf6b4b7f55bf941bd6"
+    },
+    {
+      "path": "../substitute-test-1-k56-computer-based/annotations.js",
+      "sha256": "424ed9e489e424a3d75a7a127c23167565e92ca28eefcaa6ecd10329fef78262"
+    },
+    {
+      "path": "../substitute-test-1-k56-computer-based/styles.css",
+      "sha256": "0111d675e284bc779e0940a129a6f392cca66b352ce598b5b5ed92c5ac2134ef"
+    },
+    {
+      "path": "../substitute-test-1-k67-computer-based/annotations.js",
+      "sha256": "bddf6042165a7631c7cf3d5af339bd9496eac7e864c3882c15306bd18ad3bc50"
+    },
+    {
+      "path": "../substitute-test-2-k56-computer-based/annotations.js",
+      "sha256": "bddf6042165a7631c7cf3d5af339bd9496eac7e864c3882c15306bd18ad3bc50"
+    },
+    {
+      "path": "../substitute-test-2-k67-computer-based/annotations.js",
+      "sha256": "bddf6042165a7631c7cf3d5af339bd9496eac7e864c3882c15306bd18ad3bc50"
+    },
+    {
+      "path": "../substitute-test-2-k67-computer-based/assets/tourist-information-2011-v2.png",
+      "sha256": "39cda26eb6a1fa504c5e61eff56966a349e0f662d1f274438502e8efcd060004"
+    },
+    {
+      "path": "../substitute-test-2-k67-computer-based/demo-reset.css",
+      "sha256": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035"
+    },
+    {
+      "path": "../substitute-test-2-k67-computer-based/layout-updates.css",
+      "sha256": "201953304dccc36833a3331b91c593006fbaa77d38bab7887686d2c37151ccaa"
+    },
+    {
+      "path": "../substitute-test-2-k67-computer-based/styles.css",
+      "sha256": "2a40a8fdf9b84ee7a5c436919f846926a97dcda7ad1a49a1a22f6f4103e284d6"
+    },
+    {
+      "path": "index.html",
+      "sha256": "0a9033b5dddbae149326161ee1a9974861a70ae41466197e0bb0db2d7ee50c68"
+    },
+    {
+      "path": "sw.js",
+      "sha256": "e68ca9c30de8ddf77715fcf0a86025f2400ef0b37d1d28f82d6ba3f35dabe3cb"
     }
   ]
 }

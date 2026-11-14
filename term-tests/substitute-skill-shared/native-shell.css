@@ -1,0 +1,7 @@
+/* Chỉ nối engine một kỹ năng vào mẫu gốc; không thay palette/font của bài thi. */
+[hidden],[data-native-hidden]{display:none!important}.single-skill .single-start{grid-template-columns:1fr}.single-skill #local-status{margin:0}.single-skill #result-ready{max-width:1040px;margin:24px auto}.single-skill #result-summary>h2{display:none}.single-skill #heard-label{display:none!important}.single-skill #writingView{margin-inline:auto}.single-skill #finished{margin:24px auto}.single-skill #feedback:has(.writing-task-result){border:0}.single-skill #identity-form select:disabled{opacity:1}.single-skill #ready{display:block}.single-skill #notice:empty{display:none}.single-skill #replace-attempt{margin:12px 0}.single-skill .result-heading{display:flex;align-items:start;justify-content:space-between;gap:20px}.single-skill .cbt-confirm-actions{display:flex;justify-content:end;gap:12px}
+
+.single-skill #exam:not([hidden]),.single-skill #objective-form{display:contents}.single-skill #local-status:empty{display:none}.single-skill #finished{max-width:1240px;margin:24px auto;padding:24px;border:1px solid var(--line);background:#fff}
+.single-skill #native-summary{max-width:100%;min-width:0;overflow-x:auto}
+
+.single-skill #skill-progress{grid-template-columns:repeat(2,minmax(0,1fr))}

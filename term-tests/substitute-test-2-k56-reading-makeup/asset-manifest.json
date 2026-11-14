@@ -1,70 +1,14 @@
 {
   "testId": "substitute-test-2-k56-reading-makeup",
-  "build": "issue611-d62548efdc6e9af0",
+  "build": "issue611-3cfb4d4aebdea3fe",
   "assets": [
     {
-      "path": "index.html",
-      "sha256": "4e9f40de0d9e7b1047990eb871eb27369616e21d8a96ca4c97c6693fe2a256da"
+      "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
+      "sha256": "35be0a8b9cc0401d66c0ee2970e7f5c5816994379e6bca1332995065c585a8f3"
     },
     {
-      "path": "sw.js",
-      "sha256": "e68ca9c30de8ddf77715fcf0a86025f2400ef0b37d1d28f82d6ba3f35dabe3cb"
-    },
-    {
-      "path": "../substitute-skill-shared/offline-worker.js",
-      "sha256": "454ae6856478457e7b73ea18d5bbbfd6234ab6caf1324882261f85168805e09b"
-    },
-    {
-      "path": "../substitute-skill-shared/offline.mjs",
-      "sha256": "1aa9bbbbbb34d29edab98e01473f2a74042e354aa4797fc30ee23d26dc2abd54"
-    },
-    {
-      "path": "../substitute-skill-shared/objective.mjs",
-      "sha256": "9b0cdbc8c6be4ca76fa52eddce55f1a3feda64aaa1bb8c8957f722fe3a11137e"
-    },
-    {
-      "path": "../substitute-skill-shared/native-reading.mjs",
-      "sha256": "c3a9fd93fb8301bea6bf0831452390e007122fc86c5a09103e769f12ad9651fa"
-    },
-    {
-      "path": "../substitute-skill-shared/audio.mjs",
-      "sha256": "45160e724036d14f16c2f40304b88b14e4fa654db956e86d1d319b9edb3d191a"
-    },
-    {
-      "path": "../substitute-skill-shared/storage.mjs",
-      "sha256": "2ea5c91610cc40ea39c95608c26a6bea1f85360f547b265010552ebba4fcf9e3"
-    },
-    {
-      "path": "../substitute-skill-shared/writing.css",
-      "sha256": "7f385efa099e446163e7cc5563441651d83ce23141b803aed7a3267b0eee974e"
-    },
-    {
-      "path": "../substitute-skill-shared/objective.css",
-      "sha256": "eaf08a2420ac0222be00c2cba161ea89efbaa26d44118fb2188f5918dabe039e"
-    },
-    {
-      "path": "../substitute-k56-shared/styles.css",
-      "sha256": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e"
-    },
-    {
-      "path": "../substitute-test-2-k56-computer-based/styles.css",
-      "sha256": "2a40a8fdf9b84ee7a5c436919f846926a97dcda7ad1a49a1a22f6f4103e284d6"
-    },
-    {
-      "path": "../substitute-test-1-k56-computer-based/annotations.js",
-      "sha256": "424ed9e489e424a3d75a7a127c23167565e92ca28eefcaa6ecd10329fef78262"
-    },
-    {
-      "path": "../substitute-shared/exam-controls.js",
-      "sha256": "7f06e285bc9044e97ef7e39b84fa251c3e27af3857820f474afca75a00cb911c"
-    },
-    {
-      "path": "../substitute-shared/exam-controls.css",
-      "sha256": "c3104b8a4bcefdc52dbe72652151e3df9220af89f9829de4ef966eb9116fba97"
-    },
-    {
-      "path": "../substitute-shared/izone-logo-color.png",
-      "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
+      "path": "../../recordings/assets/fonts/SourceSansPro-Regular.ttf",
+      "sha256": "34abc200f93a80cdfe82091de3f72e396e965f63f388be38f448db473c87f9cd"
     },
     {
       "path": "../../shared/izone-favicon.svg",
@@ -75,8 +19,140 @@
       "sha256": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8"
     },
     {
+      "path": "../shared/cbt-audio-download-status.css",
+      "sha256": "4d62a08d3c3f93439ce977312feedecc3cfdaf5315fd9212bae7a6ca90a4a493"
+    },
+    {
+      "path": "../shared/cbt-audio-start-label.js",
+      "sha256": "f62890142ebc075664342c4dd321071754ad59c4fffc716019f14ad1a1944304"
+    },
+    {
+      "path": "../shared/desktop-exam-guard.css",
+      "sha256": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4"
+    },
+    {
+      "path": "../shared/desktop-exam-guard.js",
+      "sha256": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460"
+    },
+    {
+      "path": "../shared/exam-journal/outbox.mjs",
+      "sha256": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f"
+    },
+    {
+      "path": "../shared/exam-journal/recorder.mjs",
+      "sha256": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76"
+    },
+    {
+      "path": "../substitute-k56-shared/styles.css",
+      "sha256": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e"
+    },
+    {
+      "path": "../substitute-shared/backup-export-submission-recovery-v1.mjs",
+      "sha256": "9921c9a5bc6f653b7bcf9a644d4359b4c57cead4066460973adf0d232c2387d1"
+    },
+    {
+      "path": "../substitute-shared/brand.css",
+      "sha256": "dbff918f7e31b60bc524fc656ed5c060ac3409c8ede58e1651f5274b8dde755f"
+    },
+    {
+      "path": "../substitute-shared/exam-controls.css",
+      "sha256": "c3104b8a4bcefdc52dbe72652151e3df9220af89f9829de4ef966eb9116fba97"
+    },
+    {
+      "path": "../substitute-shared/exam-controls.js",
+      "sha256": "7f06e285bc9044e97ef7e39b84fa251c3e27af3857820f474afca75a00cb911c"
+    },
+    {
+      "path": "../substitute-shared/izone-logo-color.png",
+      "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
+    },
+    {
+      "path": "../substitute-shared/native-exam-ui.mjs",
+      "sha256": "e832f8b3e8a08da40ed01399d5184634c9f4d78dff6e1a637c3cfd2656236a5c"
+    },
+    {
+      "path": "../substitute-skill-shared/audio.mjs",
+      "sha256": "45160e724036d14f16c2f40304b88b14e4fa654db956e86d1d319b9edb3d191a"
+    },
+    {
+      "path": "../substitute-skill-shared/listening-journal-v1.mjs",
+      "sha256": "5ff958d58187d2c119f2395d67c3e95e6e9f7e5202fa99ff76146d828c53d684"
+    },
+    {
+      "path": "../substitute-skill-shared/native-reading.mjs",
+      "sha256": "3d5e3c93e8a4884ce531a812f1deed06cdb3bb775785eb43dc49069006ade6ee"
+    },
+    {
+      "path": "../substitute-skill-shared/native-shell.css",
+      "sha256": "410df13ad6d7cd225bd01614bf7f708965e51b57fed5331977172df489719adc"
+    },
+    {
+      "path": "../substitute-skill-shared/native-shell.mjs",
+      "sha256": "d84aa63c1a5541d88bc7839c4aeac5fc623dfc93e448fc86fe474039d17f1455"
+    },
+    {
+      "path": "../substitute-skill-shared/objective-controller.mjs",
+      "sha256": "bbaea38452b8df6a202c078f9699365b15fd4aa6f78694e281389714dc2173eb"
+    },
+    {
+      "path": "../substitute-skill-shared/objective.css",
+      "sha256": "eaf08a2420ac0222be00c2cba161ea89efbaa26d44118fb2188f5918dabe039e"
+    },
+    {
+      "path": "../substitute-skill-shared/objective.mjs",
+      "sha256": "5defd2131b514bce87fa554752811ab024cf639bcbaa6a8ff361fdbd14542a98"
+    },
+    {
+      "path": "../substitute-skill-shared/offline-worker.js",
+      "sha256": "454ae6856478457e7b73ea18d5bbbfd6234ab6caf1324882261f85168805e09b"
+    },
+    {
+      "path": "../substitute-skill-shared/offline.mjs",
+      "sha256": "1aa9bbbbbb34d29edab98e01473f2a74042e354aa4797fc30ee23d26dc2abd54"
+    },
+    {
       "path": "../substitute-skill-shared/portal-status.mjs",
       "sha256": "4ce87f53cd948ccf73a46a53355ed2de1500f15e8d3dca5caa31ed764f4e07db"
+    },
+    {
+      "path": "../substitute-skill-shared/storage.mjs",
+      "sha256": "2ea5c91610cc40ea39c95608c26a6bea1f85360f547b265010552ebba4fcf9e3"
+    },
+    {
+      "path": "../substitute-skill-shared/writing-result.css",
+      "sha256": "3db4c29be7578ca3b11728bf2db8ec3405098b781166bd175a1dc464c224a893"
+    },
+    {
+      "path": "../substitute-skill-shared/writing.css",
+      "sha256": "7f385efa099e446163e7cc5563441651d83ce23141b803aed7a3267b0eee974e"
+    },
+    {
+      "path": "../substitute-test-1-k56-computer-based/annotations.js",
+      "sha256": "424ed9e489e424a3d75a7a127c23167565e92ca28eefcaa6ecd10329fef78262"
+    },
+    {
+      "path": "../substitute-test-2-k56-computer-based/demo-reset.css",
+      "sha256": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035"
+    },
+    {
+      "path": "../substitute-test-2-k56-computer-based/layout-updates.css",
+      "sha256": "b6304826d1c48c96b91cea4deda78c12e493d155b901cacaefbbe4364c637871"
+    },
+    {
+      "path": "../substitute-test-2-k56-computer-based/styles.css",
+      "sha256": "2a40a8fdf9b84ee7a5c436919f846926a97dcda7ad1a49a1a22f6f4103e284d6"
+    },
+    {
+      "path": "../substitute-test-2-k56-shared/styles.css",
+      "sha256": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e"
+    },
+    {
+      "path": "index.html",
+      "sha256": "137c2ce5a0603709a0a208868d6cf3f5a8876ad433a0fb12e4a3e7c39578de52"
+    },
+    {
+      "path": "sw.js",
+      "sha256": "e68ca9c30de8ddf77715fcf0a86025f2400ef0b37d1d28f82d6ba3f35dabe3cb"
     }
   ]
 }
