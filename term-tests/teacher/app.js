@@ -317,7 +317,8 @@ function renderOverviewRows() {
     const row = document.createElement('tr');
     const nameCell = document.createElement('td');
     nameCell.append(createNode('span', 'teacher-student-name', studentDisplayName(student)));
-    const listeningCell = createNode('td', 'teacher-band', result ? formatBand(result.listening?.band) : '—');
+    const listeningCell = createNode('td', 'teacher-band',
+      result?.listeningStatus === 'interrupted' && !result.listening ? 'Gián đoạn' : formatBand(result?.listening?.band));
     const readingCell = createNode('td', 'teacher-band', result ? formatBand(result.reading?.band) : '—');
     const writing = student.writing || { status: 'not_submitted' };
     const taskNumbers = configuredWritingTasks();
@@ -363,6 +364,10 @@ function addResultSummaryCard(label, value) {
   const card = createNode('article', 'summary-card');
   card.append(createNode('span', '', label), createNode('strong', '', value));
   return card;
+}
+
+function sectionScoreText(section, unavailableText = 'Chưa có kết quả') {
+  return section ? `${section.correct}/${section.total} · Band ${section.band}` : unavailableText;
 }
 
 function addWritingResultSummaryButton(student, taskNumber, value, ready) {
@@ -841,6 +846,10 @@ function renderStudentResult(student) {
   }
 
   const result = student.result;
+  const { listening, reading } = result;
+  const listeningScore = sectionScoreText(listening,
+    result.listeningStatus === 'interrupted' ? 'Gián đoạn' : undefined);
+  const readingScore = sectionScoreText(reading);
   const previousPanel = elements.studentView.querySelector('.teacher-result-panel');
   const viewKey = JSON.stringify([state.selectedClassId, state.selectedTestSlug, student.ref]);
   const expandedSkills = previousPanel?.dataset.viewKey === viewKey
@@ -872,8 +881,8 @@ function renderStudentResult(student) {
     writing.status === 'ready'
   ));
   summaryGrid.append(
-    addResultSummaryCard('Listening', `${result.listening.correct}/${result.listening.total} · Band ${result.listening.band}`),
-    addResultSummaryCard('Reading', `${result.reading.correct}/${result.reading.total} · Band ${result.reading.band}`),
+    addResultSummaryCard('Listening', listeningScore),
+    addResultSummaryCard('Reading', readingScore),
     ...writingSummaryCards,
     ...(configuredWritingTasks().length
       ? [addResultSummaryCard('Writing', writing.status === 'ready' ? `Band ${formatBand(Number(writing.writingScore))}` : writingStatusLabel(writing.status))]
@@ -881,10 +890,8 @@ function renderStudentResult(student) {
   );
 
   const questionDetails = document.createElement('div');
-  questionDetails.append(
-    renderDetailBlock('Listening', result.listening.details),
-    renderDetailBlock('Reading', result.reading.details)
-  );
+  if (listening) questionDetails.append(renderDetailBlock('Listening', listening.details));
+  if (reading) questionDetails.append(renderDetailBlock('Reading', reading.details));
   questionDetails.querySelectorAll('.detail-block').forEach(block => { block.open = expandedSkills.has(block.dataset.skill); });
   const selectedClass = getSelectedClass();
   const selectedTestSlug = state.selectedTestSlug;
@@ -945,8 +952,8 @@ function renderStudentResult(student) {
   const identity=JSON.stringify([loginGeneration,state.selectedClassId,state.selectedTestSlug,student.ref,student.completedAt]);
   const changed=commitResultSections(elements.studentView,panel,identity,[
     {key:'heading',node:heading,value:[student,getSelectedClass(),getSelectedTest()]},
-    {key:'summary',node:summaryGrid,value:[result.listening.correct,result.listening.total,result.listening.band,result.reading.correct,result.reading.total,result.reading.band,writing]},
-    {key:'questions',node:questionDetails,value:[student.completedAt,result.listening,result.reading]},
+    {key:'summary',node:summaryGrid,value:[listeningScore,readingScore,writing]},
+    {key:'questions',node:questionDetails,value:[student.completedAt,listening,reading]},
     {key:'analysis',node:analysisGrid,value:result.performance},
     {key:'performance',node:performanceWrap,value:result.typeStats}
   ]);
