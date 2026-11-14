@@ -126,6 +126,11 @@
 .thuy-speaking-stats{padding:16px!important}.thuy-speaking-stats h3{margin:0 0 6px}.thuy-speaking-stats>small{font-size:12px;color:var(--muted)}.thuy-speaking-chart{display:grid;gap:12px;margin:20px 0}.thuy-speaking-bar{display:grid;grid-template-columns:minmax(130px,230px) minmax(80px,1fr) 32px;gap:12px;align-items:center;font-size:13px}.thuy-speaking-track{height:12px;background:#edf4fa;border-radius:4px;overflow:hidden}.thuy-speaking-track i{height:100%;display:block;background:var(--navy);border-radius:4px}.thuy-speaking-stats>details{font-size:12px;color:var(--muted)}.thuy-speaking-stats>details details{margin:12px 0}.thuy-speaking-stats>details p{margin:4px 0}@media(max-width:650px){.thuy-speaking-bar{grid-template-columns:minmax(110px,1fr) 1fr 24px;gap:8px}}
 @media(min-width:651px) and (max-width:759px){.thuy-teacher .thuy-side{position:fixed;width:140px;display:flex}.thuy-teacher .thuy-side>.brand{display:block}.thuy-teacher .teacher-header{margin-left:140px}.thuy-teacher .teacher-shell{margin-left:140px;width:calc(100% - 140px)}.thuy-side .teacher-tabs{display:grid}.thuy-nav-label,.thuy-side-foot{display:block}}
 @media(max-width:650px){.thuy-teacher #formDraftEditor .thuy-library-tools input{width:100%;max-width:none}}
+.thuy-library-actions{display:grid;gap:8px;width:clamp(176px,38vw,220px)}
+.thuy-library-actions-top{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px}
+.thuy-teacher .thuy-library-actions .button{min-width:0;min-height:48px;padding-inline:8px;justify-content:center;white-space:nowrap}
+.thuy-teacher .thuy-library-actions .thuy-library-copy{display:block;min-height:64px;line-height:1.35;text-align:center}
+.thuy-library-copy span{display:block}
 
 /* Câu trả lời trong Tổng quan lớp */
 .thuy-question-workspace{grid-template-columns:minmax(235px,28%) minmax(0,1fr)}
