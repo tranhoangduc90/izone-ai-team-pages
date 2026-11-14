@@ -1,6 +1,6 @@
 import { createOfflineRuntime } from '../k56-offline-shared/runtime-term2-k67-recovery-v1.mjs?v=20261107-mini-v3';
 import { downloadTermAudio } from '../k56-offline-shared/whole-audio-terms-cbt-audio-status-v1.mjs?v=20261111-audio-milestones-v2';
-import { mountOfflineListeningPlayer, prepareContinuityAudio, mountContinuityListeningPlayer } from '../k67-shared/offline-journey-ui-term2-audio-v2.mjs?v=20261110-continuity-v2';
+import { mountOfflineListeningPlayer, prepareContinuityAudio, mountContinuityListeningPlayer } from '../k67-shared/offline-journey-ui-term2-journal-v1.mjs?v=20261110-continuity-v2';
 
 const miniSlug='mini-test-lesson-5';
 const term1Slug='term-test-1';
@@ -157,6 +157,15 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
     if(diagnostics.length>=32)diagnostics.shift();
     diagnostics.push({offlineVersion:1,action,observedAt:new Date().toISOString(),...details});
     drainDiagnostics();
+  }
+  function observeListeningDecision(phase, fields = {}) {
+    if (paper || slug !== 'term-test-2' || globalThis.TERM_TEST_APP_CONFIG?.EXAM_JOURNAL_ENABLED !== true) return;
+    try {
+      return saveSubmissionDiagnostic('state_observed', {cause: 'k67_offline_journey', checkpointState: {
+        offlineVersion: 1, action: 'term2_listening_decision', phase, section: 'listening',
+        elapsedPageMs: Math.round(performance.now()), ...fields
+      }});
+    } catch { /* Diagnostics are independent of the exam. */ }
   }
   function setJournal(value){journal=value;drainDiagnostics();}
   function connectJournal({endpoint,build,getState,onConnected}){
@@ -655,6 +664,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
     const timing=record.package.timing;
     const player=continuity()
       ? mountContinuityListeningPlayer({...options,section,timing,now,persist,observe,
+          observeDecision: observeListeningDecision,
           onPlaying:() => {
             section.playbackConfirmed=true;
             void persist().catch(() => observe('audio_diagnostic',{event:'playback_marker_save_failed'}));
@@ -709,7 +719,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
   return {content:record.package.content,paper,view,start,begin,saveDrafts,seal,mountPlayer,verifiedAudio,download,resultToken,now,
     activated:()=>Boolean(record.activatedAt),drafts:()=>structuredClone(record.drafts),revisions:()=>({...record.revisions}),close,changed,
     message:()=>message,reviewComplete:()=>playing?.reviewComplete()===true,
-    continuity,preparePlayer,interrupt,acknowledgeInterruption,setJournal,connectJournal,markListeningStart,
+    continuity,preparePlayer,interrupt,acknowledgeInterruption,setJournal,connectJournal,markListeningStart,observeListeningDecision,
     listeningPlaybackConfirmed:()=>record.sections.listening?.playbackConfirmed!==false,
     listeningReviewStarted:()=>Boolean(record.sections.listening?.eofAt)};
 }
