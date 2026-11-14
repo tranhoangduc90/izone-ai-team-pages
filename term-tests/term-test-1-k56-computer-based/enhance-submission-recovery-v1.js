@@ -809,35 +809,7 @@
       setListeningVisible(true);
       const player = protectedBootstrap.officialAudioElement;
       player.volume = uiState.audio.volume;
-      const onlinePlayback=protectedBootstrap.onlinePlayback;
-      const submitButton=listeningForm.form.querySelector('#submitListening');
-      const answerRegions=[listeningForm.source.viewport,...examRegions.filter(region=>!region.contains(examCard))];
-      const answerControls=[...listeningForm.form.querySelectorAll('input,select,textarea')]
-        .filter(control=>!examCard.contains(control)&&!lobby.contains(control));
-      const answerDisabled=new Map(answerControls.map(control=>[control,control.disabled]));
-      const wasDisabled=submitButton?.disabled;
-      const lockBeforePlaying=()=>{
-        for(const region of answerRegions)region.inert=true;
-        for(const control of gatedControls)control.disabled=true;
-        for(const control of answerControls)control.disabled=true;
-        if(submitButton)submitButton.disabled=true;
-        manualButton.disabled=true;
-      };
-      if(onlinePlayback){
-        lockBeforePlaying();
-        examStatus.textContent='Đang chuẩn bị phát audio…';
-      }
-      const unlockAfterPlaying=()=>{
-        if(onlinePlayback&&!onlinePlayback.isCurrent())return;
-        for(const region of answerRegions)region.inert=false;
-        for(const control of gatedControls)control.disabled=Boolean(initialDisabled.get(control));
-        for(const control of answerControls)control.disabled=answerDisabled.get(control);
-        if(submitButton)submitButton.disabled=wasDisabled;
-        manualButton.disabled=false;
-      };
-      const attachController=()=>{
-        if(onlinePlayback&&player.paused&&!player.ended)player.addEventListener('playing',unlockAfterPlaying,{once:true});
-        const controller = window.K56AudioRecovery.create({ audio: player,
+      const controller = window.K56AudioRecovery.create({ audio: player,
         token: protectedBootstrap.examSessionToken, slug: testConfig.slug,
         studentRef: protectedBootstrap.studentRef, generation: protectedBootstrap.generation,
         apiBase: appConfig.API_BASE_URL, classCode, initial: protectedBootstrap.audioRecoveryInitial,
@@ -848,19 +820,11 @@
           examStatus.textContent = prefix + ' · ' + formatTime(current) + ' / ' + formatTime(duration);
           uiState.audio.started = true; uiState.audio.time = Number(current) || 0; saveUiState();
         }
-        });
-        if(onlinePlayback){
-          if(player.paused&&!player.ended)lockBeforePlaying();
-          else unlockAfterPlaying();
-        }
-        observeOnlineCallbackGap(player, protectedBootstrap, controller);
-        listeningForm.form.addEventListener('term-test:listening-submitted', () => controller.finish());
-      };
-      if(onlinePlayback)onlinePlayback.attachController=attachController;
-      else attachController();
+      });
       examVolumeInput.addEventListener('input', () => {
         player.volume = Number(examVolumeInput.value); uiState.audio.volume = player.volume; saveUiState();
       });
+      listeningForm.form.addEventListener('term-test:listening-submitted', () => controller.finish());
       return;
     }
 
@@ -1348,60 +1312,6 @@
   // Việc chính: theo dõi deadline ở chế độ nền và khóa/tự nộp đúng hạn, không hiện số giây gây mất tập trung.
   // Kết quả: audio kết thúc không tạo thêm thời gian làm vô hạn; lần thử lại vẫn dùng bản đáp án đã khóa.
   // Khi lỗi mạng: form tiếp tục bị khóa và shared/app.js tự thử gửi lại cùng một payload.
-  function observeOnlineCallbackGap(player, owner, controller) {
-    if (appConfig?.EXAM_JOURNAL_ENABLED !== true || testConfig.slug !== 'term-test-1-k56') return;
-    const endpoint = appConfig.EXAM_JOURNAL_BASE_URL || appConfig.API_BASE_URL + '/api/term-tests/' + testConfig.slug;
-    let key;
-    try { key = JSON.stringify([new URL(endpoint, location.href).href, testConfig.slug]); }
-    catch { return; }
-    let baseline = null;
-    let reported = false;
-    let lastReportedAt = -Infinity;
-    function sample() { return {at: performance.now(), position: player.currentTime}; }
-    function reset() { baseline = sample(); reported = false; }
-    function stop() {
-      clearInterval(timer);
-      player.removeEventListener('timeupdate', reset);
-      player.removeEventListener('playing', reset);
-      player.removeEventListener('seeking', reset);
-      window.removeEventListener('pagehide', onPageHide);
-    }
-    function onPageHide(event) {
-      if (event.persisted) baseline = null;
-      else stop();
-    }
-    player.addEventListener('timeupdate', reset);
-    player.addEventListener('playing', reset);
-    player.addEventListener('seeking', reset);
-    const timer = setInterval(() => {
-      try {
-        const state = controller.inspect();
-        if (!player.isConnected || owner !== window.TERM_TEST_BOOTSTRAP || state.disposed ||
-            ['ended', 'submitted'].includes(state.phase)) { stop(); return; }
-        if (state.phase !== 'playing' || player.paused || player.ended || player.seeking) { baseline = null; return; }
-        const current = sample();
-        if (!baseline) baseline = current;
-        const elapsedMs = Math.round(current.at - baseline.at);
-        if (reported || elapsedMs < 5000) return;
-        if (elapsedMs > 15000 || current.position < baseline.position) { reset(); return; }
-        if (current.at - lastReportedAt < 60000) return;
-        const journal = window[Symbol.for('izone.examJournal.connections.v1')]?.get(key);
-        reported = Boolean(journal?.recordK56Submission?.(owner, 'audio_observed', {
-          action: 'term_k56_media_continuity',
-          positionSeconds: current.position,
-          paused: player.paused, ended: player.ended, readyState: player.readyState,
-          checkpointState: {
-            telemetryVersion: 1, assetId: testConfig.slug, mode: 'online', phase: 'callback_gap',
-            initialPositionSeconds: baseline.position, elapsedMs,
-            visibility: document.visibilityState === 'visible' ? 'visible' : 'hidden', online: navigator.onLine
-          }
-        }));
-        if (reported) lastReportedAt = current.at;
-      } catch { /* A journal failure must not affect the player. */ }
-    }, 500);
-    window.addEventListener('pagehide', onPageHide);
-  }
-
   function setupListeningTimer(listeningForm) {
     if(window.K56_TERM1_OFFLINE?.active)return; // Chỉ ended hợp lệ mới được tự thu Listening v2.
     if (!listeningForm) return;
