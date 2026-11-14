@@ -11,18 +11,27 @@ const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const base = 'https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/';
 const entries = [
   ['term-test-1', 'term-test-1-audio.html', true],
-  ['term-test-2', 'term-test-2-audio.html', true],
+  ['term-test-2', 'term-test-2-audio.html', false],
   ['mini-test-lesson-5', 'mini-test-listening-audio.html', false]
 ];
 const live = process.argv.includes('--live');
-const routes = process.argv.includes('--term1') ? entries.slice(0, 1) : entries;
+const routes = entries.filter(([slug]) =>
+  (!process.argv.includes('--term1') || slug === 'term-test-1') &&
+  (!process.argv.includes('--term2') || slug === 'term-test-2')
+);
 
 try {
   for (const [slug, path, timeWindow] of routes) {
     const context = await browser.newContext({ timezoneId: 'Asia/Saigon' });
     await context.clock.setFixedTime(new Date('2026-11-12T18:44:00+07:00'));
     await context.addInitScript(() => {
-      document.addEventListener('k67:paper-audio-load', event => { window.paperAudioLoad = event.detail; });
+      document.addEventListener('k67:paper-audio-load', event => {
+        if (event.detail.outcome === 'load_requested') {
+          window.playDisabledWhileLoading = document.getElementById('btnPlayMain').disabled;
+          return;
+        }
+        window.paperAudioLoad = event.detail;
+      });
     });
     if (!live) {
       const html = await readFile(new URL('../term-tests/' + path, import.meta.url), 'utf8');
@@ -70,6 +79,16 @@ try {
         await context.clock.setFixedTime(new Date('2026-11-12T' + clock + ':00+07:00'));
         await page.waitForFunction(expected => document.getElementById('btnPlayMain').disabled === expected, disabled);
       }
+    }
+    if (slug === 'term-test-2') {
+      assert.equal(await page.evaluate(() => window.playDisabledWhileLoading), true);
+      await context.clock.setFixedTime(new Date('2026-11-12T19:00:00+07:00'));
+      await page.reload();
+      await page.waitForFunction(() => window.paperAudioLoad?.outcome === 'ready', undefined, { timeout: 100000 });
+      assert.equal(await page.locator('#btnPlayMain').isEnabled(), true);
+      await page.locator('#btnPlayMain').click();
+      await page.waitForFunction(() => document.getElementById('audioMain').currentTime > 0.05);
+      assert.equal(await page.locator('#status').textContent(), 'Đang phát audio thi.');
     }
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({ live, ...result, soundCheck: true, timeWindow }));
