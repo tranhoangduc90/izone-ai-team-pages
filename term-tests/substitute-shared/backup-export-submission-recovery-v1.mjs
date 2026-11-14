@@ -34,6 +34,12 @@ export function makeSubstituteBackup({scope,lobby,app,sections,writing,title}){
    ...recoveryDetails(row)})),
   writing:writing?{answers:writingAnswers(writing.payload),status:writing.status==='acknowledged'?'acknowledged':'pending',
    queuedAt:number(writing.queuedAt),acknowledgedAt:number(writing.acknowledgedAt),...recoveryDetails(writing)}:null};
+ if(['listening','reading','writing'].includes(scope.skill)){
+  record.scope={...record.scope,skill:scope.skill,sourceSlug:text(scope.sourceSlug)};
+  record.app.drafts=Object.fromEntries(Object.entries(record.app.drafts).filter(([skill])=>skill===scope.skill));
+  record.sections=record.sections.filter(row=>row.skill===scope.skill);
+  if(scope.skill!=='writing')record.writing=null;
+ }
  const json=escapeHtml(JSON.stringify(record,null,2)),heading=escapeHtml(title);
  const html=`<!doctype html><html lang="vi"><meta charset="utf-8"><title>${heading}</title><style>body{font:16px/1.6 system-ui;max-width:960px;margin:auto;padding:24px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>${heading}</h1><p>Bản lưu ngoại tuyến để giữ câu trả lời. Hãy giữ file này và liên hệ giáo viên nếu trang thi không đồng bộ được.</p><pre>${json}</pre></html>`;
  return {blob:new Blob([html],{type:'text/html;charset=utf-8'}),name:`${testSlug}-${classCode}-${studentRef}-${clientRunId.slice(0,8)}.html`};
