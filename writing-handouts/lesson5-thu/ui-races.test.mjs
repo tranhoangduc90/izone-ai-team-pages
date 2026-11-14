@@ -15,10 +15,11 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const core=await import(pathToFileURL(root+'/lesson5-demo/core.mjs'));
 const {createClient}=await import(pathToFileURL(root+'/lesson5-thu/client.mjs'));
 function deferred(){let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};}
-function fixture(api={}){
+function fixture(api={},lesson){
  const elements=new Map(),storage=new Map(),textarea={dataset:{field:'idea1'},value:'',disabled:false};
  const el=id=>{if(!elements.has(id))elements.set(id,{hidden:false,disabled:false,dataset:{},textContent:'',innerHTML:'',value:'',handlers:{},addEventListener(k,f){this.handlers[k]=f;},append(){},querySelector(){return null;},scrollIntoView(){},focus(){}});return elements.get(id);};
  const context=vm.createContext({createCheckFeedback,missingCheckFields,workflowFor,isWhole,isMulti,isPrepared,isOpinion,isDiscussion,isBodyOutline,validOutlineDirection,planFields,solutionsFor,AGREEMENT_LEVELS,requiredFields,preparationError,PLAN_FIELDS,SOLUTIONS,bodyView,bodyKey,bodyIndexOf,localKey,wholeSections,createCourseStudentIdentity,requestMappingStudentIdentity:async()=>{throw new Error('Bộ thử phản hồi muộn không được gọi mạng');},...core,installStyles(){},createClient:()=>({setToken(){},...api}),document:{createElement:()=>({addEventListener(){}}),getElementById:el,querySelector:()=>null,querySelectorAll:s=>s==='textarea[data-field]'?[textarea]:[]},window:{addEventListener(){},scrollTo(){}},localStorage:{setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k),getItem:k=>storage.get(k)||null},crypto:{randomUUID:()=> 'fixture-request'},setTimeout:()=>0,clearTimeout(){},Promise,JSON,Date,Number,String,Object,structuredClone});
+ context.handout67Lesson=lesson;
  const source=fs.readFileSync(root+'/lesson5-thu/app.js','utf8').replace(/^import .*\r?\n/gm,'').replace('void bootstrap();','');
  vm.runInContext(source,context);
  const run=code=>vm.runInContext(code,context);
@@ -26,6 +27,30 @@ function fixture(api={}){
  run("render=()=>{};state.ref='a-ref';state.responses.idea1='Old draft';student='A';");
  return {run,el,textarea,storage,context};
 }
+
+test('Outline Check skips the stance only for Lesson 4 and validates each body independently',async()=>{
+ for(const activity of ['lesson4','lesson3']){
+  const sent=[],missing=[];
+  const h=fixture({check:async(ref,payload)=>{
+   sent.push(payload.section);
+   return {session:h.run('structuredClone(state)')};
+  }},{activity,outlineOnly:true,handoutMode:'two-bodies-v1'});
+  h.context.checkMissing=fields=>missing.push(...fields);
+  h.run("checkFeedback.missing=checkMissing;for(const field of FIELDS.body2_topic)state.responses[field]='Sample outline';");
+  const click=section=>h.el('workspace').handlers.click({target:{closest:selector=>selector==='button'?{
+   hasAttribute:()=>false,dataset:{check:section}
+  }:null}});
+  await click('body2_topic');
+  if(activity==='lesson4'){
+   assert.deepEqual({sent,missing},{sent:['body2_topic'],missing:[]});
+   await click('body1_topic');
+   assert.deepEqual(sent,['body2_topic']);
+   assert.deepEqual(missing,['body1_idea1','body1_idea2','body1_topicSentence']);
+  }else{
+   assert.deepEqual({sent,missing},{sent:[],missing:['stance']});
+  }
+ }
+});
 
 function replyForm(body='Lời trả lời'){
  const button={disabled:false},status={textContent:'',dataset:{}};
