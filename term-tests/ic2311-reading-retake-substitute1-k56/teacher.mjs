@@ -1,6 +1,6 @@
 import {API} from './config.mjs';
 const $=id=>document.getElementById(id),show=(id,v=true)=>$(id).hidden=!v;
-let latest='',authenticated=false,loading=false,authEpoch=0;
+let latest='',authenticated=false,loading=false,authEpoch=0,logRequest=0;
 const reopenOperations=new Map();
 async function call(path,body){const r=await fetch(API+'/teacher/'+path,{method:body?'POST':'GET',credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1','X-Request-Id':crypto.randomUUID()},...body?{body:JSON.stringify(body)}:{},signal:AbortSignal.timeout(10000)});const v=await r.json();if(!r.ok)throw Object.assign(Error(v.error),{status:r.status});return v;}
 const label={prepared:'Đã chuẩn bị',draft:'Đang làm / đã lưu nháp',submitted:'Đã nộp',technical_stop:'Dừng do sự cố'};
@@ -8,7 +8,7 @@ const cell=(tr,value)=>{const td=document.createElement('td');td.textContent=val
 function clearSession(){
  authEpoch++;authenticated=false;loading=false;latest='';
  for(const id of ['results','logs'])show(id,false);
- $('rows').replaceChildren();$('log-rows').replaceChildren();
+ $('rows').replaceChildren();$('log-rows').replaceChildren();$('log-system-rows').replaceChildren();show('log-system',false);
 }
 function reviewLink(attemptId){
  const url=new URL('../ic2311-retake-review/teacher.html',location.href);
@@ -17,13 +17,57 @@ function reviewLink(attemptId){
  link.href=url.href;link.textContent='Xem bài đã nộp';
  return link;
 }
-async function logs(attemptId){const epoch=authEpoch;try{const r=await call('logs?attemptId='+encodeURIComponent(attemptId));if(epoch!==authEpoch)return;show('logs');$('log-status').textContent=r.coverage==='partial'?'Nhật ký chưa đủ; còn '+r.pendingEvents+' sự kiện chờ ghi. Không kết luận không có sự kiện trong phần chưa đọc được.':'Tối đa 2.000 bản ghi mới nhất; thời gian Việt Nam. Lưu 90 ngày; kho mã hóa được đối chiếu tại hai máy chủ dự phòng.';$('log-rows').replaceChildren();for(const{fields:f}of r.events){const tr=document.createElement('tr');cell(tr,new Date(f.occurredAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}));cell(tr,f.eventName+(f.errorCode?' · '+f.errorCode:''));cell(tr,(f.requestId||'—')+' / '+(f.operationId||'—'));const a=f.stateAfter||f.stateBefore||f;cell(tr,(a.elapsedExamMs??'—')+' / '+(f.serverAckedElapsedMs??'—'));$('log-rows').append(tr);}}catch(e){$('status').textContent='Chưa đọc được nhật ký ('+e.message+'). Không suy thành không có sự kiện.';}}
+function logCoverage(result){
+ const notes=[];
+ if(result.scopeMatched===false)notes.push('Kho nóng chưa trả về sự kiện của lượt này.');
+ if(result.truncated)notes.push('Một phần nhật ký vượt giới hạn hiển thị.');
+ if(result.pendingEvents>0)notes.push(`Có ${result.pendingEvents} sự kiện đang chờ ghi trên máy chủ.`);
+ if(result.archive?.ok===false)notes.push('Chưa xác minh được kho lưu trữ.');
+ if(result.coverage==='partial'&&!notes.length)notes.push('Nguồn nhật ký báo độ phủ một phần.');
+ return notes.join(' ')||'Thời gian Việt Nam. Nhật ký trong kho nóng.';
+}
+async function logs(attemptId){
+ const epoch=authEpoch,request=++logRequest;
+ const isCurrent=()=>epoch===authEpoch&&request===logRequest;
+ try{
+  const result=await call('logs?attemptId='+encodeURIComponent(attemptId));
+  if(!isCurrent())return;
+  show('logs');$('log-status').textContent=logCoverage(result);
+  const rows=document.createDocumentFragment();
+  for(const {fields:f} of result.events){
+   const tr=document.createElement('tr');
+   cell(tr,new Date(f.occurredAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}));
+   cell(tr,[f.eventName,f.errorCode||f.reason].filter(Boolean).join(' · '));
+   cell(tr,(f.requestId||'—')+' / '+(f.operationId||'—'));
+   const state=f.stateAfter||f.stateBefore||f;
+   cell(tr,(state.elapsedExamMs??'—')+' / '+(state.serverAckedElapsedMs??'—'));
+   rows.append(tr);
+  }
+  $('log-rows').replaceChildren(rows);
+  const signals=document.createDocumentFragment();
+  for(const {fields:f} of result.systemMetricsAndGaps??[]){
+   if(!['log_gap','journal_capacity_pressure'].includes(f.eventName))continue;
+   const item=document.createElement('li');
+   const time=new Date(f.occurredAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'});
+   const detail=f.eventName==='log_gap'
+    ? `Khoảng thiếu nhật ký · ${f.gapReason||'chưa rõ lý do'}${Number.isFinite(f.droppedCount)?' · '+f.droppedCount+' dòng':''}`
+    : `Kho nóng vượt ngưỡng${Number.isFinite(f.sampleCount)?' · còn '+f.sampleCount+' dòng':''}`;
+   item.textContent=`${time} · ${detail}`;
+   signals.append(item);
+  }
+  const hasSignals=signals.childNodes.length>0;
+  $('log-system-rows').replaceChildren(signals);
+  show('log-system',hasSignals);
+ }catch(error){
+  if(isCurrent())$('status').textContent='Chưa đọc được nhật ký ('+error.message+').';
+ }
+}
 async function refresh(){if(!authenticated||loading)return;loading=true;const epoch=authEpoch;try{
  const r=await call('results');
  if(epoch!==authEpoch)return;
  const canManage=r.role==='admin';
  document.querySelectorAll('[data-admin-only]').forEach(node=>node.hidden=!canManage);
- if(!canManage){show('logs',false);$('log-rows').replaceChildren();}
+ if(!canManage){logRequest++;show('logs',false);$('log-rows').replaceChildren();}
  const fingerprint=JSON.stringify({role:r.role,students:r.students,attempts:r.attempts.map(({id,student_ref,generation,status,raw_score,receipt_id,portal_status,portal_error_code})=>({id,student_ref,generation,status,raw_score,receipt_id,portal_status,portal_error_code}))});if(fingerprint===latest){$('status').textContent='Đã cập nhật · không có thay đổi';return;}latest=fingerprint;const scrolls=[...document.querySelectorAll('.table-scroll')].map(e=>[e,e.scrollTop,e.scrollLeft]),pageY=scrollY;const fragment=document.createDocumentFragment();for(const student of r.students){const attempts=r.attempts.filter(a=>a.student_ref===student.studentRef);const tr=document.createElement('tr'),a=attempts[0];cell(tr,student.name);cell(tr,a?label[a.status]:'Chưa vào bài');cell(tr,a?.status==='submitted'?a.raw_score+'/26':'—');cell(tr,a?.receipt_id||'—').hidden=!canManage;cell(tr,a?.portal_status==='confirmed'?'Đã ghi Term Test 1 Reading':a?.portal_status==='blocked'?'Cần đối soát · '+(a.portal_error_code||''):a?.portal_status?'Chờ ghi Term Test 1 Reading':'—').hidden=!canManage;const actions=cell(tr,'');
  if(a?.status==='submitted')actions.append(reviewLink(a.id));
  if(canManage&&a){const b=document.createElement('button');b.className='secondary';b.textContent='Xem log';b.onclick=()=>void logs(a.id);actions.append(b);if(a.status!=='submitted'){const reopen=document.createElement('button');reopen.className='secondary';reopen.textContent='Cấp lượt thay thế';reopen.onclick=async()=>{if(!confirm('Chỉ cấp khi đã xác nhận học viên dừng lượt hiện tại. Tạo lượt Reading thay thế cho '+student.name+'? Lượt cũ và đáp án vẫn được giữ; lượt cũ sẽ không gửi tiếp được.'))return;try{const key=student.studentRef+':'+a.generation;if(!reopenOperations.has(key))reopenOperations.set(key,crypto.randomUUID());await call('reopen',{studentRef:student.studentRef,operationId:reopenOperations.get(key)});reopenOperations.delete(key);latest='';await refresh();}catch(e){$('status').textContent='Chưa cấp lượt: '+e.message;}};actions.append(reopen);}}fragment.append(tr);}$('rows').replaceChildren(fragment);show('results');for(const[e,y,x]of scrolls){e.scrollTop=y;e.scrollLeft=x;}window.scrollTo({top:pageY,behavior:'instant'});$('status').textContent='Đã cập nhật. Điểm /26 được ghi vào Term Test 1 Reading. Listening/Writing giữ nguyên.';}catch(e){if(epoch!==authEpoch)return;$('status').textContent='Chưa tải được kết quả ('+e.message+'). Dữ liệu đang xem được giữ.';if([401,403].includes(e.status)){void authenticate();}}finally{if(epoch===authEpoch)loading=false;}}
