@@ -596,7 +596,8 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
           const retryBeforeDeadline = (held||canRetryWithoutHold) && error.reasonCode==='SERVER_BEFORE_DEADLINE'
               && Number.isSafeInteger(error.retryAfterMs) && error.retryAfterMs>0 && error.retryAfterMs<=3_000 && priorRetries<3;
           if (canRetryWithoutHold && error.status === 409) {
-            const reasonCode = /^[A-Z0-9_]{1,80}$/.test(error.reasonCode || '') ? error.reasonCode : 'UNKNOWN_CONFLICT';
+            const rawReason = error.observedReasonCode || error.reasonCode;
+            const reasonCode = typeof rawReason === 'string' && /^[A-Z0-9_]{1,80}$/.test(rawReason) ? rawReason : 'UNKNOWN_CONFLICT';
             observeSubmission('term2_writing_sync_conflict', pending, {status:409, reasonCode,
               decision:retryBeforeDeadline?'retry_same_operation':held?'held_for_review':'review_required',
               retryCount:priorRetries, ...(retryBeforeDeadline?{retryAfterMs:error.retryAfterMs}:{})}, false);
