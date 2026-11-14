@@ -134,10 +134,10 @@
   // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
   let examJournal = null, journalConnection = null;
   if (appConfig.EXAM_JOURNAL_ENABLED === true) {
-    journalConnection = import('../shared/exam-journal/bridge-substitute-recovery-v1.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&eofLog=20261108-v1&continuity=20261110-listening-observations-v1&continuity=20261110-listening-observations-v1&submission=20261112-v2&startTrace=20261114-v2').then(({ connectExamJournal }) => {
+    journalConnection = import('../shared/exam-journal/bridge-substitute-recovery-v1.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&eofLog=20261108-v1&continuity=20261110-listening-observations-v1&continuity=20261110-listening-observations-v1&submission=20261112-v2&startTrace=20261114-v3').then(({ connectExamJournal }) => {
       examJournal = connectExamJournal({ enabled: true,
         endpoint: appConfig.EXAM_JOURNAL_BASE_URL || new URL(appConfig.API_BASE_URL).origin + '/substitute-journal-api/' + testConfig.slug,
-        testSlug: testConfig.slug, build: (appConfig.EXAM_JOURNAL_BUILD || 'unknown')+'+start-trace-20261114-v2',
+        testSlug: testConfig.slug, build: (appConfig.EXAM_JOURNAL_BUILD || 'unknown')+'+start-trace-20261114-v3',
         submissionMetadataOnly:sealedSubmissions,substituteStartTrace:listeningContinuity,
         getState: () => ({ ...state, classCode,
           generation: sealedSubmissions ? Number(window.TERM_TEST_BOOTSTRAP?.offlineGeneration ?? 0)
