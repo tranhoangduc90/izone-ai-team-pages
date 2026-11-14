@@ -11,6 +11,8 @@ const listeningStartPhases=new Set(['start_requested','play_requested','play_res
   'start_discarded','answers_unlocked']);
 const listeningStartReasons=new Set(['phase_or_player_unavailable','play_not_allowed','play_failed',
   'scope_changed_before_play','scope_changed_after_play']);
+const substituteSubmissionPhases=new Set(['local_sealed','local_seal_failed','hold_cached','hold_cache_failed',
+  'receipt_cached','receipt_cache_failed']);
 const listeningEndNumber=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=86400;
 const listeningEndTime=value=>typeof value==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value)&&Number.isFinite(Date.parse(value));
 export function safeRoute(path) {
@@ -296,6 +298,23 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     adopt(reader){if(typeof reader==='function'){getState=reader;stateChanged('state_reader_changed');}return api;},
     recordK67Submission(owner,type,data){return k67Metadata&&recordScopedSubmission(owner,type,data);},
     recordK56Submission(owner,type,data){return scopedK56&&recordScopedSubmission(owner,type,data);},
+    recordSubstituteSubmission(owner,{phase,skill,operationId,receiptId,automatic}){
+      if(stopped||!scopedSubstitute||!metadataOnly||owner!==win.TERM_TEST_BOOTSTRAP||!owner?.examSessionId
+        ||!substituteSubmissionPhases.has(phase)||!['listening','reading','writing'].includes(skill))return;
+      const proof=proofOf(getState()),key=JSON.stringify(proof);
+      if(proof.examSessionId!==owner.examSessionId||proof.clientRunId!==owner.clientRunId)return;
+      const validId=value=>typeof value==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value);
+      if(!validId(operationId))return;
+      const detail={telemetryVersion:1,phase,operationId,
+        ...(validId(receiptId)?{receiptId}:{}),...(typeof automatic==='boolean'?{automatic}:{})};
+      const record=context=>{
+        if(stopped||!context?.identityConfirmed||key!==JSON.stringify(proofOf(getState()))||owner!==win.TERM_TEST_BOOTSTRAP)return;
+        recorder.record('state_observed',{cause:'substitute_submission_checkpoint',section:skill,checkpointState:detail},capturedBinding(context));
+      };
+      const context=bindingCache.get(key);
+      if(context)record(context);
+      else void loadBinding(proof).then(record).catch(()=>{});
+    },
     prepareInitialization({classCode='' }={}) {
       // Warm only the page scope. Never borrow an adopted native learner proof.
       return loadBinding(proofOf({classCode,generation:0}));
