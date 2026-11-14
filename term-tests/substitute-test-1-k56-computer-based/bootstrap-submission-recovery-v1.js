@@ -57,8 +57,12 @@
     if(!offline||!('serviceWorker' in navigator)||!('caches' in window))return;
     navigator.serviceWorker.addEventListener('message',event=>{
       if(event.data?.type==='PRECACHE_RESULT')window.SUBSTITUTE_OFFLINE_SHELL_STATUS=event.data.ok?'ready':'partial';
+      if(event.data?.type==='SUBSTITUTE_SHELL_CACHE_DECISION'&&event.data.workerRevision==='20261114-v1'
+        &&['cached_exact','cached_other_revision','cached_shell','cache_miss'].includes(event.data.outcome))
+        observeLobbyDecision('substitute_shell_cache',event.data.outcome,state.classCode||classCode,{workerRevision:'20261114-v1'});
+
     });
-    void navigator.serviceWorker.register('./offline-sw.js?v=20261110-listening-observations-v1').then(async()=>{
+    void navigator.serviceWorker.register('./offline-sw.js?v=20261114-v1').then(async()=>{
       const registration=await navigator.serviceWorker.ready;
       const urls=[...document.querySelectorAll('script[src],link[href],img[src]')]
         .map(element=>element.src||element.href).filter(url=>url&&!new URL(url).pathname.includes('/exam-journal/'));
@@ -282,8 +286,22 @@
     return `izone-substitute-lobby-v1:${testConfig.slug}:${window.SUBSTITUTE_STATE.meta.historyEpoch}:${selectedClass}:${studentRef}`;
   }
 
+  let lobbyJournalCount=0;
+  function observeLobbyDecision(action,outcome,selectedClass,extra={}){
+    try{
+      if(appConfig.EXAM_JOURNAL_ENABLED!==true||lobbyJournalCount>=16||!/^[A-Z0-9_-]{1,40}$/.test(selectedClass||''))return;
+      lobbyJournalCount++;
+      const endpoint=appConfig.EXAM_JOURNAL_BASE_URL||new URL(appConfig.API_BASE_URL).origin+'/substitute-journal-api/'+testConfig.slug;
+      const key=JSON.stringify([new URL(endpoint,window.location.href).href,testConfig.slug]);
+      const bridge=window[Symbol.for('izone.examJournal.connections.v1')]?.get(key);
+      void bridge?.recordInitialization([{type:'state_observed',data:{action,outcome,identityConfirmed:false,
+        checkpointState:{telemetryVersion:1,observedElapsedMs:Math.round(performance.now()),...extra}}}],
+        {classCode:selectedClass}).catch(()=>{});
+    }catch{}
+  }
+
   async function acquireListeningLease(studentRef, selectedClass) {
-    if (!navigator.locks?.request) return;
+    if (!navigator.locks?.request) {observeLobbyDecision("substitute_tab_owner","locks_unavailable",selectedClass);return;}
     const key = studentPointer(studentRef, selectedClass);
     if (listeningLease?.key === key) return;
     if (pendingListeningLease?.key === key) return pendingListeningLease.result;
@@ -291,11 +309,13 @@
     const result = new Promise((resolve, reject) => {
       navigator.locks.request(key, { ifAvailable: true }, lock => {
         if (!lock) {
+          observeLobbyDecision("substitute_tab_owner","blocked",selectedClass);
           reject(Error('Bài đang mở ở tab khác. Hãy quay lại tab đó hoặc đóng tab đó trước khi thử lại.'));
           return;
         }
         return new Promise(release => {
           listeningLease = { key, release };
+          observeLobbyDecision("substitute_tab_owner","acquired",selectedClass);
           resolve();
         });
       }).catch(reject);
