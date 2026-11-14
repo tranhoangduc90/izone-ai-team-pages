@@ -59,6 +59,18 @@ test('Phiếu mở bản Pages trước API phiên bản; tab mở lâu cập nh
   assert.ok(openingRequest>=0&&openingRequest<versionRequestOnWorksheet,'Mở phiếu bắt đầu trước kiểm phiên bản nền');
   assert.ok(!requests.some(path=>/\/(session-review\.js|course-skills\.js|journey\.css)$/.test(path)),
    'Màn chọn học viên không tải chữa bài, tổng quan kỹ năng hay CSS Hành trình');
+  const worksheet='\/izone-ai-team-pages\/progress-log\/thuy.html';
+  const worksheetUrl=origin+worksheet+'?presentation=thuy#assignment='+fakeToken;
+  const missingModule=/\/releases\/[^/]+\/progress-log\/app\.js$/;
+  await page.route(missingModule,route=>route.abort('internetdisconnected'));
+  await page.goto(worksheetUrl);
+  await page.getByText('Chưa tải được giao diện Phiếu. Kiểm tra kết nối rồi thử lại.').waitFor({timeout:5000});
+  const retry=page.getByRole('link',{name:'Tải lại Phiếu'});
+  assert.equal(await retry.evaluate(link=>link.href),worksheetUrl);
+  await page.unroute(missingModule);
+  await retry.click();
+  await page.locator('#identityView').waitFor({state:'visible',timeout:5000});
+  assert.equal(page.url(),worksheetUrl);
   requests.length=0;
   await page.goto(origin+'/izone-ai-team-pages/progress-log/student.html?release-test=1');await page.locator('#portalClass:not([disabled])').selectOption('1294');await page.locator('#portalStudent:not([disabled])').selectOption(a);await page.locator('#portalContinue').click();
   const packageRequest=requests.findIndex(path=>path.includes('/releases/'+old+'/'));

@@ -4,9 +4,35 @@ const match=new URL(script.src||script.dataset.releaseSource,location.origin).pa
 if(match){
  const canonical=match[1]+'/'+location.pathname.split('/').at(-1);
  window.PROGRESS_LOG_RELEASE={version:match[2],root:match[1]+'/',entry:location.pathname.split('/').at(-1)};
+ const worksheet=['index.html','thuy.html'].includes(window.PROGRESS_LOG_RELEASE.entry);
+ if(worksheet){
+  const appPath=new URL('./app.js',new URL(script.src||script.dataset.releaseSource,location.origin)).pathname;
+  function reportStartupFailure(event){
+   const target=event.target;
+   if(target?.tagName!=='SCRIPT'||target.type!=='module'||new URL(target.src).pathname!==appPath)return;
+   window.removeEventListener('error',reportStartupFailure,true);
+   const showRetry=()=>{
+    const notice=document.getElementById('notice');
+    if(!notice||!document.body.classList.contains('progress-starting'))return;
+    const retry=document.createElement('a');
+    retry.textContent='Tải lại Phiếu';
+    retry.href=canonical+location.search+location.hash;
+    retry.addEventListener('click',event=>{
+     if(retry.href!==location.href)return;
+     event.preventDefault();
+     location.reload();
+    });
+    notice.textContent='Chưa tải được giao diện Phiếu. Kiểm tra kết nối rồi thử lại.';
+    notice.after(retry);
+   };
+   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',showRetry,{once:true});
+   else showRetry();
+  }
+  window.addEventListener('error',reportStartupFailure,true);
+ }
  const publicToken=new URLSearchParams(location.hash.slice(1)).get('assignment');
  const api=window.PROGRESS_LOG_CONFIG?.API_BASE_URL;
- if(api&&['index.html','thuy.html'].includes(window.PROGRESS_LOG_RELEASE.entry)&&
+ if(api&&worksheet&&
     /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(publicToken||'')){
   const request=fetch(api+'/api/learning/assignments/open',{
    method:'POST',headers:{'Content-Type':'application/json'},
