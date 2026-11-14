@@ -26,6 +26,7 @@
       "tests/k67-audio-incidents-browser.mjs",
       "tests/term-test-k67-result-details.mjs",
       "tests/term-teacher-interrupted-listening-browser.mjs",
+      "tests/substitute-teacher-interrupted-listening-browser.mjs",
       "tests/term-test-result-details.mjs",
       "tests/term-test-result-details-browser.mjs",
       "tests/term-demo-reopen.cjs",

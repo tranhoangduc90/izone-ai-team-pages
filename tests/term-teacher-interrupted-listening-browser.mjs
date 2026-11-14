@@ -7,7 +7,19 @@ const playwright = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : 'playwright');
 const { chromium } = playwright.chromium ? playwright : playwright.default;
 
-test('Teacher K67 switches from a complete result to a student with interrupted Listening', async t => {
+const cases = [
+  { slug: 'term-test-1', tasks: [2], missing: 'listening', tagged: true },
+  { slug: 'term-test-2', tasks: [1, 2], missing: 'listening', tagged: true },
+  { slug: 'mini-test-lesson-5', tasks: [], missing: 'listening', tagged: true },
+  { slug: 'term-test-1-k56', tasks: [2], missing: 'listening', raw: true },
+  { slug: 'term-test-2-k56', tasks: [1], missing: 'listening', raw: true, tagged: true },
+  { slug: 'mini-test-k56', tasks: [2], missing: 'listening', raw: true },
+  { slug: 'pretest-lesson-16', tasks: [], missing: 'listening', tagged: true },
+  { slug: 'pretest-lesson-16', tasks: [], missing: 'reading' }
+];
+
+for (const { slug, tasks, missing, raw, tagged } of cases) {
+test(`Teacher ${slug} opens the correct student with no ${missing} result`, async t => {
   const server = await serve();
   t.after(() => server.close());
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -19,7 +31,8 @@ test('Teacher K67 switches from a complete result to a student with interrupted 
 
   const reviewer = { email: 'teacher@fixture.test', displayName: 'Giảng viên thử', role: 'teacher' };
   const cls = { id: '9999', name: 'IC9999', accessMode: 'assigned_teacher', isAssignedTeacher: true };
-  const exam = { slug: 'term-test-2', title: 'Term Test 2', version: 1 };
+  const isMiniK56 = slug === 'mini-test-k56';
+  const exam = { slug, title: 'Đề kiểm thử', version: 1, scoreMode: raw ? 'raw' : 'band', writingTasks: tasks };
   const section = (answer, band) => ({
     correct: 1, total: 1, band,
     details: [{ number: 1, studentAnswer: answer, correctAnswer: answer, result: 'correct' }]
@@ -29,10 +42,13 @@ test('Teacher K67 switches from a complete result to a student with interrupted 
     result: { listening: section('Listening A', 7), reading: section('Reading A', 7) }
   };
   const interrupted = {
-    ref: '70000000-0000-4000-8000-000000000002', name: 'Học viên B', status: 'completed',
-    completedAt: '2026-11-14T13:20:52Z',
-    result: { listening: null, listeningStatus: 'interrupted', reading: section('Reading B', 6.5) },
-    writing: { status: 'ready', task1Score: 6, task2Score: 5, writingScore: 5.5 }
+    ref: '70000000-0000-4000-8000-000000000002', name: 'Học viên B',
+    status: raw && !tagged ? 'incomplete' : 'completed',
+    completedAt: raw && !tagged ? null : '2026-11-14T13:20:52Z',
+    result: { listening: section('Listening B', 6.5), reading: section('Reading B', 6.5),
+      [missing]: null, ...(tagged ? { listeningStatus: 'interrupted' } : {}) },
+    writing: { status: tasks.length ? 'ready' : 'not_submitted', task1Score: 6, task2Score: 5, writingScore: 5.5,
+      ...(isMiniK56 ? { lmsUrl: `https://ducizone.ddns.net/writing/shared/writing-essays/${'a'.repeat(48)}/view?v=1` } : {}) }
   };
   const requestedTasks = [];
   await page.route('**/*', async route => {
@@ -56,39 +72,51 @@ test('Teacher K67 switches from a complete result to a student with interrupted 
     return route.fulfill({ status: 404, json: { ok: false } });
   });
 
-  const url = `${server.base}term-tests/teacher/?class=${cls.name}&test=${exam.slug}`;
+  const entry = raw ? 'teacher-k56/' : slug === 'pretest-lesson-16' ? 'teacher/pretest.html' : 'teacher/';
+  const url = `${server.base}term-tests/${entry}?class=${cls.name}&test=${exam.slug}`;
   await page.goto(`${url}&student=${previous.ref}`);
   const result = page.locator('#studentView');
   await result.getByRole('heading', { name: previous.name }).waitFor();
-  await result.getByText('1/1 · Band 7', { exact: true }).first().waitFor();
+  await result.getByText(raw ? '1/1 câu đúng' : '1/1 · Band 7', { exact: true }).first().waitFor();
   await page.getByRole('tab', { name: interrupted.name }).click();
 
   assert.deepEqual(errors, []);
   assert.equal(await result.locator('h2').textContent(), interrupted.name);
   assert.equal(new URL(page.url()).searchParams.get('student'), interrupted.ref);
-  await result.getByText('Gián đoạn', { exact: true }).waitFor();
-  assert.equal(await result.locator('details[data-skill="Listening"]').count(), 0);
-  const reading = result.locator('details[data-skill="Reading"]');
-  await reading.locator('summary').click();
-  await reading.getByText('Reading B', { exact: true }).first().waitFor();
-  for (const task of [1, 2]) {
-    await result.getByRole('button', { name: new RegExp(`Xem bài chấm chi tiết Writing Task ${task}`) }).click();
+  const missingLabel = tagged ? 'Gián đoạn' : 'Chưa có kết quả';
+  await result.getByText(missingLabel, { exact: true }).waitFor();
+  assert.equal(await result.locator(`details[data-skill="${missing}" i]`).count(), 0);
+  const available = missing === 'listening' ? 'Reading' : 'Listening';
+  const sectionDetails = result.locator(`details[data-skill="${available}"]`);
+  await sectionDetails.locator('summary').click();
+  await sectionDetails.getByText(`${available} B`, { exact: true }).first().waitFor();
+  const writingDetails = isMiniK56 ? [] : tasks;
+  for (const task of writingDetails) {
+    await result.getByRole('button', { name: new RegExp(`Xem bài chấm chi tiết (?:Writing )?Task ${task}`) }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByText(`${interrupted.name} · Kết quả Writing`).waitFor();
     await dialog.getByText(`Writing B, Task ${task}`, { exact: true }).waitFor();
     await dialog.getByRole('button', { name: 'Đóng bài chấm Writing' }).click();
   }
-  assert.deepEqual(requestedTasks, [1, 2].map(task => [cls.name, exam.slug, interrupted.ref, task]));
+  assert.deepEqual(requestedTasks, writingDetails.map(task => [cls.name, exam.slug, interrupted.ref, task]));
+  if (isMiniK56) {
+    const link = result.getByRole('link', { name: 'Mở bài chữa từng câu trên LMS' });
+    assert.equal(await link.getAttribute('href'), interrupted.writing.lmsUrl);
+  }
+  if (interrupted.status === 'incomplete') {
+    assert.equal(await result.getByRole('button', { name: 'Xem lại toàn bộ bài làm' }).isVisible(), false);
+  }
 
   await page.reload();
   await result.getByRole('heading', { name: interrupted.name }).waitFor();
-  await result.getByText('Gián đoạn', { exact: true }).waitFor();
+  await result.getByText(missingLabel, { exact: true }).waitFor();
 
   await page.getByRole('tab', { name: 'Tổng quan' }).click();
   const row = page.getByRole('row').filter({ hasText: interrupted.name });
-  await row.getByText('Gián đoạn', { exact: true }).waitFor();
+  await row.getByText(tagged ? 'Gián đoạn' : '—', { exact: true }).first().waitFor();
   await row.getByRole('button', { name: 'Xem', exact: true }).click();
   await result.getByRole('heading', { name: interrupted.name }).waitFor();
-  await result.getByText('1/1 · Band 6.5', { exact: true }).waitFor();
+  await result.getByText(raw ? '1/1 câu đúng' : '1/1 · Band 6.5', { exact: true }).waitFor();
   assert.deepEqual(errors, []);
 });
+}
