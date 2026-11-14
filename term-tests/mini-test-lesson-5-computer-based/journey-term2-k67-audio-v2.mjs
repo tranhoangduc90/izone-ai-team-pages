@@ -593,8 +593,15 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
           const retryKey=pending.section==='writing'?'writingRetry':'lrRetry';
           const priorRetries=record[retryKey]?.operationId===pending.operationId?record[retryKey].count:0;
           const canRetryWithoutHold=slug===term2Slug&&pending.section==='writing';
-          if ((held||canRetryWithoutHold) && error.reasonCode==='SERVER_BEFORE_DEADLINE' && Number.isSafeInteger(error.retryAfterMs)
-              && error.retryAfterMs>0 && error.retryAfterMs<=3_000 && priorRetries<3) {
+          const retryBeforeDeadline = (held||canRetryWithoutHold) && error.reasonCode==='SERVER_BEFORE_DEADLINE'
+              && Number.isSafeInteger(error.retryAfterMs) && error.retryAfterMs>0 && error.retryAfterMs<=3_000 && priorRetries<3;
+          if (canRetryWithoutHold && error.status === 409) {
+            const reasonCode = /^[A-Z0-9_]{1,80}$/.test(error.reasonCode || '') ? error.reasonCode : 'UNKNOWN_CONFLICT';
+            observeSubmission('term2_writing_sync_conflict', pending, {status:409, reasonCode,
+              decision:retryBeforeDeadline?'retry_same_operation':held?'held_for_review':'review_required',
+              retryCount:priorRetries, ...(retryBeforeDeadline?{retryAfterMs:error.retryAfterMs}:{})}, false);
+          }
+          if (retryBeforeDeadline) {
             record[retryKey]={operationId:pending.operationId,count:priorRetries+1};
             await persist().catch(()=>{});
             retryAt=performance.now()+error.retryAfterMs;
