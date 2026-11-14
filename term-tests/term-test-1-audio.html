@@ -54,9 +54,12 @@
   <audio id="audioTest"></audio>
   <audio id="audioMain"></audio>
 
+  <script src="./shared/exam-journal/public-audio-session.js?v=20261114-v1"></script>
   <script type="module">
-    import { mountPaperPlayback } from './k67-shared/paper-playback-v1.mjs';
-    import { mountPaperAudio } from './k67-shared/paper-audio.mjs?v=20261112-k67-paper-audio';
+    import { mountPaperPlayback } from './k67-shared/paper-playback-v1.mjs?journalAudio=20261114-v1';
+    import { mountPaperAudio } from './k67-shared/paper-audio.mjs?journalAudio=20261114-v1&v=20261112-k67-paper-audio';
+    const journal = window.IZONE_PUBLIC_AUDIO_JOURNAL?.open('term-test-1','paper');
+    const observe = ({outcome,...fields}) => journal?.record(outcome,fields);
     const audioTest = document.getElementById('audioTest');
     const audioMain = document.getElementById('audioMain');
 
@@ -83,10 +86,15 @@
       return isAudioFullyLoaded && currentMins >= startMins && currentMins < endMins;
     }
 
+    let previousWindowDecision;
     function checkTimeWindow() {
       if (!isAudioFullyLoaded || playback.hasStarted()) return;
       playback.refresh();
       const allowed = startAllowed();
+      if (allowed !== previousWindowDecision) {
+        previousWindowDecision = allowed;
+        observe({outcome:allowed?'start_window_allowed':'start_window_locked',mode:'exam',actor:'schedule'});
+      }
       timeNotice.style.color = allowed ? "#4CAF50" : "#d32f2f";
       timeNotice.textContent = allowed ? "Đã đến giờ thi. Có thể bắt đầu." : "Nút Phát Audio chỉ mở từ 18h45 - 19h00";
     }
@@ -101,7 +109,12 @@
 
     function playTestAudio() {
       audioTest.currentTime = 0;
-      audioTest.play();
+      observe({outcome:'play_requested',mode:'preview',actor:'operator',positionMs:0});
+      audioTest.play().then(
+        () => observe({outcome:'playing',mode:'preview',actor:'operator',positionMs:Math.round(audioTest.currentTime*1000)}),
+        error => observe({outcome:'play_rejected',mode:'preview',actor:'operator',
+          errorCode:error?.name==='NotAllowedError'?'PLAY_NOT_ALLOWED':'PLAY_FAILED'})
+      );
       testStatus.innerText = "Đang phát 30s đầu...";
       testStatus.style.color = "#FF9800";
     }
@@ -125,6 +138,7 @@
     const playback = mountPaperPlayback({
       audio: audioMain, preview: audioTest, button: btnPlayMain, status: statusDiv,
       timeAllowed: startAllowed,
+      observe,
       onStart() {
         btnCheckVol.hidden = true;
         document.getElementById('progress-wrapper').hidden = true;
@@ -136,6 +150,7 @@
     // Khởi động
     mountPaperAudio({
       slug: 'term-test-1',
+      observe,
       onReady(objectUrl) {
         audioTest.src = objectUrl;
         audioMain.src = objectUrl;

@@ -52,10 +52,13 @@
   <audio id="audioTest"></audio>
   <audio id="audioMain"></audio>
 
+  <script src="./shared/exam-journal/public-audio-session.js?v=20261114-v1"></script>
   <script type="module">
-    import { mountPaperPlayback } from './k67-shared/paper-playback-v1.mjs';
-    import { mountPaperAudio } from './k67-shared/paper-audio.mjs?v=20261112-k67-paper-audio';
+    import { mountPaperPlayback } from './k67-shared/paper-playback-v1.mjs?journalAudio=20261114-v1';
+    import { mountPaperAudio } from './k67-shared/paper-audio.mjs?journalAudio=20261114-v1&v=20261112-k67-paper-audio';
 
+    const journal = window.IZONE_PUBLIC_AUDIO_JOURNAL?.open('mini-test-lesson-5','paper');
+    const observe = ({outcome,...fields}) => journal?.record(outcome,fields);
     const audioTest = document.getElementById('audioTest');
     const audioMain = document.getElementById('audioMain');
 
@@ -79,7 +82,12 @@
 
     function playTestAudio() {
       audioTest.currentTime = 0;
-      audioTest.play();
+      observe({outcome:'play_requested',mode:'preview',actor:'operator',positionMs:0});
+      audioTest.play().then(
+        () => observe({outcome:'playing',mode:'preview',actor:'operator',positionMs:Math.round(audioTest.currentTime*1000)}),
+        error => observe({outcome:'play_rejected',mode:'preview',actor:'operator',
+          errorCode:error?.name==='NotAllowedError'?'PLAY_NOT_ALLOWED':'PLAY_FAILED'})
+      );
       testStatus.innerText = "Đang phát 30s đầu...";
       testStatus.style.color = "#FF9800";
     }
@@ -102,6 +110,7 @@
 
     const playback = mountPaperPlayback({
       audio: audioMain, preview: audioTest, button: btnPlayMain, status: statusDiv,
+      observe,
       onStart() {
         btnCheckVol.hidden = true;
         document.getElementById('progress-wrapper').hidden = true;
@@ -112,6 +121,7 @@
     // Khởi động
     mountPaperAudio({
       slug: 'mini-test-lesson-5',
+      observe,
       onReady(objectUrl) {
         audioTest.src = objectUrl;
         audioMain.src = objectUrl;
