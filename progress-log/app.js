@@ -1,7 +1,6 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
 import {createReadCoordinator} from './read-coordinator.js';
 import {pilotEntry} from './pilot-entry.js?rev=20261022-official-v2';
-import {renderSessionReview} from './session-review.js?rev=20261104-the25-v1';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
 import {dropdownOptionLabel} from './dropdown-option-label.js';
 import {buildCompactExercises} from './compact-exercises.js?rev=20261019-quoted-notes-v1';
@@ -30,7 +29,17 @@ import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRemembered
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 const THUY_UI=location.pathname.endsWith('/thuy.html')||new URLSearchParams(location.search).get('presentation')==='thuy';
-const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261102-the24-v1'):null;
+let thuySkills;
+let renderSessionReview;
+let journeyStyle;
+function loadJourneyStyle(){
+  if(journeyStyle)return;
+  journeyStyle=document.createElement('link');
+  journeyStyle.rel='stylesheet';
+  journeyStyle.href=new URL('./journey.css?rev=20261001-journey-loading-v1',import.meta.url);
+  journeyStyle.addEventListener('error',()=>{journeyStyle.remove();journeyStyle=null;},{once:true});
+  document.head.append(journeyStyle);
+}
 if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');for(const path of ['./thuy-live/styles.css?rev=20261022-final-choice','./student-session-dashboard.css?rev=20261028-v1','./the24.css?rev=20261104-the25-v1']){const css=document.createElement('link');css.rel='stylesheet';css.href=new URL(path,import.meta.url);document.head.append(css);}}
 const AUTOSAVE_IDLE_MIN_MS = 5_000;
 const AUTOSAVE_IDLE_MAX_MS = 12_000;
@@ -1632,6 +1641,7 @@ async function loadThuyStudentSkills(journey,{signal,current}){
   if(!root.hasChildNodes())root.textContent='Đang đọc kết quả bốn kỹ năng…';
   const records=new Map((journey.skillForms||[]).map(form=>[form.sessionNumber,form])),finals=journey.skillForms?[]:journey.sessions.filter(session=>['complete','incomplete'].includes(session.completeness));
   try{
+    thuySkills??=await import('./thuy-live/course-skills.js?rev=20261102-the24-v1');
     for(let offset=0;offset<finals.length;offset+=3){
       const details=await Promise.all(finals.slice(offset,offset+3).map(async session=>{
         const {detail}=await apiRequest('/student/course-session-detail',{body:{publicToken:state.publicToken,studentRef:journey.student.studentRef,identityConfirmed:true,sessionNumber:session.sessionNumber},signal});
@@ -1681,6 +1691,8 @@ async function openStudentJourneyDetail(session) {
     const detail=payload.detail;
     if (detail.student?.studentRef!==studentRef||String(detail.classId)!==String(classId)
       ||detail.sessionNumber!==session.sessionNumber) throw new Error('Dữ liệu bài làm không khớp học viên và buổi đã chọn.');
+    ({renderSessionReview}=await import('./session-review.js?rev=20261104-the25-v1'));
+    if (!current()) return;
     renderSessionReview(elements.journeyDetailContent,THUY_UI?legacyFeedbackForView(detail):detail,{session,studentView:true});elements.journeyDetailStatus.textContent='Bài đã nộp · chỉ để xem lại.';
   } catch(error) {
     if (!current()) return;
@@ -1700,6 +1712,7 @@ async function openIntegratedJourney(returnView) {
     :returnView==='resultView'?state.attempt?.identity?.studentRef:state.confirmedStudent?.studentRef;
   const studentRef = activeStudent();
   if (!studentRef) return;
+  loadJourneyStyle();
   const assignment = state.assignment;
   const publicToken = state.publicToken;
   const generation = (state.journeyGeneration || 0) + 1;
@@ -1867,6 +1880,8 @@ async function startAttempt({selection=null,pinned=false}={}) {
       if(detail?.submissionId){
         if(detail.student.studentRef!==chosenStudent.studentRef||String(detail.classId)!==String(state.assignment.class.id)
           ||detail.sessionNumber!==state.assignment.sessionNumber)throw Error('Bài đã nộp chưa khớp người, lớp và buổi.');
+        ({renderSessionReview}=await import('./session-review.js?rev=20261104-the25-v1'));
+        if(state.confirmedStudent!==chosenStudent)return;
         state.thuyReadOnly=detail;state.responses=detail.responses||{};state.checkpointSubmissions=new Map();
         if(courseIdentity){if(!pinned)await courseIdentity.commit(identityContext,{automatic:Boolean(selection),remember:elements.rememberStudent.checked&&officialStudent(chosenStudent)});courseIdentity.pin(chosenStudent.studentRef);stampProgressStudent();}
         elements.studentNameLabel.textContent=chosenStudent.name;elements.formContextLabel.textContent=state.assignment.class.name+' · Buổi '+state.assignment.sessionNumber;

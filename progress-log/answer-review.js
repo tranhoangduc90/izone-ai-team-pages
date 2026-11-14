@@ -15,6 +15,13 @@ function plain(value){
   return String(value);
 }
 function selected(value,id){return Array.isArray(value)?value.includes(id):value===id;}
+function referenceLabel(item,value){
+  const option=item.options?.find(option=>option.id===value);
+  if(option)return option.label;
+  // Legacy survey references may contain published prose even on a choice item.
+  const internalId=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(String(value));
+  return item.options?.length&&internalId?answerOptionLabel(item,value):plain(value);
+}
 export function reviewItems(detail,{studentView=false}={}){
   const responses=detail.responses||{};
   return (detail.definition?.blocks||[]).map(block=>{
@@ -50,7 +57,7 @@ export function reviewItems(detail,{studentView=false}={}){
       if(!survey&&result?.slotResults)answer+='<ol class="reviewAnswerList">'+result.slotResults.map(slot=>'<li><small>'+esc(c.responseLabels?.[slot.slot]||'Ô '+(slot.slot+1))+'</small><strong>'+esc(verdicts[slot.verdict])+'</strong></li>').join('')+'</ol>';
       if(survey&&applicable&&result){
         if(result.referenceSlots)answer+='<ol class="reviewAnswerList">'+result.referenceSlots.filter(slot=>slot.expectedAnswer.length).map(slot=>'<li><small>'+esc(c.responseLabels?.[slot.slot]||'Ô '+(slot.slot+1))+' · Đáp án tham khảo</small><strong>'+esc(slot.expectedAnswer.join(' / '))+'</strong></li>').join('')+'</ol>';
-        else if(result.expectedAnswer!=null){const refs=Array.isArray(result.expectedAnswer)?result.expectedAnswer:[result.expectedAnswer];answer+='<p class="reviewAnswer"><small>Đáp án tham khảo</small><strong>'+esc(refs.map(value=>item.options?.length?answerOptionLabel(item,value):plain(value)).join(' / '))+'</strong></p>';}
+        else if(result.expectedAnswer!=null){const refs=Array.isArray(result.expectedAnswer)?result.expectedAnswer:[result.expectedAnswer];answer+='<p class="reviewAnswer"><small>Đáp án tham khảo</small><strong>'+esc(refs.map(value=>referenceLabel(item,value)).join(' / '))+'</strong></p>';}
         if(result.explanation&&(result.expectedAnswer!=null||result.referenceSlots?.some(slot=>slot.expectedAnswer.length)))answer+='<p class="reviewInstructions">Giải thích: '+esc(result.explanation)+'</p>';
       }
       return '<article data-review-item="'+esc(item.itemVersionId)+'"><div class="reviewQuestionTop"><span class="reviewQuestionNumber">'+esc(item.displayNumber??item.position??index+1)+'</span><div><small>CÂU '+esc(item.displayNumber??item.position??index+1)+(item.required?' · BẮT BUỘC':'')+'</small><h3>'+esc(item.prompt)+'</h3></div></div>'+((item.helpText||item.instructions)?'<p class="reviewInstructions">'+esc(item.helpText||item.instructions)+'</p>':'')+answer+'<p class="reviewVerdict '+esc(verdict)+'">'+esc(label+score)+'</p></article>';

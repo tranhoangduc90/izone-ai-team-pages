@@ -42,7 +42,7 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   if(path==='/student/course-journey'){if(journeyFailure==='denied')return send({ok:false,message:'Quyền đọc đã bị thu hồi'},403);if(journeyFailure)return send({ok:false,message:'Nguồn danh sách tạm lỗi'},503);return send({ok:true,journey:{student:person(body.studentRef),class:{classId:'1294',name:'IC2305'},summary:{totalSessions:11,submittedComplete:0,attendedSessions:0,availableReports:0},sessions:[{assignmentId,publicToken:assignmentId,sessionNumber:11,sessionDate:'2026-01-01',title:definition.title,assignmentStatus:'published',submissionWindow:window(),completeness:state(body.studentRef).final?'incomplete':null}],reports:[]}});}
   if(path==='/student/course-session-detail'){
    const s=state(body.studentRef);if(!s.final)return send({ok:false,error:'JOURNEY_SUBMISSION_NOT_READY',message:'Buổi này chưa có bài nộp cuối'},409);
-   return send({ok:true,detail:{classId:'1294',sessionNumber:11,student:person(body.studentRef),submissionId:uid(40),definition,responses:s.draft,gradingItems:result(s).items.map(item=>item.itemVersionId===uid(90)?{...item,expectedAnswer:['Tham khảo sau khi mở lại']}:item),status:'incomplete'}});
+   return send({ok:true,detail:{classId:'1294',sessionNumber:11,student:person(body.studentRef),submissionId:uid(40),definition,responses:s.draft,gradingItems:result(s).items.map(item=>item.itemVersionId===uid(90)?{...item,expectedAnswer:['Tham khảo sau khi mở lại','B',uid(99)]}:item),status:'incomplete'}});
   }
   if(path==='/attempts/resume')return route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({ok:false,error:'ATTEMPT_NOT_FOUND'})});
   if(path==='/attempts/start'){
@@ -113,7 +113,8 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   const starts=requests.filter(r=>r.path==='/attempts/start').length;await page.close();page=await ctx.newPage();await page.clock.install({time:new Date('2026-01-01T12:00:00Z')});await page.goto(url);await page.locator('#formView').waitFor();
   await page.locator('#questionList .studentDetailHeader').waitFor();assert.equal(requests.filter(r=>r.path==='/attempts/start').length,starts);
   assert.equal(await page.locator('#studentDashboardSessions').isVisible(),false,'Xem lại bài chỉ đọc cũng không lặp danh sách buổi học');
-  await page.getByText('Tham khảo sau khi mở lại',{exact:true}).waitFor();
+  const reference=page.locator('[data-review-item="'+uid(90)+'"] .reviewAnswer strong').last();
+  assert.equal(await reference.textContent(),'Tham khảo sau khi mở lại / Phát âm và trọng âm / Không đối chiếu được lựa chọn');
   assert.equal(requests.filter(r=>r.path==='/attempts/submit').length,1);assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
   if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'learner-completed.png'),fullPage:true});}
   closed=true;journeyFailure=true;await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.waitForURL('**/student.html');await page.goto(url);
