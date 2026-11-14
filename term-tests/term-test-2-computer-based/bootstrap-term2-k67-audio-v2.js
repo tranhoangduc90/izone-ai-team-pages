@@ -1285,6 +1285,41 @@
     previewAudio.volume = volume;
     saveState({ audioVolume: volume });
   });
+  let startSequence = 0;
+  function observeTerm2Start() {
+    if (testConfig.slug !== 'term-test-2' || appConfig.EXAM_JOURNAL_ENABLED !== true) return () => {};
+    try {
+      const endpoint = appConfig.EXAM_JOURNAL_BASE_URL || appConfig.API_BASE_URL + '/api/term-tests/' + testConfig.slug;
+      const key = JSON.stringify([new URL(endpoint, location.href).href, testConfig.slug]);
+      const owner = {examSessionToken: state.examSessionToken, generation: Number(state.generation || 0)};
+      const classAtStart = classCode;
+      const commandSequence = ++startSequence;
+      const queue = [];
+      let commandStep = 0, timer;
+      const schedule = () => { if (!timer) timer = setTimeout(flush, 500); };
+      function flush() {
+        timer = undefined;
+        try {
+          const journal = window[Symbol.for('izone.examJournal.connections.v1')]?.get(key);
+          const matches = owner.examSessionToken === state.examSessionToken && owner.generation === Number(state.generation || 0);
+          while (matches && queue.length && journal?.recordK67Submission?.(owner, queue[0].type, queue[0].data)) queue.shift();
+          if (!queue.length) return;
+          if (performance.now() - queue[0].data.checkpointState.elapsedPageMs < 12000) { schedule(); return; }
+          const rows = queue.splice(0);
+          if (classCode === classAtStart) void journal?.recordInitialization?.(rows, {classCode: classAtStart})?.catch(() => {});
+        } catch { /* The exam does not depend on telemetry. */ }
+      }
+      return (phase, detail = {}) => {
+        if (queue.length >= 16) return;
+        queue.push({type: 'audio_observed', data: {action: 'k67_term2_start', checkpointState: {
+          telemetryVersion: 1, assetId: testConfig.slug, phase, commandSequence, commandStep: ++commandStep,
+          elapsedPageMs: Math.round(performance.now()), ...detail
+        }}});
+        schedule();
+      };
+    } catch { return () => {}; }
+  }
+
   elements.bootstrapStart.addEventListener('click', async () => {
     if(miniJourney){
       if(preparing||elements.bootstrapStart.disabled)return;
@@ -1308,12 +1343,15 @@
     const startToken = state.examSessionToken;
     const startOwner = window.K67_AUDIO_OWNER;
     const startGeneration = Number(state.generation)||0;
+    const observe = observeTerm2Start();
+    observe('start_requested', {cache: audioFromCache ? 'cache' : 'network'});
     try {
-      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller-term2-audio-v2.js?rev=20261016-reading-recovery-v1&termEof=20261108-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':'&termsEof=20261107-v1'));
+      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller-term2-journal-v1.js?rev=20261016-reading-recovery-v1&termEof=20261108-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':'&termsEof=20261107-v1'));
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;
       const ownerStart=await window.K67_AUDIO_OWNER?.beforeStart()||{};
+      observe('start_guard_passed');
       started = await apiRequest(`/api/term-tests/${testConfig.slug}/session/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1336,7 +1374,8 @@
       if(!window.K67_AUDIO_ENVIRONMENT)await loadScript('../k67-shared/audio-environment.js?rev=20261015-owner-v1');
       window.K67_ACTIVE_LISTENING?.stop();
       window.K67_ACTIVE_LISTENING = window.K67_LISTENING_PROTECTION({audio: officialAudio,
-        session: started, slug: testConfig.slug, apiBase: appConfig.API_BASE_URL, generation: Number(started.generation) || 0});
+        session: started, slug: testConfig.slug, apiBase: appConfig.API_BASE_URL, generation: Number(started.generation) || 0,
+        observePlayback: observe});
       let decrypted;
       try { decrypted = await decryptOfficialAudio(encryptedAudio, started); }
       catch (error) {
@@ -1372,6 +1411,7 @@
         window.K67_ACTIVE_LISTENING?.requireEof(createListeningEofGate({ audio: officialAudio, anchorSeconds: resumeAt, observeDecision }));
       }
       officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
+      observe('player_ready', {readyState: officialAudio.readyState});
       saveState({
         listeningStartedAt: started.listeningStartedAt,
         listeningDeadlineAt: started.listeningDeadlineAt,
@@ -1389,16 +1429,25 @@
         && startOwner?.canPlay() !== false && view?.isConnected && !view.hidden;
       const protection = window.K67_ACTIVE_LISTENING;
       if (reviewOnly) {
+        observe('review_only');
         view?.dispatchEvent(new Event('term-test:listening-audio-ready'));
       } else if (stillOwnsListening() && resumeAt < officialAudio.duration) {
         const play = async () => {
           if (!stillOwnsListening() || view.dataset.listeningSubmitting === 'true') return;
-          if (protection?.isHeld()) await protection.start();
-          else await officialAudio.play();
-          if (!stillOwnsListening()) { officialAudio.pause(); return; }
+          observe('play_requested');
+          try {
+            if (protection?.isHeld()) await protection.start();
+            else await officialAudio.play();
+          } catch (error) {
+            observe('play_rejected', {reason: error?.name === 'NotAllowedError' ? 'play_not_allowed' : 'play_failed'});
+            throw error;
+          }
+          if (!stillOwnsListening()) { observe('start_discarded', {reason: 'scope_changed_after_play'}); officialAudio.pause(); return; }
           if (protection?.isHeld() || officialAudio.paused) return;
+          observe('play_active', {positionSeconds: officialAudio.currentTime});
           protection?.arm();
           view.dispatchEvent(new Event('term-test:listening-audio-ready'));
+          observe('answers_unlock_signaled');
         };
         try { await play(); }
         catch {
@@ -1417,13 +1466,14 @@
             });
           }
         }
-      }
+      } else if (!stillOwnsListening()) observe('start_discarded', {reason: 'scope_changed_before_play'});
       if (audioScope) {
         const status = document.createElement('p'); status.id = 'k67AudioCacheStatus'; status.textContent = audioCacheStatus;
         status.className='k67-cache-status';status.title=audioCacheStatus;
         document.querySelector('#listeningView .k67-inline-audio')?.append(status);
       }
     } catch (error) {
+      observe('start_failed', {reason: openingApp ? 'app_unavailable' : 'start_or_player_unavailable'});
       if (openingApp) {
         window.K67_ACTIVE_LISTENING?.stop();
         officialAudio?.pause();
