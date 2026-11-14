@@ -155,6 +155,13 @@ function formatSectionScore(section) {
     : formatBand(section.band);
 }
 
+function sectionScoreText(section, unavailableText = 'Chưa có kết quả') {
+  if (!section) return unavailableText;
+  return scoreMode() === 'raw'
+    ? `${section.correct}/${section.total} câu đúng`
+    : `${section.correct}/${section.total} · Band ${section.band}`;
+}
+
 function updateUrl() {
   const url = new URL(window.location.href);
   const selectedClass = getSelectedClass();
@@ -330,7 +337,8 @@ function renderOverviewRows() {
     const row = document.createElement('tr');
     const nameCell = document.createElement('td');
     nameCell.append(createNode('span', 'teacher-student-name', studentDisplayName(student)));
-    const listeningCell = createNode('td', 'teacher-band', result ? formatSectionScore(result.listening) : '—');
+    const listeningCell = createNode('td', 'teacher-band',
+      result?.listeningStatus === 'interrupted' && !result.listening ? 'Gián đoạn' : formatSectionScore(result?.listening));
     const readingCell = createNode('td', 'teacher-band', result ? formatSectionScore(result.reading) : '—');
     const writing = student.writing || { status: 'not_submitted' };
     const taskNumbers = configuredWritingTasks();
@@ -914,7 +922,9 @@ function savedProgressButton(student){
 }
 
 function renderStudentResult(student) {
-  if (!student || student.status !== 'completed' || !student.result) {
+  const result = student?.result;
+  const { listening, reading } = result || {};
+  if (!result || (student.status !== 'completed' && !listening && !reading)) {
     const empty = createNode('section', 'panel teacher-empty');
     empty.append(
       createNode('p', 'eyebrow', 'Kết quả cá nhân'),
@@ -926,7 +936,9 @@ function renderStudentResult(student) {
     return;
   }
 
-  const result = student.result;
+  const listeningScore = sectionScoreText(listening,
+    result.listeningStatus === 'interrupted' ? 'Gián đoạn' : undefined);
+  const readingScore = sectionScoreText(reading);
   const writing = student.writing || { status: 'not_submitted' };
   const isMini = state.selectedTestSlug === 'mini-test-k56';
   const miniLmsUrl = miniHomeworkLmsUrl(writing);
@@ -942,7 +954,8 @@ function renderStudentResult(student) {
   const reviewButton = createNode('button', 'button button-secondary teacher-attempt-review-button', 'Xem lại toàn bộ bài làm');
   reviewButton.type = 'button';
   reviewButton.dataset.fullAttemptStudent = student.ref;
-  reviewButton.hidden = configuredWritingTasks().length > 0 && writing.status === 'not_submitted';
+  reviewButton.hidden = student.status !== 'completed'
+    || (configuredWritingTasks().length > 0 && writing.status === 'not_submitted');
   reviewButton.addEventListener('click', () => openTeacherAttemptReview(student, reviewButton));
   heading.append(headingCopy, savedProgressButton(student), reviewButton);
 
@@ -960,12 +973,8 @@ function renderStudentResult(student) {
     writing.status === 'ready'
   ));
   summaryGrid.append(
-    addResultSummaryCard('Listening', scoreMode() === 'raw'
-      ? `${result.listening.correct}/${result.listening.total} câu đúng`
-      : `${result.listening.correct}/${result.listening.total} · Band ${result.listening.band}`),
-    addResultSummaryCard('Reading', scoreMode() === 'raw'
-      ? `${result.reading.correct}/${result.reading.total} câu đúng`
-      : `${result.reading.correct}/${result.reading.total} · Band ${result.reading.band}`),
+    addResultSummaryCard('Listening', listeningScore),
+    addResultSummaryCard('Reading', readingScore),
     ...writingSummaryCards,
     ...(configuredWritingTasks().length
       ? [addResultSummaryCard('Writing', isMini && writing.status === 'ready' && !isMiniLegacy
@@ -983,10 +992,8 @@ function renderStudentResult(student) {
   }
 
   const questionDetails = document.createElement('div');
-  questionDetails.append(
-    renderDetailBlock('Listening', result.listening.details),
-    renderDetailBlock('Reading', result.reading.details)
-  );
+  if (listening) questionDetails.append(renderDetailBlock('Listening', listening.details));
+  if (reading) questionDetails.append(renderDetailBlock('Reading', reading.details));
 
   const analysisGrid = createNode('div', 'analysis-grid');
   const bestCard = createNode('article', 'analysis-card best');
@@ -1018,8 +1025,8 @@ function renderStudentResult(student) {
   panel.append(heading, summaryGrid, questionDetails, analysisGrid, performanceWrap);
   commitResultSections(elements.studentView,panel,JSON.stringify([loginGeneration,state.selectedClassId,state.selectedTestSlug,student.ref,student.completedAt]),[
     {key:'heading',node:heading,value:[student,getSelectedClass(),getSelectedTest()]},
-    {key:'summary',node:summaryGrid,value:[result.listening.correct,result.listening.total,result.listening.band,result.reading.correct,result.reading.total,result.reading.band,writing]},
-    {key:'questions',node:questionDetails,value:[student.completedAt,result.listening,result.reading]},
+    {key:'summary',node:summaryGrid,value:[listeningScore,readingScore,writing]},
+    {key:'questions',node:questionDetails,value:[student.completedAt,listening,reading]},
     {key:'analysis',node:analysisGrid,value:result.performance},
     {key:'performance',node:performanceWrap,value:result.typeStats}
   ]);

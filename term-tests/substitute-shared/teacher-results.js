@@ -12,7 +12,7 @@ const pageTest=Object.keys(TITLES).find(slug=>location.pathname.includes(slug+'-
 const authView=createTeacherAuthState({panel:$('google-signin'),notice:$('login-status'),retry:initialize});
 const selectedTest=()=>$('test-select').value;
 const statusText=value=>({queued:'Chờ chấm Writing',processing:'Đang chấm Writing',ready:'Đã chấm Writing',incomplete:'Thiếu bài Writing; chưa có điểm tổng',failed:'Cần kiểm tra bài chấm'}[value]||'Chưa xác nhận');
-const portalText=value=>({not_applicable:'DEMO · không gửi Portal',pending:'Chờ đồng bộ Portal',waiting_destination:'Chờ khởi tạo điểm trên Portal',blocked:'Đồng bộ cần xử lý · chưa xác nhận ghi Portal',unknown:'Cần đối soát Portal · chưa xác nhận',synced:'Đã xác nhận đồng bộ Portal'}[value]||'Chưa xác nhận Portal');
+const portalText=value=>({not_applicable:'DEMO · không gửi Portal',pending:'Chờ đồng bộ Portal',waiting_destination:'Chờ khởi tạo điểm trên Portal',blocked:'Đồng bộ cần xử lý · chưa xác nhận ghi Portal',unknown:'Cần đối soát Portal · chưa xác nhận',synced:'Đã xác nhận đồng bộ Portal',listening_replacement_required:'Cần thi thay thế Listening'}[value]||'Chưa xác nhận Portal');
 const number=value=>typeof value==='number'&&Number.isFinite(value)?String(value):'—';
 const time=value=>value&&!Number.isNaN(Date.parse(value))?new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'—';
 function node(tag,text,className){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;}
@@ -43,7 +43,11 @@ function renderClasses(requested='ALL'){
  const classes=classesForTest();$('class-filter').replaceChildren(new Option('Tất cả lớp được phép','ALL'),...classes.map(code=>new Option(code,code)));
  $('class-filter').value=classes.includes(requested)?requested:'ALL';
 }
-function score(skill,row){const value=row.scores?.[skill];if(!value)return'—';return row.testSlug==='substitute-test-1-k56'?`${number(value.raw)}/${number(value.max)}`:`${number(value.band)}/9 (${number(value.raw)}/${number(value.max)} câu)`;}
+function score(skill,row){
+ if(skill==='listening'&&row.listeningStatus==='replacement_required')return 'Gián đoạn';
+ const value=row.scores?.[skill];if(!value)return '—';
+ return row.testSlug==='substitute-test-1-k56'?`${number(value.raw)}/${number(value.max)}`:`${number(value.band)}/9 (${number(value.raw)}/${number(value.max)} câu)`;
+}
 function appendPortalProjection(content,data){
  const p=data.portalProjection;if(!p)return;
  const skills=['listening','reading','writing'],maxima=data.testSlug.endsWith('k67')?[9,9,9]:[40,data.testSlug==='substitute-test-1-k56'?26:40,9];
@@ -102,11 +106,14 @@ async function openAttempt(attempt){
 function appendStudentSource(content,source,testSlug){
  const block=node('section',undefined,'student-source');block.append(node('h3','Bài làm gốc của học viên'));
  for(const [skill,title]of [['listening','Listening'],['reading','Reading']]){
-  const explanations=testSlug==='substitute-test-1-k67';
-  const part=node('details',undefined,'student-source-section'+(explanations?' detail-block':''));part.dataset.skill=title;part.append(node('summary',`${title} · đáp án đã nộp`));
   const saved=source?.[skill];
+  const interrupted=saved?.availability==='interrupted';
+  const explanations=testSlug==='substitute-test-1-k67'&&!interrupted;
+  const part=node('details',undefined,'student-source-section'+(explanations?' detail-block':''));
+  part.dataset.skill=title;part.append(node('summary',`${title} · ${interrupted?'gián đoạn':'đáp án đã nộp'}`));
   const available=saved?.availability==='available'&&Array.isArray(saved.section?.details);
-  if(!available)part.append(node('p','Lượt cũ chưa lưu đáp án từng câu. Không thể suy ra bài làm từ tổng điểm.','source-unavailable'));
+  if(interrupted)part.append(node('p','Phần Listening bị gián đoạn.','source-unavailable'));
+  else if(!available)part.append(node('p','Lượt cũ chưa lưu đáp án từng câu. Không thể suy ra bài làm từ tổng điểm.','source-unavailable'));
   if(available||explanations){
    const wrap=node('div',undefined,'table-wrap'),table=node('table',undefined,'results-table'+(explanations?' detail-table':'')),head=node('thead'),row=node('tr'),body=node('tbody');
    for(const label of ['Câu','Đáp án đã nộp','Đáp án đúng','Kết quả'])row.append(node('th',label));head.append(row);
