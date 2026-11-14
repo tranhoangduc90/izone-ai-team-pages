@@ -27,7 +27,7 @@
   if (!testConfig || !appConfig || !root) return;
   let recoveryClient;
   const loadRecoveryClient=()=>recoveryClient??=
-    import('../substitute-shared/submission-recovery-v1.mjs?v=20261113-capacity-v1').then(({createSubmissionRecoveryClient})=>
+    import('../substitute-shared/submission-recovery-v1.mjs?v=20261114-submission-observations-v1').then(({createSubmissionRecoveryClient})=>
       createSubmissionRecoveryClient({apiRequest,journalSubmissionOwner,sectionDefinition,taskNumber:1}));
   const { createWritingSubmission } = await import('../shared/writing-submission.mjs?v=20261105-writing-submit-v1');
 
@@ -134,10 +134,10 @@
   // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
   let examJournal = null, journalConnection = null;
   if (appConfig.EXAM_JOURNAL_ENABLED === true) {
-    journalConnection = import('../shared/exam-journal/bridge-substitute-recovery-v1.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&eofLog=20261108-v1&continuity=20261110-listening-observations-v1&continuity=20261110-listening-observations-v1&submission=20261112-v2&startTrace=20261114-v3').then(({ connectExamJournal }) => {
+    journalConnection = import('../shared/exam-journal/bridge-substitute-recovery-v1.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&eofLog=20261108-v1&continuity=20261110-listening-observations-v1&continuity=20261110-listening-observations-v1&submission=20261112-v2&startTrace=20261114-v4').then(({ connectExamJournal }) => {
       examJournal = connectExamJournal({ enabled: true,
         endpoint: appConfig.EXAM_JOURNAL_BASE_URL || new URL(appConfig.API_BASE_URL).origin + '/substitute-journal-api/' + testConfig.slug,
-        testSlug: testConfig.slug, build: (appConfig.EXAM_JOURNAL_BUILD || 'unknown')+'+start-trace-20261114-v3',
+        testSlug: testConfig.slug, build: (appConfig.EXAM_JOURNAL_BUILD || 'unknown')+'+start-trace-20261114-v4',
         submissionMetadataOnly:sealedSubmissions,substituteStartTrace:listeningContinuity,
         getState: () => ({ ...state, classCode,
           generation: sealedSubmissions ? Number(window.TERM_TEST_BOOTSTRAP?.offlineGeneration ?? 0)
@@ -2821,8 +2821,14 @@
                 const offline=window.SUBSTITUTE_OFFLINE;
                 if(!offline)throw new Error('Không thể lưu bản chốt trên thiết bị. Hãy tải bài để đối soát.');
                 const clock=window.SUBSTITUTE_EXAM.clockIso(window.TERM_TEST_BOOTSTRAP);
+                const exam=window.TERM_TEST_BOOTSTRAP,operationId=crypto.randomUUID();
                 const row=await offline.queueWriting(writingPayload,{
-                  operationId:crypto.randomUUID(),revision:state.writingRevision,capturedAt:clock,automatic
+                  operationId,revision:state.writingRevision,capturedAt:clock,automatic
+                }).catch(error=>{
+                  try{examJournal?.recordSubstituteSubmission?.(exam,{
+                    phase:'local_seal_failed',skill:'writing',operationId,automatic
+                  });}catch{}
+                  throw error;
                 });
                 if(!writingSubmission.current(writingOwner))return;
                 lockWritingSeal(row);

@@ -134,6 +134,26 @@ async function submitRecovered({ row, body, read, fromStatus, verifySaved, send,
 
 export function createSubmissionRecoveryClient({apiRequest,journalSubmissionOwner,sectionDefinition,taskNumber,examVersion=null}) {
   let scheduledListeningRetry='';
+  function record(exam,phase,skill,operationId,receiptId,automatic){
+    try{
+      if(exam!==window.TERM_TEST_BOOTSTRAP||window.SUBSTITUTE_STATE.blocked)return;
+      const config=window.TERM_TEST_APP_CONFIG,slug=window.TERM_TEST_CONFIG?.slug;
+      if(config?.EXAM_JOURNAL_ENABLED!==true)return;
+      const endpoint=config.EXAM_JOURNAL_BASE_URL||new URL(config.API_BASE_URL).origin+'/substitute-journal-api/'+slug;
+      const key=JSON.stringify([new URL(endpoint,window.location.href).href,slug]);
+      window[Symbol.for('izone.examJournal.connections.v1')]?.get(key)?.recordSubstituteSubmission?.(exam,
+        {phase,skill,operationId,receiptId,automatic});
+    }catch{/* Diagnostics are independent of submission. */}
+  }
+  async function rememberHold(offline,exam,skill,operationId,hold,code){
+    try{
+      await offline.rememberSectionHold(skill,hold,code);
+      record(exam,'hold_cached',skill,operationId);
+    }catch(error){
+      record(exam,'hold_cache_failed',skill,operationId);
+      throw error;
+    }
+  }
   function sealedTransport(exam,row,owner) {
     const permit={deviceId:exam.offlineDeviceId,generation:exam.offlineGeneration,offlinePermit:exam.offlinePermit};
     const assertOwner=()=>{
@@ -153,9 +173,14 @@ export function createSubmissionRecoveryClient({apiRequest,journalSubmissionOwne
     if (!offline) throw new Error('Không thể lưu bản chốt trên thiết bị. Hãy tải bài để đối soát.');
     const clock = window.IZONE_EXAM_CLOCK?.estimate(exam.serverTimeOffsetMs)
       ?? Date.now() + (Number(exam.serverTimeOffsetMs) || 0);
+    const operationId=crypto.randomUUID();
     const row = await offline.queueSection(skill, answers, {
-      operationId: crypto.randomUUID(), revision: 0, capturedAt: new Date(clock).toISOString(), automatic
+      operationId, revision: 0, capturedAt: new Date(clock).toISOString(), automatic
+    }).catch(error=>{
+      record(exam,'local_seal_failed',skill,operationId,undefined,automatic);
+      throw error;
     });
+    record(exam,'local_sealed',skill,row.recovery?.operationId,undefined,row.recovery?.automatic);
     const { permit, request, assertOwner } = sealedTransport(exam,row,owner);
     try {
       const receipt = await submitRecoveredSection({
@@ -174,11 +199,18 @@ export function createSubmissionRecoveryClient({apiRequest,journalSubmissionOwne
           }
           return request('/api/test/grade', {...permit, examId:skill, answers:row.answers, recovery:row.recovery}, 'send');
         },
-        rememberHold: async (hold, code) => { assertOwner(); await offline.rememberSectionHold(skill,hold,code); }
+        rememberHold: async (hold, code) => {
+          assertOwner();await rememberHold(offline,exam,skill,row.recovery.operationId,hold,code);
+        }
       });
       assertOwner();
-      try { await offline.acknowledgeSection(skill,receipt); }
-      catch { window.SUBSTITUTE_OFFLINE_STATUS = 'receipt_cache_failed'; }
+      try {
+        await offline.acknowledgeSection(skill,receipt);
+        record(exam,'receipt_cached',skill,row.recovery?.operationId,receipt.submissionReceipt?.receiptId);
+      } catch {
+        record(exam,'receipt_cache_failed',skill,row.recovery?.operationId,receipt.submissionReceipt?.receiptId);
+        window.SUBSTITUTE_OFFLINE_STATUS = 'receipt_cache_failed';
+      }
       return receipt;
     } catch (error) {
       assertOwner();
@@ -202,6 +234,7 @@ export function createSubmissionRecoveryClient({apiRequest,journalSubmissionOwne
     const offline=window.SUBSTITUTE_OFFLINE,exam=window.TERM_TEST_BOOTSTRAP;
     const {permit,request,assertOwner}=sealedTransport(exam,row,journalSubmissionOwner());
     const payload=row.payload;
+    record(exam,'local_sealed','writing',row.recovery?.operationId);
     const saved=await submitRecoveredWriting({
       row,taskNumber,examVersion,
       read:()=>request('/api/test/exam/recovery/status',{
@@ -211,13 +244,18 @@ export function createSubmissionRecoveryClient({apiRequest,journalSubmissionOwne
         classCode:payload.classCode,studentRef:payload.studentRef,attemptToken:payload.attemptToken,promptVersion:payload.promptVersion
       },'readback'),
       send:()=>request('/api/test/writing',{...payload,...permit,recovery:row.recovery},'send'),
-      rememberHold:async(hold,code)=>{assertOwner();await offline.rememberSectionHold('writing',hold,code);},
+      rememberHold:async(hold,code)=>{assertOwner();await rememberHold(offline,exam,'writing',row.recovery.operationId,hold,code);},
       claimDispatch:async()=>{assertOwner();return offline.claimWritingDispatch(row.recovery.operationId).catch(()=>false);}
     });
     assertOwner();
     let acknowledged;
-    try{acknowledged=await offline.acknowledgeWriting(saved);}
-    catch{window.SUBSTITUTE_OFFLINE_STATUS='writing_receipt_cache_failed';}
+    try{
+      acknowledged=await offline.acknowledgeWriting(saved);
+      record(exam,'receipt_cached','writing',row.recovery?.operationId,saved.submissionReceipt?.receiptId);
+    }catch{
+      record(exam,'receipt_cache_failed','writing',row.recovery?.operationId,saved.submissionReceipt?.receiptId);
+      window.SUBSTITUTE_OFFLINE_STATUS='writing_receipt_cache_failed';
+    }
     return {saved,acknowledged};
   }
 

@@ -31,8 +31,8 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app-submission-recovery-v1.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&order=20261107-v1&offline=20261107-v2&eofLog=20261108-v1&uiRestore=20261108-v2&handoff=20261108-v1&resultAnchor=20261108-v1&readingHandoff=20261108-v1&continuity=20261110-listening-observations-v1&submission=20261113-capacity-v1&startTrace=20261114-v3'))
-      .then(() => loadScript('enhance-submission-recovery-v1.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1&eofLog=20261108-v1&playLabel=20261108-v1&readingHandoff=20261108-v1&continuity=20261110-listening-observations-v1&previewWait=20261109-preview-10s-v1&submission=20261113-capacity-v1&startGuard=20261113-v1&startTrace=20261114-v3'))
+      .then(() => loadScript('../substitute-k67-shared/app-submission-recovery-v1.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&order=20261107-v1&offline=20261107-v2&eofLog=20261108-v1&uiRestore=20261108-v2&handoff=20261108-v1&resultAnchor=20261108-v1&readingHandoff=20261108-v1&continuity=20261110-listening-observations-v1&submission=20261113-capacity-v1&startTrace=20261114-v4'))
+      .then(() => loadScript('enhance-submission-recovery-v1.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1&eofLog=20261108-v1&playLabel=20261108-v1&readingHandoff=20261108-v1&continuity=20261110-listening-observations-v1&previewWait=20261109-preview-10s-v1&submission=20261113-capacity-v1&startGuard=20261113-v1&startTrace=20261114-v4'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -62,7 +62,7 @@
       const registration=await navigator.serviceWorker.ready;
       const urls=[...document.querySelectorAll('script[src],link[href],img[src]')]
         .map(element=>element.src||element.href).filter(url=>url&&!new URL(url).pathname.includes('/exam-journal/'));
-      for(const path of ['./offline-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1','../substitute-shared/backup-export-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1','../substitute-shared/listening-outbox-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1','../substitute-shared/submission-recovery-v1.mjs?v=20261113-capacity-v1','../substitute-k67-shared/app-submission-recovery-v1.js','./enhance-submission-recovery-v1.js',
+      for(const path of ['./offline-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1','../substitute-shared/backup-export-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1','../substitute-shared/listening-outbox-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1','../substitute-shared/submission-recovery-v1.mjs?v=20261114-submission-observations-v1','../substitute-k67-shared/app-submission-recovery-v1.js','./enhance-submission-recovery-v1.js',
         './annotations.js','../shared/writing-submission.mjs','../../shared/substitute-student-identity.js',
         '../../shared/student-identity.js','../../shared/student-identity-migration.js',
         '../../shared/teacher-entry.js','../../shared/master170/question-layout-v1.1.mjs',
@@ -939,9 +939,9 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app-submission-recovery-v1.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&blankWriting=20261107-v1&order=20261107-v1&offline=20261107-v2&eofLog=20261108-v1&uiRestore=20261108-v2&handoff=20261108-v1&resultAnchor=20261108-v1&readingHandoff=20261108-v1&continuity=20261110-listening-observations-v1&submission=20261113-capacity-v1&startTrace=20261114-v3');
+    await loadScript('../substitute-k67-shared/app-submission-recovery-v1.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&blankWriting=20261107-v1&order=20261107-v1&offline=20261107-v2&eofLog=20261108-v1&uiRestore=20261108-v2&handoff=20261108-v1&resultAnchor=20261108-v1&readingHandoff=20261108-v1&continuity=20261110-listening-observations-v1&submission=20261113-capacity-v1&startTrace=20261114-v4');
     deferredPlayback?.verify();
-    await loadScript('enhance-submission-recovery-v1.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1&eofLog=20261108-v1&playLabel=20261108-v1&readingHandoff=20261108-v1&continuity=20261110-listening-observations-v1&previewWait=20261109-preview-10s-v1&submission=20261113-capacity-v1&startGuard=20261113-v1&startTrace=20261114-v3');
+    await loadScript('enhance-submission-recovery-v1.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1&eofLog=20261108-v1&playLabel=20261108-v1&readingHandoff=20261108-v1&continuity=20261110-listening-observations-v1&previewWait=20261109-preview-10s-v1&submission=20261113-capacity-v1&startGuard=20261113-v1&startTrace=20261114-v4');
     await loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1');
     if(deferredPlayback){
       deferredPlayback.verify();
