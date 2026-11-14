@@ -284,7 +284,7 @@ export const ASSET_HASHES={
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/public-audio-audio-status-v1.mjs": "30c109b154046f13fef9f9b53e722b35b3f268fa60d2d874b507a9fed077e24c",
   "../k56-shared/teacher-session-client.js": "e23d770dc0a4beb35a5b9751990cfd9667e1ea2568d0bffb3125e721dafefa27",
-  "../k56-test2-shared/app-term2-audio-goal-v1.js": "201ed8446538bcb45441885b0234915739f1a86156b2a8a8bbbd069e154422d7",
+  "../k56-test2-shared/app-term2-audio-goal-v1.js": "9d56f6d1a2aca8343283e94764225bc945ff0c29054ea9b3cfb9ecfe1f9b5c86",
   "../k56-test2-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-test2-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-writing-feedback/styles.css": "5f1990abcb8a2a38b7168dfbaa56565e0faece43c4c4c15c146ef6c800fca99e",
@@ -354,4 +354,4 @@ export const ASSET_HASHES={
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="4e663c41c02b2955b955bc5ef74cd8d4ae676bd6886a0b1307616f96146a917f";
+export const ASSET_BUILD_ID="f70f1bc049cdc19cf4b551b45e7649c235baa877f5807d5300539a36c1462d12";

@@ -1310,7 +1310,7 @@
         await offline.seal('writing',data,state.writingRevision,writingTimeExpired()?'deadline':'manual');
         const saved = offline.record.sections.writing;
         try {
-          offline.observe?.('submission_device_saved', {section:'writing',operationId:saved?.operationId,
+          offline.observe?.('writing_task1_sealed', {section:'writing',operationId:saved?.operationId,
             revision:saved?.revision,task1Length:data.task1.length,automatic});
         } catch { /* Writing submission does not depend on the journal. */ }
       } else await offline.draft('writing',data,state.writingRevision);
