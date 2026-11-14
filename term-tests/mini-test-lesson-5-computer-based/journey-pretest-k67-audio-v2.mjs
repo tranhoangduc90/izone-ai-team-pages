@@ -1,6 +1,6 @@
 import { createOfflineRuntime } from '../k56-offline-shared/runtime-audio-status-v2.mjs?v=20261107-mini-v3';
 import { downloadTermAudio } from '../k56-offline-shared/whole-audio-terms-cbt-audio-status-v2.mjs';
-import { mountOfflineListeningPlayer, prepareContinuityAudio, mountContinuityListeningPlayer } from '../k67-shared/offline-journey-ui-term2-audio-v2.mjs?v=20261110-continuity-v2';
+import { mountOfflineListeningPlayer, prepareContinuityAudio, mountContinuityListeningPlayer } from '../k67-shared/offline-journey-ui-term2-journal-v1.mjs?v=20261114-v1';
 
 const miniSlug='mini-test-lesson-5';
 const term1Slug='term-test-1';
@@ -148,7 +148,16 @@ export async function openMiniJourney({scope,request,apiBase,existing,prepare=fa
     drainDiagnostics();
   }
   function setJournal(value){journal=value;drainDiagnostics();}
-  function markListeningStart(){listeningStartIntent=performance.now();}
+  const journalEnabled = () => (slug === pretestSlug || slug === pretestSlug+'-paper')
+    && globalThis.TERM_TEST_APP_CONFIG?.EXAM_JOURNAL_ENABLED === true;
+  function observeDecision(phase, details={}) {
+    if (!journalEnabled()) return;
+    observe('pretest_journey_decision',{phase,delivery:paper?'paper':'computer',...details});
+  }
+  function markListeningStart(){
+    listeningStartIntent=performance.now();
+    observeDecision('start_requested',{section:'listening',examMode:record.package.examMode});
+  }
   function onOnline(){retryAt=0;void flush();}
   const owner = {examSessionToken:scope.examSessionToken,generation:scope.generation};
   const save = () => store.put(key,record);
@@ -212,8 +221,14 @@ export async function openMiniJourney({scope,request,apiBase,existing,prepare=fa
           body:JSON.stringify({...owner,deviceProof:record.deviceProof})
         });
       } : undefined;
+      if (!paper) observeDecision('audio_access_verified',{section:'listening',audioAssetHash:manifest.sha256,
+        source:audioDownload&&!pagesOnly?'cloudflare':privateSource?'legacy-vps':'pages'});
       const blob=await downloadTermAudio(slug,{pagesUrl:audioUrl,sha256:manifest.sha256,bytes:manifest.byteLength,private:privateSource},
-        {audioDownload:pagesOnly?undefined:audioDownload,refresh,onProgress,onPhase,fetchImpl:fetchPrivate});
+        {audioDownload:pagesOnly?undefined:audioDownload,refresh,onProgress,onPhase,fetchImpl:fetchPrivate,
+          onMilestone:!paper&&journalEnabled()? milestone=>{
+            if (!['first_byte','source_switch_started'].includes(milestone.phase)) return;
+            observeDecision(milestone.phase,{section:'listening',source:milestone.source,audioAssetHash:manifest.sha256});
+          }:undefined});
       onPhase?.('Đang kiểm tra bản audio đã lưu trên thiết bị…');
       await store.put(key+':audio',{blob});
       const stored=await store.get(key+':audio');
@@ -349,8 +364,12 @@ export async function openMiniJourney({scope,request,apiBase,existing,prepare=fa
       record.drafts[skill]=payload.answers;
       record.revisions[skill]=payload.revision;
     }
-    try{await persist();}
+    try{
+      await persist();
+      observeDecision('submission_device_saved',{section:skill,operationId:payload.operationId});
+    }
     catch(error){
+      observeDecision('submission_device_save_failed',{section:skill,operationId:payload.operationId});
       record.pending.splice(record.pending.indexOf(payload),1);
       delete section.operationId;
       if(interrupted)delete section.interrupted;
@@ -396,7 +415,13 @@ export async function openMiniJourney({scope,request,apiBase,existing,prepare=fa
     try{
       while(!stopped&&!savingOperation&&record.pending.length){
         const pending=record.pending[0];
-        const checked=(writing||paper||receiptStatus)?await send('status',{section:pending.section,operationId:pending.operationId}):null;
+        const receiptFields={section:pending.section,operationId:pending.operationId};
+        let checked;
+        try { checked=(writing||paper||receiptStatus)?await send('status',receiptFields):null; }
+        catch (error) {
+          observeDecision('receipt_lookup_failed',{...receiptFields,status:error?.status});
+          throw error;
+        }
         const result=checked?.persisted?checked:await send(pending.outcome==='interrupted'?'interrupt':'seal',pending);
         const receipt=result.receipt;
         if(stopped)return;
@@ -405,6 +430,7 @@ export async function openMiniJourney({scope,request,apiBase,existing,prepare=fa
             ||receipt.payloadHash!==await hash(text.encode(JSON.stringify(pending))))throw new Error('Biên nhận không khớp bản đã lưu.');
         record.receipts[pending.section]=receipt;record.pending.shift();
         try{await persist();}catch(error){record.pending.unshift(pending);delete record.receipts[pending.section];throw error;}
+        observeDecision('submission_receipt_verified',{...receiptFields,via:checked?.persisted?'readback':'send'});
         if(continuity()&&pending.section==='listening')
           observe('listening_server_received',{operationId:pending.operationId,outcome:pending.outcome||'submitted'});
       }
@@ -444,6 +470,7 @@ export async function openMiniJourney({scope,request,apiBase,existing,prepare=fa
     const timing=record.package.timing;
     const player=continuity()
       ? mountContinuityListeningPlayer({...options,section,timing,now,persist,observe,
+          observeDecision:(phase,details) => observeDecision(phase,{section:'listening',...details}),
           onPlaying:() => {
             if (section.playbackConfirmed !== true) {
               section.playbackConfirmed=true;
