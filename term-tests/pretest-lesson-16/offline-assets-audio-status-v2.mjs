@@ -206,7 +206,7 @@ export const ASSET_HASHES = {
   "../shared/section-submission.mjs": "f0e91d30ebe25e921c33e6f89ecb33cdf6f3cf8da0168301665f0d634faf6baf",
   "../shared/styles.css": "e19be7903218548bc254d0ceca072fa999dbf42a654585bf10e93dfafbc13ec5",
   "../shared/teacher-audio-recovery.css": "cc53a29792f4ada666cc5c440b1d544ae70f8d14e2910262b4465a4247d979b4",
-  "../shared/teacher-audio-recovery.js": "feefd9156426976d8b642db0045da1a00107b9ab7934121083b67bbd9c4ce1d6",
+  "../shared/teacher-audio-recovery.js": "a3a84e1bb92462ff7efd01068cca468c01fce47a6ac8086070f21a25cee6cce4",
   "../shared/teacher-reading-state.mjs": "63635319ac4313af32ed618e6e2e8bc0d99762ed0237fde8df3f54e6514d8f9f",
   "../shared/teacher-saved-progress.css": "d740e95c983e2c16ebfedc4f9569c54923bd3e52c483146e4b69cff8b6cd8f6c",
   "../shared/teacher-saved-progress.js": "994ea9c9d0b7ca99d4b84fca451f4e6dd5bb68e83985b013256166bd589fa4da",
@@ -215,8 +215,8 @@ export const ASSET_HASHES = {
   "../shared/writing-planning.js": "1ce3652cdb91ce598f50e03516318154331fb461dcd28834534ddeb599da7094",
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../substitute-test-1-k67-computer-based/assets/figures/home-improvement-store.png": "feab5540ce3cac2115201f167f1a05cf5b916021e4ec2c4f67912728290aa150",
-  "../teacher/app.js": "4741c17e7beb347dbbd8d103cfcaa6a48a5717d50e0f8e08e1ecc0924272dcea",
-  "../teacher/index.html": "ddf188e44dd49af9ddcd8a17ba58476d49b39d84830c89be4c01c91a0b6b0437",
+  "../teacher/app.js": "9292035d24e0bebc11f9a3017af3c18236cac1c056f403797e9ad5e48f7891d0",
+  "../teacher/index.html": "2175ab34e2741d0f5a8f7fc4c1fde74a35fea859b3ceace20a352ba7c74885ef",
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
@@ -231,4 +231,4 @@ export const ASSET_HASHES = {
   "../k67-shared/offline-journey-ui-term2-journal-v1.mjs": "0b0789bfcb8e5322dc6993d8a51235f635fcdab9e0d9e1d4c37b7e6a7ed0447a",
   "../mini-test-lesson-5-computer-based/journey-pretest-k67-audio-v2.mjs": "33a4e355109bc16e9984d030b7103cfaefe8a40c7ef07ec419ea2ed579dc3621"
 };
-export const ASSET_BUILD_ID = "fff06e3a1e2a6076af4bbde25401dbc2dac4c78ff726ff587062c658842dfd48";
+export const ASSET_BUILD_ID = "9ac46a897e0cea58311619567f57f4e9c15682a8a32e8ac947b52a9d30eb7996";

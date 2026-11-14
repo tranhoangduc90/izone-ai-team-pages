@@ -150,15 +150,15 @@ export const ASSET_HASHES={
   "../shared/section-submission-k67-paper-v1.mjs": "e60b3c241a9e74c615de5685d12088ce12faa2c0cfe97818d27a8867ba4bc7ff",
   "../shared/styles.css": "e19be7903218548bc254d0ceca072fa999dbf42a654585bf10e93dfafbc13ec5",
   "../shared/teacher-audio-recovery.css": "cc53a29792f4ada666cc5c440b1d544ae70f8d14e2910262b4465a4247d979b4",
-  "../shared/teacher-audio-recovery.js": "feefd9156426976d8b642db0045da1a00107b9ab7934121083b67bbd9c4ce1d6",
+  "../shared/teacher-audio-recovery.js": "a3a84e1bb92462ff7efd01068cca468c01fce47a6ac8086070f21a25cee6cce4",
   "../shared/teacher-reading-state.mjs": "63635319ac4313af32ed618e6e2e8bc0d99762ed0237fde8df3f54e6514d8f9f",
   "../shared/teacher-saved-progress.css": "d740e95c983e2c16ebfedc4f9569c54923bd3e52c483146e4b69cff8b6cd8f6c",
   "../shared/teacher-saved-progress.js": "994ea9c9d0b7ca99d4b84fca451f4e6dd5bb68e83985b013256166bd589fa4da",
   "../shared/teacher-state-tracking.mjs": "a325aa65afd7fb91f42972f91c1a6ae16f733d2d304b589e17987ff9be4deb28",
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../substitute-test-1-k67-computer-based/assets/figures/home-improvement-store.png": "feab5540ce3cac2115201f167f1a05cf5b916021e4ec2c4f67912728290aa150",
-  "../teacher/app.js": "4741c17e7beb347dbbd8d103cfcaa6a48a5717d50e0f8e08e1ecc0924272dcea",
-  "../teacher/index.html": "ddf188e44dd49af9ddcd8a17ba58476d49b39d84830c89be4c01c91a0b6b0437",
+  "../teacher/app.js": "9292035d24e0bebc11f9a3017af3c18236cac1c056f403797e9ad5e48f7891d0",
+  "../teacher/index.html": "2175ab34e2741d0f5a8f7fc4c1fde74a35fea859b3ceace20a352ba7c74885ef",
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
@@ -167,4 +167,4 @@ export const ASSET_HASHES={
   "offline-worker.js": "58b1a2ff93d85c6a89703296bda096f03e3eafbcc2f5459a9758d322c7e56d39",
   "test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8"
 };
-export const ASSET_BUILD_ID="e3668d71121cd6e8a6f0933a2c1ed0769f649ece66dc12a508b6e993d5992de5";
+export const ASSET_BUILD_ID="09335c8d513d6b58804d891ceb2880993efa6953da9307c8cb2aaa505548d7f6";
