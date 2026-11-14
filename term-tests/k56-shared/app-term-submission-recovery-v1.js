@@ -862,6 +862,16 @@
     return answered;
   }
 
+  function observePaperSubmission(phase, section, operationId, source) {
+    if (!paperIdentity || testConfig.slug !== 'term-test-1-k56' || !operationId) return;
+    try {
+      const owner = {examSessionToken: state.examSessionToken, generation: Number(state.generation || 0)};
+      examJournal?.recordK56Submission(owner, 'state_observed', {cause: 'term1_answer_sheet', checkpointState: {
+        offlineVersion: 1, action: 'paper_submission_observed', phase, section, operationId, source
+      }});
+    } catch { /* Submission does not depend on the journal. */ }
+  }
+
   async function apiRequest(path, options = {}) {
     if(offline){
       const data=JSON.parse(options.body||'{}'),match=path.match(/\/term-test-1-k56\/(listening|reading)(?:\/(start|draft))?$/);
@@ -891,9 +901,19 @@
     const module = await import('../shared/section-submission-k56-term-v1.mjs?v=20261112-k56-online-writing');
     const { submitSection } = module;
     const recovery = getTermRecovery(module)?.forSubmission(section, options.submissionAutomatic);
+    let paperOperation = state.pendingSubmissions?.[section]?.operationId || operationId;
+    let paperSource;
     const data = await submitSection({ state, section, body, testSlug, owner, getOwner, operationId, save: saveSession, recovery,
-      send: (value, id) => rawApiRequest(path, { ...options, body: JSON.stringify(value) }, trace(id, 'send')),
+      send: (value, id) => {
+        paperOperation = id;
+        paperSource = 'send';
+        observePaperSubmission('submitted_request', section, id, paperSource);
+        return rawApiRequest(path, { ...options, body: JSON.stringify(value) }, trace(id, 'send'));
+      },
       read: async (value, id) => {
+        paperOperation = id;
+        paperSource = 'readback';
+        observePaperSubmission('receipt_requested', section, id, paperSource);
         try { return await rawApiRequest(`/api/term-tests/${testSlug}/submission-status`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...value, section })
@@ -904,6 +924,8 @@
       }
     });
     // Chỉ trả bản đã được xác nhận; handler mới được chuyển phần.
+    if (!recovery && getOwner() === owner && paperSource)
+      observePaperSubmission('submission_confirmed', section, paperOperation, paperSource);
     return data;
   }
 
