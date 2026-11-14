@@ -1,4 +1,4 @@
-import { ExamStore, SkillOffline } from './reading-offline-submission-recovery-v1.mjs?v=20261112-fallback-recovery';
+import { ExamStore, SkillOffline } from './reading-offline-submission-recovery-v1.mjs?skillLog=20261114-v1&v=20261112-fallback-recovery';
 import { isK56ClassCode, renderK56ClassEntry } from '../k56-offline-shared/class-entry.mjs';
 
 const form = document.getElementById('skillIdentity');

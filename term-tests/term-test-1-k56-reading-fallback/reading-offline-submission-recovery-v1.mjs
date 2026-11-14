@@ -157,16 +157,39 @@ export class SkillOffline extends withListeningContinuity(OfflineRuntime) {
 
   order() { return [this.skill]; }
 
+  observeSkillOutcome(action, details) {
+    if (globalThis.TERM_TEST_APP_CONFIG?.EXAM_JOURNAL_ENABLED !== true) return;
+    try { this.observe(action, {section: this.skill, ...details}); } catch { /* Diagnostics are best effort. */ }
+  }
+
+  async start(section) {
+    const previous = this.record.sections[section]?.startedAt;
+    const result = await super.start(section);
+    const active = this.record.sections[section];
+    if (!previous && section !== 'listening' && active?.startedAt) {
+      this.observeSkillOutcome('fallback_timer_started', {clockSource: 'local_validated',
+        startedAt: active.startedAt, deadlineAt: active.deadlineAt});
+    }
+    return result;
+  }
+
   sectionResponse() {
     const response = super.sectionResponse();
     return { ...response, completed: Boolean(this.record.sections[this.skill]?.sealed) };
   }
 
   async readResult() {
+    const run = this.record;
     const value = await this.post('/skill-fallback/result', { grantId: this.grantId, ownerId: this.scope.ownerId, section: this.skill }, false);
     const writing = this.skill === 'writing';
     if (value.section !== this.skill || !value.submitted || !(writing ? value.writing : value.result))
       throw Error('Chưa có kết quả ' + this.label + ' đã xác nhận.');
+    if (run === this.record && this.resultObservedFor !== run) {
+      this.resultObservedFor = run;
+      const operationId = run.sections[this.skill]?.operationId;
+      this.observeSkillOutcome('fallback_result_verified', {operationId, receiptId: run.receipts[operationId]?.receiptId,
+        resultKind: writing ? 'writing' : 'objective'});
+    }
     return { studentName: this.record.prepared.studentName, className: this.classCode,
       result: { testTitle: 'Term Test 1 · Khóa 56', ...(writing ? {} : { [this.skill]: value.result }) },
       ...(!writing && Array.isArray(value.review) ? { review: value.review } : {}),
