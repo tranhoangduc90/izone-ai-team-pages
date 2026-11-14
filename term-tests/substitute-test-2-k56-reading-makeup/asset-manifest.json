@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-2-k56-reading-makeup",
-  "build": "issue611-3cfb4d4aebdea3fe",
+  "build": "issue611-b31083da96c6d0ba",
   "assets": [
     {
       "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
@@ -92,7 +92,7 @@
     },
     {
       "path": "../substitute-skill-shared/objective-controller.mjs",
-      "sha256": "bbaea38452b8df6a202c078f9699365b15fd4aa6f78694e281389714dc2173eb"
+      "sha256": "2786c0741e2d7a62abf46c02320411e3254fefd6ad4bc7357ed2fb9e6eb26d40"
     },
     {
       "path": "../substitute-skill-shared/objective.css",
@@ -153,6 +153,14 @@
     {
       "path": "sw.js",
       "sha256": "e68ca9c30de8ddf77715fcf0a86025f2400ef0b37d1d28f82d6ba3f35dabe3cb"
+    },
+    {
+      "path": "../substitute-skill-shared/submission-journal-v1.mjs",
+      "sha256": "d047605cd8a0c988885f7818aac8e03141e2ce76eb66054913fe8512f021fa2b"
+    },
+    {
+      "path": "../shared/exam-journal/recorder.mjs?v=20261109-term1-writing-v1",
+      "sha256": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76"
     }
   ]
 }

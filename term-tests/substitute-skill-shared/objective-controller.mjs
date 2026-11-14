@@ -9,7 +9,26 @@ let state,storage,content,native,player,busy=false,syncing=false,ownerHeld=false
 let playbackStarted=false,stallReported=false,eofInFlight=false,eofNeedsSave=false,sealedNeedsSave=false;
 const build='substitute-native-audio-v4';
 const earlyObservations=[];
-const quietJournal={emit(action,data){if(isListening&&state?.identity&&state.identity.classCode!=='DEMO'&&earlyObservations.length<16)earlyObservations.push([state.identity,action,data]);}};
+const earlySubmissions=[];
+let submissionJournal,submissionJournalLoading=false;
+function emitSubmission(action,fields={}) {
+ const identity=state?.identity;
+ if(!identity||identity.classCode==='DEMO')return;
+ if(submissionJournal){submissionJournal.emit(action,fields);return;}
+ if(earlySubmissions.length<24)earlySubmissions.push([identity,action,fields]);
+ if(submissionJournalLoading)return;
+ submissionJournalLoading=true;
+ void import('./submission-journal-v1.mjs').then(({createSubmissionJournal})=>{
+  submissionJournal=createSubmissionJournal({endpoint:REAL_API,build:'substitute-skill-rw-journal-v1',
+   getIdentity:()=>state?.identity?.classCode==='DEMO'?null:state?.identity,section:'reading'});
+  for(const [owner,event,data] of earlySubmissions.splice(0)){
+   if(owner.attemptId===state?.identity?.attemptId&&owner.generation===state.identity.generation)
+    submissionJournal.emit(event,data);
+  }
+ }).catch(()=>{earlySubmissions.length=0;}).finally(()=>{submissionJournalLoading=false;});
+}
+
+const quietJournal={emit(action,data){if(!isListening){emitSubmission(action,data);return;}if(isListening&&state?.identity&&state.identity.classCode!=='DEMO'&&earlyObservations.length<16)earlyObservations.push([state.identity,action,data]);}};
 let observation=quietJournal, journalLoading=false;
 function listenJournal(){
  if(!isListening||!state?.identity||state.identity.classCode==='DEMO'||journalLoading||observation!==quietJournal)return;
@@ -195,13 +214,15 @@ async function seal(automatic=false){
  if(busy||!ownerHeld||state.phase!=='draft'||state.sealed||isListening&&(!state.audioEndedAt||eofNeedsSave))return;
  state.revision++;
  state.sealed={...payload(),operationId:crypto.randomUUID(),automatic,confirmedEarlySubmit:!automatic,...isListening?{audioEndedAt:state.audioEndedAt}:{}};
- observation.emit('seal_created',{operationId:state.sealed.operationId,revision:state.revision,automatic,deadlineAtMs:state.deadlineAt});
+ observation.emit('seal_created',{operationId:state.sealed.operationId,revision:state.revision,automatic,
+  deadlineAtMs:state.deadlineAt,deadlineAt:state.deadlineAt,
+  ...!isListening&&{answeredCount:Object.values(state.answers).filter(Boolean).length}});
  state.pending=null;
  sealedNeedsSave=true;
  freeze();
  void sync();
 }
-async function prepare(){if(busy)return;busy=true;try{const selected=roster.find(r=>r.studentRef===$('student').value)||state?.prepareOperation&&{name:state.name,studentRef:state.studentRef};if(!selected)return;if(!state?.prepareOperation)await restorePerson($('class').value,selected.studentRef);listenJournal();if(state?.sealed||state?.phase==='submitted'){finish();busy=false;await sync();await check();return;}state??={prepareOperation:crypto.randomUUID(),classCode:$('class').value,studentRef:selected.studentRef,name:selected.name};await persist();const v=state.identity?await api('status',state.identity):await api('prepare',{classCode:state.classCode,studentRef:state.studentRef,operationId:state.prepareOperation});state.identity=v.identity;listenJournal();state.phase=v.status;state.revision=Math.max(state.revision||0,v.revision);state.lastServer=v;state.startedAt=v.startedAt;state.deadlineAt=v.deadlineAt;state.audioEndedAt=v.audioEndedAt;await persist();if(v.status==='technical_stop'){finish(v);return;}if(isListening&&v.status==='draft'&&!v.audioEndedAt){busy=false;await stop('reload');return;}content=await api('content',state.identity);if(content.testId!==testId||content.skill!==skill||content.contentHash!==state.identity.contentHash)throw Error('CONTENT_CONFLICT');state.content=content;state.answers??={};await persist();anchor(v);if(v.status==='submitted'){finish(v);return;}if(v.status==='draft'){if(!Object.keys(state.answers).length&&v.snapshot?.answers)state.answers=structuredClone(v.snapshot.answers);await display();tick();return;}text('prepare-status','Đang lưu đề và giao diện để phục hồi…');const offline=await prepareOffline();state.offlineBuild=offline.build;await persist();if(offline.updated){location.reload();return;}show('identity-form',false);show('ready');
+async function prepare(){if(busy)return;busy=true;try{const selected=roster.find(r=>r.studentRef===$('student').value)||state?.prepareOperation&&{name:state.name,studentRef:state.studentRef};if(!selected)return;if(!state?.prepareOperation)await restorePerson($('class').value,selected.studentRef);listenJournal();if(state?.sealed||state?.phase==='submitted'){finish();busy=false;await sync();await check();return;}state??={prepareOperation:crypto.randomUUID(),classCode:$('class').value,studentRef:selected.studentRef,name:selected.name};await persist();const v=state.identity?await api('status',state.identity):await api('prepare',{classCode:state.classCode,studentRef:state.studentRef,operationId:state.prepareOperation});state.identity=v.identity;if(!isListening)observation.emit('owner_acquired');listenJournal();state.phase=v.status;state.revision=Math.max(state.revision||0,v.revision);state.lastServer=v;state.startedAt=v.startedAt;state.deadlineAt=v.deadlineAt;state.audioEndedAt=v.audioEndedAt;await persist();if(v.status==='technical_stop'){finish(v);return;}if(isListening&&v.status==='draft'&&!v.audioEndedAt){busy=false;await stop('reload');return;}content=await api('content',state.identity);if(content.testId!==testId||content.skill!==skill||content.contentHash!==state.identity.contentHash)throw Error('CONTENT_CONFLICT');if(!isListening)observation.emit('content_verified');state.content=content;state.answers??={};await persist();anchor(v);if(v.status==='submitted'){finish(v);return;}if(v.status==='draft'){if(!Object.keys(state.answers).length&&v.snapshot?.answers)state.answers=structuredClone(v.snapshot.answers);await display();tick();return;}text('prepare-status','Đang lưu đề và giao diện để phục hồi…');const offline=await prepareOffline();state.offlineBuild=offline.build;await persist();if(offline.updated){location.reload();return;}show('identity-form',false);show('ready');
  if(isListening){listenJournal();text('prepare-status','Đang tải và kiểm tra đầy đủ audio…');const journal={emit:(action,data)=>observation.emit(action,data)};const {downloadAudio,LocalPlayer}=createAudioTools(content.audio),asset=await downloadAudio({journal,onProgress:audioProgress});player=new LocalPlayer($('official-audio'),journal);player.onFault=code=>void stop('learner_report',code);player.onEnded=()=>void ended();await player.attach(asset);player.setVolume(state.audioVolume??Number($('volume').value));text('prepare-status','Đã kiểm tra audio. Nghe thử 10 giây rồi xác nhận nghe rõ.');$('preview').disabled=false;$('volume').disabled=false;show('retry-audio',false);text('bootstrapPreviewStatus','Sẵn sàng nghe thử.');}
  else{text('prepare-status','Đã sẵn sàng · '+content.durationMinutes+' phút · '+content.controls.length+' câu');$('start').disabled=false;}
  }catch(e){if(isListening&&state?.phase==='prepared')show('retry-audio');fail(e);}finally{busy=false;updateNativeShell(state,content,undefined,()=>persist());}}
@@ -211,7 +232,7 @@ async function start(){
  try{
   observation.emit('start_requested');
   const v=await api('start',{...state.identity,...isListening?{audioHash:content.audio.hash}:{}});
-  observation.emit('start_confirmed');
+  observation.emit('start_confirmed',isListening?{}:{startedAt:v.startedAt,deadlineAt:v.deadlineAt});
   anchor(v);state.phase=v.status;state.startedAt=v.startedAt;state.deadlineAt=v.deadlineAt;state.lastServer=v;
   await persist();
   if(isListening)setWaitingForAudio(true);
