@@ -1,5 +1,5 @@
-const CACHE='k67-listening-makeup-shell-v1-20261111-audio-status-v1-20261112-submission-reconciliation';
-const PREVIOUS_CACHES=['k67-listening-makeup-shell-v1-20261111-audio-status-v1','k67-listening-makeup-shell-v1'];
+const CACHE='k67-listening-makeup-shell-v1-20261111-audio-status-v1-20261112-submission-reconciliation-20261114-retake-log-v1';
+const PREVIOUS_CACHES=['k67-listening-makeup-shell-v1-20261111-audio-status-v1-20261112-submission-reconciliation','k67-listening-makeup-shell-v1-20261111-audio-status-v1','k67-listening-makeup-shell-v1'];
 const shell=new URL('./',self.location.href);
 const project=new URL('../../',shell);
 const preparedMarker=new URL('offline-sw-audio-status-v1.js?shell-prepared=1',shell);

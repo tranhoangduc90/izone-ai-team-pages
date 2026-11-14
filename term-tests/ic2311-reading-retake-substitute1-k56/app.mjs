@@ -65,6 +65,7 @@ async function synchronize(force=false,lookupOnly=false){
  try{
   let r;
   if(pending.status==='submitted'||state.uncertainOperation===pending.operationId){
+   journal.emit('reading_receipt_lookup',{operationId:pending.operationId,revisionSent:pending.revision,phase:state.phase});
    r=await journal.request('/operation-status',{operationId:pending.operationId});
    if(epoch!==ownerEpoch)return;
    if(!r.value.persisted){
@@ -89,6 +90,8 @@ async function synchronize(force=false,lookupOnly=false){
   state.ackedRevision=Math.max(state.ackedRevision||0,r.value.revision);if(same){state.pending=null;state.uncertainOperation=null;}
   if(pending.status==='submitted'){
    state.serverConfirmed=true;state.receipt=r.value.receiptId;state.rawScore=r.value.rawScore;
+   journal.emit('reading_receipt_verified',{operationId:pending.operationId,receiptId:state.receipt,
+    revisionSent:pending.revision,persisted:true,phase:'submitted'});
    state.reconciliation=null;state.needsTeacher=false;
   }
   await persist();failures=0;text('local-status',state.pending?'Đã lưu trên thiết bị · đang gửi thay đổi mới':'Đã lưu lên máy chủ');if(state.phase==='submitted')renderFinished();
@@ -228,7 +231,10 @@ async function restoreClock(){
   journal.emit('restore_failed',{errorCode:'CLOCK_INVALID'});void synchronize(true);return false;
  }
  state.elapsedMs=Math.min(DURATION_MS,(state.elapsedMs||0)+Math.max(0,gap));
- baseElapsed=state.elapsedMs;baseMono=performance.now();checkpoint();return true;
+ baseElapsed=state.elapsedMs;baseMono=performance.now();checkpoint();
+ journal.emit('reading_timer_restored',{phase:state.phase,startedAt:state.startedAt,durationMs:DURATION_MS,
+  elapsedExamMs:state.elapsedMs,timerRemainingMs:Math.max(0,DURATION_MS-state.elapsedMs),reason:'local_clock_checkpoint'});
+ return true;
 }
 setInterval(()=>{if(ownerHeld&&state?.phase==='playing'){drawClock();if(clock()>=DURATION_MS)void seal('deadline');else{checkpoint();captureUi();void persist().catch(saveFailure);}}void synchronize();},1000);
 setInterval(()=>{if(state?.phase==='playing')void queueDraft();},10000);

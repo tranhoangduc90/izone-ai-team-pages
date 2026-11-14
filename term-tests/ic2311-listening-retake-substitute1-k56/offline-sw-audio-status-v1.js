@@ -1,5 +1,5 @@
-const CACHE='ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1-20261112-submission-reconciliation';
-const PREVIOUS_CACHES=['ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1','ic2311-listening-retake-shell-20261110-k56-picker-v1'];
+const CACHE='ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1-20261112-submission-reconciliation-20261114-retake-log-v1';
+const PREVIOUS_CACHES=['ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1-20261112-submission-reconciliation','ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1','ic2311-listening-retake-shell-20261110-k56-picker-v1'];
 const shell=new URL('./',self.location.href);
 const project=new URL('../../',shell);
 const preparedMarker=new URL('offline-sw-audio-status-v1.js?shell-prepared=1',shell);

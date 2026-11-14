@@ -1,3 +1,4 @@
+import {observeRetakeMedia} from '../shared/retake-media-observation-v1.mjs';
 import {API,BUILD,AUDIO,CONTENT_VERSION,REVIEW_MS,PRODUCT,SLUG} from './config.mjs?v=20261112-submission-reconciliation';
 import {DurableStore} from './storage.mjs';
 import {Telemetry} from './telemetry.mjs?v=20261112-submission-reconciliation';
@@ -27,6 +28,7 @@ async function acquireOwner(){
  });
 }
 const journal=new Telemetry({tabId,audioOwnerId}),player=new LocalPlayer($('audio'),journal);journal.snapshot=()=>player.snapshot();
+const sampleMedia=observeRetakeMedia($('audio'),journal,()=>ownerHeld&&state?.phase==='playing');
 const note=message=>{text('notice',message);show('notice');};
 const done=id=>$(id).classList.add('done');
 async function persist(){
@@ -212,7 +214,10 @@ async function restoreReview(){
  await renderContent();
  const ended=Date.parse(state.audioEndedAt);
  if(!Number.isFinite(ended))throw Error('REVIEW_TIME_UNAVAILABLE');
- reviewMono=performance.now()-Math.min(REVIEW_MS,Math.max(0,Date.now()-ended));
+ const reviewElapsedMs=Math.min(REVIEW_MS,Math.max(0,Date.now()-ended));
+ reviewMono=performance.now()-reviewElapsedMs;
+ journal.emit('audio_review_restored',{phase:'review',reason:'eof_anchor_retained',elapsedMs:reviewElapsedMs,
+  timeoutMs:REVIEW_MS,positionAfter:state.eofPlayedSeconds??AUDIO.seconds});
  state.eofPlayedSeconds??=AUDIO.seconds;
  show('preparation',false);show('exam');text('learner',state.learnerName||'Lượt đã xác nhận');
  $('audio-problem').disabled=true;
@@ -223,7 +228,7 @@ async function prepareOfflineShell(){
  let timer;
  try{
   return await Promise.race([new Promise(resolve=>{timer=setTimeout(()=>resolve(false),6000);}), (async()=>{
-   const worker=await activateListeningShell('./offline-sw-audio-status-v1.js?v=20261112-submission-reconciliation');
+   const worker=await activateListeningShell('./offline-sw-audio-status-v1.js?v=20261114-retake-log-v1');
    if(!worker)return false;
    const urls=[...performance.getEntriesByType('resource').map(entry=>entry.name),
     ...Array.from(document.querySelectorAll('script[src],link[href],img[src]'),element=>element.src||element.href)];
@@ -293,7 +298,11 @@ $('start').onclick=async()=>{
  text('preview-status','Chưa bắt đầu được audio ('+(e.code||'PLAY_FAILED')+'). Nhấn Bắt đầu để thử lại.');$('start').disabled=false;}
  finally{busy=false;}
 };
-player.onEnded=async()=>{if(state?.phase!=='playing')return;state.phase='review';state.audioEndedAt=new Date().toISOString();state.eofPlayedSeconds=player.snapshot().playerCurrentTime;reviewMono=performance.now();journal.emit('audio_natural_ended',{phase:'review',audioAfter:player.snapshot()});$('audio-problem').disabled=true;await queueDraft();};
+player.onEnded=async()=>{if(state?.phase!=='playing')return;state.phase='review';state.audioEndedAt=new Date().toISOString();state.eofPlayedSeconds=player.snapshot().playerCurrentTime;reviewMono=performance.now();journal.emit('audio_natural_ended',{phase:'review',audioAfter:player.snapshot()});$('audio-problem').disabled=true;
+ const pending=queueDraft();
+ journal.emit('audio_review_started',{phase:'review',reason:'natural_eof',timeoutMs:REVIEW_MS,
+  operationId:state.pending?.operationId,positionAfter:state.eofPlayedSeconds,audioAfter:player.snapshot()});
+ await pending;};
 player.onFault=reason=>{journal.emit('audio_media_event',{reason,audioAfter:player.snapshot()});};
 $('audio-problem').onclick=()=>{if(state?.phase==='playing'&&!busy)void technicalStop('LEARNER_CANNOT_HEAR');};
 $('technical').addEventListener('cancel',event=>event.preventDefault());
@@ -343,15 +352,21 @@ addEventListener('pageshow',event=>{
   if(['submitted','technical_stop'].includes(state.phase))return synchronize(true,!!pendingReview(state));
   if(state.phase==='review'){
    reviewMono=performance.now()-Math.min(REVIEW_MS,Math.max(0,Date.now()-Date.parse(state.audioEndedAt)));
-  }else return technicalStop('PAGE_RELOADED_DURING_EXAM');
+  }else{
+   journal.emit('audio_restore_exam_observed',{reason:'bfcache_reload_during_audio',audioAfter:player.snapshot()});
+   return technicalStop('PAGE_RELOADED_DURING_EXAM');
+  }
  }).catch(()=>note('Lượt thi đang mở ở tab khác. Hãy quay lại đúng tab.'));
 });
-setInterval(()=>{if(ownerHeld&&state?.phase==='review'&&reviewMono!==null){const left=Math.max(0,REVIEW_MS-(performance.now()-reviewMono));text('phase-label','Rà đáp án · '+Math.ceil(left/60000)+' phút');if(left<=0)void seal('review_deadline');}if(state?.pending)void synchronize();},1000);
+setInterval(()=>{sampleMedia();if(ownerHeld&&state?.phase==='review'&&reviewMono!==null){const left=Math.max(0,REVIEW_MS-(performance.now()-reviewMono));text('phase-label','Rà đáp án · '+Math.ceil(left/60000)+' phút');if(left<=0)void seal('review_deadline');}if(state?.pending)void synchronize();},1000);
 try{
  if(state?.permit){if(state.pending||!['submitted','technical_stop'].includes(state.phase))await acquireOwner();journal.bind(state.identity,state.permit);if(state.phase==='technical_stop'&&state.interruptionConfirmed===false)await presentInterruption();
  else if(['submitted','technical_stop'].includes(state.phase)){renderFinished();void synchronize(true,!!pendingReview(state));}
  else if(state.phase==='review')await restoreReview();
- else if(state.phase!=='prepared'){await technicalStop('PAGE_RELOADED_DURING_EXAM');}}
+ else if(state.phase!=='prepared'){
+  journal.emit('audio_restore_exam_observed',{reason:'reload_during_audio',audioAfter:player.snapshot()});
+  await technicalStop('PAGE_RELOADED_DURING_EXAM');
+ }}
  if(!state||state.phase==='prepared'){
   if(![...document.styleSheets].some(sheet=>sheet.href?.includes('/native-upgrades.css')))throw Error('STYLESHEET_UNAVAILABLE');
   const results=await Promise.all([loadContent(),cohort?(state?null:journal.request('/self-enrollment',null,{permit:null,method:'GET'})):journal.request('/roster?purpose=prepare',null,{permit:null,method:'GET'})]);content=results[0];
