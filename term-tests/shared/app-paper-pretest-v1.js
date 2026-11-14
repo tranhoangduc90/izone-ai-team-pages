@@ -173,6 +173,7 @@
           generation: typeof miniGeneration === 'number' ? miniGeneration : Number(state.generation || 0),
           clientRunId: window.TERM_TEST_BOOTSTRAP?.clientRunId || '', examSessionId: window.TERM_TEST_BOOTSTRAP?.examSessionId || '', historyEpoch: window.TERM_TEST_BOOTSTRAP?.historyEpoch || '' })
       });
+      miniJourney?.setJournal?.(examJournal);
     }).catch(() => {});
   }
 
@@ -3054,7 +3055,8 @@
       window.K67_ANSWER_EXPLANATIONS?.attach({
         container: elements.questionDetails, payload,
         attemptToken: miniJourney?.paper ? miniJourney.resultToken() : state.attemptToken,
-        testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest
+        testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest,
+        observeReviewAudio: observeResult
       });
     }
     const performanceSections = [renderSkillPerformance('Listening', result.listening)];
@@ -3114,6 +3116,12 @@
     return 'Bài Writing của bạn đang được chấm. Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
   }
 
+  function observeResult(phase, audioAssetHash) {
+    try { examJournal?.recorder.record('state_observed',{cause:'k67_offline_journey',checkpointState:{
+      offlineVersion:1,action:'pretest_journey_decision',phase,section:'result',delivery:'paper',audioAssetHash
+    }}); } catch {}
+  }
+
   async function loadResult(button) {
     if (!resultsUnlocked()) {
       setStage(stageBeforeResults());
@@ -3128,7 +3136,7 @@
         body: JSON.stringify({ attemptToken: state.attemptToken })
       });
       applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
-      renderResult(payload);
+      if (renderResult(payload)) observeResult('result_accessed');
       const grading = payload.writing?.grading;
       if (payload.writing?.submitted && !grading?.ready) {
         showNotice(writingGradingNotice(grading), 'success');
@@ -3142,6 +3150,7 @@
       if (listeningOnly) void waitForListeningPortalSync();
       scheduleWritingGradingRefresh();
     } catch (error) {
+      observeResult('result_access_failed');
       showNotice(`Không thể tải kết quả: ${error.message}`, 'error');
     } finally {
       setBusy(button, false, 'Đang tải kết quả...', button.dataset.normalText || 'Xem kết quả');
@@ -4212,20 +4221,21 @@
   }
 
   async function enterTermPaper(studentRef,prepare=false){
-    const {openTermPaperJourney}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt-audio-status-v4.mjs?v=20261112-pretest-v1');
+    const {openTermPaperJourney}=await import('../mini-test-lesson-5-computer-based/journey-pretest-k67-audio-v2.mjs?journalStart=20261114-pretest-v1');
     const journey=await openTermPaperJourney({slug:testConfig.slug,classCode,studentRef,mode:window.K67_EXAM_ORDER.requested(),
       request:rawApiRequest,prepare});
     if(!journey)return false;
     miniJourney=journey;
     state.studentRef=studentRef;
     await initializeMiniJourney();
+    miniJourney.setJournal?.(examJournal);
     saveSession();
     return true;
   }
 
   async function offerTermPaperRecovery(){
     if(!paperIdentity)return false;
-    const {termPaperRecovery}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt-audio-status-v4.mjs?v=20261112-pretest-v1');
+    const {termPaperRecovery}=await import('../mini-test-lesson-5-computer-based/journey-pretest-k67-audio-v2.mjs?journalStart=20261114-pretest-v1');
     const restore=await termPaperRecovery(classCode,testConfig.slug);
     if(!restore)return false;
     const form=document.createElement('form');

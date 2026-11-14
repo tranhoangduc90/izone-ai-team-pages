@@ -3,6 +3,7 @@
 (function () {
   'use strict';
   const substituteTests = new Set(['substitute-test-1-k67', 'k67-term1-listening-makeup-substitute1']);
+  const reviewObservation = new WeakMap();
   const supported = new Set(['term-test-1', 'term-test-2', 'mini-test-lesson-5', 'pretest-lesson-16', ...substituteTests]);
   const replayTests = new Set(['term-test-1', 'term-test-2', ...substituteTests]);
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({
@@ -83,10 +84,21 @@
       job.promise = (async () => {
         let blob;
         if (loadPrivateAudio) {
-          blob = await loadPrivateAudio(controller.signal);
+          const report = phase => {
+            try { reviewObservation.get(review)?.(phase, descriptor.sha256); } catch {}
+          };
+          try { blob = await loadPrivateAudio(controller.signal); }
+          catch (error) {
+            if (!controller.signal.aborted) report('review_audio_failed');
+            throw error;
+          }
           const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()))]
             .map(b => b.toString(16).padStart(2, '0')).join('');
-          if (hash !== descriptor.sha256) throw Error('Audio không khớp phiên bản lời giải');
+          if (hash !== descriptor.sha256) {
+            report('review_audio_failed');
+            throw Error('Audio không khớp phiên bản lời giải');
+          }
+          report('review_audio_verified');
         } else {
           const {downloadReview} = await import(new URL('../../shared/audio/transport.mjs?v=20261026-term1-replay1&journal=20261024-startup-v2&resilience=20261027-v1&audio=20261028-part-rescue-v1', scriptBase));
           blob = await downloadReview(source, descriptor.sha256, {signal:controller.signal});
@@ -304,7 +316,7 @@
     });
   }
   function attach({ container, payload, attemptToken, reviewKey = attemptToken, testSlug, title, request,
-    loadReview, loadAudio, answerLabel = 'Bài làm của bạn' }) {
+    loadReview, loadAudio, observeReviewAudio, answerLabel = 'Bài làm của bạn' }) {
     if (!supported.has(testSlug) || !payload.completed || !reviewKey || (!attemptToken && !loadReview)) return;
     const scopeKey = JSON.stringify([testSlug,reviewKey]);
     if (activeAttempt !== scopeKey) {
@@ -330,6 +342,7 @@
               return response.blob();
             }));
             if (readAudio) privateAudio.set(payload.review, readAudio);
+            if (observeReviewAudio) reviewObservation.set(payload.review, observeReviewAudio);
           }
           return payload;
         });

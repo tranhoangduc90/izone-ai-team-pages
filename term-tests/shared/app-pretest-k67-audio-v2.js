@@ -3142,7 +3142,8 @@
     if (!writingConfig || payload.writing?.submitted) {
       window.K67_ANSWER_EXPLANATIONS?.attach({
         container: elements.questionDetails, payload, attemptToken: state.attemptToken,
-        testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest
+        testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest,
+        observeReviewAudio: observeResult
       });
     }
     const performanceSections = skills.map(([title, skill]) => renderSkillPerformance(title, skill));
@@ -3201,6 +3202,12 @@
     return 'Bài Writing của bạn đang được chấm. Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
   }
 
+  function observeResult(phase, audioAssetHash) {
+    try { examJournal?.recorder.record('state_observed',{cause:'k67_offline_journey',checkpointState:{
+      offlineVersion:1,action:'pretest_journey_decision',phase,section:'result',delivery:'computer',audioAssetHash
+    }}); } catch {}
+  }
+
   async function loadResult(button) {
     if (miniJourney && waitForJourneyReceipt && !miniJourney.resultToken()) {
       updateJourneyResultReady();
@@ -3219,7 +3226,7 @@
         body: JSON.stringify({ attemptToken: state.attemptToken })
       });
       applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
-      renderResult(payload);
+      if (renderResult(payload)) observeResult('result_accessed');
       const grading = payload.writing?.grading;
       if (payload.writing?.submitted && !grading?.ready) {
         showNotice(writingGradingNotice(grading), 'success');
@@ -3235,6 +3242,7 @@
       if (listeningOnly) void waitForListeningPortalSync();
       scheduleWritingGradingRefresh();
     } catch (error) {
+      observeResult('result_access_failed');
       showNotice(`Không thể tải kết quả: ${error.message}`, 'error');
     } finally {
       setBusy(button, false, 'Đang tải kết quả...', button.dataset.normalText || 'Xem kết quả');
