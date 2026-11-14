@@ -62,7 +62,7 @@ export const ASSETS=[
   "../k67-shared/config.js",
   "../k67-shared/listening-controller-term2-journal-v1.js",
   "../k67-shared/listening-eof.mjs",
-  "../k67-shared/offline-journey-ui-term2-audio-v2.mjs",
+  "../k67-shared/offline-journey-ui-term2-journal-v1.mjs",
   "../k67-shared/public-audio-audio-status-v1.js",
   "../k67-shared/review-audio.js",
   "../mini-test-lesson-5-computer-based/journey-term2-k67-audio-v2.mjs",
@@ -173,10 +173,10 @@ export const ASSET_HASHES={
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
   "../k67-shared/listening-controller-term2-journal-v1.js": "d9b3da4e3e640d09dcc0300eebf732b139ae5f6fa6a33e6bb5e5538deb24926f",
   "../k67-shared/listening-eof.mjs": "b411d6b8cd0c79882c5d6a917a9d5bc7b6f4449589fdcbeba1400880296c42b5",
-  "../k67-shared/offline-journey-ui-term2-audio-v2.mjs": "4ba3be35966b5aca7c61e97e1d4239639ceede49dbd604872636258255da7abc",
+  "../k67-shared/offline-journey-ui-term2-journal-v1.mjs": "0b0789bfcb8e5322dc6993d8a51235f635fcdab9e0d9e1d4c37b7e6a7ed0447a",
   "../k67-shared/public-audio-audio-status-v1.js": "664f02516753db672e7e56e547cc2bda321f118db6bf44a7403ba1b99afb7bc7",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
-  "../mini-test-lesson-5-computer-based/journey-term2-k67-audio-v2.mjs": "e030c3ce175145a8c749d1ae648e7fec0217847850049f9cd1c29a9098a96844",
+  "../mini-test-lesson-5-computer-based/journey-term2-k67-audio-v2.mjs": "0baca93f3e09081f55cd12a95d31e187d4cc4a9c192e517a092c2d4892de6458",
   "../mini-test-lesson-5-computer-based/journey.mjs": "e6bdb3be01b65f1acd43e40ab29e4806c7f3759860a17b5f8d0381a4ce6dae1e",
   "../mini-test-lesson-5-computer-based/resilience-audio-status-v2.mjs": "7c74293a558505055148bb239607dffc83a0883459084c7ec45489368cf5d964",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
@@ -211,13 +211,13 @@ export const ASSET_HASHES={
   "../term-test-2/test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8",
   "audio-loader-audio-status-v1.js": "a7399bba30177f98a291033678c0cd4d41909b5ea499c162f1b15a4b9c0eead3",
   "bootstrap-audio-status-v2.js": "129dded9216b6e1f3b9999e133c215ce839778a495c0d62f53af78974ef9f4c8",
-  "bootstrap-term2-k67-audio-v2.js": "d50b22ca004e2dfc8b91ea6d13bea180979a7d1c9e646e65e50dd5dc8e75fcde",
+  "bootstrap-term2-k67-audio-v2.js": "dea56eff53725974fc9c7bdc4fb2e97e7d045504dc2609aad374d1632feb1d16",
   "enhance-term2-k67-audio-v2.js": "65d6cd0b9cb8bcd03fdbabb1acbe96d3c0abbc5a42d9a2a2a8e31a9de474b330",
   "enhance.js": "b2fa19b00fb7f2615207a4b3a03deb8baae8d258a8d2abec26be39d3b3fc7883",
-  "index-audio-status-v2.html": "0c28d43525d7c52763f323b07ace6c3b5c21ed48827c71d3a757ad5e2696935c",
+  "index-audio-status-v2.html": "7806fe74de1b469b96cf3c463283d099148d892bc5dd0c83579a0612f52922ae",
   "interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "offline-worker-audio-status-v2.js": "40cd4445d60bf60cbef329a4b3920cebda9d0c8f36038b12a0f48d720feca1be",
   "styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3"
 };
-export const ASSET_BUILD_ID="a1aec6d75aa98352efbcd5b4f841f03d65236fdee150cf40ac2bb7d6934e7f36";
+export const ASSET_BUILD_ID="91599d29c2c4a93de0535a9b9b50cba7117fea0dfbad3c554329215d430adbd8";
