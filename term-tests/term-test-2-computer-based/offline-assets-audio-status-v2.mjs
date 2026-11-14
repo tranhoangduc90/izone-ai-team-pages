@@ -60,7 +60,7 @@ export const ASSETS=[
   "../k67-shared/audio-owner.js",
   "../k67-shared/audio-store.js",
   "../k67-shared/config.js",
-  "../k67-shared/listening-controller-term2-audio-v2.js",
+  "../k67-shared/listening-controller-term2-journal-v1.js",
   "../k67-shared/listening-eof.mjs",
   "../k67-shared/offline-journey-ui-term2-audio-v2.mjs",
   "../k67-shared/public-audio-audio-status-v1.js",
@@ -171,7 +171,7 @@ export const ASSET_HASHES={
   "../k67-shared/audio-owner.js": "ce609e325abf7c16de1a03daff6d4b44b7826878cd23834e4974902aa500f5b5",
   "../k67-shared/audio-store.js": "ffd0bcb23310f7aa80705bba814098ac3b094244cd1609a518e9e0f1a7d7d826",
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
-  "../k67-shared/listening-controller-term2-audio-v2.js": "7db3e38d0883ad7c0c533f01fea8a7046fd4b1a4c1c7e34dd055f74da45bf598",
+  "../k67-shared/listening-controller-term2-journal-v1.js": "d9b3da4e3e640d09dcc0300eebf732b139ae5f6fa6a33e6bb5e5538deb24926f",
   "../k67-shared/listening-eof.mjs": "b411d6b8cd0c79882c5d6a917a9d5bc7b6f4449589fdcbeba1400880296c42b5",
   "../k67-shared/offline-journey-ui-term2-audio-v2.mjs": "4ba3be35966b5aca7c61e97e1d4239639ceede49dbd604872636258255da7abc",
   "../k67-shared/public-audio-audio-status-v1.js": "664f02516753db672e7e56e547cc2bda321f118db6bf44a7403ba1b99afb7bc7",
@@ -211,13 +211,13 @@ export const ASSET_HASHES={
   "../term-test-2/test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8",
   "audio-loader-audio-status-v1.js": "a7399bba30177f98a291033678c0cd4d41909b5ea499c162f1b15a4b9c0eead3",
   "bootstrap-audio-status-v2.js": "129dded9216b6e1f3b9999e133c215ce839778a495c0d62f53af78974ef9f4c8",
-  "bootstrap-term2-k67-audio-v2.js": "a9950573fd35e71d6536437e4fe34f3d2f534a94d37ab975b6db2dbc756724f6",
+  "bootstrap-term2-k67-audio-v2.js": "d50b22ca004e2dfc8b91ea6d13bea180979a7d1c9e646e65e50dd5dc8e75fcde",
   "enhance-term2-k67-audio-v2.js": "65d6cd0b9cb8bcd03fdbabb1acbe96d3c0abbc5a42d9a2a2a8e31a9de474b330",
   "enhance.js": "b2fa19b00fb7f2615207a4b3a03deb8baae8d258a8d2abec26be39d3b3fc7883",
-  "index-audio-status-v2.html": "c7f841056752f6d67d641fe8bedc62efbb651bfe609da7d3d249fcf036e84052",
+  "index-audio-status-v2.html": "0c28d43525d7c52763f323b07ace6c3b5c21ed48827c71d3a757ad5e2696935c",
   "interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "offline-worker-audio-status-v2.js": "40cd4445d60bf60cbef329a4b3920cebda9d0c8f36038b12a0f48d720feca1be",
   "styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3"
 };
-export const ASSET_BUILD_ID="34fa629c12d2967647537ae0bf38df8b3c684c70c7f1693fff740f6fd4623be8";
+export const ASSET_BUILD_ID="a1aec6d75aa98352efbcd5b4f841f03d65236fdee150cf40ac2bb7d6934e7f36";
