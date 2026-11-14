@@ -20,7 +20,8 @@
   const miniPrefix = '/api/term-tests/mini-test-lesson-5/answer-sheet';
   const requestedDemo = query.get('demo') || '';
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
-  const listeningOnly = retakeConfig.mode === 'listening-only';
+  const listeningTimer = window.TERM_TEST_BOOTSTRAP?.listeningTimer;
+  const listeningOnly = Boolean(listeningTimer) || retakeConfig.mode === 'listening-only';
   const writingConfig = listeningOnly ? null : (window.TERM_TEST_CONTENT?.writing || null);
   const deferResultsUntilComplete = listeningOnly ? false : Boolean(window.TERM_TEST_CONTENT?.deferResultsUntilComplete);
   const readingMinutes = Math.max(1, Number(window.TERM_TEST_CONTENT?.timing?.readingMinutes) || 60);
@@ -68,7 +69,7 @@
       return;
     }
   }
-  let storageScope = (listeningOnly ? String(retakeConfig.storageScope || ':listening-retake:missing') : '')
+  let storageScope = (listeningOnly && !listeningTimer ? String(retakeConfig.storageScope || ':listening-retake:missing') : '')
     + (window.TERM_TEST_STORAGE_SCOPE || '');
   let paperPointerKey = paperIdentity?.current().keys?.state || '';
   let storageKey = paperIdentity ? paperPointerKey : `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
@@ -294,7 +295,7 @@
 
   const progressMarkup = listeningOnly
     ? `<div class="progress-step" data-progress="listening">1. Listening</div>
-        <div class="progress-step" data-progress="result">2. Kết quả</div>`
+        <div class="progress-step" data-progress="result">2. ${listeningTimer ? 'Đã nộp' : 'Kết quả'}</div>`
     : writingConfig
     ? `<div class="progress-step" data-progress="listening">1. Listening</div>
         <div class="progress-step" data-progress="reading">2. Reading</div>
@@ -356,9 +357,9 @@
       <section class="panel transition-card" id="listeningSavedView" hidden>
         <div class="transition-icon">✓</div>
         <p class="eyebrow">Đã chấm bài Listening</p>
-        <h2>Điểm và phân tích Listening đã sẵn sàng</h2>
-        <p>Reading và Writing không thuộc lượt thi bù này nên không hiển thị và không bị ghi đè.</p>
-        <div class="form-actions transition-actions">
+        <h2>${listeningTimer ? 'Máy chủ đã thu và chấm bài Listening' : 'Điểm và phân tích Listening đã sẵn sàng'}</h2>
+        <p>${listeningTimer ? 'Bạn có thể đóng trang này.' : 'Reading và Writing không thuộc lượt thi bù này nên không hiển thị và không bị ghi đè.'}</p>
+        <div class="form-actions transition-actions" ${listeningTimer ? 'hidden' : ''}>
           <button class="button button-primary" id="viewListeningResult" type="button">Xem điểm và phân tích Listening</button>
           <button id="startReading" type="button" hidden>Không dùng trong lượt thi bù</button>
         </div>
@@ -1305,7 +1306,7 @@
       ? { examSessionToken: state.examSessionToken }
       : { attemptToken: state.attemptToken };
     if (!Object.values(token)[0]) return null;
-    const response = await apiRequest(path, {
+    const response = listeningTimer && skill === 'listening' ? await listeningTimer('draft', { answers, revision }) : await apiRequest(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...token, answers, revision })
@@ -1515,6 +1516,62 @@
     guard.interval = 0;
   }
 
+  function watchSharedListeningClock() {
+    const clock = document.createElement('output');
+    clock.className = 'cbt-reading-clock';
+    clock.setAttribute('role', 'timer');
+    clock.setAttribute('aria-label', 'Thời gian Listening còn lại');
+    elements.listeningView.querySelector('.section-heading').append(clock);
+    const render = () => {
+      const now = window.IZONE_EXAM_CLOCK.now(state.serverTimeOffsetMs);
+      if (!Number.isFinite(now)) return;
+      const seconds = Math.max(0, Math.ceil((Date.parse(state.listeningDeadlineAt) - now) / 1000));
+      clock.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    };
+    let pending = false;
+    const refresh = async () => {
+      if (pending || state.listeningSubmitted) return;
+      pending = true;
+      try {
+        const current = await listeningTimer('status', {});
+        if (current.examSessionToken !== state.examSessionToken) return;
+        if (current.listeningSubmitted && current.attemptToken && !state.listeningSubmitted) {
+          state.attemptToken = current.attemptToken;
+          state.listeningSubmitted = true;
+          saveSession();
+          stopSectionDeadlineGuard('listening');
+          stopSectionDraftFlow('listening');
+          setStage('listening-saved');
+          stop();
+          return;
+        }
+        if (Date.parse(current.listeningDeadlineAt) >= Date.parse(state.listeningDeadlineAt)) {
+          const previous = state.listeningDeadlineAt;
+          state.listeningDeadlineAt = current.listeningDeadlineAt;
+          state.serverTimeOffsetMs = window.IZONE_EXAM_CLOCK.offset(current.serverNow);
+          if (current.waitingForAudio) showNotice('Đang chờ giảng viên xác nhận audio đã phát xong.');
+          if (state.listeningDeadlineAt !== previous && !isSectionExpired('listening')) {
+            state.frozenAnswers.listening = null;
+            delete elements.listeningView.dataset.listeningTimeExpired;
+            setAnswerControlsLocked('listening', false);
+            hideNotice();
+          }
+          render();
+        }
+      } catch { /* The latest acknowledged deadline stays visible during a network error. */ }
+      finally { pending = false; }
+    };
+    const displayInterval = window.setInterval(render, 250);
+    const refreshInterval = window.setInterval(refresh, 3000);
+    const stop = () => {
+      window.clearInterval(displayInterval);
+      window.clearInterval(refreshInterval);
+    };
+    elements.listeningView.addEventListener('term-test:listening-submitted', stop, { once: true });
+    window.addEventListener('pagehide', stop, { once: true });
+    render();
+  }
+
   // Dữ liệu vào: deadline do server cấp, token của đúng lượt thi và snapshot đang nằm trên máy.
   // Việc chính: khóa đáp án đúng lúc hết giờ rồi gọi lại request nộp mỗi 15 giây nếu mạng lỗi.
   // Kết quả: answer sheet và computer-based dùng chung một cơ chế tự nộp, không phụ thuộc lớp giao diện.
@@ -1557,6 +1614,7 @@
       }
       setAnswerControlsLocked(skill, true);
       stopSectionDraftFlow(skill);
+      if (skill === 'listening' && listeningTimer) return;
       if (!guard.reportedDeadline) {
         guard.reportedDeadline = true;
         sendClientEvent('deadline_reached', skill, {
@@ -2102,11 +2160,13 @@
         ? window.K67_EXAM_ORDER.request(options) : options).catch(() => null);
     };
     if (state.examSessionToken && !state.listeningSubmitted && !miniCbt?.pending('listening') && state.draftRevisions.listening > state.draftAckRevisions.listening) {
-      post(`/api/term-tests/${testConfig.slug}/listening/draft`, {
+      const draft = {
         examSessionToken: state.examSessionToken,
         revision: Number(state.draftRevisions.listening) || 0,
         answers: state.drafts.listening || {}
-      });
+      };
+      if (listeningTimer) void listeningTimer('draft', draft, true).catch(() => {});
+      else post(`/api/term-tests/${testConfig.slug}/listening/draft`, draft);
     }
     if (state.attemptToken && !miniCbt?.pending('reading') && state.draftRevisions.reading > state.draftAckRevisions.reading && !state.completed && !state.readingSubmitted) {
       post(`/api/term-tests/${testConfig.slug}/reading/draft`, {
@@ -3490,7 +3550,9 @@
       answeredCount: countAnswered(answers)
     });
     try {
-      const response = await apiRequest(`/api/term-tests/${testConfig.slug}/listening`, {
+      const response = listeningTimer
+        ? await listeningTimer('submit', { answers, revision: Number(state.draftRevisions.listening) || 0 })
+        : await apiRequest(`/api/term-tests/${testConfig.slug}/listening`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3504,6 +3566,8 @@
           answers
         })
       }, { automatic });
+      if (listeningTimer && (response.examSessionToken !== state.examSessionToken || response.listeningSubmitted !== true
+        || !/^[a-f0-9-]{36}$/i.test(response.attemptToken || ''))) throw new Error('Chưa nhận được biên nhận của lượt Listening.');
       state.attemptToken = response.attemptToken;
       if (miniAnswerSheet) {
         storageKey = `izone-mini-answer:v2:${testConfig.slug}:${classCode}:${state.studentRef}:${state.attemptToken}`;
@@ -3537,7 +3601,10 @@
           ['pending', 'queued'].includes(response.portalSyncStatus) ? '' : 'success'
         );
       }
-      if (listeningOnly) {
+      if (listeningTimer) {
+        showNotice('Bài Listening đã được ghi nhận.', 'success');
+        setStage('listening-saved');
+      } else if (listeningOnly) {
         renderResult({
           ...response,
           className: state.className,
@@ -4538,7 +4605,7 @@
           showNotice(`Chưa đọc được bản lưu trên hệ thống: ${error.message}. Hệ thống đang dùng bản giữ trên máy.`, 'error');
         }
       }
-      if (canReuseVerified) await initializeCbtResilience(verified).catch(() => {});
+      if (canReuseVerified && !listeningTimer) await initializeCbtResilience(verified).catch(() => {});
       elements.readingStudentName.textContent = state.studentName;
       if (state.completed && state.attemptToken) {
         if (writingConfig && !state.writingSubmitted) {
@@ -4572,6 +4639,7 @@
         setStage('listening');
         startSectionDeadlineGuard('listening');
         hideNotice();
+        if (listeningTimer) watchSharedListeningClock();
       }
       if (audioAppReady) {
         if (!elements.listeningView.hidden && waitingForListeningAudio) waitForListeningAudio(true);

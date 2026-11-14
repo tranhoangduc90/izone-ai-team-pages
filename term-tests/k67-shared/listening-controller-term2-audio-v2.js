@@ -254,6 +254,13 @@
     }, 500);
     const progress = setInterval(async () => {
       if (eofPending) { await sendEof(); return; }
+      if (armed && !held && !stopped && snapshot.listeningSharedClock && audio.ended && !progressPending) {
+        progressPending = true;
+        try { apply(await request('audio-state', {}, false)); }
+        catch { /* Keep the confirmed clock until the next status read. */ }
+        finally { progressPending = false; }
+        return;
+      }
       if (!armed || held || stopped || progressPending || audio.paused || audio.ended) return;
       progressPending = true;
       try {
@@ -276,6 +283,7 @@
       start: async () => {if(snapshot.activeIncident?.startup)await resume(true);},
       arm: () => {armed = true; lastAdvance = performance.now();}, isHeld: () => held, getSnapshot: () => ({held, ...snapshot}),
       requireEof: gate => { eofGate = gate; snapshot = { ...snapshot, listeningEofVersion: 1 }; },
-      canAutoSubmit: () => snapshot.listeningEofVersion !== 1 || Boolean(snapshot.listeningEofAt && (!eofGate || eofGate.canAutoSubmit()))};
+      canAutoSubmit: () => (!snapshot.listeningSharedClock || snapshot.sharedAudioConfirmed)
+        && (snapshot.listeningEofVersion !== 1 || Boolean(snapshot.listeningEofAt && (!eofGate || eofGate.canAutoSubmit())))};
   };
 }());

@@ -154,6 +154,62 @@ function renderClassAccessNotice(classInfo) {
   elements.classAccessMessage.textContent = notice?.message || '';
 }
 
+const roomPanel = document.getElementById('term1ListeningRoom');
+const roomForm = document.getElementById('term1ListeningRoomForm');
+const roomStatus = document.getElementById('term1ListeningRoomStatus');
+const roomLink = document.getElementById('term1ListeningRoomLink');
+const finishAudio = document.getElementById('term1ListeningFinishAudio');
+const holdAudio = document.getElementById('term1ListeningHoldAudio');
+const roomPath = '/api/term-tests/teacher/term1-listening-room';
+const roomTime = new Intl.DateTimeFormat('vi-VN', { dateStyle:'short', timeStyle:'medium', timeZone:'Asia/Ho_Chi_Minh' });
+let roomRequestVersion = 0;
+
+async function refreshListeningRoom(update = null) {
+  if (!roomPanel) return;
+  const cls = getSelectedClass();
+  const version = ++roomRequestVersion;
+  const isCurrent = () => version === roomRequestVersion && state.selectedClassId === cls?.id && state.selectedTestSlug === 'term-test-1';
+  roomPanel.hidden = !cls || state.selectedTestSlug !== 'term-test-1';
+  if (roomPanel.hidden) return;
+  roomForm.hidden = true;
+  roomLink.hidden = true;
+  finishAudio.hidden = true;
+  holdAudio.hidden = true;
+  roomStatus.textContent = 'Đang tải ca Listening…';
+  try {
+    const payload = await apiRequest(update ? roomPath : `${roomPath}?classId=${encodeURIComponent(cls.id)}`, {
+      isCurrent, ...(update ? { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ ...update, classId:cls.id }) } : {})
+    });
+    if (!isCurrent()) return;
+    const room = payload.room;
+    roomForm.hidden = Boolean(room);
+    roomStatus.textContent = room ? `Bắt đầu ${roomTime.format(new Date(room.startsAt))} · Thu bài ${roomTime.format(new Date(room.deadlineAt))}` : 'Lớp chưa có ca Listening dùng đồng hồ chung.';
+    if (room) {
+      const url = new URL('../term-test-1-computer-based/listening-timer.html', location.href);
+      url.searchParams.set('class', cls.name);
+      roomLink.href = url.href;
+      roomLink.hidden = false;
+      finishAudio.hidden = !room.audioHeld;
+      holdAudio.hidden = room.audioHeld || Boolean(room.audioConfirmedAt) || Date.parse(room.deadlineAt) <= Date.parse(room.serverNow);
+      if (room.audioHeld) roomStatus.textContent += ' · Đang giữ giờ thu';
+    }
+  } catch (error) {
+    if (!isCurrent()) return;
+    if (error.status === 404 && !update) { roomPanel.hidden = true; return; }
+    if (update) await refreshListeningRoom();
+    if (state.selectedClassId === cls?.id && state.selectedTestSlug === 'term-test-1') roomStatus.textContent = error.message;
+  }
+}
+
+roomPanel?.addEventListener('toggle', () => { if (roomPanel.open) void refreshListeningRoom(); });
+roomForm?.addEventListener('submit', event => {
+  event.preventDefault();
+  const start = document.getElementById('term1ListeningStart').value;
+  if (start) void refreshListeningRoom({ action:'schedule', startsAt:new Date(start + '+07:00').toISOString() });
+});
+finishAudio?.addEventListener('click', () => { void refreshListeningRoom({ action:'finish-audio' }); });
+holdAudio?.addEventListener('click', () => { void refreshListeningRoom({ action:'hold-audio' }); });
+
 async function loadOptions() {
   const payload = await apiRequest('/api/term-tests/teacher/options');
   state.reviewer = payload.reviewer;
@@ -175,6 +231,7 @@ async function loadOptions() {
   elements.accessView.hidden = true;
   elements.dashboardView.hidden = false;
   state.connected = true;
+  void refreshListeningRoom();
 }
 
 function addTeacherSummaryCard(label, value) {
@@ -1061,6 +1118,7 @@ elements.classSelect.addEventListener('change', async () => {
   clearTeacherSavedProgress();clearTeacherAudioRecovery();
   window.K67_ANSWER_EXPLANATIONS?.reset();
   state.selectedClassId = elements.classSelect.value;
+  void refreshListeningRoom();
   state.selectedTab = 'overview';
   renderClassAccessNotice(getSelectedClass());
   try {
@@ -1075,6 +1133,7 @@ elements.testSelect.addEventListener('change', async () => {
   clearTeacherSavedProgress();clearTeacherAudioRecovery();
   window.K67_ANSWER_EXPLANATIONS?.reset();
   state.selectedTestSlug = elements.testSelect.value;
+  void refreshListeningRoom();
   state.selectedTab = 'overview';
   try {
     await loadResults();
