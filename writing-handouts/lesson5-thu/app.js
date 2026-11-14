@@ -441,7 +441,7 @@ $('workspace').addEventListener('click',async event=>{
  const next=button.id==='next-idea'||!!button.id?.endsWith('_next-idea'),bodyIndex=isMulti(lesson)?bodyIndexOf(key||button.id)||Number(button.closest('[data-body-index]')?.dataset.bodyIndex)||undefined:undefined;
  if(!swap&&!key&&!next&&!button.dataset.vocabRetry)return;
  if((busy&&!saveInFlight)||conflict||editingLocked||button.disabled)return;
- if(key&&outline&&!validOutlineDirection(state.responses.stance)){
+ if(key&&outline&&!sharePractice&&!validOutlineDirection(state.responses.stance)){
   checkFeedback.missing(['stance'],state.responses,state.ref);return;
  }
  if(key){const missing=missingCheckFields([{section:key,requiredFields:requiredFields(state,key)}],key,state.responses);if(missing.length){checkFeedback.missing(missing,state.responses,state.ref);return;}}

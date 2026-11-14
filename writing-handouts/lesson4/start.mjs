@@ -51,7 +51,7 @@ async function start() {
     globalThis.handout67WritingHandoff = Object.freeze({
       apiBase, request, verifiedDocsStudent: studentRef, showOpeningError,
     });
-    await import('../shared/loader.mjs?v=20261114-lesson4-share');
+    await import('../shared/loader.mjs?v=20261114-lesson4-check');
   }
   await enter(await access.open(root));
 }
