@@ -9,7 +9,8 @@
   const query = new URLSearchParams(window.location.search);
   let classCode = (query.get('class') || '').trim().toUpperCase();
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
-  const timerOnly = testConfig?.slug === 'term-test-1' && document.body.dataset.term1ListeningTimer === '1';
+  const makeupOnly = testConfig?.slug === 'term-test-2' && document.body.dataset.term2ListeningMakeup === '1';
+  const timerOnly = makeupOnly || (testConfig?.slug === 'term-test-1' && document.body.dataset.term1ListeningTimer === '1');
   if (timerOnly && location.protocol === 'file:') {
     document.getElementById('listeningTimerStartup').textContent = 'Trang cần máy chủ HTTP để mở màn đăng nhập và lưu bài.';
     document.getElementById('listeningTimerLocalPreview').hidden = false;
@@ -69,7 +70,7 @@
 
   document.addEventListener('keydown', blockInPageSearchShortcuts, { capture: true });
 
-  const baseStorageScope = listeningOnly ? String(retakeConfig.storageScope || ':listening-retake:missing') : '';
+  const baseStorageScope = makeupOnly ? ':listening-makeup' : listeningOnly ? String(retakeConfig.storageScope || ':listening-retake:missing') : '';
   let storageScope = baseStorageScope;
   let storageKey = `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
   let uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageScope}`;
@@ -103,7 +104,7 @@
     }
   }
   function applyStorageBinding(binding) {
-    window.TERM_TEST_STORAGE_SCOPE = binding.scope;
+    window.TERM_TEST_STORAGE_SCOPE = makeupOnly ? baseStorageScope + binding.scope : binding.scope;
     window.TERM_TEST_SHARED_IDENTITY_ENABLED = true;
     storageScope = baseStorageScope + binding.scope;
     storageKey = binding.keys?.state || ''; uiStorageKey = binding.keys?.ui || '';
@@ -592,7 +593,7 @@
     if (timerOnly) {
       elements.bootstrapStart.disabled = preparing || !timerSession || timerSession.listeningSubmitted;
       elements.bootstrapStart.textContent = timerSession?.listeningStartedAt ? 'Tiếp tục Listening' : 'Bắt đầu Listening';
-      elements.bootstrapStartStatus.textContent = 'Đề mở theo giờ của ca thi. Đồng hồ đồng bộ với phòng thi.';
+      elements.bootstrapStartStatus.textContent = makeupOnly ? 'Đồng hồ tính giờ từ lúc bạn bấm Bắt đầu Listening.' : 'Đề mở theo giờ của ca thi. Đồng hồ đồng bộ với phòng thi.';
       return;
     }
     if (miniJourney) {
@@ -832,7 +833,7 @@
       preparing = true;
       setStartAvailability();
       try {
-        const key = 'izone-term1-timer-device';
+        const key = makeupOnly ? 'izone-term2-makeup-device' : 'izone-term1-timer-device';
         let deviceProof = localStorage.getItem(key);
         if (!/^[a-f0-9]{64}$/.test(deviceProof || '')) {
           deviceProof = Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, '0')).join('');
@@ -1036,7 +1037,7 @@
   }
 
   function timerRequest(action, input, keepalive = false) {
-    return apiRequest('/api/term-tests/term-test-1/listening-timer/' + action, {
+    return apiRequest(`/api/term-tests/${testConfig.slug}/listening-timer/${action}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), keepalive
     });
   }
@@ -1877,7 +1878,7 @@
           return;
         }
         elements.bootstrapStudent.value = launchMatches[0].ref;
-        elements.bootstrapDownloadStatus.textContent = 'Đã điền sẵn họ tên. Hãy xác nhận trước khi tải audio.';
+        elements.bootstrapDownloadStatus.textContent = timerOnly ? 'Đã điền sẵn họ tên. Hãy xác nhận để tiếp tục.' : 'Đã điền sẵn họ tên. Hãy xác nhận trước khi tải audio.';
         elements.bootstrapStudent.dispatchEvent(new Event('change'));
       } else {
         elements.bootstrapDownloadStatus.textContent = timerOnly ? 'Hãy chọn và xác nhận họ tên.' : 'Hãy chọn họ và tên để bắt đầu tải audio.';
