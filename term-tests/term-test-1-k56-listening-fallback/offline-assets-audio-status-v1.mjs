@@ -90,10 +90,10 @@ export const ASSET_HASHES={
   "../term-test-1-k56-computer-based/enhance-submission-recovery-v1.js": "fb87a8c7aa32cdb5204256afced54b26260eed0072de34de7e8def48549e938d",
   "../term-test-1-k56-computer-based/layout-updates.css": "e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351",
   "../term-test-1-k56-computer-based/styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb",
-  "../term-test-1-k56-reading-fallback/bootstrap-audio-submission-recovery-v1.mjs": "aa6cac3ccaf82cad38261d3969c45b0fc8480c08b79d590b6172ca07799302eb",
-  "../term-test-1-k56-reading-fallback/reading-offline-submission-recovery-v1.mjs": "97e68a484b4b68fb03d80df5001913abf4ce6cd39b62ca3815a2168ee16bcaef",
+  "../term-test-1-k56-reading-fallback/bootstrap-audio-submission-recovery-v1.mjs": "5aa447235985d44f80c3705402056bbf3a5069eff4060094083b3933a372fb73",
+  "../term-test-1-k56-reading-fallback/reading-offline-submission-recovery-v1.mjs": "0abc9493ba0f7f206bc9bf354bfbb0890f9f510063e247c7777e132e58e2c406",
   "../term-test-1-k56/test-config.js": "fdfa91aa74cda341a1965c418f24b2a7a7065c547d0fbad4ae581c8ec1844bc2",
-  "index-audio-status-v1.html": "2feb3bcedde41ee1ee11a03be8c4d7562cc58b8e277c445c440ab02ca7aec6fd",
+  "index-audio-status-v1.html": "29334d5966c98823db9598c8b48b02978d15dde446c3c2d788632a9120bdf65c",
   "offline-worker-audio-status-v1.js": "a40c811e1fb31919e985e3a310efbcbe1a99aa6f5fb4f2be3e9e9ee2ac0e5900"
 };
-export const ASSET_BUILD_ID="8225504eb2337a32a768b2af9138ce59f47559cacd3ce12929175c2e79f51e76";
+export const ASSET_BUILD_ID="3fbbf18a2a76334e917c690c9f776640dcc6c573a58edbe0d42db21123fdd125";
