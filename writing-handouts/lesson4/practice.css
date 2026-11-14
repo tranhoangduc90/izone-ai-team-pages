@@ -1,0 +1,14 @@
+body[data-activity="lesson4"] .lesson4-page-title,
+body[data-activity="lesson4"] .share-practice {
+  margin-inline: 28px;
+}
+body[data-activity="lesson4"] .lesson4-page-title { padding-top: 20px; margin-bottom: 0; }
+body[data-activity="lesson4"] .share-practice > label { margin-bottom: 8px; font-size: 14px; }
+body[data-activity="lesson4"] .share-practice input { height: 50px; font-size: 16px; border-radius: 8px; }
+body[data-activity="lesson4"] .practice-open { min-height: 42px; padding: 9px 18px; border-radius: 7px; font-size: 14px; font-weight: 400; }
+body[data-activity="lesson4"] #practice-check { color: #152b4e; border-color: #152b4e; border-radius: 7px; font-size: 16px; font-weight: 600; }
+body[data-activity="lesson4"] .reading-practice-gate { display: flow-root; }
+@media (max-width: 800px) {
+  body[data-activity="lesson4"] .lesson4-page-title,
+  body[data-activity="lesson4"] .share-practice { margin-inline: 14px; }
+}
