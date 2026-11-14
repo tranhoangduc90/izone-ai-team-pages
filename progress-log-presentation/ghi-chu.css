@@ -1,0 +1,9 @@
+body { margin: 0; background: #f3f4f6; color: #263744; font: 16px/1.5 system-ui, sans-serif; }
+main { padding: 20px; max-width: 640px; margin: auto; }
+h1 { color: #174266; margin: 0 0 8px; }
+ol { padding-left: 24px; }
+li { margin: 14px 0; }
+li p { margin: 5px 0; }
+button { background: white; color: #174266; border: 1px solid #a9b9c8; border-radius: 6px; padding: 6px 10px; font: inherit; text-align: left; cursor: pointer; }
+button[aria-current=true] { border-color: #db0829; color: #a90020; background: #fff0f3; }
+button:disabled { cursor: default; }

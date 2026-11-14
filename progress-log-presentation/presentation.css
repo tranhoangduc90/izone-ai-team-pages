@@ -1,0 +1,96 @@
+.presenter-layer {
+  position: fixed;
+  z-index: 2147483600;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.presenter-layer[popover], .presenter-history {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  width: auto;
+  height: auto;
+}
+.presenter-history { overflow: hidden; }
+.presenter-history-frame {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  visibility: hidden;
+  background: #f3f4f6;
+}
+.presenter-history-layer { transition: none; }
+.presenter-student {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483500;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #f3f4f6;
+}
+.presenter-showing-student { overflow: hidden; }
+.presenter-focus {
+  position: absolute;
+  opacity: 0;
+  border: 2px solid #e72341;
+  border-radius: 9px;
+  box-shadow: 0 0 0 2px #fff9, 0 0 0 200vmax #17253631;
+  transition: opacity 180ms ease;
+}
+.presenter-focus.visible { opacity: 1; }
+.presenter-focus.typing {
+  box-shadow: 0 0 0 3px #fff9, 0 0 22px #e7234155, 0 0 0 200vmax #17253625;
+}
+.presenter-pointer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transition: opacity 130ms ease;
+}
+.presenter-pointer.visible { opacity: 1; }
+.presenter-pointer::before,
+.presenter-ripple {
+  position: absolute;
+  content: "";
+  width: 39px;
+  height: 39px;
+  left: -19px;
+  top: -19px;
+  border: 2px solid #e72341;
+  border-radius: 50%;
+  background: #f132491c;
+  box-shadow: 0 0 0 2px #fffc;
+}
+.presenter-ripple { opacity: 0; }
+.presenter-arrow {
+  position: absolute;
+  width: 20px;
+  height: 24px;
+  left: -2px;
+  top: -2px;
+  filter: drop-shadow(0 2px 2px #0008);
+}
+.presenter-arrow::before,
+.presenter-arrow::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: white;
+  clip-path: polygon(0 0, 100% 64%, 57% 67%, 76% 91%, 57% 100%, 38% 75%, 0 94%);
+}
+.presenter-arrow::after { inset: 2px 3px 4px 2px; background: #152b40; }
+@media (prefers-reduced-motion: reduce) {
+  .presenter-focus, .presenter-pointer { transition: none; }
+}
