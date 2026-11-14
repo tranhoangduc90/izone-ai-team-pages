@@ -55,8 +55,8 @@ test('Phiếu mở bản Pages trước API phiên bản; tab mở lâu cập nh
   const openingRequest=requests.findIndex(path=>path.endsWith('/assignments/open'));
   const versionRequestOnWorksheet=requests.findIndex(path=>path.endsWith('/frontend-release'));
   assert.ok(openingRequest>=0&&openingRequest<versionRequestOnWorksheet,'Mở phiếu bắt đầu trước kiểm phiên bản nền');
-  assert.ok(await page.locator('link[rel=modulepreload][href$="/session-review.js"]').count(),
-   'Chrome được phát hiện các module con cùng lúc với app.js');
+  assert.ok(!requests.some(path=>/\/(session-review\.js|course-skills\.js|journey\.css)$/.test(path)),
+   'Màn chọn học viên không tải chữa bài, tổng quan kỹ năng hay CSS Hành trình');
   requests.length=0;
   await page.goto(origin+'/izone-ai-team-pages/progress-log/student.html?release-test=1');await page.locator('#portalClass:not([disabled])').selectOption('1294');await page.locator('#portalStudent:not([disabled])').selectOption(a);await page.locator('#portalContinue').click();
   const packageRequest=requests.findIndex(path=>path.includes('/releases/'+old+'/'));
