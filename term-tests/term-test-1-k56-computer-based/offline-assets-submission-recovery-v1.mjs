@@ -277,7 +277,7 @@ export const ASSET_HASHES={
   "../k56-offline-shared/whole-audio-audio-status-v1.mjs": "891ef93aee9fedd15af83a6f7559fe850837fcf352cde05ac684364955282965",
   "../k56-offline-shared/worker-term-submission-recovery-v1.mjs": "f63a7138eeacadc6335f1cb646d0b60658a5c49426bff445670f814b500451c5",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
-  "../k56-shared/app-term-submission-recovery-v1.js": "4fbcacc15a92414aef61c18597747fac49886242b9208660c513ed2c735e2300",
+  "../k56-shared/app-term-submission-recovery-v1.js": "36b80dde15199302c4a6e9831b1513657247ca60bffb05aa24d5a3a09616e4c1",
   "../k56-shared/app-term1-audio-goal-v1.js": "f6ec23c2df86dbb7a804b790c9075252854e7e024cea19ab7cb8f5ca7bc9b938",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/public-audio-audio-status-v1.mjs": "30c109b154046f13fef9f9b53e722b35b3f268fa60d2d874b507a9fed077e24c",
@@ -346,4 +346,4 @@ export const ASSET_HASHES={
   "offline-worker-submission-recovery-v1.js": "868f97f66cb30c1bf417fc2b037ff5ea0dfde6e9ff0dbb87fc668f2bb6414350",
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb"
 };
-export const ASSET_BUILD_ID="481e773f8529160ad63d2dc07f3e10da2920cfe506ab3cc4544ef3769d9bf48c";
+export const ASSET_BUILD_ID="5bdc19a1ba60eb783567aa456e67d197a06bcd39f4b8df8182da54e8c87f6cba";

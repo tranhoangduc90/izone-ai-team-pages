@@ -73,7 +73,7 @@ export const ASSET_HASHES={
   "../k56-offline-shared/runtime-term-submission-recovery-v1.mjs": "8d238b13d7b33265b420c7ea2923a1190d0c31c5848a7379c12f2bde3c734f47",
   "../k56-offline-shared/whole-audio-audio-status-v1.mjs": "891ef93aee9fedd15af83a6f7559fe850837fcf352cde05ac684364955282965",
   "../k56-offline-shared/worker-audio-status-v1.mjs": "6de008420ebc17ecac20cec5d12b12b71e18860835022d22c8711cab5bb7451d",
-  "../k56-shared/app-term-submission-recovery-v1.js": "4fbcacc15a92414aef61c18597747fac49886242b9208660c513ed2c735e2300",
+  "../k56-shared/app-term-submission-recovery-v1.js": "36b80dde15199302c4a6e9831b1513657247ca60bffb05aa24d5a3a09616e4c1",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../shared/cbt-audio-download-status.css": "4d62a08d3c3f93439ce977312feedecc3cfdaf5315fd9212bae7a6ca90a4a493",
@@ -96,4 +96,4 @@ export const ASSET_HASHES={
   "index-audio-status-v1.html": "29334d5966c98823db9598c8b48b02978d15dde446c3c2d788632a9120bdf65c",
   "offline-worker-audio-status-v1.js": "a40c811e1fb31919e985e3a310efbcbe1a99aa6f5fb4f2be3e9e9ee2ac0e5900"
 };
-export const ASSET_BUILD_ID="3fbbf18a2a76334e917c690c9f776640dcc6c573a58edbe0d42db21123fdd125";
+export const ASSET_BUILD_ID="b6fb07a579eae21e7c6a4601e0b0b57fd4fe6e667f5a3a6bcedcc964edcc0829";

@@ -69,7 +69,7 @@ export const ASSET_HASHES={
   "../k56-offline-shared/runtime-term-submission-recovery-v1.mjs": "8d238b13d7b33265b420c7ea2923a1190d0c31c5848a7379c12f2bde3c734f47",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
-  "../k56-shared/app-term-submission-recovery-v1.js": "4fbcacc15a92414aef61c18597747fac49886242b9208660c513ed2c735e2300",
+  "../k56-shared/app-term-submission-recovery-v1.js": "36b80dde15199302c4a6e9831b1513657247ca60bffb05aa24d5a3a09616e4c1",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-writing-feedback/styles.css": "5f1990abcb8a2a38b7168dfbaa56565e0faece43c4c4c15c146ef6c800fca99e",
@@ -89,4 +89,4 @@ export const ASSET_HASHES={
   "index.html": "c1eff2fe9a8ecf6f9ddad3341ae3a87820a4124d5810439894ca07109199f3fb",
   "offline-worker.js": "4f343041a15cb5b49437c5e38b4518454b91355bf9de11e2cf6f0a4c4cfd631d"
 };
-export const ASSET_BUILD_ID="8bafebda739bcdad4bf2f55efdc932c5665c586c2bc3fc81549b6f1b1302f7ca";
+export const ASSET_BUILD_ID="7f9a5d1b00429a9d5de7b4c9d876abae047768e1ddcb2f876b4ecc4606854b35";
