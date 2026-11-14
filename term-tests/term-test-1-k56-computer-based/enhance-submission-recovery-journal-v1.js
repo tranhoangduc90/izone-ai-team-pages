@@ -834,6 +834,7 @@
         for(const control of answerControls)control.disabled=answerDisabled.get(control);
         if(submitButton)submitButton.disabled=wasDisabled;
         manualButton.disabled=false;
+        onlinePlayback?.onAnswersUnlocked?.();
       };
       const attachController=()=>{
         if(onlinePlayback&&player.paused&&!player.ended)player.addEventListener('playing',unlockAfterPlaying,{once:true});
