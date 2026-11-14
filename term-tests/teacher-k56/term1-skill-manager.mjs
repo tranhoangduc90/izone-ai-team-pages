@@ -2,6 +2,32 @@ const endpoint = '/api/term-tests/term-test-1-k56/skill-fallback/';
 const modeLabels = { lis_first: 'Listening trước', read_first: 'Reading trước' };
 const grantLabels = { awaiting: 'Đã cấp · Chưa kích hoạt', bound: 'Đang gắn với thiết bị học viên', expired: 'Đã hết hạn kích hoạt' };
 let active;
+const journalKey = 'izone:term1-k56-fallback-grant:v1';
+const isGrantId = value => typeof value === 'string' && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value);
+
+export function readTerm1SkillGrantJournal() {
+  try {
+    const rows = JSON.parse(sessionStorage.getItem(journalKey) || '[]');
+    return Array.isArray(rows) ? rows.slice(-80) : [];
+  } catch { return []; }
+}
+
+function record(section, action, outcome, { grantId, status } = {}) {
+  try {
+    const event = { schemaVersion: 1, testSlug: 'term-test-1-k56', section, action, outcome, occurredAt: new Date().toISOString() };
+    if (isGrantId(grantId)) event.grantId = grantId;
+    if (Number.isInteger(status) && status >= 100 && status <= 599) event.status = status;
+    const rows = readTerm1SkillGrantJournal();
+    rows.push(event);
+    sessionStorage.setItem(journalKey, JSON.stringify(rows.slice(-80)));
+  } catch {}
+}
+
+function outcomeFor(error, current) {
+  if (error.status === 401 || error.status === 403) return 'denied';
+  if (!current()) return 'stale';
+  return error.status >= 400 && error.status < 500 ? 'refused' : 'unconfirmed';
+}
 
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -48,7 +74,7 @@ export function openTerm1SkillManager({ classCode, student, opener, request, isC
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...scope, ...fields }), isCurrent: current
   });
 
-  function copyField(label, value) {
+  function copyField(label, value, grantId) {
     const wrap = node('p');
     const caption = node('label', label + ' ');
     const field = node('input');
@@ -57,8 +83,14 @@ export function openTerm1SkillManager({ classCode, student, opener, request, isC
     caption.append(field);
     const copy = button('Sao chép ' + label.toLowerCase());
     copy.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(field.value); if (current()) status.textContent = 'Đã sao chép ' + label.toLowerCase() + '.'; }
-      catch { if (current()) { field.select(); status.textContent = 'Hãy sao chép nội dung đang được chọn.'; } }
+      try {
+        await navigator.clipboard.writeText(field.value);
+        if (grantId) record(section, 'copy_link', current() ? 'confirmed' : 'stale', { grantId });
+        if (current()) status.textContent = 'Đã sao chép ' + label.toLowerCase() + '.';
+      } catch {
+        if (grantId) record(section, 'copy_link', current() ? 'unconfirmed' : 'stale', { grantId });
+        if (current()) { field.select(); status.textContent = 'Hãy sao chép nội dung đang được chọn.'; }
+      }
     });
     wrap.append(caption, document.createTextNode(' '), copy);
     return wrap;
@@ -69,8 +101,10 @@ export function openTerm1SkillManager({ classCode, student, opener, request, isC
     actions.replaceChildren();
     try {
       const value = await send('manage');
+      record(section, 'manage', current() ? 'confirmed' : 'stale', { grantId: value.activeGrant?.grantId });
       if (current()) render(value);
     } catch (error) {
+      record(section, 'manage', outcomeFor(error, current), { status: error.status });
       if (!current()) return;
       status.textContent = error.status === 404 ? 'Cổng này chưa mở quản lý link dự phòng.' : error.message;
       const retry = button('Kiểm tra lại');
@@ -82,12 +116,18 @@ export function openTerm1SkillManager({ classCode, student, opener, request, isC
   async function mutate(action, fields) {
     actions.querySelectorAll('button, input, select').forEach(control => { control.disabled = true; });
     status.textContent = action === 'issue' ? 'Đang cấp link…' : 'Đang thu hồi link…';
+    record(section, action, 'requested', { grantId: fields.grantId });
     try {
       const value = await send(action, fields);
+      const verified = value?.ok === true && value.section === section && isGrantId(value.grantId)
+        && (action !== 'revoke' || value.grantId === fields.grantId);
+      if (!verified) throw Error('Phản hồi chưa xác nhận đúng link đang xử lý.');
+      record(section, action, current() ? 'confirmed' : 'stale', { grantId: value.grantId });
       if (!current()) return;
       issued = action === 'issue' ? value : null;
       await refresh();
     } catch (error) {
+      record(section, action, outcomeFor(error, current), { grantId: fields.grantId, status: error.status });
       if (!current()) return;
       status.textContent = error.status ? error.message : 'Chưa nhận được xác nhận. Kiểm tra trạng thái trước khi thao tác lại.';
       const retry = button('Kiểm tra trạng thái');
@@ -108,7 +148,7 @@ export function openTerm1SkillManager({ classCode, student, opener, request, isC
         link.searchParams.set('class', classCode);
         link.hash = new URLSearchParams({ g: issued.token });
         actions.append(node('p', 'Sao chép link và gửi mã kích hoạt riêng cho học viên.'),
-          copyField('Link ' + label, link.href), copyField('Mã kích hoạt', issued.activationCode));
+          copyField('Link ' + label, link.href, grant.grantId), copyField('Mã kích hoạt', issued.activationCode));
       } else if (grant.state === 'awaiting') {
         actions.append(node('p', 'Link và mã được hiển thị khi cấp. Nếu chưa lưu được, hãy thu hồi rồi cấp lại.'));
       }

@@ -316,8 +316,8 @@ export const ASSET_HASHES={
   "../shared/writing-planning.js": "1ce3652cdb91ce598f50e03516318154331fb461dcd28834534ddeb599da7094",
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../substitute-test-1-k67-computer-based/assets/figures/home-improvement-store.png": "feab5540ce3cac2115201f167f1a05cf5b916021e4ec2c4f67912728290aa150",
-  "../teacher-k56/app.js": "e232946c72c79ab9af04cba1100c06c699924a54bac9f393c4b3a81038204f34",
-  "../teacher-k56/index.html": "e1b56c031149f2e7c3e5b8f11f43e89a1ba669ee127fc3c06554df84d0a7e3dd",
+  "../teacher-k56/app.js": "3109a1d774e80701752c6ce608c97777c59fe8497b690423206af5292a93674e",
+  "../teacher-k56/index.html": "e4a71c193fdfc463c35ee66f9285d6da6517e385f726f603aec775cdd0ffdafc",
   "../teacher-k56/model.js": "9766cea8d9ca6617d22a3fd4f947590458d4909add0d22415b2deec9e3b5a5c3",
   "../teacher-k56/styles.css": "131d01f090fc461af96f1408f90c56cec05d467420146cd799f83ea65e854aa7",
   "../teacher/app.js": "9292035d24e0bebc11f9a3017af3c18236cac1c056f403797e9ad5e48f7891d0",
@@ -344,4 +344,4 @@ export const ASSET_HASHES={
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="c9eb5f2fee5ec1e021a4f64364b921147e8637dffcd7d7bb8bdeeef57afc413d";
+export const ASSET_BUILD_ID="97971c90068a350eea2123ca12ae02eee8566820b5cd61a012f48635a363841c";
