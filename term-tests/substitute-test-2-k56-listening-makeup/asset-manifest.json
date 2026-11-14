@@ -1,10 +1,10 @@
 {
   "testId": "substitute-test-2-k56-listening-makeup",
-  "build": "issue611-ff8e059bea31909a",
+  "build": "issue611-a6e7bed50eee71b6",
   "assets": [
     {
       "path": "index.html",
-      "sha256": "006c10acce3effee0818fcfd53501ac075fd66ada7bd80dcd64754d2f35d62c0"
+      "sha256": "6dc004c1f0f98fa6eb05bde2f9be8cfc99299caaedae944866e9508ec081e9ab"
     },
     {
       "path": "sw.js",
@@ -19,8 +19,8 @@
       "sha256": "1aa9bbbbbb34d29edab98e01473f2a74042e354aa4797fc30ee23d26dc2abd54"
     },
     {
-      "path": "../substitute-skill-shared/objective-listening-audio-v3.mjs",
-      "sha256": "aa00c2500269ed70395dcaf3f728bb867c2d7e80806b0d5e9d6f0a99ef55a536"
+      "path": "../substitute-skill-shared/objective-listening-audio-v4.mjs",
+      "sha256": "a633eeee1177724e02d04f935f1e9ba0155a7449e730d101bf578ed5cb2c1fcd"
     },
     {
       "path": "../substitute-skill-shared/native-listening.mjs",
@@ -81,6 +81,18 @@
     {
       "path": "../substitute-skill-shared/portal-status.mjs",
       "sha256": "4ce87f53cd948ccf73a46a53355ed2de1500f15e8d3dca5caa31ed764f4e07db"
+    },
+    {
+      "path": "../substitute-skill-shared/listening-journal-v1.mjs",
+      "sha256": "5ff958d58187d2c119f2395d67c3e95e6e9f7e5202fa99ff76146d828c53d684"
+    },
+    {
+      "path": "../shared/exam-journal/recorder.mjs?v=20261109-term1-writing-v1",
+      "sha256": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76"
+    },
+    {
+      "path": "../shared/exam-journal/outbox.mjs",
+      "sha256": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f"
     }
   ]
 }
