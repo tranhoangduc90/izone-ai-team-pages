@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Phiếu điểm danh và ghi nhận tiến bộ trong buổi học">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; style-src 'self'; script-src 'self' 'sha256-XYLPMqVmx4sAT/eVxIjDzmM3DNG1JyXKlJ25ePXI03A='; base-uri 'none'; form-action 'self'">
+    <title>Phiếu điểm danh</title><script data-release-source="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/release-runtime.js">// Local preview and GitHub Pages intentionally use the same backend.
+// The browser never connects to PostgreSQL directly; the VPS API owns that connection.
+const productionApi = 'https://ducizone.ddns.net/mapping-api';
+
+window.PROGRESS_LOG_CONFIG = Object.freeze({
+  API_BASE_URL: productionApi,
+  THUY_PILOT_CLASS_IDS: Object.freeze(['1294']),
+  DEMO_API_BASE_URL: 'https://ducizone.ddns.net/mapping-api-progress-log-demo',
+  STUDENT_MEMORY: Object.freeze({ enabled: true, allClasses: true }),
+  GOOGLE_CLIENT_ID: '235597750133-urmb86ktf5recnvvtbghf13bktfv5rkj.apps.googleusercontent.com'
+});
+
+// Runs before application scripts in immutable release pages.
+const script=document.currentScript;
+const match=new URL(script.src||script.dataset.releaseSource,location.origin).pathname.match(/^(.*\/progress-log)\/releases\/([a-f0-9]{16})\/progress-log\//);
+if(match){
+ const canonical=match[1]+'/'+location.pathname.split('/').at(-1);
+ window.PROGRESS_LOG_RELEASE={version:match[2],root:match[1]+'/',entry:location.pathname.split('/').at(-1)};
+ const worksheet=['index.html','thuy.html'].includes(window.PROGRESS_LOG_RELEASE.entry);
+ if(worksheet){
+  const appPath=new URL('./app.js',new URL(script.src||script.dataset.releaseSource,location.origin)).pathname;
+  function reportStartupFailure(event){
+   const target=event.target;
+   if(target?.tagName!=='SCRIPT'||target.type!=='module'||new URL(target.src).pathname!==appPath)return;
+   window.removeEventListener('error',reportStartupFailure,true);
+   const showRetry=()=>{
+    const notice=document.getElementById('notice');
+    if(!notice||!document.body.classList.contains('progress-starting'))return;
+    const retry=document.createElement('a');
+    retry.textContent='Tải lại Phiếu';
+    retry.href=canonical+location.search+location.hash;
+    retry.addEventListener('click',event=>{
+     if(retry.href!==location.href)return;
+     event.preventDefault();
+     location.reload();
+    });
+    notice.textContent='Chưa tải được giao diện Phiếu. Kiểm tra kết nối rồi thử lại.';
+    notice.after(retry);
+   };
+   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',showRetry,{once:true});
+   else showRetry();
+  }
+  window.addEventListener('error',reportStartupFailure,true);
+ }
+ const publicToken=new URLSearchParams(location.hash.slice(1)).get('assignment');
+ const api=window.PROGRESS_LOG_CONFIG?.API_BASE_URL;
+ if(api&&worksheet&&
+    /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(publicToken||'')){
+  const request=fetch(api+'/api/learning/assignments/open',{
+   method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({publicToken}),cache:'no-store',referrerPolicy:'no-referrer',
+   signal:AbortSignal.timeout(5000)
+  }).then(async response=>({status:response.status,ok:response.ok,payload:await response.json()})).catch(()=>null);
+  window.progressLogOpeningRead={publicToken,request};
+ }
+ try{history.replaceState(history.state,'',canonical+location.search+location.hash);}catch{/* History failure must not stop the lesson. */}
+}
+</script>
+    <link rel="preconnect" href="https://ducizone.ddns.net" crossorigin>
+    <script type="module" src="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/app.js"></script>
+    <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/shared/teacher-entry.css">
+    <link rel="icon" type="image/svg+xml" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/shared/izone-favicon.svg">
+    <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/styles.css">
+    <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/reference-components.css">
+      <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/student-the20.css">
+<script  defer src="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/shared/red-focus-glow.js"></script>
+  <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/startup.css">
+<link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/app.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/session-presentation.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/read-coordinator.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/pilot-entry.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/dropdown-flowchart.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/dropdown-option-label.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/compact-exercises.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/session-comments.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/submission-window.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/shared/course-student-identity.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/shared/student-identity.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/shared/student-identity-client.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/shared/student-identity-migration.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/thuy-live/keyword-selection.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/thuy-live/learner-view.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/thuy-live/part-feedback.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/thuy-live/question-presentation.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/item-kind.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/thuy-live/question-review.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/student-instructions.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/thuy-live/comparison-table.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/docs-source-table.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/thuy-live/feedback-policy.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/student-session-dashboard.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/student-session-memory.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/student-test-results.js"><link rel="modulepreload" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/shared/student-memory.js"><script type="module" src="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/release-updater.js"></script></head>
+  <body class="progress-starting">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">PL</span>
+        <div><b id="brandLabel">Progress Log · IZONE</b><small>Phiếu học tập &amp; xác nhận tham gia</small></div>
+      </div>
+    </header>
+    <main class="shell">
+      <p class="notice" id="notice" role="status">Đang mở phiếu…</p>
+      <p class="muted" id="submissionWindowNotice" role="status" hidden></p>
+
+      <section class="card" id="identityView" hidden>
+        <p class="eyebrow" id="sessionLabel">BUỔI HỌC</p>
+        <h1 id="assignmentTitle">Phiếu điểm danh</h1>
+        <p class="muted" id="classLabel"></p>
+        <label class="field">
+          <span>Tên của bạn</span>
+          <select id="studentSelect">
+            <option value="">Chọn tên của bạn</option>
+          </select>
+        </label>
+        <label class="checkbox-row" id="rememberStudentRow">
+          <input id="rememberStudent" type="checkbox" checked>
+          <span>Ghi nhớ tôi trên thiết bị này</span>
+        </label>
+        <p class="muted" id="rememberStudentStatus" role="status"></p>
+        <button class="button text-button" id="changeRememberedStudent" type="button" hidden>Đổi người học</button>
+        <button class="button primary" id="chooseStudentButton" type="button" disabled>Tiếp tục</button>
+      </section>
+
+      <section class="card confirm-card" id="confirmView" hidden>
+        <p class="eyebrow">XÁC NHẬN</p>
+        <h1 id="confirmName">—</h1>
+        <p class="muted" id="confirmContext">—</p>
+        <button class="button primary" id="confirmButton" type="button">Đúng là em · làm phiếu</button>
+        <button class="button" id="journeyButton" type="button">Xem hành trình của em</button>
+        <button class="button text-button" id="backToNamesButton" type="button">Chọn lại tên</button>
+        <p class="fine-print">Đây là xác nhận của học viên, không phải xác thực chống gian lận.</p>
+      </section>
+
+      <section id="formView" hidden>
+        <div class="context-bar">
+          <div><b id="studentNameLabel">—</b><small id="formContextLabel">—</small></div>
+          <span id="saveState" class="save-state">Chưa có thay đổi</span>
+        </div>
+        <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
+        <p class="fine-print" id="participationState" role="status" hidden></p>
+        <form class="card form-card" id="reflectionForm" novalidate>
+          <div class="panel-heading">
+            <p class="eyebrow" id="checkpointLabel">PHẦN 1/2</p>
+            <h1 id="checkpointTitle">Ghi lại điều quan trọng</h1>
+            <p class="muted" id="checkpointInstructions"></p>
+            <p class="fine-print">Bạn có thể bỏ trống câu chưa làm. Câu có chấm bị bỏ trống sẽ không được điểm.</p>
+          </div>
+          <div id="questionList"></div>
+          <div class="form-actions">
+            <button class="button text-button" id="previousButton" type="button">Quay lại</button>
+            <button class="button primary" id="nextButton" type="button">Tiếp tục</button>
+            <button class="button primary" id="submitButton" type="submit" hidden>Nộp phiếu</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card result-card" id="resultView" hidden>
+        <div class="success-mark" aria-hidden="true">✓</div>
+        <p class="eyebrow">ĐÃ NHẬN PHIẾU</p>
+        <h1 id="resultTitle">Bạn đã hoàn tất</h1>
+        <div class="result-line"><span>Điểm danh</span><b id="attendanceResult">—</b></div>
+        <div class="result-line"><span>Bài làm</span><b id="completenessResult">—</b></div>
+        <section class="graded-results" id="gradedResults" hidden aria-label="Kết quả câu chấm tự động">
+          <h2>Kết quả câu chấm tự động</h2>
+          <p class="graded-summary" id="gradedSummary"></p>
+          <div id="gradedItemList"></div>
+          <p class="graded-note">Câu tự luận và phần tự đánh giá đã được ghi nhận, chưa chấm tự động.</p>
+        </section>
+        <button class="button" id="journeyResultButton" type="button">Xem hành trình của em</button>
+      </section>
+
+      <section class="card" id="journeyLoadingView" hidden aria-busy="false">
+        <p class="eyebrow">HÀNH TRÌNH HỌC TẬP</p>
+        <span class="journey-spinner" id="journeySpinner" aria-hidden="true" hidden></span>
+        <h1 id="journeyLoadingStatus" role="status" aria-live="polite">Đang tải hành trình…</h1>
+        <div class="journey-skeleton" aria-hidden="true"></div>
+        <button class="button primary" id="journeyRetryButton" type="button" hidden>Thử lại</button>
+        <button class="button text-button" id="journeyLoadingBackButton" type="button">Quay lại phiếu</button>
+      </section>
+      <section class="referenceRegion studentPortal" id="journeyView" hidden>
+        <div class="studentPortalHero"><div><p class="studentPortalEyebrow">PORTAL HỌC VIÊN</p><h1 id="journeyStudentName">Hành trình học tập của em</h1><p id="journeyClassName"></p></div><div class="portalStudentPicker"><span>HÀNH TRÌNH CÁ NHÂN</span><b>Bài làm từ các phiếu đã có</b></div></div>
+        <div class="studentPortalMetrics">
+          <div><small>Đã hoàn thành</small><strong id="submittedCount">0</strong><span>Phiếu Progress Log nộp đủ</span></div>
+          <div><small>Progress Log đã có</small><strong id="journeyAssignedCount">0</strong><span id="journeyPlanCount">Trong kế hoạch khóa học</span></div>
+          <div><small>Câu trả lời đúng</small><strong id="journeyCorrectCount">0</strong><span>Trong các câu đã chấm</span></div>
+          <div><small>Câu trả lời sai</small><strong id="journeyIncorrectCount">0</strong><span>Câu mở không tính đúng/sai</span></div>
+        </div>
+        <button id="journeySummaryButton" class="studentCumulativeReport" type="button"><span class="cumulativeReportIcon">▤</span><span class="cumulativeReportCopy"><small>TỔNG KẾT TỪ CÁC PHIẾU ĐÃ CÓ</small><strong>Nhìn lại kết quả của em</strong><em>Bài đã nộp, câu đúng và những câu cần xem lại</em></span><span class="cumulativeReportAction">Xem kết quả →</span></button>
+        <p class="muted compact"><span id="attendedCount">0</span> buổi xác nhận trong Progress Log · <span id="reportCount">0</span> lần tổng kết đã công bố</p>
+        <section class="studentJourney"><div class="studentJourneyHeading"><div><p class="studentPortalEyebrow">HÀNH TRÌNH CỦA EM</p><h2 id="journeyListTitle">Các buổi học, từng bước rõ ràng</h2></div></div>
+        <p class="journey-normal-note">Buổi chưa tạo Progress Log là bình thường. Các buổi này vẫn nằm trong kế hoạch khóa học.</p>
+        <p class="muted" id="journeyStatus" role="status"></p>
+        <div class="studentSessionGrid" id="journeySessions"></div>
+        <section class="report-history" id="journeyReports" hidden>
+          <h2>Các lần tổng kết</h2>
+          <div id="journeyReportList"></div>
+        </section>
+        </section><button class="button text-button" id="journeyBackButton" type="button">Quay lại Progress Log</button>
+      </section>
+
+      <section id="journeyDetailView" class="referenceRegion" hidden>
+        <button id="journeyDetailBackButton" class="button student-back-button" type="button"><span class="back-icon" aria-hidden="true">←</span>Hành trình của em</button>
+        <p id="journeyDetailStatus" role="status"></p>
+        <div id="journeyDetailContent"></div>
+        <button id="journeyDetailRetryButton" class="button" type="button" hidden>Thử lại</button>
+      </section>
+
+      <section class="card error-card" id="errorView" hidden>
+        <p class="eyebrow">CHƯA MỞ ĐƯỢC PHIẾU</p>
+        <h1 id="errorTitle">Hãy kiểm tra lại đường dẫn</h1>
+        <p class="muted" id="errorMessage"></p>
+        <button class="button primary" id="retryButton" type="button">Thử lại</button>
+      </section>
+    </main>
+    <dialog id="journeySummaryDialog" class="draft-dialog referenceRegion"><form method="dialog"><button class="button text-button" value="close">Đóng tổng kết</button></form><h2>Kết quả từ các phiếu đã có</h2><p class="muted">Chỉ tính câu có kết quả chấm đúng/sai; câu mở và điểm tự khai không tính.</p><div id="journeySummaryContent" class="basicStudentScores"></div></dialog>
+    <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/session-comments.css">
+  </body>
+</html>

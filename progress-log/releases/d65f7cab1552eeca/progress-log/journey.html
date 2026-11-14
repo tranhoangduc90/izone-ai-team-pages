@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Hành trình học tập cá nhân của học viên IZONE">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+    <title>Hành trình học tập</title>
+    <link rel="icon" type="image/svg+xml" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/shared/izone-favicon.svg">
+    <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/styles.css">
+    <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/journey.css">
+    <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/reference-components.css">
+      <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/student-the20.css">
+<script  defer src="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/shared/red-focus-glow.js"></script>
+  <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/startup.css">
+<script src="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/release-runtime.js"></script><script type="module" src="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/release-updater.js"></script></head>
+  <body class="progress-starting">
+    <main class="shell journey-shell">
+      <header class="brand">
+        <span class="brand-mark" aria-hidden="true">I</span>
+        <div><b>IZONE</b><small>Hành trình học tập</small></div>
+        <div class="student-account"><span id="journeyAccountName"></span><button id="journeyLogout" class="button" type="button">Đăng xuất</button></div>
+      </header>
+
+      <p class="notice" id="journeyNotice" role="status">Đang mở hành trình của bạn…</p>
+
+      <section class="card journey-content referenceRegion" id="journeyView" hidden>
+        <p class="eyebrow">TÌNH HÌNH CỦA BẠN</p>
+        <h1>Progress log</h1><p id="journeyStudentName">—</p>
+        <p class="muted journey-class" id="journeyClassName">—</p>
+
+        <div class="journey-summary" aria-label="Tóm tắt hành trình">
+          <div><b id="attendedCount">0</b><span>buổi có mặt</span></div>
+          <div><b id="submittedCount">0</b><span>phiếu hoàn tất</span></div>
+          <div><b id="reportCount">0</b><span>lần tổng kết</span></div>
+        </div>
+
+        <section class="teacher-session-feedback" id="latestSpeakingFeedback" hidden>
+          <p class="eyebrow">NHẬN XÉT SPEAKING TỪ GIẢNG VIÊN</p>
+          <b id="latestSpeakingFeedbackScope"></b>
+          <p id="latestSpeakingFeedbackText"></p>
+        </section>
+
+        <section class="latest-report" id="latestReport">
+          <p class="eyebrow">TỔNG KẾT GẦN NHẤT</p>
+          <p class="muted" id="latestReportScope"></p>
+          <div class="report-block">
+            <h2>Điều đã tiến bộ</h2>
+            <div id="progressPoints"></div>
+          </div>
+          <div class="report-block">
+            <h2>Điều cần chú ý</h2>
+            <div id="recurringPoints"></div>
+          </div>
+          <div class="next-action journey-next-action">
+            <small>VIỆC TIẾP THEO</small>
+            <p id="journeyNextAction">—</p>
+          </div>
+          <div class="teacher-message" id="teacherMessage" hidden>
+            <small>LỜI NHẮN TỪ GIẢNG VIÊN</small>
+            <p id="teacherMessageText"></p>
+          </div>
+        </section>
+
+        <p class="empty-report" id="emptyReport" hidden>Chưa có bản tổng kết nào được công bố.</p>
+        <button class="button primary" id="timelineToggle" type="button" aria-expanded="false">Xem tình hình từng buổi</button>
+
+        <section class="timeline" id="timeline" hidden>
+          <div class="timeline-heading">
+            <p class="eyebrow">TỪNG BUỔI HỌC</p>
+            <span id="timelineCount"></span>
+          </div>
+          <div class="studentSessionGrid" id="sessionList"></div>
+          <section class="report-history" id="reportHistory" hidden>
+            <h2>Các lần tổng kết</h2>
+            <div id="reportList"></div>
+          </section>
+        </section>
+      </section>
+
+      <section class="card error-card" id="journeyError" hidden>
+        <p class="eyebrow">CHƯA MỞ ĐƯỢC HÀNH TRÌNH</p>
+        <h1>Hãy xin lại link từ giảng viên</h1>
+        <p class="muted" id="journeyErrorMessage"></p>
+      </section>
+    </main>
+    <script  src="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/config.js"></script>
+    <link rel="stylesheet" href="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/session-comments.css">
+    <script type="module" src="/izone-ai-team-pages/progress-log/releases/d65f7cab1552eeca/progress-log/journey.js"></script>
+  </body>
+</html>
