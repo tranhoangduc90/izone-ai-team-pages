@@ -849,7 +849,7 @@
     await loadScript('annotations.js?v=20261018-identity-v1');
   }
 
-  async function enterOfflineListening() {
+  async function enterOfflineListening(observe = () => {}) {
     const runtime=term2Offline, prepared=runtime.record.prepared;
     let audio;
     if (!runtime.record.sections.listening?.startedAt) {
@@ -866,13 +866,20 @@
     const progress=runtime.record.player.position||0;
     if (progress>0) audio.currentTime=Math.min(progress,audio.duration);
     const started=await runtime.start('listening');
+    observe('local_start_recorded');
     state.preparedAttempt={...prepared,...started};
     saveState({...started,studentRef:runtime.record.studentRef,identityConfirmed:true});
     await enterExam({...prepared,...started},audio);
     if (!runtime.playerReady) throw new Error('Bộ điều khiển audio chưa sẵn sàng. Bài được giữ.');
     if (!runtime.record.sections.listening.sealed && !runtime.record.player.ended && !runtime.record.player.held) {
-      try { await audio.play(); } catch { window.K56_LISTENING_AUDIO?.playBlocked({ keepHeld: true }); }
+      observe('play_requested');
+      try { await audio.play(); observe('play_resolved'); }
+      catch (error) {
+        observe('play_rejected', {reason:error?.name==='NotAllowedError'?'play_not_allowed':'play_failed'});
+        window.K56_LISTENING_AUDIO?.playBlocked({ keepHeld: true });
+      }
     } else if(runtime.record.player.ended&&!runtime.record.sections.listening.sealed) {
+      observe('eof_submit_dispatched',{positionSeconds: Number(runtime.record.player.position) || 0});
       const form=document.getElementById('listeningView'),submit=document.createElement('button');submit.type='submit';submit.hidden=true;submit.dataset.autoSubmit='true';form.append(submit);form.requestSubmit(submit);
     }
   }
@@ -881,6 +888,8 @@
     const runtime=term2Offline;
     const listening = runtime.record.sections.listening;
     if (listening?.startedAt && !listening.sealed && !listening.interrupted && !runtime.record.player.ended) {
+      const observe = startObservation(++onlineStartEpoch, 'offline');
+      observe('reload_during_audio', {positionSeconds: Number(runtime.record.player.position) || 0});
       await runtime.interruptListening('page_interrupted');
     }
     const p=runtime.record.prepared,current=runtime.sectionResponse();
@@ -981,6 +990,47 @@
   });
   let onlineStartEpoch=0;
   window.addEventListener('pagehide',()=>{onlineStartEpoch++;});
+  function startObservation(commandSequence, mode = 'online') {
+    if (appConfig.EXAM_JOURNAL_ENABLED !== true || localDemo) return () => {};
+    try {
+      const endpoint = appConfig.EXAM_JOURNAL_BASE_URL || appConfig.API_BASE_URL + '/api/term-tests/' + testConfig.slug;
+      const key = JSON.stringify([new URL(endpoint, location.href).href, testConfig.slug]);
+      const {examSessionToken, generation} = state;
+      const classAtStart = classCode;
+      const began = performance.now();
+      const queued = [];
+      let scheduled = false;
+      let commandStep = 0;
+      function flush() {
+        scheduled = false;
+        try {
+          const elapsedMs = performance.now() - began;
+          const owner = window.TERM_TEST_BOOTSTRAP;
+          const bridge = window[Symbol.for('izone.examJournal.connections.v1')]?.get(key);
+          if (examSessionToken && owner?.examSessionToken === examSessionToken && Number(owner.generation || 0) === Number(generation || 0)) {
+            while (queued.length && bridge?.recordK56Submission?.(owner, queued[0].type, queued[0].data)) queued.shift();
+          }
+          if (!queued.length) return;
+          if (elapsedMs < 12_000) { schedule(); return; }
+          const remaining = queued.splice(0);
+          if (classCode === classAtStart) void bridge?.recordInitialization?.(remaining, {classCode: classAtStart})?.catch(() => {});
+        } catch { /* The exam does not depend on the journal. */ }
+      }
+      function schedule() {
+        if (!scheduled) { scheduled = true; setTimeout(flush, 500); }
+      }
+      return (phase, details = {}) => {
+        try {
+          queued.push({type: 'audio_observed', data: {action: 'term_k56_media_continuity', checkpointState: {
+            telemetryVersion: 1, assetId: testConfig.slug, mode, phase, commandSequence, commandStep: ++commandStep,
+            elapsedPageMs: Math.round(performance.now()), ...details
+          }}});
+          schedule();
+        } catch { /* Diagnostics are best effort. */ }
+      };
+    } catch { return () => {}; }
+  }
+
   elements.bootstrapStart.addEventListener('click', async () => {
     if (elements.bootstrapStart.disabled || !encryptedAudio || preparing) return;
     preparing = true;
@@ -992,12 +1042,14 @@
     const generation=Number(state.generation)||0;
     const isCurrent=()=>epoch===onlineStartEpoch&&state.attemptToken===attemptToken
       &&state.examSessionToken===examSessionToken&&(Number(state.generation)||0)===generation;
+    const observe = startObservation(epoch, term2Offline?.active ? 'offline' : 'online');
+    observe('start_requested');
     previewAudio.pause();
 
     try {
       if (term2Offline?.active) {
         term2Offline.listeningStartIntent = performance.now();
-        await enterOfflineListening();entered=true;return;
+        await enterOfflineListening(observe);entered=true;return;
       }
       if (localDemo) {
         officialObjectUrl = URL.createObjectURL(encryptedAudio);
@@ -1051,6 +1103,9 @@
           audioOwnerId: recovery.ownerId, audioStateRevision: recovery.revision, generation: Number(state.generation) || 0
         })
       });
+      observe('native_start_received', {requestGeneration:generation,serverGeneration:started.generation,
+        requestRevision:recovery.revision,serverRevision:started.audioStateRevision});
+      if (!isCurrent()) observe('reply_discarded', {reason:'scope_changed_before_play'});
       if (started.audioRecoveryVersion !== 2 || !Number.isFinite(started.listeningResumeAtSeconds)
           || !Number.isFinite(Date.parse(started.listeningHardDeadlineAt))) {
         throw new Error('API chưa hỗ trợ đúng phiên bản khôi phục audio. Nháp được giữ; chưa thể tự tua theo đồng hồ.');
@@ -1095,14 +1150,22 @@
       if(!isCurrent()||!officialAudio.isConnected||typeof onlinePlayback.attachController!=='function'
           ||!document.getElementById('listeningQuestions')?.getClientRects().length)throw Error('Màn làm bài chưa sẵn sàng. Hãy tải lại để tiếp tục đúng lượt.');
       if(!loading.manual&&resumeAt<officialAudio.duration){
-        try{await officialAudio.play();}
-        catch(error){if(error?.name!=='NotAllowedError')throw error;}
+        observe('play_requested');
+        try{await officialAudio.play();observe('play_resolved');}
+        catch(error){
+          observe('play_rejected',{reason:error?.name==='NotAllowedError'?'play_not_allowed':'play_failed'});
+          if(error?.name!=='NotAllowedError')throw error;
+        }
       }
-      if(!isCurrent())throw Error('Lượt Listening đã thay đổi.');
+      if(!isCurrent()){
+        observe('reply_discarded',{reason:'scope_changed_after_play'});
+        throw Error('Lượt Listening đã thay đổi.');
+      }
       onlinePlayback.attachController();
       entered = true;
 
     } catch (error) {
+      observe('start_rejected',{reason:error?.name==='NotAllowedError'?'play_not_allowed':'start_failed'});
       if (startingAudio && !entered) {
         window.K56_LISTENING_AUDIO?.dispose();
         startingAudio.pause(); startingAudio.remove();
