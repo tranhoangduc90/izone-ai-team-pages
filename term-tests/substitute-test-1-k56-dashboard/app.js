@@ -1,4 +1,5 @@
 import '../../shared/teacher-single-sign-on.js?v=20261026-startup2&startup=20261026-v2';
+import {recordCatalogJournal as log} from '../shared/exam-journal/substitute-catalog-session.mjs?v=1';
 
 const $=id=>document.getElementById(id);
 const API='https://ducizone.ddns.net/substitute-teacher-api';
@@ -10,6 +11,9 @@ const fullLinks=new Map([...document.querySelectorAll('.test-group a')].map(a=>[
 let state={course:null,test:null,type:null},generation=0,catalogGeneration=0;
 let catalog=null,authenticated=false,authEpoch=0,authState='restoring',authMessage='Đang khôi phục đăng nhập giảng viên…',refreshing=false,googleEpoch=-1;
 const entryFor=(course,test,skill)=>catalog?.entries.find(e=>e.course===Number(String(course).replace('k',''))&&e.examNumber===Number(test)&&e.skill===skill);
+function entryFields(course,test,action,ready){
+ return {testSlug:'substitute-test-'+test+'-'+course,action,ready};
+}
 const statusLabel=status=>({open:'Đang mở',closed:'Tạm đóng',unreleased:'Chưa mở',unknown:'Chưa xác minh',restricted:'Chưa có quyền',login:'Cần đăng nhập',restoring:'Đang xác minh'}[status]||'Chưa xác minh');
 
 function availability(type=state.type){
@@ -48,12 +52,15 @@ document.querySelectorAll('.test-group a').forEach(link=>link.addEventListener('
 $('step-course').addEventListener('click',()=>{state={course:null,test:null,type:null};render();saveCourse();focusStage();});
 $('step-test').addEventListener('click',()=>{state.test=null;state.type=null;render();focusStage();});
 $('step-type').addEventListener('click',()=>{state.type=null;render();focusStage();});
-function chooseType(type){state.type=type;render();document.querySelector('[data-type="'+type+'"]')?.focus({preventScroll:true});}
+function chooseType(type){state.type=type;
+ log('entry_selected',entryFields(state.course,state.test,type,Boolean(availability().url)));
+ render();document.querySelector('[data-type="'+type+'"]')?.focus({preventScroll:true});}
 $('types').addEventListener('click',event=>{const button=event.target.closest('[data-type]');if(button)chooseType(button.dataset.type);});
 $('types').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))return;event.preventDefault();let i=Math.max(0,TYPES.findIndex(t=>t.id===state.type));i=event.key==='Home'?0:event.key==='End'?3:(i+(['ArrowLeft','ArrowUp'].includes(event.key)?-1:1)+4)%4;chooseType(TYPES[i].id);});
 
 async function copyText(link,field,current){if(!current())return false;try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(link);return true;}}catch{}if(!current())return false;field.focus();field.select();try{return document.execCommand('copy');}catch{return false;}}
-$('copy-link').addEventListener('click',async()=>{const link=$('student-url').value,g=generation;if(!link)return;const current=()=>g===generation,ok=await copyText(link,$('student-url'),current);if(current())$('copy-status').textContent=ok?'Đã sao chép đúng link đang chọn.':'Hãy chọn link và sao chép thủ công.';});
+$('copy-link').addEventListener('click',async()=>{const link=$('student-url').value,g=generation;if(!link)return;const current=()=>g===generation,ok=await copyText(link,$('student-url'),current);if(current()){log(ok?'copy_confirmed':'copy_failed',entryFields(state.course,state.test,state.type,true));$('copy-status').textContent=ok?'Đã sao chép đúng link đang chọn.':'Hãy chọn link và sao chép thủ công.';}else log('response_stale');});
+$('open-test').addEventListener('click',()=>{if(availability().url)log('entry_opened',entryFields(state.course,state.test,state.type,true));});
 function fillCatalog(){
  catalogGeneration++;let html='';
  for(const course of['k56','k67'])for(const test of['1','2'])for(const type of TYPES.filter(t=>t.id!=='full')){
@@ -61,7 +68,7 @@ function fillCatalog(){
   html+='<tr><td><strong>Khóa '+course.slice(1)+'</strong> · Test '+test+'</td><td>'+type.name+'</td><td><span class="badge '+(url?'':'closed')+'">'+statusLabel(status)+'</span></td><td><div class="table-link">'+(url?'<input readonly aria-label="Link '+label+'" value="'+escapeHtml(url)+'">':'<span>'+statusLabel(status)+'</span>')+'<button type="button" class="copy-icon" data-copy="'+key+'" aria-label="Sao chép '+label+'" '+(url?'':'disabled')+'>'+COPY+'</button></div></td></tr>';
  }$('catalog-body').innerHTML=html;$('catalog-status').textContent='';
 }
-$('catalog-body').addEventListener('click',async event=>{const button=event.target.closest('[data-copy]');if(!button||button.disabled)return;const [course,test,type]=button.dataset.copy.split(':'),entry=entryFor(course,test,type);if(!authenticated||entry?.status!=='open')return;const g=catalogGeneration,current=()=>g===catalogGeneration&&$('catalog').open,ok=await copyText(entry.studentUrl,button.closest('tr').querySelector('input'),current);if(!current())return;if(ok){button.textContent='✓';button.classList.add('copied');}$('catalog-status').textContent=ok?'Đã sao chép '+TYPES.find(t=>t.id===type).name+' · Test '+test+' · Khóa '+course.slice(1)+'.':'Hãy chọn link và sao chép thủ công.';});
+$('catalog-body').addEventListener('click',async event=>{const button=event.target.closest('[data-copy]');if(!button||button.disabled)return;const [course,test,type]=button.dataset.copy.split(':'),entry=entryFor(course,test,type);if(!authenticated||entry?.status!=='open')return;const g=catalogGeneration,current=()=>g===catalogGeneration&&$('catalog').open,ok=await copyText(entry.studentUrl,button.closest('tr').querySelector('input'),current);if(!current()){log('response_stale');return;}log(ok?'copy_confirmed':'copy_failed',entryFields(course,test,type,true));if(ok){button.textContent='✓';button.classList.add('copied');}$('catalog-status').textContent=ok?'Đã sao chép '+TYPES.find(t=>t.id===type).name+' · Test '+test+' · Khóa '+course.slice(1)+'.':'Hãy chọn link và sao chép thủ công.';});
 
 function wireDialog(dialog,opener){
  dialog.addEventListener('click',event=>{if(event.target!==dialog)return;const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();});
@@ -93,8 +100,17 @@ function validatedCatalog(value){
  }return value;
 }
 async function readCatalog(epoch){
- const value=validatedCatalog(await call('/teacher/skill-tests'));if(epoch!==authEpoch)return false;if(!value.entries.length)throw Object.assign(Error('NO_SCOPE'),{status:403});
- if(value.revision!==catalog?.revision){catalog=value;render();}return true;
+ try {
+  const value=validatedCatalog(await call('/teacher/skill-tests'));
+  if(epoch!==authEpoch){log('response_stale');return false;}
+  if(!value.entries.length)throw Object.assign(Error('NO_SCOPE'),{status:403});
+  const changed=value.revision!==catalog?.revision;
+  if(changed){catalog=value;log('catalog_read',{count:value.entries.length});render();}
+  return true;
+ } catch(error) {
+  log(epoch===authEpoch?'catalog_failed':'response_stale',{status:error.status});
+  throw error;
+ }
 }
 let googleScript;
 async function ensureGoogle(){

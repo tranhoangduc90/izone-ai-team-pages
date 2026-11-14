@@ -53,3 +53,22 @@ test('Link teacher cũ về dashboard gốc, giữ course; luồng chính vừa 
 test('Danh mục chứa URL ngoài hệ thống bị chặn; không phát sinh request hay copy tới đích lạ',async t=>{
  const data=catalog();data.entries[1].studentUrl='https://fixture-unknown.invalid/private';const f=await fixture(t,{data});await choose(f.page);await f.page.waitForFunction(()=>document.getElementById('auth-status').textContent.includes('Chưa xác minh'));assert.equal(await f.page.locator('#open-test').getAttribute('href'),null);await f.page.locator('#catalog-open').click();assert.equal(await f.page.locator('#catalog-body button:not([disabled])').count(),0);assert.deepEqual(f.unexpected,[]);assert.deepEqual(f.errors,[]);
 });
+
+test('Nhật ký danh mục đọc đúng đề/kỹ năng; phiên cũ và lỗi API có dấu mốc riêng',async t=>{
+ const f=await fixture(t,{clock:true});await ready(f.page);await choose(f.page,'k67','2','writing');
+ const read=()=>f.page.evaluate(()=>JSON.parse(sessionStorage.getItem('izone:teacher-journal:v1:substitute-catalog')||'[]'));
+ await f.page.locator('#copy-link').click();
+ await f.page.waitForFunction(()=>document.querySelector('#copy-status').textContent.includes('Đã sao chép'));
+ await f.page.evaluate(()=>document.querySelector('#open-test').addEventListener('click',event=>event.preventDefault()));
+ await f.page.locator('#open-test').click();
+ assert.ok((await read()).some(row=>row.outcome==='catalog_read'&&row.count===16));
+ for(const outcome of ['entry_selected','copy_confirmed','entry_opened']){
+  assert.ok((await read()).some(row=>row.outcome===outcome&&row.testSlug==='substitute-test-2-k67'&&row.action==='writing'&&row.ready===true));
+ }
+ f.fail();await f.page.clock.fastForward(31000);await f.page.waitForFunction(()=>!document.getElementById('open-test').hasAttribute('href'));
+ assert.ok((await read()).some(row=>row.outcome==='catalog_failed'&&row.status===503));
+ const rows=await read();assert.ok(rows.every(row=>Object.keys(row).every(key=>['schemaVersion','outcome','occurredAt','testSlug','action','status','count','ready'].includes(key))));
+ await f.page.evaluate(()=>Object.defineProperty(Storage.prototype,'setItem',{configurable:true,value(){throw new Error('fixture storage blocked')}}));
+ await f.page.locator('[data-type="full"]').click();assert.equal(await f.page.locator('#open-test').isVisible(),true);
+ assert.deepEqual(f.errors,[]);assert.deepEqual(f.unexpected,[]);
+});
