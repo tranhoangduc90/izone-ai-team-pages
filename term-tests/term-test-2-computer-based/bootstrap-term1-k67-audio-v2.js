@@ -10,6 +10,11 @@
   let classCode = (query.get('class') || '').trim().toUpperCase();
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
   const timerOnly = testConfig?.slug === 'term-test-1' && document.body.dataset.term1ListeningTimer === '1';
+  if (timerOnly && location.protocol === 'file:') {
+    document.getElementById('listeningTimerStartup').textContent = 'Trang cần máy chủ HTTP để mở màn đăng nhập và lưu bài.';
+    document.getElementById('listeningTimerLocalPreview').hidden = false;
+    return;
+  }
   const listeningOnly = retakeConfig.mode === 'listening-only';
   const configuredRetakeGrant = String(retakeConfig.grant || '').trim();
   const retakeGrant = listeningOnly && /^[A-Za-z0-9_-]{40,1800}\.[A-Za-z0-9_-]{43}$/.test(configuredRetakeGrant)
