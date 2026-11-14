@@ -179,6 +179,10 @@
   };
 
   window.PROGRESS_LOG_CONFIG = { API_BASE_URL: location.origin };
+  // Giữ phiên mẫu ngay cả khi thư viện phiên chung khởi tạo trên tên miền Pages.
+  Object.defineProperty(window, 'IzoneTeacherSso', {
+    value: Object.freeze({ restore: async product => product === 'mapping' }),
+  });
   window.presentationData = {
     targetClass: 'IC2481', targetAssignment: id(7), targetTitle: lessons[1].title,
     publicToken: byNumber(7).public_token, studentName, studentRef, firstQuestion, reflectionQuestion,
