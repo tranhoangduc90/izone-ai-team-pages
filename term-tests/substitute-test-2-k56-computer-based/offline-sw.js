@@ -1,5 +1,12 @@
 const CACHE='substitute-test-2-k56-shell-20261110-listening-observations-v1';
 const SHELL=new URL('./',self.location.href);
+async function tellCacheDecision(event,outcome){
+ try{
+  const client=event.clientId?await self.clients.get(event.clientId):null;
+  client?.postMessage({type:'SUBSTITUTE_SHELL_CACHE_DECISION',outcome,workerRevision:'20261114-v1'});
+ }catch{}
+}
+
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.add(SHELL.href)).then(()=>self.skipWaiting()));
 });
@@ -27,9 +34,17 @@ self.addEventListener('fetch',event=>{
    if(response.ok)void cache.put(event.request,response.clone());
    return response;
   }catch(error){
-   const cached=await cache.match(event.request)||await cache.match(event.request,{ignoreSearch:true});
-   if(cached)return cached;
-   if(event.request.mode==='navigate')return cache.match(SHELL.href);
+   const exact=await cache.match(event.request);
+   const cached=exact||await cache.match(event.request,{ignoreSearch:true});
+   if(cached){
+    void tellCacheDecision(event,exact?'cached_exact':'cached_other_revision');
+    return cached;
+   }
+   if(event.request.mode==='navigate'){
+    const shell=await cache.match(SHELL.href);
+    void tellCacheDecision(event,shell?'cached_shell':'cache_miss');
+    return shell;
+   }
    throw error;
   }
  })());
