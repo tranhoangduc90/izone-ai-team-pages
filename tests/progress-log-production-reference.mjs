@@ -14,7 +14,9 @@ async function run(action){
  const server=createServer(async(req,res)=>{try{let f=resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!f.startsWith(resolve(root)+sep))throw Error('Denied');res.setHeader('content-type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'}[extname(f)]||'text/plain'));res.end(await readFile(f));}catch{res.writeHead(404).end();}});
  await new Promise(r=>server.listen(20000+Math.floor(Math.random()*30000),'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({channel:'chrome',headless:true});
  const page=await browser.newPage({viewport:{width:390,height:844},timezoneId:'America/New_York'}),writes=[],errors=[];page.setDefaultTimeout(5000);page.on('pageerror',e=>errors.push(e.message));
- const detail={...demoDetail(demoCourse.overview.students[0].studentRef,5),classId:'1294',student:{studentRef:ref,name:'Học viên giả'},sessionNumber:2,status:'complete'};
+ const sample=demoDetail(demoCourse.overview.students[0].studentRef,5);
+ const detail={...sample,definition:{...sample.definition,title:'ENTRANCE TICKET • Reading 3 + Writing 1'},
+  classId:'1294',student:{studentRef:ref,name:'Học viên giả'},sessionNumber:2,status:'complete'};
  const sessions=[{sessionNumber:2,sessionDate:'2026-09-21',assignmentId:'assignment-2',title:'ENTRANCE TICKET • Reading 3 + Writing 1',assignmentStatus:'published',completeness:'complete',attendanceStatus:'self_confirmed',portalSync:{status:'complete'},quizSummary:{correct:2,incorrect:1,graded:3}},
  {sessionNumber:3,sessionDate:'2026-10-03',assignmentId:'assignment-3',title:'Reading 4 + Writing 2',assignmentStatus:'published',publicToken:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'},
  {sessionNumber:4,sessionDate:'2026-10-05',sessionKind:'test',dataOrigin:'confirmed_plan',title:'Buổi Test'},
@@ -50,7 +52,7 @@ test('Production reference regression: session title and full submitted question
  for(const width of [390,768,1440]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await mkdir(resolve(root,'output/playwright'),{recursive:true});await page.screenshot({path:resolve(root,'output/playwright/production-journey-'+width+'.png'),fullPage:true});}
  await card.click();await page.locator('#journeyDetailView').waitFor({state:'visible'});
  assert.equal(await page.locator('.studentDetailHeader').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(13, 41, 65)');
- assert.equal(await page.locator('.studentDetailHeader h1').evaluate(e=>getComputedStyle(e).fontWeight),'400');
+ await page.locator('.studentDetailHeader').getByRole('heading',{level:2,name:'Reading 3 + Writing 1'}).waitFor();
  const items=detail.definition.blocks.flatMap(b=>b.items);assert.equal(await page.locator('#journeyDetailContent [data-review-item]').count(),items.length);
  for(const item of items){const q=page.locator('[data-review-item="'+item.itemVersionId+'"]');assert.match(await q.textContent(),new RegExp(item.prompt.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));}
  assert.equal(await page.locator('.reviewOption').count(),items.reduce((n,i)=>n+(i.options?.length||0),0));
@@ -60,7 +62,11 @@ test('Production reference regression: session title and full submitted question
 }));
 test('Production reference regression: Vietnam 18:25 switches assigned session without API writes',{timeout:60000},async()=>run(async({page})=>{
  const region=page.locator('#journeySessions');assert.match(await region.textContent(),/Chưa đến buổi học/);await page.clock.runFor(1021);
- const ready=region.getByRole('link',{name:/Nhấn để học buổi hôm nay/});await ready.waitFor();assert.match(await ready.getAttribute('href'),/#assignment=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb$/);
+ const ready=region.getByRole('link',{name:/Nhấn để học buổi hôm nay/});await ready.waitFor();
+ const link=new URL(await ready.getAttribute('href'),page.url());
+ const fragment=new URLSearchParams(link.hash.slice(1));
+ assert.equal(fragment.get('assignment'),'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+ assert.equal(fragment.get('student'),ref);
  assert.match(await region.textContent(),/Buổi Test · chưa có kết quả/);assert.match(await region.textContent(),/Chưa tạo Progress Log/);
 }));
 test('Production history errors, wrong identity and late detail do not reopen hidden context',{timeout:60000},async()=>run(async({page,setMode,release})=>{
@@ -79,6 +85,7 @@ test('Nhận xét chung hiện trong Journey của phiếu, thẻ/chi tiết và
  await page.locator('#journeySessions [data-session-number="2"]').click();await page.locator('#journeyDetailView').waitFor({state:'visible'});
  await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.locator('#journeyDetailContent .session-comment').waitFor();
  assert.match(await page.locator('#journeyDetailContent .session-comment').textContent(),/Dòng thứ hai/);
+ await page.locator('#journeyDetailStatus').filter({hasText:'Bài đã nộp'}).waitFor();
  const answers=await page.locator('[data-review-item]').count();assert.ok(answers>0);
  setComments([]);await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.locator('#journeyDetailContent .session-comment').waitFor({state:'hidden'});
  assert.equal(await page.locator('[data-review-item]').count(),answers);
