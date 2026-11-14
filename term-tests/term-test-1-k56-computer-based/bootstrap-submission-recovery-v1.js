@@ -57,7 +57,7 @@
     Promise.resolve()
       .then(() => loadScript('../k56-shared/app-term1-audio-goal-v1.js?audioGoal=20261113-v1&v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=term1-20261107-v1&termK56Audio=20261108-v2&offlineNotice=20261108-v1&writingRecovery=20261112-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1&termK56Audio=20261108-v2'))
-      .then(() => loadScript('enhance-submission-recovery-v1.js?audioGoal=20261113-v1&offline=term1-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2&previewWait=20261109-preview-10s-v1'))
+      .then(() => loadScript('enhance-submission-recovery-v1.js?journalObs=20261114-v1&audioGoal=20261113-v1&offline=term1-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2&previewWait=20261109-preview-10s-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -958,7 +958,7 @@
         await new Promise(resolve=>setTimeout(resolve,30));
       }
     }
-    const enhance='enhance-submission-recovery-v1.js?audioGoal=20261113-v1&offline=term1-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2&previewWait=20261109-preview-10s-v1';
+    const enhance='enhance-submission-recovery-v1.js?journalObs=20261114-v1&audioGoal=20261113-v1&offline=term1-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2&previewWait=20261109-preview-10s-v1';
     await loadScript(onlinePlayback?enhance+'&onlineStart=20261113-v1':enhance);
     await loadScript('annotations.js?v=20261018-identity-v1');
   }
