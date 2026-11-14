@@ -18,7 +18,6 @@
     #progress-wrapper { width: 100%; background-color: #e0e0e0; border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
     #progress-bar { width: 0%; height: 8px; background-color: #2196F3; transition: width 0.1s linear; }
     #progress-text { font-size: 14px; color: #555; display: block; margin-bottom: 20px; font-weight: bold; }
-    .time-notice { font-size: 14px; color: #d32f2f; margin-bottom: 15px; font-weight: bold; display: block; }
 
     /* CSS Modal Thử Âm Lượng */
     #volModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
@@ -38,7 +37,6 @@
 
     <button id="audioRetry" type="button" style="background:#152b4e" hidden>Thử tải lại audio</button>
     <button id="btnCheckVol" disabled>🔊 THỬ ÂM LƯỢNG TRƯỚC KHI THI</button>
-    <span id="timeNotice" class="time-notice">Nút Phát Audio chỉ mở từ 18h45 - 19h00</span>
     <button id="btnPlayMain" disabled>PHÁT AUDIO THI THẬT</button>
   </div>
 
@@ -66,7 +64,6 @@
 
     const btnCheckVol = document.getElementById('btnCheckVol');
     const btnPlayMain = document.getElementById('btnPlayMain');
-    const timeNotice = document.getElementById('timeNotice');
 
     const volModal = document.getElementById('volModal');
     const btnReplayTest = document.getElementById('btnReplayTest');
@@ -75,34 +72,7 @@
     const statusDiv = document.getElementById('status');
     const progressText = document.getElementById('progress-text');
 
-    let isAudioFullyLoaded = false;
-
-    // 2. Chỉ cho bắt đầu bài thi từ 18:45 đến trước 19:00 theo giờ trên thiết bị.
-    function startAllowed() {
-      const now = new Date();
-      const currentMins = now.getHours() * 60 + now.getMinutes();
-      const startMins = 18 * 60 + 45; // 18:45
-      const endMins = 19 * 60;        // 19:00
-
-      return isAudioFullyLoaded && currentMins >= startMins && currentMins < endMins;
-    }
-
-    let previousWindowDecision;
-    function checkTimeWindow() {
-      if (!isAudioFullyLoaded || playback.hasStarted()) return;
-      playback.refresh();
-      const allowed = startAllowed();
-      if (allowed !== previousWindowDecision) {
-        previousWindowDecision = allowed;
-        observe({outcome:allowed?'start_window_allowed':'start_window_locked',mode:'exam',actor:'schedule'});
-      }
-      timeNotice.style.color = allowed ? "#4CAF50" : "#d32f2f";
-      timeNotice.textContent = allowed ? "Đã đến giờ thi. Có thể bắt đầu." : "Nút Phát Audio chỉ mở từ 18h45 - 19h00";
-    }
-    // Kiểm tra lại giờ mỗi 5 giây nếu học viên đang mở trang để chờ.
-    setInterval(checkTimeWindow, 5000);
-
-    // 3. Mở cửa sổ thử âm lượng và phát 30 giây đầu của bài nghe.
+    // Mở cửa sổ thử âm lượng và phát 30 giây đầu của bài nghe.
     btnCheckVol.addEventListener('click', () => {
       volModal.style.display = 'flex';
       playTestAudio();
@@ -136,15 +106,13 @@
       volModal.style.display = 'none';
     });
 
-    const playback = mountPaperPlayback({
+    mountPaperPlayback({
       audio: audioMain, preview: audioTest, button: btnPlayMain, status: statusDiv,
-      timeAllowed: startAllowed,
       observe,
       onStart() {
         btnCheckVol.hidden = true;
         document.getElementById('progress-wrapper').hidden = true;
         progressText.hidden = true;
-        timeNotice.hidden = true;
       }
     });
 
@@ -156,8 +124,7 @@
         audioTest.src = objectUrl;
         audioMain.src = objectUrl;
         btnCheckVol.disabled = false;
-        isAudioFullyLoaded = true;
-        checkTimeWindow();
+        btnPlayMain.disabled = false;
       }
     });
   </script>

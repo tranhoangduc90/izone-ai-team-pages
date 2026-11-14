@@ -39,10 +39,10 @@ test('các bài test có đủ computer-based, answer sheet và Listening audio'
   assert.match(styles, /#teacherDashboard \{ grid-column: 1 \/ -1; \}/);
 });
 
-test('ba trang Listening audio dùng đúng tài sản K67 và giữ cổng phát', async () => {
+test('ba trang Listening audio dùng đúng tài sản K67 và chỉ Term Test 1 khóa giờ phát', async () => {
   const pages = [
     ['term-test-1-audio.html', 'term-test-1', true],
-    ['term-test-2-audio.html', 'term-test-2', true],
+    ['term-test-2-audio.html', 'term-test-2', false],
     ['mini-test-listening-audio.html', 'mini-test-lesson-5', false]
   ];
   for (const [fileName, slug, hasTimeWindow] of pages) {
