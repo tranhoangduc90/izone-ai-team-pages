@@ -8,7 +8,8 @@ import {startThe20Server,a} from './fixtures/progress-the20-server.mjs';
 const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 test('Phiếu mở bản Pages trước API phiên bản; tab mở lâu cập nhật, giữ người/URL và không ghi bài',{timeout:120000},async()=>{
  const release=JSON.parse(await readFile(new URL('../progress-log/release.json',import.meta.url))),old=release.version,next=old==='eeeeeeeeeeeeeeee'?'dddddddddddddddd':'eeeeeeeeeeeeeeee';let active=old;
- const fixture=await startThe20Server();let versionReads=0;
+ const fixture=await startThe20Server();let versionReads=0,openingReads=0;
+ const fakeToken='f1000000-0000-4000-8000-000000000001';
  const server=createServer(async(req,res)=>{try{
   const pathname=new URL(req.url,'http://local').pathname,relative=pathname.replace(/^\/izone-ai-team-pages\//,'');if(relative.includes('..'))throw Error('Denied');
   const version=relative.match(/releases\/([a-f0-9]{16})\//)?.[1],file=relative.replace('/'+next+'/', '/'+old+'/');
@@ -27,6 +28,11 @@ test('Phiếu mở bản Pages trước API phiên bản; tab mở lâu cập nh
    if(versionReads===1)await page.waitForTimeout(1800);
    return route.fulfill({json:{ok:true,version:active},headers:{'cache-control':'no-store'}});
   }
+  if(url.pathname.endsWith('/api/learning/assignments/open')&&route.request().postDataJSON()?.publicToken===fakeToken){
+   openingReads++;
+   return route.fulfill({json:{ok:true,assignment:{assignmentId:fakeToken,publicToken:fakeToken,
+    class:{id:'2',name:'Lớp giả'},definition:{title:'Phiếu khởi động',blocks:[]},roster:[],sessionNumber:1}}});
+  }
   if(url.origin==='https://ducizone.ddns.net'){
    const path=url.pathname.replace(/^\/mapping-api/,'');const response=await route.fetch({url:fixture.origin+path});return route.fulfill({response});
   }
@@ -35,6 +41,15 @@ test('Phiếu mở bản Pages trước API phiên bản; tab mở lâu cập nh
  try{
   const requests=[];
   page.on('request',request=>requests.push(new URL(request.url()).pathname));
+  await page.goto(origin+'/izone-ai-team-pages/progress-log/index.html#assignment='+fakeToken);
+  await page.locator('#identityView').waitFor({state:'visible'});
+  assert.equal(openingReads,1);
+  const openingRequest=requests.findIndex(path=>path.endsWith('/assignments/open'));
+  const applicationRequest=requests.findIndex(path=>path.endsWith('/app.js'));
+  assert.ok(openingRequest>=0&&openingRequest<applicationRequest,'Mở phiếu bắt đầu trước khi tải app.js');
+  assert.ok(await page.locator('link[rel=modulepreload][href$="/session-review.js"]').count(),
+   'Chrome được phát hiện các module con cùng lúc với app.js');
+  requests.length=0;
   await page.goto(origin+'/izone-ai-team-pages/progress-log/student.html?release-test=1');await page.locator('#portalClass:not([disabled])').selectOption('1294');await page.locator('#portalStudent:not([disabled])').selectOption(a);await page.locator('#portalContinue').click();
   const packageRequest=requests.findIndex(path=>path.includes('/releases/'+old+'/'));
   const versionRequest=requests.findIndex(path=>path.endsWith('/frontend-release'));

@@ -1,0 +1,8 @@
+/* Chỉ dùng trong iframe demo giảng viên, không áp lên trang học viên thật. */
+body[data-worksheet-preview=true]{background:#f3f4f6}
+body[data-worksheet-preview=true] :is(.topbar,.demo-banner,#thuyGreeting,#submissionWindowNotice,.context-bar,.progress-track,#participationState,#studentDashboardLatest,#studentDashboardSessions,#questionList>.button){display:none!important}
+body[data-worksheet-preview=true].thuy-student .shell{max-width:none;padding:16px;margin:0}
+body[data-worksheet-preview=true] #reflectionForm{padding:0;margin:0;border:0;background:none;box-shadow:none}
+body[data-worksheet-preview=true] .panel-heading>.fine-print{display:none}
+body[data-worksheet-preview=true] #notice:not(.error):empty{display:none}
+body[data-worksheet-preview=true] #notice{position:static;width:auto;height:auto;overflow:visible;clip-path:none;white-space:normal;margin:0 0 12px}

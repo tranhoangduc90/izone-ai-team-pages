@@ -34,6 +34,17 @@ if(!requiredRuntime.every(file=>included.has(file)))throw Error('Missing release
 const version=hash(Buffer.concat([Buffer.from((await readFile(fileURLToPath(import.meta.url),'utf8')).replaceAll('\r\n','\n')),...files.flatMap(f=>[Buffer.from(f+'\0'),source.get(f)])])).slice(0,16);
 const base='/izone-ai-team-pages/progress-log/releases/'+version+'/';
 const output=path.join(repo,'progress-log/releases',version),assets=[];
+const appModules=new Set();
+function collectAppImports(file){
+ if(appModules.has(file))return;
+ appModules.add(file);
+ for(const match of source.get(file).toString().matchAll(/^\s*import\s+[^;]+?from\s+['"]([^'"]+)['"]\s*;/gm)){
+  const target=path.posix.normalize(path.posix.join(path.posix.dirname(file),match[1].split(/[?#]/)[0]));
+  if(source.has(target))collectAppImports(target);
+ }
+}
+collectAppImports('progress-log/app.js');
+const preloads=[...appModules].map(file=>`<link rel="modulepreload" href="${base}${file}">`).join('');
 function assetURL(file,spec){
  if(!/^\.?\.?\//.test(spec)||!/[.](?:js|mjs|css|json|svg|png|jpg|webp|woff2?|ico)(?:[?#]|$)/i.test(spec))return spec;
  const pathname=spec.split(/[?#]/)[0],resolved=path.posix.normalize(path.posix.join(path.posix.dirname(file),pathname));
@@ -51,7 +62,16 @@ for(const file of files){
    const resolved=path.posix.normalize(path.posix.join(path.posix.dirname(file),spec.split(/[?#]/)[0]));
    return source.has(resolved)?attr+'="'+base+resolved+'"':all;
   });
-  if(entries.some(entry=>file==='progress-log/'+entry))html=html.replace('</head>',`<script src="${base}progress-log/release-runtime.js"></script><script type="module" src="${base}progress-log/release-updater.js"></script></head>`);
+  if(entries.some(entry=>file==='progress-log/'+entry)){
+   const configTag=`<script src="${base}progress-log/config.js"></script>`;
+   const runtime=`<script src="${base}progress-log/release-runtime.js"></script>`;
+   if(/progress-log\/(?:index|thuy)\.html$/.test(file)){
+    html=html.replace(/^[ \t]*<script\s+src="[^"]+\/progress-log\/config\.js"><\/script>\r?\n/m,'')
+      .replace('</title>','</title>'+configTag+runtime);
+    html=html.replace('</head>',preloads+'</head>');
+   }else html=html.replace('</head>',runtime+'</head>');
+   html=html.replace('</head>',`<script type="module" src="${base}progress-log/release-updater.js"></script></head>`);
+  }
   bytes=Buffer.from(html);
  }
  const target=path.join(output,file);await mkdir(path.dirname(target),{recursive:true});

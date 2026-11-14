@@ -1789,7 +1789,12 @@ async function openAssignment() {
     let assignment;
     state.journeyOnly = false;
     try {
-      const payload = await apiRequest('/assignments/open', { body: { publicToken: state.publicToken } });
+      const opening=window.progressLogOpeningRead;
+      delete window.progressLogOpeningRead;
+      const prefetched=opening?.publicToken===state.publicToken?await opening.request:null;
+      if(prefetched&&!prefetched.ok)throw Object.assign(new Error(prefetched.payload?.message||'Chưa mở được phiếu.'),{status:prefetched.status});
+      const payload = prefetched?.payload?.ok?prefetched.payload:
+        await apiRequest('/assignments/open', { body: { publicToken: state.publicToken } });
       assignment = payload.assignment;
     } catch (error) {
       if (error.status !== 404) throw error;
