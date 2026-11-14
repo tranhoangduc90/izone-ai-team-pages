@@ -903,7 +903,7 @@ function savedProgressButton(student){
         const isCurrent=()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId
           &&state.selectedTestSlug==='term-test-1-k56'&&state.selectedTab===student.ref;
         try{
-          term1SkillManager??=await import('./term1-skill-manager.mjs?v=20261108-skills-v3');
+          term1SkillManager??=await import('./term1-skill-manager.mjs?v=20261114-grant-log-v1');
           term1SkillManager.openTerm1SkillManager({classCode,student,opener:grant,request:apiRequest,isCurrent,section});
         }catch(error){if(isCurrent())showNotice(`Chưa mở được công cụ cấp link: ${error.message}`,'error');}
       });
