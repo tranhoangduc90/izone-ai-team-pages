@@ -53,6 +53,8 @@ test('Phiếu mở bản Pages trước API phiên bản; tab mở lâu cập nh
   await page.locator('#identityView').waitFor({state:'visible',timeout:5000});
   assert.equal(openingReads,1);
   const openingRequest=requests.findIndex(path=>path.endsWith('/assignments/open'));
+  assert.ok(!requests.some(path=>path.endsWith('/config.js')||path.endsWith('/release-runtime.js')),
+   'Phiếu dùng cấu hình và bootstrap có hash trong HTML của gói');
   const versionRequestOnWorksheet=requests.findIndex(path=>path.endsWith('/frontend-release'));
   assert.ok(openingRequest>=0&&openingRequest<versionRequestOnWorksheet,'Mở phiếu bắt đầu trước kiểm phiên bản nền');
   assert.ok(!requests.some(path=>/\/(session-review\.js|course-skills\.js|journey\.css)$/.test(path)),
