@@ -9,7 +9,7 @@ const apiBase=handoff?.apiBase||(localPreview?location.origin+'/api/handout67/v1
 if(localPreview)globalThis.handout67ApiBase=apiBase;
 async function boot(){
  const activity=document.body.dataset.activity,view=document.body.dataset.view;
- const fromVerifiedDocs=activity==='lesson3'&&view==='student'&&!!handoff?.verifiedDocsStudent;
+ const fromVerifiedDocs=['lesson3','lesson4'].includes(activity)&&view==='student'&&!!handoff?.verifiedDocsStudent;
  try{
   if(!/^lesson[1-9]\d*$/.test(activity)||!['student','teacher'].includes(view))throw new Error('ROUTE_INVALID');
   const [response,template]=await Promise.all([(handoff?.request||fetch)(apiBase+'/lessons/'+encodeURIComponent(activity),{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)}),fetch(new URL('./'+view+'.html?v=20261026-startup2',import.meta.url),{redirect:'error',signal:AbortSignal.timeout(15000)})]);
@@ -36,7 +36,7 @@ async function boot(){
    document.body.replaceChildren(layout.content);
   }else document.body.innerHTML=html;
   if(view==='student'&&activity==='lesson15')document.querySelector('[data-lesson-text="classLesson"]')?.remove();
-  if(view==='student')installTeacherEntry({product:'handout67',teacherPath:handoff?'../lesson3/teacher.html':'./teacher.html',context:{class:entryClass},hosts:[document.querySelector('.topbar')]});
+  if(view==='student'&&activity!=='lesson4')installTeacherEntry({product:'handout67',teacherPath:handoff?'../lesson3/teacher.html':'./teacher.html',context:{class:entryClass},hosts:[document.querySelector('.topbar')]});
   if(lesson.workflowMode==='whole-chain-v1'&&view==='student'){
    document.querySelector('.login-description').textContent='Giải thích vì sao người ta theo thời trang. Nhập cả A–X–B và Check chung từng ý.';
    document.querySelector('.journey h2').textContent='Thân bài 1 · WHY';document.querySelector('.lesson-tag').textContent='Thân bài 1';
@@ -64,13 +64,20 @@ async function boot(){
    document.querySelector('.journey-note p').textContent='Check từng thân bài, rồi đối chiếu với quan điểm của cả bài.';
    document.querySelector('.work-content>.page-title p:last-child').textContent=lesson.ideaHint;
   }
+  if(activity==='lesson4'&&view==='student'){
+   document.querySelector('.journey-note').remove();
+   document.querySelector('.page-footer').remove();
+   document.querySelector('.brand-product span').textContent='Homework';
+   document.querySelector('.work-content>.page-title [data-lesson-text="writingLesson"]').textContent='WRITING HOMEWORK';
+   document.querySelector('.work-content>.page-title [data-lesson-text="writingLesson"]').removeAttribute('data-lesson-text');
+  }
   if(localPreview){const banner=document.createElement('aside');banner.className='preview-banner';banner.innerHTML='<b>Bản xem thử riêng · Dữ liệu mẫu</b><p>Không ghi vào bài học viên thật. Check dùng Cổng AI thật; bài và góp ý lưu trong kho thử trên máy này.</p><a href="/writing-handouts/'+activity+'/">Trang học viên</a> · <a href="/writing-handouts/'+activity+'/teacher.html">Trang giảng viên</a>';document.body.prepend(banner);}
   const texts={...lesson,classLesson:(entryClass||lesson.classes.join(', '))+' · Lesson '+lesson.number,courseLesson:'Khóa 6–7 · Writing lesson '+lesson.number,writingLesson:'Writing · Lesson '+lesson.number,contextLesson:'Khóa 67 · Lesson '+lesson.number,teacherTopic:lesson.title+(lesson.handoutMode==='two-bodies-v1'?' · Hai thân bài':' · Thân bài '+lesson.body),teacherTitle:'Theo dõi Lesson '+lesson.number,promptTitle:'Đề bài · '+lesson.title};
   for(const el of document.querySelectorAll('[data-lesson-text]'))el.textContent=texts[el.dataset.lessonText];
   document.querySelector('[data-lesson-brand]')?.setAttribute('aria-label','IZONE Writing Lesson '+lesson.number);
-  document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':'Lesson '+lesson.number+' · Writing · IZONE';
+  document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':activity==='lesson4'?lesson.title:'Lesson '+lesson.number+' · Writing · IZONE';
   const editorVersion=lesson.outlineOnly||['opinion-v1','discussion-v1'].includes(lesson.preparationKind)
-   ?'20261113-save-log-v1':'20261109-l3-v1&check=20261101-v1&poll=20261104-v1';
+   ?(activity==='lesson4'?'20261114-lesson4-share':'20261113-save-log-v1'):'20261109-l3-v1&check=20261101-v1&poll=20261104-v1';
   await import(view==='teacher'?'../lesson5/teacher.js?v=20261109-l3-v1&startup=20261026-v2':'../lesson5-thu/app.js?v='+editorVersion);
  }catch(error){
   if(fromVerifiedDocs){

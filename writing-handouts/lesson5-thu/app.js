@@ -1,11 +1,12 @@
 import {createCheckFeedback,missingCheckFields} from '../../shared/writing-check-feedback.mjs?v=20261101-v1';
 import {createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs?v=20261109-l3-v1';
-import {createClient} from './client.mjs?v=20261111-dev-handoff';
+import {createClient} from './client.mjs?v=20261114-lesson4-share';
 import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261109-l3-v1';
 import {savedContent,threadsView,approvalLabel,installStyles} from './features.mjs?v=20261007-1';
 import {workflowFor,isWhole,isMulti,isPrepared,isOpinion,isDiscussion,planFields,solutionsFor,AGREEMENT_LEVELS,requiredFields,preparationError,bodyView,bodyKey,bodyIndexOf,localKey} from '../shared/workflow.mjs?v=20261109-l3-v1';
 import {renderMultiBodies,multiJourney} from '../shared/multi-body-ui.mjs?v=20261109-l3-v1';
-import {outlineSections,outlineJourney} from '../shared/body-outline-ui.mjs?v=20261111-dev-handoff';
+import {outlineSections,outlineJourney} from '../shared/body-outline-ui.mjs?v=20261114-lesson4-share';
+import {mountLesson4Practice} from '../shared/lesson4-practice.mjs?v=20261114-lesson4-share';
 import {isBodyOutline,outlineRelation,validOutlineDirection} from '../shared/workflow.mjs?v=20261109-l3-v1';
 import {wholeSections} from '../shared/whole-chain-ui.mjs';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../../shared/course-student-identity.js?v=20261018-identity-v1';
@@ -36,6 +37,7 @@ if(isPrepared(lesson)){labels.outline='Kế hoạch idea hai thân bài';labels.
 if(isDiscussion(lesson)){labels.chosenSolution='Phương án bạn ủng hộ';descriptions.outline.instruction=lesson.description+' '+lesson.bodies[0].focus+' '+lesson.bodies[1].focus;}
 if(isOpinion(lesson)){labels.agreementLevel='Mức độ đồng ý với nhận định của đề bài';labels.chosenSolution='Phương án bạn ủng hộ';labels.positionLimit='Giới hạn hoặc điều kiện · Bắt buộc khi đồng ý một phần';descriptions.outline.instruction='Chọn mức độ đồng ý và phương án bạn ủng hộ. Thân bài 1 bàn phương án không ủng hộ; thân bài 2 bảo vệ phương án ủng hộ. Nếu đồng ý một phần, chỉ rõ điều kiện và phía bạn nghiêng về. Chốt hai idea mỗi đoạn; chưa viết Topic hoặc A/X/B.';}
 const outline=isBodyOutline(lesson);
+const sharePractice=lesson.activity==='lesson4';
 const saveLogBuild='20261113-save-log-v1';
 if(outline){
  labels.stance='Quan điểm của cả bài';
@@ -106,7 +108,7 @@ function render(){
   const openSteps=[...document.querySelectorAll('details.prior-step[open]')].map(d=>d.id);
   const historyStates=new Map([...document.querySelectorAll('details.comment.history[data-history]')].map(d=>[d.dataset.history,d.open]));
   if(outline){
-   renderRegion('sections',outlineSections(state,{field,comments,statusLabels,canContinueWriting:!!writingHandoff}));
+   renderRegion('sections',outlineSections(state,{field,comments,statusLabels,canContinueWriting:!!writingHandoff&&!sharePractice}));
    renderRegion('journey-nav',outlineJourney(state));
    $('completion').hidden=true;
   }else if(isMulti(lesson)){
@@ -133,7 +135,7 @@ function render(){
 }
 let writingPrompt,acknowledgedWriting,writingHandoffInFlight=false;
 function syncWritingPrompt(force=false){
- if(!outline||!writingHandoff)return;
+ if(!outline||!writingHandoff||sharePractice)return;
  const ready=state.ref&&outlineRelation(state)==='passed'&&!Object.keys(dirty).length&&!conflict;
  if(!ready){
   if(writingPrompt?.open&&!writingHandoffInFlight)writingPrompt.close();
@@ -220,6 +222,16 @@ function focusSection(key){const el=$('step-'+key)||$(key);if(el){el.scrollIntoV
 function message(text){clearTimeout(toastTimer);$('toast').textContent=text;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},6000);}
 function note(text){$('connection-note').textContent=text;$('connection-note').hidden=!text;}
 function handoutAccessLost(){
+ if(sharePractice){
+  generation++;clearTimeout(pollTimer);clearTimeout(saveTimer);api.setToken('');
+  window.dispatchEvent(new Event('reading67:access-revoked'));
+  const workspace=$('workspace');
+  workspace.querySelector('.share-practice')?.setAttribute('hidden','');
+  workspace.querySelector('.reading-practice-gate')?.setAttribute('hidden','');
+  $('restore-draft').hidden=true;$('read-latest').hidden=true;
+  note('Phiên không còn quyền mở dàn ý. Hãy mở lại từ Docs cá nhân của bạn.');
+  return;
+ }
  const link=document.createElement('a');
  link.href=writingHandoff.writingUrl;link.textContent='Về cửa vào Writing';
  note('Phiên không còn quyền mở dàn ý. Bài đã lưu vẫn được giữ. ');
@@ -243,6 +255,7 @@ async function flush(){
  const epoch=generation;
  return enqueue(async()=>{
   if(epoch!==generation||!state.ref||conflict||!Object.keys(dirty).length)return !conflict;
+  if(sharePractice&&!window.ReadingSharePractice.isAccepted())return false;
   const changes={...dirty};busy=true;saveInFlight=true;mutationVersion++;
   const requestId=crypto.randomUUID();
   try {
@@ -294,6 +307,19 @@ async function openHandout(classRef,selectedStudent,isCurrent){
 function displayHandout(result){
  api.setToken(result.token);pollEtag=undefined;dirty={};conflict=false;busy=false;saveInFlight=false;editingLocked=false;serial=Promise.resolve();state=result.session;
  $('learner-label').textContent=names[student];show('workspace');render();note('');$('read-latest').hidden=true;
+ if(sharePractice){
+  const ref=state.ref,epoch=generation;
+  const scoped=async action=>{
+   try{return await action();}catch(error){
+    if(epoch===generation&&[401,403].includes(error.status)){
+     handoutAccessLost();
+    }
+    throw Object.assign(error,{code:error.message});
+   }
+  };
+  mountLesson4Practice($('workspace'),{ref,flush,
+   practice:()=>scoped(()=>api.practice(ref)),savePractice:body=>scoped(()=>api.savePractice(ref,body))});
+ }
  $('save-state').textContent='Đã mở bài từ máy chủ';
  try{$('restore-draft').hidden=!localStorage.getItem(draftKey());}catch{$('restore-draft').hidden=true;}
  schedulePoll();
