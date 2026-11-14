@@ -19,6 +19,7 @@
    const measured=(name,value)=>Number.isFinite(value)&&value>=0&&value<=86400?{[name]:value}:{};
    window[Symbol.for('izone.examJournal.connections.v1')]?.get(key)?.recordListeningEnd(owner,{
     ...measured('durationSeconds',audio?.duration),...measured('positionSeconds',audio?.currentTime),
+    ...measured('playbackRate',audio?.playbackRate),
     ...(typeof audio?.ended==='boolean'?{ended:audio.ended}:{}),
     checkpointState:{telemetryVersion:1,decision,assetId:slug,
      ...measured('configuredDurationSeconds',Number(window.TERM_TEST_CONFIG.listening?.durationSeconds)),...review}
@@ -43,7 +44,7 @@
    if(!response.ok){
     const result=await response.json().catch(()=>null);
     throw Object.assign(new Error(result?.code||'Không xác nhận được thời gian làm bài.'),
-     {accessDenied:[400,401,403,409,410,422].includes(response.status)});
+     {accessDenied:[400,401,403,409,410,422].includes(response.status),httpStatus:response.status});
    }
    return await response.json();
   }finally{clearTimeout(timer);untrack();}
@@ -167,7 +168,10 @@
   const identity={classCode:bootstrap.classCode,studentRef:bootstrap.studentRef,clientRunId:bootstrap.clientRunId,...permit(bootstrap)};
   const data=pendingInterruption?await request('/api/test/exam/listening/interrupt',{...identity,
    operationId:interruption.operationId,capturedAt:interruption.capturedAt,reason:interruption.reason
-  }):await request('/api/test/exam/audio-ended',{...identity,audioEndedAt:eof.audioEndedAt,heardSeconds:eof.heardSeconds});
+  }):await request('/api/test/exam/audio-ended',{...identity,audioEndedAt:eof.audioEndedAt,heardSeconds:eof.heardSeconds}).catch(error=>{
+   observeEnd(null,bootstrap,'eof_sync_failed',{httpStatus:error.httpStatus});
+   throw error;
+  });
   if(bootstrap!==window.TERM_TEST_BOOTSTRAP||window.SUBSTITUTE_STATE.blocked)throw Error('EXAM_OWNER_CHANGED');
   if(!pendingInterruption){
    const acknowledged=await offline.acknowledgeListeningEof(data);
@@ -194,7 +198,10 @@
      reviewDeadlineAt:timing.listeningDeadlineAt});
     window.dispatchEvent(new CustomEvent('term-test:listening-timing-updated',{detail:timing}));
     void window.SUBSTITUTE_SYNC_PENDING?.();
-   }).catch(()=>window.dispatchEvent(new Event('substitute:listening-storage-error')));
+   }).catch(()=>{
+    observeEnd(audio,owner,'eof_storage_failed');
+    window.dispatchEvent(new Event('substitute:listening-storage-error'));
+   });
    return true;
   }
   endedByRun.set(bootstrap.clientRunId,audioEndedAt);

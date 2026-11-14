@@ -4,7 +4,8 @@ import {createAudioTransferObserver} from './audio-delivery.mjs?v=20261024-start
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const registryKey=Symbol.for('izone.examJournal.connections.v1');
-const listeningEndDecisions=new Set(['metadata_unavailable','duration_mismatch','position_outside_end','review_started','review_confirmed']);
+const listeningEndDecisions=new Set(['metadata_unavailable','duration_mismatch','position_outside_end','review_started','review_confirmed',
+  'eof_storage_failed','review_restored','eof_sync_failed']);
 const listeningEndClocks=new Set(['saved_end','media_end_sample','media_end_estimate','server_ack']);
 const listeningStartPhases=new Set(['start_requested','play_requested','play_resolved','start_rejected',
   'start_discarded','answers_unlocked']);
@@ -119,6 +120,11 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       observer.environment();
       attachPlayers();for(const stop of audioStops.values())stop.snapshot('context_ready');
       recorder.record('identity_observed',{identityConfirmed:context.identityConfirmed === true,generation:proof.generation});
+      const owner=win.TERM_TEST_BOOTSTRAP;
+      if(scopedSubstitute&&owner?.listeningContinuityVersion===1&&owner.continuityReview)
+        api.recordListeningEnd(owner,{checkpointState:{telemetryVersion:1,assetId:testSlug,
+          decision:'review_restored',clockSource:'saved_end',reviewStartedAt:owner.audioEndedAt,
+          reviewDeadlineAt:owner.listeningDeadlineAt}});
       observer.snapshot('context_ready'); stateChanged('context_ready');
       void recorder.flush({force:true});
     } catch { if (ownerKey === key) { nextContextTry = Date.now() + 5000; health({status:'degraded',errorCode:'JOURNAL_CONTEXT_UNAVAILABLE'}); } }
@@ -463,14 +469,17 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       if(seen.has(detail.decision))return false;
       const metadata={telemetryVersion:1,assetId:testSlug,decision:detail.decision};
       if(listeningEndNumber(detail.configuredDurationSeconds))metadata.configuredDurationSeconds=detail.configuredDurationSeconds;
-      if(detail.decision==='review_started'||detail.decision==='review_confirmed'){
+      if(detail.decision==='eof_sync_failed'&&Number.isInteger(detail.httpStatus)&&detail.httpStatus>=400&&detail.httpStatus<=599)
+        metadata.httpStatus=detail.httpStatus;
+      if(['review_started','review_confirmed','review_restored'].includes(detail.decision)){
         if(!listeningEndClocks.has(detail.clockSource)||((detail.clockSource==='server_ack')!==(detail.decision==='review_confirmed'))
           ||!listeningEndTime(detail.reviewStartedAt)||!listeningEndTime(detail.reviewDeadlineAt)
           ||Date.parse(detail.reviewDeadlineAt)<Date.parse(detail.reviewStartedAt))return false;
         Object.assign(metadata,{clockSource:detail.clockSource,reviewStartedAt:detail.reviewStartedAt,reviewDeadlineAt:detail.reviewDeadlineAt});
       }
       const measurements={};
-      for(const field of ['durationSeconds','positionSeconds'])if(listeningEndNumber(data[field]))measurements[field]=data[field];
+      for(const field of ['durationSeconds','positionSeconds','playbackRate'])
+        if(listeningEndNumber(data[field]))measurements[field]=data[field];
       if(typeof data.ended==='boolean')measurements.ended=data.ended;
       const id=recorder.record('audio_observed',{action:'listening_end_decision',...measurements,checkpointState:metadata},current);
       if(!id)return false;
