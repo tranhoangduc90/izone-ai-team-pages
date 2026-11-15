@@ -22,6 +22,7 @@ export function createClient(base,fetcher=fetch){
   return responseTag?{...value,etag:responseTag}:value;
  }
  return {setToken:value=>{token=value;},lesson:activity=>call('/lessons/'+encodeURIComponent(activity)),roster:(activity='lesson5')=>call('/roster?activity='+encodeURIComponent(activity)),open:body=>call('/sessions','POST',body),read:(ref,etag)=>call('/sessions/'+ref,'GET',undefined,etag),save:(ref,body)=>call('/sessions/'+ref+'/responses','PUT',body),check:(ref,body)=>call('/sessions/'+ref+'/checks','POST',body),attest:(ref,body)=>call('/sessions/'+ref+'/attest','POST',body),edit:(ref,body)=>call('/sessions/'+ref+'/edit','POST',body),thread:(ref,body)=>call('/sessions/'+ref+'/threads','POST',body),idea2:(ref,bodyIndex)=>call('/sessions/'+ref+'/idea2','POST',{bodyIndex}),handoff:(ref,body)=>call('/sessions/'+encodeURIComponent(ref)+'/continue-writing','POST',body),vocabulary:(ref,n,bodyIndex)=>call('/sessions/'+ref+'/vocabulary/'+n+'/retry','POST',{bodyIndex}),
+  docsProgress:()=>call('/docs-progress').then(result=>result.docs),
   practice:ref=>call('/sessions/'+ref+'/practice').then(result=>result.practice),
   savePractice:(ref,body)=>call('/sessions/'+ref+'/practice','POST',body).then(result=>result.practice)};
 }
