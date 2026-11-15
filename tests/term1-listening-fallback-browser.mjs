@@ -21,7 +21,7 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : relo
   const { fixture } = await import(pathToFileURL(resolve(backend, 'backend/ops/releases/term1-offline-20261107/test.mjs')));
   const { registerTerm1SkillRoutes } = await import(pathToFileURL(resolve(runtime, 'src/term1-skill-routes.mjs')));
   const require = createRequire(deps), express = require('express');
-  const native = await fixture('read_first', { skipPrepare: true, realtime: true });
+  const native = await fixture('read_first', { skipPrepare: true, realtime: true, listeningInterruption: true });
   t.after(native.close);
   const sandbox = { window: {} };
   vm.runInNewContext(await readFile(new URL('../term-tests/term-test-1-k56-computer-based/content.js', import.meta.url), 'utf8'), sandbox);
