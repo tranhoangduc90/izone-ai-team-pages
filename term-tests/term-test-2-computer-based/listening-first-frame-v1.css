@@ -1,0 +1,42 @@
+/* Listening on one page. The rest of the CBT keeps its own scrolling regions. */
+body[data-k67-design="term-test-2"] #listeningView.cbt-listening-form:not([hidden]),
+body[data-k67-design="term-test-2"] #listeningView:not([hidden]) .cbt-semantic-stage,
+body[data-k67-design="term-test-2"] #listeningView:not([hidden]) .cbt-semantic-pane,
+body[data-k67-design="term-test-2"] #listeningView:not([hidden]) .cbt-content-viewport,
+body[data-k67-design="term-test-2"] #listeningView:not([hidden]) .cbt-listening-section {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+body[data-k67-design="term-test-2"] #listeningView:not([hidden]) .cbt-semantic-pane {
+  grid-template-rows: auto auto;
+}
+
+body[data-k67-design="term-test-2"] #listeningView :is(.cbt-table-wrap, table) {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.substitute-listening-report:not([hidden]) {
+  position: fixed;
+  z-index: 110;
+  inset: 12px 12px auto auto;
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 24px));
+  margin: 0;
+  padding: 12px 16px;
+  color: #143c63;
+  border: 1px solid #b0c8e3;
+  border-radius: 8px;
+  background: #edf5ff;
+  pointer-events: none;
+}
+.substitute-listening-report-announcement {
+  position: absolute;
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
