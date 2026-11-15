@@ -50,7 +50,7 @@ for (const [mode, reloadWhilePlaying, viewLoadFails] of [
         const append = document.body.append;
         document.body.append = function (...nodes) {
           const app = nodes.find(node => node instanceof HTMLScriptElement &&
-            new URL(node.src).pathname.endsWith('/k56-mini-shared/app.js'));
+            /\/k56-mini-shared\/app(?:-listening-view-v1)?\.js$/.test(new URL(node.src).pathname));
           if (!app) return append.apply(this,nodes);
           document.body.append = append;
           app.dispatchEvent(new Event('error'));

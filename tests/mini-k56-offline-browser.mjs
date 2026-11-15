@@ -37,11 +37,18 @@ for(const paper of [true,false])for(const mode of ['lis_first','read_first']){
     await field.fill(skill+' kept offline');
     if(!paper&&skill==='listening'){
      await p.waitForTimeout(1600);
-     await p.evaluate(()=>window.K56_MINI_OFFLINE.player.dispatchEvent(new Event('error')));
+     const position=await p.evaluate(()=>{
+      const player=window.K56_MINI_OFFLINE.player;
+      player.dispatchEvent(new Event('error'));
+      return player.currentTime;
+     });
      assert.equal(await p.evaluate(async()=> (await window.K56_LISTENING_AUDIO.beforeAutoSubmit()).submit),false);
      assert.equal(await p.evaluate(()=>window.K56_MINI_OFFLINE.record.sections.listening.sealed),false);
+     await p.waitForFunction(before=>window.K56_MINI_OFFLINE.player.currentTime>before+0.1,position);
     }
-    if(skill===skills[0]){
+    // Closing the browser during Listening uses Mini's separate interruption
+    // contract. Exercise full receipt + reload here while doing Reading.
+    if(paper?skill===skills[0]:skill==='reading'){
      await f.reopen({offline:true});
      p=f.page;await p.goto(f.url);
      await wait(p,()=>window.K56_MINI_APP_READY,'Đóng trình duyệt và mở lại offline');
@@ -54,7 +61,6 @@ for(const paper of [true,false])for(const mode of ['lis_first','read_first']){
     assert.ok(!html.includes('fixture-permit')&&!html.includes('X-Amz-Signature'));
     if(paper)assert.doesNotMatch(html,/<h2>Writing/);
     if(!paper&&skill==='listening'){
-     await p.getByRole('button',{name:/Tiếp tục audio/}).click();
      if(full){await p.waitForFunction(()=>window.K56_MINI_OFFLINE.record.sections.listening.sealed,undefined,{timeout:480000});continue;}
     }
     if(full&&!paper&&skill==='reading'){
