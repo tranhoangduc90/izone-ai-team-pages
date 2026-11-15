@@ -7,6 +7,10 @@ const booleans=new Set(['paused','ended','muted','connectionClosed','responseFin
 const numbers=new Set(['schemaVersion','sequence','generation','retryIndex','clientMonoMs','timeoutMs','elapsedMs','headerElapsedMs','bodyElapsedMs','httpStatus','upstreamStatus','queueWaitMs','dbPoolWaitMs','dbExecutionMs','dbCommitMs','handlerMs','totalMs','revisionSent','revisionReceived','revisionBefore','revisionAfter','revisionApplied','acceptedRevision','serverAckedHeardSeconds','playerCurrentTime','readyState','mediaErrorCode','playbackRate','volume','verifiedAudioBytes','lastPositionAdvanceMonoMs','lastAdvancedPosition','lastAdvanceAgeMs','positionBefore','positionAfter','targetSeconds','observedSeconds','consecutiveNoProgressRecoveries','recoveryAttemptIndex','droppedCount','firstDroppedSequence','lastDroppedSequence','activeRequests','queuedRequests','sampleCount','timeoutCount','status429','status5xx','maxMs','p95Ms','poolInUse','poolIdle','poolMax','poolWaiting','cpuPercent','ramBytes','eventLoopP95Ms','eventLoopMaxMs','cpuThrottledUsec','cpuThrottledCount','cpuQuotaMicros','cpuPeriodMicros']);
 const errorCodes=new Set(['UNCLASSIFIED_EXCEPTION','CLIENT_TIMEOUT','FIRST_BYTE_TIMEOUT','DOWNLOAD_STALLED','NETWORK_UNREACHABLE','FETCH_FAILED_UNCLASSIFIED','USER_CANCELLED','NAVIGATION_ABORTED','SUPERSEDED_REQUEST_ABORTED','HTTP_ERROR','API_CONTRACT_MISMATCH','API_UNAVAILABLE','UPSTREAM_TIMEOUT','RATE_LIMITED','AUDIO_HTTP_ERROR','AUDIO_SIZE_MISMATCH','AUDIO_HASH_MISMATCH','AUDIO_DURATION_MISMATCH','AUDIO_BLOB_UNAVAILABLE','AUDIO_SOURCES_EXHAUSTED','AUDIO_RESPONSE_STALE','AUDIO_PROGRESS_STALE','AUDIO_GENERATION_STALE','AUDIO_OWNER_CONFLICT','AUDIO_CONTRACT_MISMATCH','OPERATION_CONFLICT','PLAYER_NO_PROGRESS','PLAYER_NOT_REAL_TIME','PLAY_NOT_ALLOWED','PLAY_NOT_SUPPORTED','PLAY_FAILED','MEDIA_COMMAND_FAILED','LOCAL_PERSIST_FAILED','LOG_QUEUE_DROPPED','LOG_COLLECTOR_UNAVAILABLE','LOG_ARCHIVE_EXPORT_FAILED','DB_POOL_TIMEOUT','DB_CONNECTION_UNAVAILABLE','DB_EXECUTION_FAILED','DB_COMMIT_OUTCOME_UNKNOWN','DB_ROLLBACK_OUTCOME_UNKNOWN','SUBMISSION_HOLD_FULL','PERMIT_INVALID','STUDENT_NOT_ALLOWED','ATTEMPT_LOCKED','ATTEMPT_NOT_FOUND','ALREADY_SUBMITTED','TEACHER_REOPEN_REQUIRED','SSO_LOGIN_REQUIRED','SSO_UNAVAILABLE','TEACHER_NOT_ALLOWED','CSRF_DENIED','ORIGIN_DENIED','NOT_FOUND','REQUEST_TOO_LARGE','JSON_INVALID','PREPARE_INVALID','FILTER_INVALID','EVENTS_INVALID','OPERATION_INVALID','SNAPSHOT_INVALID','ANSWERS_INVALID','TIMING_INVALID','SUBMISSION_INVALID','AUDIO_NOT_FINISHED','REOPEN_NOT_ALLOWED']);
 numbers.add('dbPoolP95Ms');numbers.add('dbPoolMaxMs');
+ids.add('incidentId');
+const reportErrors=['LISTENING_REPORT_DISABLED','LISTENING_REPORT_INVALID','LISTENING_REPORT_IMAGE_INVALID',
+ 'LISTENING_REPORT_NO_RECEIPT','LISTENING_REPORT_TIME_MISMATCH','LISTENING_REPORT_IDENTITY_MISSING','INVALID_CONTENT_TYPE'];
+for(const errorCode of reportErrors)errorCodes.add(errorCode);
 export function sanitize(input){
  const out={};if(!input||typeof input!=='object')return out;
  for(const[k,v]of Object.entries(input)){
@@ -15,6 +19,8 @@ export function sanitize(input){
   else if(times.has(k)&&(v===null||typeof v==='string'&&/Z$/.test(v)&&Number.isFinite(Date.parse(v))))out[k]=v;
   else if(booleans.has(k)&&typeof v==='boolean')out[k]=v;
   else if(numbers.has(k)&&(v===null||typeof v==='number'&&Number.isFinite(v)))out[k]=v;
+  else if(k==='gapId'&&typeof v==='string'&&/^before-q(?:[1-9]|[1-3][0-9]|40)$/.test(v))out[k]=v;
+  else if(k==='remainingSeconds'&&Number.isInteger(v)&&v>=0&&v<=120)out[k]=v;
   else if(['audioBefore','audioAfter'].includes(k)&&v&&typeof v==='object')out[k]=sanitize(v);
  }
  if(out.errorCode&&!errorCodes.has(out.errorCode))out.errorCode='UNCLASSIFIED_EXCEPTION';
