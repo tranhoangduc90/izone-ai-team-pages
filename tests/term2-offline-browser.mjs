@@ -34,7 +34,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,port=0,
  if(profileDir){context=await chromium.launchPersistentContext(profileDir,{...launchOptions,...contextOptions});browser=context.browser();}
  else{browser=await chromium.launch(launchOptions);context=await browser.newContext(contextOptions);}
  page=await context.newPage();
- const id=native?.a||randomUUID(),session=native?.s||randomUUID(),student=native?.student||randomUUID(),receipts=new Map(),calls=[],errors=[];let disconnected=false,fixtureContent;
+ const id=native?.a||randomUUID(),session=native?.s||randomUUID(),student=native?.student||randomUUID(),receipts=new Map(),calls=[],errors=[];let disconnected=false,fixtureContent,onlineRevision=0;
  function handleDialog(dialog){
   if(dialog.type()==='confirm'&&controls.dismissNextConfirmation){controls.dismissNextConfirmation=false;return dialog.dismiss();}
   return dialog.accept();
@@ -66,9 +66,9 @@ export async function fixture(mode,{profile,native,product=2,paper=false,port=0,
   if(endpoint==='result'&&controls.resultResponse)return route.fulfill({json:controls.resultResponse});
   if(endpoint==='result/stream')return route.fulfill({status:404,json:{ok:false}});
   const content=fixtureContent||(fixtureContent=await page.evaluate(()=>window.K56_TERM_TEST_CONTENT));
-  if(native&&endpoint.includes('/offline/')){
+  if(native&&(endpoint.includes('/offline/')||(mini&&endpoint.endsWith('/listening/report')))){
    Object.assign(native.content,content);
-   const response=await fetch(native.base+u.pathname.slice(u.pathname.indexOf('/offline/')),{method:'POST',headers:{'content-type':'application/json','x-term2-permit':request.headers()['x-term2-permit']||'','x-exam-journal-request-id':request.headers()['x-exam-journal-request-id']||''},body:request.postData()});
+   const response=await fetch(native.base+endpoint.slice(slug.length),{method:'POST',headers:{'content-type':'application/json','x-term2-permit':request.headers()['x-term2-permit']||'','x-exam-journal-request-id':request.headers()['x-exam-journal-request-id']||''},body:request.postData()});
    const json=await response.json();
    if(controls.loseAck&&!controls.ackLost&&endpoint.endsWith('/offline/operation')&&body.kind==='seal'&&json.receipt?.status==='accepted'){
     controls.ackLost=true;return route.abort();
@@ -77,15 +77,43 @@ export async function fixture(mode,{profile,native,product=2,paper=false,port=0,
   }
   const timing=mini?{listeningDurationSeconds:446,listeningReviewSeconds:0,readingDurationMinutes:25,writingDurationMinutes:15}
    :product===2?{listeningDurationSeconds:1824,listeningReviewSeconds:0,readingDurationMinutes:60,writingDurationMinutes:30}:{listeningDurationSeconds:1848,listeningReviewSeconds:0,readingDurationMinutes:40,writingDurationMinutes:55};
-  const prepared={ok:true,attemptToken:id,examSessionToken:session,studentRef:student,studentName:'Học viên giả Term 2',generation:0,examMode:mode,nextSection:mode==='read_first'?'reading':'listening',serverNow:new Date().toISOString(),
+  const prepared={ok:true,attemptToken:id,examSessionToken:session,studentRef:student,studentName:'Học viên giả Term 2',generation:native?.generation??0,examMode:mode,nextSection:mode==='read_first'?'reading':'listening',serverNow:new Date().toISOString(),
    listeningSubmitted:false,readingSubmitted:false,content,timing,attemptMode:paper?'answer_sheet':'cbt',policy:{timed:!paper,autoSubmit:!paper},...controls.preparedOverride};
-  if(endpoint.endsWith('/attempt/prepare'))return route.fulfill({json:prepared});
+  if(endpoint.endsWith('/attempt/prepare')){
+   if(controls.redactListening)prepared.content={...content,listening:{...content.listening,sections:[]}};
+   if(mini&&controls.onlineMini){
+    const chunkSize=1_048_576,chunks=[];
+    for(let start=0;start<audio.byteLength;start+=chunkSize){
+     const bytes=audio.subarray(start,start+chunkSize);
+     chunks.push({byteLength:bytes.byteLength,sha256:createHash('sha256').update(bytes).digest('hex')});
+    }
+    prepared.audioManifest={...asset,envelopeVersion:'MP3',assetVersion:'sha256-'+asset.sha256,
+     encryptedByteLength:asset.byteLength,chunkSize,chunks};
+   }
+   return route.fulfill({json:prepared});
+  }
+  if(mini&&controls.onlineMini){
+   const audioState={ok:true,audioRecoveryVersion:2,audioStateRevision:++onlineRevision,generation:0,
+    listeningResumeAtSeconds:Number(body.heardSeconds)||0,listeningStartedAt:prepared.serverNow,
+    listeningDeadlineAt:new Date(Date.now()+446000).toISOString(),listeningHardDeadlineAt:new Date(Date.now()+1346000).toISOString(),
+    serverNow:prepared.serverNow};
+   if(endpoint.endsWith('/session/start'))return route.fulfill({json:{...prepared,...audioState}});
+   if(endpoint.endsWith('/session/audio-progress')){
+    if(body.manualListeningReport){
+     controls.manualCheckpoint=body;
+     audioState.miniListeningReportGrant={attemptToken:id,examSessionToken:session,generation:0,
+      ownerId:body.audioOwnerId,operationId:body.recoveryId,capability:'synthetic-online-scoped-grant'};
+    }
+    return route.fulfill({json:audioState});
+   }
+  }
   if(endpoint.endsWith('/offline/prepare')){
+   if(mini&&controls.onlineMini)return route.fulfill({status:503,json:{ok:false,error:'OFFLINE_NEW_DISABLED'}});
    if(controls.denyOfflinePrepare)return route.fulfill({status:403,json:{ok:false,error:'FIXTURE_ACCESS_DENIED',message:'Fixture từ chối quyền thi.'}});
    const audioDownload=controls.r2Audio&&body.audioTransport==='r2-direct-v1'
     ? {version:1,policy:'r2-direct-v1',method:'GET',url:`https://e340869dcc6ff285504947407d148104.r2.cloudflarestorage.com/izone-audio-r2-lab-20261023/${asset.key}?X-Amz-Signature=fixture`,sha256:asset.sha256,byteLength:asset.byteLength,validForSeconds:600,fallback:'public-pages'}
     : undefined;
-   return route.fulfill({json:{...prepared,audioDownload,offline:{policy:mini?'mini-k56-offline-v1':`term${product}-offline-v1`,permit:'fixture-permit-no-production-authority',ownerId:body.ownerId,preparedAt:prepared.serverNow}}});
+   return route.fulfill({json:{...prepared,audioDownload,offline:{policy:mini?'mini-k56-offline-v1':`term${product}-offline-v1`,permit:'fixture-permit-no-production-authority',ownerId:body.ownerId,preparedAt:prepared.serverNow,...(controls.listeningReportsEnabled?{listeningReportsEnabled:true}:{})}}});
   }
   if(endpoint.endsWith('/offline/status'))return route.fulfill({json:{ok:true,persisted:receipts.has(body.operationId),receipt:receipts.get(body.operationId)||null}});
   if(product===1&&endpoint.endsWith('/offline/resume'))return route.fulfill({json:{ok:true,completedElsewhere:controls.completedElsewhere||{}}});
