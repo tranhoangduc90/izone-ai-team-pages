@@ -39,13 +39,13 @@ test('các bài test có đủ computer-based, answer sheet và Listening audio'
   assert.match(styles, /#teacherDashboard \{ grid-column: 1 \/ -1; \}/);
 });
 
-test('ba trang Listening audio dùng đúng tài sản K67 và chỉ Term Test 1 khóa giờ phát', async () => {
+test('ba trang Listening audio dùng đúng tài sản K67 và cho phát bất cứ giờ nào', async () => {
   const pages = [
-    ['term-test-1-audio.html', 'term-test-1', true],
-    ['term-test-2-audio.html', 'term-test-2', false],
-    ['mini-test-listening-audio.html', 'mini-test-lesson-5', false]
+    ['term-test-1-audio.html', 'term-test-1'],
+    ['term-test-2-audio.html', 'term-test-2'],
+    ['mini-test-listening-audio.html', 'mini-test-lesson-5']
   ];
-  for (const [fileName, slug, hasTimeWindow] of pages) {
+  for (const [fileName, slug] of pages) {
     const html = await readFile(join(repoRoot, 'term-tests', fileName), 'utf8');
     assert.match(html, /k67-shared\/paper-audio\.mjs/);
     assert.match(html, new RegExp(`slug: '${slug}'`));
@@ -56,10 +56,8 @@ test('ba trang Listening audio dùng đúng tài sản K67 và chỉ Term Test 1
     assert.match(html, /audioTest\.currentTime >= 30/);
     assert.match(html, /id="audioRetry"/);
     assert.doesNotMatch(html, /res\.cloudinary\.com/);
-    assert.equal(html.includes('function checkTimeWindow()'), hasTimeWindow);
+    assert.doesNotMatch(html, /timeAllowed:|checkTimeWindow|timeNotice/);
   }
-  const termTest1 = await readFile(join(repoRoot, 'term-tests', 'term-test-1-audio.html'), 'utf8');
-  assert.doesNotMatch(termTest1, /18h45 - 24h00/);
 });
 
 test('lớp được xếp theo ngày mở trên Portal mà không sửa mảng API gốc', () => {
