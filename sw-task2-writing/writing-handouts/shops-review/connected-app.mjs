@@ -9,7 +9,7 @@ import {renderActivityDetail} from '../lesson5/activity-ui.mjs';
 import {renderGoogleLogin} from './teacher-google.mjs?startup=20261026-v2';
 import {readLegacyDraft} from './legacy-draft.mjs';
 import {patchReadingView} from '../../../shared/reading-view.mjs?v=20261027-draft-reading-v1';
-import {createSwRosterDialog,redeemSwRosterLink} from '../../../shared/sw-class-roster.mjs?v=20261111-v1';
+import {createSwRosterDialog,clearLegacySwInvitation} from '../../../shared/sw-class-roster.mjs?v=20261115-v1';
 installStyles();
 const root=document.querySelector('#app'),teacher=document.body.dataset.view==='teacher',$=s=>root.querySelector(s);
 const checkFeedback=createCheckFeedback({root,serverField});let checkingRef=null;
@@ -39,7 +39,7 @@ function openRoster(){
  rosterDialog ||= createSwRosterDialog({
   list:({classRef})=>api(path+'?classRef='+encodeURIComponent(classRef)),
   add:({classRef},body)=>api(path,'POST',{...body,classRef}),
-  reissue:({classRef},body)=>api(path+'/invitation','POST',{...body,classRef}),
+  retry:({classRef},body)=>api(path+'/retry','POST',{...body,classRef}),
   isCurrent:rosterIsCurrent,
   refresh:async target=>{
    const data=await api('admin/activities/'+encodeURIComponent(ACTIVITY)+'/roster');
@@ -151,7 +151,7 @@ function loginHelpView(){
  return `<div class="login-help">
   <details id="missing-name-help">
    <summary>Không có tên trong danh sách</summary>
-   <p>Bạn hãy nhờ giảng viên thêm tên vào danh sách lớp và gửi liên kết làm bài</p>
+   <p>Bạn hãy nhờ giảng viên thêm tên vào danh sách lớp, sau đó tải lại trang và chọn tên để làm bài</p>
   </details>
   <button id="pin-entry-toggle" type="button" data-action="toggle-pin-entry" aria-controls="identity-person" hidden>Mở lại bài bằng mã 4 số</button>
  </div>`;
@@ -451,14 +451,7 @@ async function boot(){
  const query=entry.get('class')?.trim();if(query&&!teacher){requestedClass=classes.find(c=>[c.classRef,c.className].some(v=>v.toLowerCase()===query.toLowerCase()));if(!requestedClass)throw Error('Không tìm thấy lớp trong đường link này. Chưa mở bài.');if(!teacher)classes=[requestedClass];}
  indexPeople();if(!teacher&&entry.has('student')&&!PEOPLE.some(p=>p.id===entry.get('student')&&(!requestedClass||p.classRef===requestedClass.classRef)))throw Error('Học viên trong link không thuộc lớp đã chọn. Chưa mở bài.');
  if(teacher){await restoreTeacher();}
- else{try{
-   const claimed=await redeemSwRosterLink(body=>api('activities/'+encodeURIComponent(ACTIVITY)+'/class-members/claim','POST',body));
-   if(claimed){
-    const p=PEOPLE.find(p=>p.id===claimed.studentRef&&p.classRef===claimed.classRef);
-    if(!p)throw Error('Chưa tìm thấy hồ sơ vừa xác nhận trong bài này.');
-    await openPerson(p);return;
-   }
-  }catch(error){draw();fillPeople();message(error.message);return;}
+ else{clearLegacySwInvitation();
   let remembered;try{remembered=JSON.parse(localStorage.getItem(namespace+'identity')||'null');if(!remembered&&ACTIVITY==='writing-task2-public-health-ban')remembered=JSON.parse(localStorage.getItem('izone:shops-writing:production:identity')||'null');}catch{}
   const p=PEOPLE.find(p=>p.id===remembered?.id&&p.classRef===remembered?.classRef&&(!entry.has('student')||p.id===entry.get('student')));if(p&&(!p.requiresAccessCode||remembered.sessionRef))await openPerson(p,undefined,remembered.sessionRef);else{draw();fillPeople();}}
 }

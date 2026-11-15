@@ -18,7 +18,7 @@ const temporary = {
   studentRef: 'temporary-fixture', displayName: official.displayName,
   alias: 'Học viên thử · TEMP', provisional: true, requiresAccessCode: true,
 };
-const help = 'Bạn hãy nhờ giảng viên thêm tên vào danh sách lớp và gửi liên kết làm bài';
+const help = 'Bạn hãy nhờ giảng viên thêm tên vào danh sách lớp, sau đó tải lại trang và chọn tên để làm bài';
 
 function session(slug, studentRef, classRef) {
   const definitions = [

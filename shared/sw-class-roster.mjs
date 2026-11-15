@@ -1,30 +1,16 @@
-const fragmentKey = 'sw-invite';
-const uuidPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/iu;
-
-export async function redeemSwRosterLink(claim) {
+export function clearLegacySwInvitation() {
   const url = new URL(location.href);
   const fragment = new URLSearchParams(url.hash.slice(1));
-  if (!fragment.has(fragmentKey)) return null;
-  const classRef = url.searchParams.get('class');
-  const token = fragment.get(fragmentKey);
-  if (!uuidPattern.test(classRef || '') || !/^[a-zA-Z0-9_-]{43}$/u.test(token || '')) {
-    throw new Error('Liên kết giảng viên gửi chưa đúng. Hãy xin lại liên kết vào bài.');
-  }
-  const result = await claim({ classRef, token });
-  if (result.classRef !== classRef || !uuidPattern.test(result.studentRef || '')) {
-    throw new Error('Chưa xác nhận được đúng hồ sơ học viên.');
-  }
-  fragment.delete(fragmentKey);
+  if (!fragment.has('sw-invite')) return;
+  fragment.delete('sw-invite');
   url.hash = fragment.toString();
   try { history.replaceState(history.state, '', url); } catch {}
-  return result;
 }
 
-function invitationUrl({ activitySlug, classRef }, token) {
+function classHandoutUrl({ activitySlug, classRef }) {
   const url = new URL('./index.html', location.href);
   url.searchParams.set('task', activitySlug);
   url.searchParams.set('class', classRef);
-  url.hash = new URLSearchParams([[fragmentKey, token]]);
   return url.href;
 }
 
@@ -58,10 +44,10 @@ function deliveryText(member) {
   return `Đã xác nhận ${ready} bài.`;
 }
 
-export function createSwRosterDialog({ list, add, reissue, refresh, isCurrent }) {
+export function createSwRosterDialog({ list, add, retry, refresh, isCurrent }) {
   const css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = new URL('./sw-class-roster.css?v=20261111-v1', import.meta.url).href;
+  css.href = new URL('./sw-class-roster.css?v=20261115-v1', import.meta.url).href;
   document.head.append(css);
   const dialog = document.createElement('dialog');
   dialog.className = 'sw-roster-dialog';
@@ -75,9 +61,9 @@ export function createSwRosterDialog({ list, add, reissue, refresh, isCurrent })
       <button type="button" data-duplicate hidden>Thêm người khác cùng tên</button>
     </form>
     <p data-status role="status" aria-live="polite"></p>
-    <div data-invitation hidden>
-      <a target="_blank" rel="noreferrer noopener">Mở liên kết vào bài</a>
-      <button type="button" data-copy>Sao chép liên kết</button>
+    <div data-class-link hidden>
+      <a target="_blank" rel="noreferrer noopener">Mở handout của lớp</a>
+      <button type="button" data-copy>Sao chép liên kết lớp</button>
     </div>
     <section aria-label="Học viên đã thêm"><ul data-members></ul></section>`;
   document.body.append(dialog);
@@ -86,14 +72,14 @@ export function createSwRosterDialog({ list, add, reissue, refresh, isCurrent })
   const name = form.elements.displayName;
   const duplicate = $('[data-duplicate]');
   const status = $('[data-status]');
-  const invitation = $('[data-invitation]');
+  const classLink = $('[data-class-link]');
   let scope;
   let generation = 0;
   let sending = false;
   let pending;
   let memberPoll;
   let memberFingerprint;
-  let renewing = 0;
+  let retrying = 0;
 
   const current = (target, epoch) => epoch === generation && dialog.open && isCurrent(target);
 
@@ -102,7 +88,7 @@ export function createSwRosterDialog({ list, add, reissue, refresh, isCurrent })
     clearTimeout(memberPoll);
     scope = null;
     if (dialog.open) dialog.close();
-    invitation.hidden = true;
+    classLink.hidden = true;
     $('a').removeAttribute('href');
   }
 
@@ -118,17 +104,20 @@ export function createSwRosterDialog({ list, add, reissue, refresh, isCurrent })
     if (!current(target, epoch)) return;
     form.hidden = !result.canAdd;
     const fingerprint = JSON.stringify(result.members);
-    if (fingerprint === memberFingerprint || renewing) return;
+    if (fingerprint === memberFingerprint || retrying) return;
     memberFingerprint = fingerprint;
     $('[data-members]').replaceChildren(...result.members.map(member => {
       const row = document.createElement('li');
       const label = document.createElement('span');
       label.textContent = `${member.displayName} · ${member.reconciliationStatus === 'pending_erp' ? 'Chờ đối soát ERP' : 'Đã đối soát ERP'} · ${deliveryText(member)} · ${member.studentRef.replaceAll('-', '').slice(0, 12)}`;
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = member.currentReady ? 'Cấp lại liên kết' : 'Thử lại bài này';
-      button.addEventListener('click', () => void renew(target, member, button, epoch));
-      row.append(label, button);
+      row.append(label);
+      if (!member.currentReady) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = 'Thử lại bài này';
+        button.addEventListener('click', () => void retryDelivery(target, member, button, epoch));
+        row.append(button);
+      }
       const targets = member.delivery.flatMap(item => item.targets);
       if (targets.length) {
         const detail = document.createElement('details');
@@ -150,23 +139,17 @@ export function createSwRosterDialog({ list, add, reissue, refresh, isCurrent })
     if (!current(target, epoch)) return;
     clearTimeout(memberPoll);
     memberPoll = setTimeout(async () => {
-      if (!sending && !renewing && !document.hidden) await refreshMembers(target, epoch).catch(() => {});
+      if (!sending && !retrying && !document.hidden) await refreshMembers(target, epoch).catch(() => {});
       pollMembers(target, epoch);
     }, 8000);
   }
 
   async function showResult(target, result, epoch) {
     if (!current(target, epoch)) return;
-    invitation.hidden = true;
-    $('a').removeAttribute('href');
     if (result.state !== 'ready') {
-      status.textContent = 'Đã nhận yêu cầu. Chưa thể vào bài này. Hãy thử lại khi kết nối ổn định.';
-    } else if (result.invitationToken) {
-      $('a').href = invitationUrl(target, result.invitationToken);
-      invitation.hidden = false;
-      status.textContent = 'Có thể làm bài ngay. Hãy gửi liên kết dùng một lần cho học viên.';
+      status.textContent = 'Đã nhận yêu cầu. Bài này đang chờ đồng bộ. Hãy thử lại khi kết nối ổn định.';
     } else {
-      status.textContent = 'Học viên đã có tên. Có thể cấp lại liên kết nếu học viên cần.';
+      status.textContent = 'Học viên có thể vào handout của lớp, chọn tên và làm bài ngay.';
     }
     void Promise.resolve(refresh(target)).catch(() => {});
     void refreshMembers(target, epoch).catch(() => {});
@@ -187,7 +170,6 @@ export function createSwRosterDialog({ list, add, reissue, refresh, isCurrent })
       pending.duplicateConfirmed ||= confirmDuplicate;
       storePending(target, pending);
       status.textContent = 'Đang lưu…';
-      invitation.hidden = true;
       const result = await add(target, { displayName, requestId: pending.requestId, duplicateConfirmed: pending.duplicateConfirmed });
       if (!current(target, epoch)) return;
       duplicate.hidden = true;
@@ -206,18 +188,16 @@ export function createSwRosterDialog({ list, add, reissue, refresh, isCurrent })
     }
   }
 
-  async function renew(target, member, button, epoch) {
-    renewing += 1;
+  async function retryDelivery(target, member, button, epoch) {
+    retrying += 1;
     button.disabled = true;
-    const requestId = button.dataset.requestId ||= crypto.randomUUID();
     try {
-      const result = await reissue(target, { studentRef: member.studentRef, requestId });
-      if (result.state === 'ready') delete button.dataset.requestId;
+      const result = await retry(target, { studentRef: member.studentRef });
       await showResult(target, result, epoch);
     } catch (err) {
-      if (current(target, epoch)) status.textContent = err.message || 'Chưa lấy được liên kết.';
+      if (current(target, epoch)) status.textContent = err.message || 'Chưa đồng bộ được học viên vào bài này.';
     } finally {
-      renewing -= 1;
+      retrying -= 1;
       button.disabled = false;
     }
   }
@@ -246,8 +226,8 @@ export function createSwRosterDialog({ list, add, reissue, refresh, isCurrent })
     pending = readPending(target);
     name.value = '';
     duplicate.hidden = true;
-    invitation.hidden = true;
-    $('a').removeAttribute('href');
+    $('a').href = classHandoutUrl(target);
+    classLink.hidden = false;
     $('[data-class]').textContent = target.classLabel;
     $('[data-members]').replaceChildren();
     busy(false);

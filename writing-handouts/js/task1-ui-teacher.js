@@ -1,6 +1,6 @@
 import {createTeacherAuthState} from "../../shared/teacher-auth-state.js?v=20261026-startup1";
-import { createTeacherApi } from "./task1-ui-api.js?rev=20260920-server-session-v1&startup=20261026-v2&roster=20261111-v1";
-import { createSwRosterDialog } from "../../shared/sw-class-roster.mjs?v=20261111-v1";
+import { createTeacherApi } from "./task1-ui-api.js?rev=20260920-server-session-v1&startup=20261026-v2&roster=20261115-v1";
+import { createSwRosterDialog } from "../../shared/sw-class-roster.mjs?v=20261115-v1";
 import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, safeLmsUrl } from "./core.js?v=20260921-draft-result-v1";
 import { sectionDefinitions } from "./lesson-core.js";
@@ -33,7 +33,7 @@ function rosterTarget() {
 
 function openRoster() {
   rosterDialog ||= createSwRosterDialog({
-    list: state.api.classMembers, add: state.api.addClassMember, reissue: state.api.reissueClassMember,
+    list: state.api.classMembers, add: state.api.addClassMember, retry: state.api.retryClassMember,
     refresh,
     isCurrent: scope => state.authenticated && scope.loginGeneration === state.loginGeneration &&
       scope.classRef === $("teacher-class").value,
