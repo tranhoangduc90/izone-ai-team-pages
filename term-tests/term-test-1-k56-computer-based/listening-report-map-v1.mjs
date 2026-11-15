@@ -1,0 +1,57 @@
+// The second source restarts its spoken numbering. Use the rendered questions 21–40.
+// The reading windows and margins use the issued MP3, not the current UI Part.
+const readingGaps=[
+  {id:'before-q1',from:53.25,to:68.25,part:1,questions:'1–5'},
+  {id:'before-q6',from:353.25,to:393.75,part:1,questions:'6–10'},
+  {id:'before-q11',from:617,to:642.75,part:2,questions:'11–17'},
+  {id:'before-q18',from:841.25,to:866.75,part:2,questions:'18–20'},
+  {id:'before-q21',from:1079,to:1109.25,part:3,questions:'21–25'},
+  {id:'before-q26',from:1271,to:1301,part:3,questions:'26–30'},
+  {id:'before-q31',from:1484.5,to:1504.5,part:4,questions:'31–33'},
+  {id:'before-q34',from:1619.75,to:1650,part:4,questions:'34–40'},
+];
+
+const audibleWindows=[
+  [1,35.75],
+  [42.5,52.5],
+  [68.75,77.25],
+  [82.25,123.25],
+  [128.5,147.5],
+  [152.5,342.75],
+  [347.75,352.75],
+  [394.25,397],
+  [401.75,554.75],
+  [560.25,564.75],
+  [597.25,598],
+  [604.5,616.25],
+  [643.25,646.75],
+  [651.5,830.75],
+  [836,840.75],
+  [867.25,870],
+  [874.75,976.75],
+  [982,986.5],
+  [1018.5,1019.5],
+  [1025.5,1061],
+  [1065.25,1078.5],
+  [1109.75,1118.75],
+  [1123,1140.25],
+  [1145,1168.25],
+  [1172.75,1260.5],
+  [1264.5,1270.5],
+  [1301.5,1305],
+  [1309.25,1421.25],
+  [1425.5,1431.25],
+  [1462.5,1463.5],
+  [1469.25,1484],
+  [1505,1509],
+  [1513.25,1608.5],
+  [1613.25,1619.25],
+  [1650.5,1654],
+  [1658.75,1798.75],
+  [1804,1809.5],
+];
+
+export const term1K56ListeningReportMap={
+  version:1,sha256:'c7766f97758ec5ecdd3b69dfd3f762567a50bdbb0fd38930a2b609879e8439fc',duration:1847.38,
+  readingGaps,audibleWindows,
+};

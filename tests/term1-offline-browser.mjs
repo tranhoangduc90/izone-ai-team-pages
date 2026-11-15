@@ -46,10 +46,21 @@ for(const mode of ['lis_first','read_first'])test('Term 1 offline/phục hồi/t
    await p.evaluate(()=>window.K56_TERM1_OFFLINE.player.dispatchEvent(new Event('error')));
    await p.waitForTimeout(1000);assert.equal(await p.locator('#listeningView').isVisible(),true);assert.equal(await p.evaluate(()=>window.K56_TERM1_OFFLINE.record.sections.listening.sealed),false);
    const decision=await p.evaluate(()=>window.K56_LISTENING_AUDIO.beforeAutoSubmit());assert.equal(decision.submit,false);
-   await p.reload();await wait(p,()=>window.K56_TERM1_APP_READY&&window.K56_TERM1_OFFLINE.playerReady,'Reload Listening offline');
-   const heldPosition=await p.evaluate(()=>window.K56_TERM1_OFFLINE.player.currentTime);await p.waitForTimeout(2200);assert.equal(await p.evaluate(()=>window.K56_TERM1_OFFLINE.player.paused),true);assert.ok(Math.abs(await p.evaluate(()=>window.K56_TERM1_OFFLINE.player.currentTime)-heldPosition)<.2);
-   assert.equal(await p.locator('#listeningQuestions input[data-number]').first().inputValue(),'answer kept offline');assert.equal(await p.locator('[data-number="32a"]').inputValue(),'pair a');assert.equal(await p.locator('[data-number="32b"]').inputValue(),'pair b');
-   await p.click('#submitListening');await p.click('#startReading');
+   await p.reload();
+   await wait(p,()=>window.K56_TERM1_APP_READY&&window.K56_TERM1_OFFLINE.record.sections.listening?.interrupted,'Đã giữ gián đoạn khi tải lại offline');
+   const restored=await p.evaluate(()=>({
+     answers:window.K56_TERM1_OFFLINE.record.snapshot.drafts.listening,
+     interruptions:window.K56_TERM1_OFFLINE.record.operations.filter(row=>row.kind==='interrupt'),
+     playerReady:Boolean(window.K56_TERM1_OFFLINE.playerReady),
+   }));
+   assert.equal(restored.answers['1'],'answer kept offline');
+   assert.equal(restored.answers['32a'],'pair a');
+   assert.equal(restored.answers['32b'],'pair b');
+   assert.equal(restored.interruptions.length,1);
+   assert.equal(restored.interruptions[0].payload.interruptionReason,'page_interrupted');
+   assert.equal(restored.playerReady,false);
+   await p.getByRole('button',{name:/Tôi đã hiểu\. Đến phần thi tiếp theo/}).click();
+   await p.locator('#k56SectionReady button').click();
   } else {await wait(p,()=>window.K56_TERM1_APP_READY,'Reading trước ready');await p.getByRole('button',{name:'Bắt đầu Reading',exact:false}).first().click();}
   assert.equal(await p.locator('#readingQuestions [data-number]').count(),26);await p.locator('#readingQuestions input[data-number]').first().fill('reading kept offline');
   await p.reload();await wait(p,()=>window.K56_TERM1_APP_READY,'Reload Reading offline');

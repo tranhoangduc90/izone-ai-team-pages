@@ -11,7 +11,9 @@ import { fixture as browserFixture, wait } from './term2-offline-browser.mjs';
 import { captureSkillScreen, chooseFallbackLearner, rosterFixture } from './term1-fallback-screen-evidence.mjs';
 
 const full = process.env.TERM1_LISTENING_FULL === '1';
-test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'khôi phục và chặn EOF giả'), { timeout: full ? 2200000 : 75000 }, async t => {
+const reload = process.env.TERM1_FALLBACK_RELOAD === '1';
+test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : reload ? 'gián đoạn sau tải lại' : 'chặn EOF giả và nộp'),
+  { timeout: full ? 2200000 : 90000 }, async t => {
   const { TERM2_EVIDENCE: output, TERM1_FALLBACK_BACKEND: backend, TERM2_RUNTIME_ROOT: runtime, TERM2_DEPS_PACKAGE: deps } = process.env;
   assert.ok(output && backend && runtime && deps);
   process.env.K56_TEST_PRODUCT = '1';
@@ -55,6 +57,8 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
     if (disconnected) return route.abort();
     const relative = new URL(request.url()).pathname.split('/term-test-1-k56/')[1];
+    if (/(?:^|\/)journal-(?:context|events)$/.test(relative))
+      return route.fulfill({status:503,headers:cors,json:{ok:false,error:'FIXTURE_JOURNAL_UNAVAILABLE'}});
     assert.match(relative, /^(?:skill-fallback|offline)\//);
     if (relative === 'skill-fallback/enroll') {
       assert.equal(JSON.parse(request.postData()).activationCode, undefined);
@@ -63,7 +67,10 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
     assert.equal(request.headers()['x-term1-skill-grant'], grant.token);
     const destination = relative.startsWith('offline/') ? native.base + '/' + relative : skillsApi + relative.slice('skill-fallback'.length);
     const response = await fetch(destination, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-term1-skill-grant': grant.token }, body: request.postData() });
-    return route.fulfill({ status: response.status, headers: cors, json: await response.json() });
+    const text=await response.text();
+    assert.match(response.headers.get('content-type')||'',/application\/json/,
+      relative+' HTTP '+response.status+' '+text.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,350));
+    return route.fulfill({ status: response.status, headers: cors, json: JSON.parse(text) });
   });
 
   await page.goto(link.href);
@@ -112,12 +119,12 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   assert.equal(await page.locator('#skillPreviewStep').getAttribute('data-state'), 'complete');
   assert.equal(await page.locator('#skillStartStep').getAttribute('data-state'), 'active');
   assert.equal(await page.locator('#securePrepTitle').textContent(), 'Kiểm tra âm thanh trước khi bắt đầu');
-  assert.match(await page.locator('#skillPreviewStatus').textContent(), /Đang nghe thử/);
+  assert.match(await page.locator('#skillPreviewStatus').textContent(), /Đang nghe thử|Đã nghe đủ đoạn thử/);
   await capture('ready');
   if (!full) {
     await page.click('#skillPreview');
     assert.equal(await page.locator('#skillStart').isEnabled(), true);
-    await page.getByRole('button', { name: 'Nghe lại 30 giây đầu' }).waitFor();
+    await page.getByRole('button', { name: 'Nghe lại 10 giây đầu' }).waitFor();
   }
   assert.ok(browser.controls.audioCalls.some(url => url.includes('r2.cloudflarestorage.com')));
   if (!full) assert.ok(browser.controls.audioCalls.some(url => url.includes('github.io')));
@@ -142,23 +149,30 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   await browser.context.setOffline(true);
   await page.evaluate(() => window.K56_TERM1_OFFLINE.player.dispatchEvent(new Event('ended')));
   assert.equal(await page.evaluate(() => Boolean(window.K56_TERM1_OFFLINE.record.sections.listening.sealed)), false);
-  const checkpoint = await page.evaluate(async () => {
-    const runtime = window.K56_TERM1_OFFLINE;
-    runtime.player.pause();
-    await runtime.persist(true);
-    return runtime.record.player.position;
-  });
-  await page.reload();
-  await wait(page, () => window.K56_TERM1_OFFLINE?.playerReady, 'Mở lại Listening offline');
-  assert.equal(await page.locator('#listeningQuestions input[data-number="1"]').inputValue(), 'A');
-  const restored = await page.evaluate(() => window.K56_TERM1_OFFLINE.player.currentTime);
-  assert.ok(checkpoint >= 1 && Math.abs(restored - checkpoint) < 0.6, `Mốc ${checkpoint}, mở lại ${restored}`);
-  await capture('offline');
-  await page.getByRole('button', { name: 'Tiếp tục audio', exact: true }).click();
-  await wait(page, () => window.K56_TERM1_OFFLINE.player.currentTime > 4, 'Audio tiếp tục ở 1×');
-  assert.equal(await page.evaluate(() => window.K56_TERM1_OFFLINE.player.playbackRate), 1);
-  await page.screenshot({ path: resolve(output, 'listening-resumed.png') });
-  await writeFile(resolve(output, 'listening-checkpoint.json'), JSON.stringify({ full, started, checkpoint, restored, sources: browser.controls.audioCalls }, null, 2));
+  if (reload) {
+    await page.reload();
+    const dialog=page.getByRole('dialog',{name:'Listening gián đoạn'});
+    await dialog.waitFor();
+    const saved=await page.evaluate(async grantId=>{
+      const {ExamStore}=await import('../term-test-1-k56-reading-fallback/listening-offline-first-frame-v1.mjs');
+      const store=new ExamStore();
+      await store.open();
+      const record=await store.get('run:'+grantId);
+      return {answer:record.snapshot.drafts.listening['1'],
+        interruptions:record.operations.filter(row=>row.kind==='interrupt').map(row=>row.payload.interruptionReason),
+        playerCount:document.querySelectorAll('audio').length};
+    },grant.token.split('.')[0]);
+    assert.deepEqual(saved,{answer:'A',interruptions:['page_interrupted'],playerCount:0});
+    await dialog.getByRole('button',{name:'Tôi đã hiểu.'}).click();
+    await page.getByText('Đã lưu trên thiết bị. Thông tin sẽ đồng bộ khi có mạng.').waitFor();
+    await capture('offline-interrupted');
+    disconnected=false;
+    await browser.context.setOffline(false);
+    await page.getByText('Máy chủ đã nhận thông tin gián đoạn.').waitFor({timeout:25000});
+    assert.equal(Number((await native.db.query('SELECT count(*) AS total FROM assessment.k56_portal_field_dispatch WHERE attempt_id=$1',[native.a])).rows[0].total),0);
+    await writeFile(resolve(output,'listening-interrupted.json'),JSON.stringify(saved,null,2));
+    return;
+  }
   if (full) {
     await page.waitForFunction(() => window.K56_TERM1_OFFLINE.record.sections.listening.sealed, undefined, { timeout: 1980000 });
     assert.ok(Date.now() - started.at >= (started.duration - 1) * 1000);
@@ -205,5 +219,5 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   assert.deepEqual(grade.rows.map(row => [row.field, Number(row.grade)]), [['listening', 1]]);
   browser.assertJournalFaultExercised();
   assert.deepEqual(browser.errors, []);
-  await writeFile(resolve(output, 'listening-result.json'), JSON.stringify({ full, started, checkpoint, restored, grade: 1, scale: 40, wallMs: Date.now() - started.at }, null, 2));
+  await writeFile(resolve(output, 'listening-result.json'), JSON.stringify({full,started,grade:1,scale:40,wallMs:Date.now()-started.at},null,2));
 });
