@@ -1,11 +1,11 @@
 import {createCheckFeedback,missingCheckFields} from '../../shared/writing-check-feedback.mjs?v=20261101-v1';
 import {createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs?v=20261109-l3-v1';
-import {createClient} from './client.mjs?v=20261114-lesson4-share';
+import {createClient} from './client.mjs?v=20261115-lesson4-progress';
 import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261109-l3-v1';
 import {savedContent,threadsView,approvalLabel,installStyles} from './features.mjs?v=20261007-1';
 import {workflowFor,isWhole,isMulti,isPrepared,isOpinion,isDiscussion,planFields,solutionsFor,AGREEMENT_LEVELS,requiredFields,preparationError,bodyView,bodyKey,bodyIndexOf,localKey} from '../shared/workflow.mjs?v=20261109-l3-v1';
 import {renderMultiBodies,multiJourney} from '../shared/multi-body-ui.mjs?v=20261109-l3-v1';
-import {outlineSections,outlineJourney} from '../shared/body-outline-ui.mjs?v=20261114-lesson4-share';
+import {outlineSections,outlineJourney} from '../shared/body-outline-ui.mjs?v=20261115-lesson4-progress';
 import {mountLesson4Practice} from '../shared/lesson4-practice.mjs?v=20261114-lesson4-share';
 import {isBodyOutline,outlineRelation,validOutlineDirection} from '../shared/workflow.mjs?v=20261109-l3-v1';
 import {wholeSections} from '../shared/whole-chain-ui.mjs';
@@ -103,6 +103,7 @@ function vocabulary(n){
 
 // Chỉ biến thể mới vá vùng thay đổi; giữ node đang đọc khi kết quả nền cập nhật.
 function renderRegion(id,html){const node=$(id);if(!outline&&!isOpinion(lesson)&&!isDiscussion(lesson)){node.innerHTML=html;return;}const template=document.createElement('template');template.innerHTML=html;patchReadingView(node,template.content);}
+let docsProgress, docsRead;
 function render(){
   const replyDrafts=new Map([...document.querySelectorAll('[data-thread-reply]')].map(f=>[f.dataset.threadReply,{body:f.elements.body.value,id:f.dataset.replyId,sentBody:f.dataset.replyBody}]));
   const openSteps=[...document.querySelectorAll('details.prior-step[open]')].map(d=>d.id);
@@ -132,6 +133,52 @@ function render(){
   for(const item of document.querySelectorAll('details.comment.history[data-history]'))if(historyStates.has(item.dataset.history))item.open=historyStates.get(item.dataset.history);
   checkFeedback.sync(state.responses,state.ref);
   syncWritingPrompt();
+  renderLesson4Progress();
+}
+function renderLesson4Progress() {
+ if(!sharePractice||!state.ref)return;
+ let region=$('lesson4-progress');
+ if(!region){
+  region=document.createElement('div');
+  region.id='lesson4-progress';
+  $('save-state').after(region);
+  region.innerHTML='<span role="status" aria-live="polite" aria-atomic="true"></span><a hidden target="_blank" rel="noopener noreferrer">Mở Homework Docs</a>';
+ }
+ const steps=[state.steps.body1_topic,state.steps.body2_topic];
+ const passed=steps.map(step=>step?.status==='passed');
+ const count=passed.filter(Boolean).length;
+ const current=docsProgress?.ref===state.ref&&docsProgress.version===state.version&&
+  passed.every((value,n)=>docsProgress.passed?.[n]===value&&docsProgress.jobs?.[n]===(steps[n]?.history?.at(-1)?.jobRef||null));
+ const synced=current&&docsProgress.state==='applied';
+ const message=count===2?'Bạn đã hoàn thành Writing Lesson 4. Cả hai thân bài đều đạt.':
+   count===1?'1/2 thân bài đạt.':'';
+ const detail=!count?'':synced?' Đã cập nhật Homework Docs.':
+   current&&docsProgress.state==='blocked'?' Homework Docs cần được kiểm tra trước khi cập nhật.':
+   current&&docsProgress.state==='retry'?' Homework Docs chưa cập nhật được. Hệ thống đang thử lại.':
+   docsProgress?.state==='unavailable'?' Chưa xác nhận được trạng thái Homework Docs.':
+   count===2?' Hệ thống sẽ tự cập nhật Homework Docs. Bạn có thể đóng trang.':'';
+ const status=region.querySelector('[role="status"]');
+ const text=message+detail;
+ if(status.textContent!==text)status.textContent=text;
+ const link=region.querySelector('a');
+ if(synced&&/^https:\/\/docs\.google\.com\/document\/d\/[A-Za-z0-9_-]+\/edit\?tab=[\w.%-]+$/.test(docsProgress.docsUrl||'')){
+  if(link.getAttribute('href')!==docsProgress.docsUrl)link.href=docsProgress.docsUrl;
+  link.hidden=false;
+ }else link.hidden=true;
+ region.hidden=!text;
+}
+async function readLesson4Docs(ref,epoch) {
+ if(!sharePractice||docsRead||!state.steps||!['body1_topic','body2_topic'].some(key=>state.steps[key]?.status==='passed'))return;
+ const request=api.docsProgress();
+ docsRead=request;
+ try{
+  const result=await request;
+  if(epoch===generation&&ref===state.ref){docsProgress=result;renderLesson4Progress();}
+ }catch {
+  if(epoch===generation&&ref===state.ref&&!docsProgress){docsProgress={state:'unavailable'};renderLesson4Progress();}
+ }finally{
+  if(docsRead===request)docsRead=null;
+ }
 }
 let writingPrompt,acknowledgedWriting,writingHandoffInFlight=false;
 function syncWritingPrompt(force=false){
@@ -293,6 +340,7 @@ async function poll(){
     if(JSON.stringify(result.session)!==JSON.stringify(state)){apply(result.session);note('');}
     pollEtag=result.etag;
    }
+   if(epoch===generation&&ref===state.ref)void readLesson4Docs(ref,epoch);
   }
  }catch(error){if(epoch===generation){if(verifiedOpening&&[401,403].includes(error.status))handoutAccessLost();else note('Kết nối đang gián đoạn. Bài đã gửi vẫn được giữ; trang sẽ kiểm lại.');}}
  finally{if(epoch===generation)schedulePoll();}
@@ -305,7 +353,7 @@ async function openHandout(classRef,selectedStudent,isCurrent){
  return result;
 }
 function displayHandout(result){
- api.setToken(result.token);pollEtag=undefined;dirty={};conflict=false;busy=false;saveInFlight=false;editingLocked=false;serial=Promise.resolve();state=result.session;
+ api.setToken(result.token);pollEtag=undefined;docsProgress=null;docsRead=null;dirty={};conflict=false;busy=false;saveInFlight=false;editingLocked=false;serial=Promise.resolve();state=result.session;
  $('learner-label').textContent=names[student];show('workspace');render();note('');$('read-latest').hidden=true;
  if(sharePractice){
   const ref=state.ref,epoch=generation;

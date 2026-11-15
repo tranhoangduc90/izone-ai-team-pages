@@ -26,7 +26,10 @@ export function outlineSections(state,{field,comments,statusLabels,canContinueWr
    <div class="section-actions"><span class="word-count">Check cả ba ô của thân bài này</span><button class="primary" data-check="${key}" ${locked?'disabled':''}>${locked?statusLabels[step.status]:'Check'}</button></div></article>${comments(key)}</div></section>`;
  }).join('');
  const relation=outlineRelation(state);
- if(twoQuestions)return bodies+`<section class="answer-card" id="relation"><h2>Kết quả dàn ý</h2><p role="status">${[1,2].filter(n=>state.steps[bodyKey(n,'topic')]?.status==='passed').length}/2 thân bài đạt</p></section>`;
+ if(twoQuestions){
+  const count=[1,2].filter(n=>state.steps[bodyKey(n,'topic')]?.status==='passed').length;
+  return bodies+`<section class="answer-card" id="relation"><h2>${count===2?'Bạn đã hoàn thành Writing Lesson 4':'Kết quả dàn ý'}</h2><p>${count}/2 thân bài đạt.</p></section>`;
+ }
  const actions=relation==='order'?'<div class="section-actions"><button class="primary" data-outline-swap>Đổi chỗ hai thân bài</button><span>Chuyển cả thông điệp, hai idea và kết quả Check của mỗi đoạn.</span></div>'
   :relation==='stance'?'<div class="field-grid section-actions"><div><button class="secondary" data-outline-focus="stance">Đổi quan điểm của cả bài</button><p class="instruction">Nếu hai thân bài đã nói đúng điều bạn muốn nói.</p></div><div><button class="secondary" data-outline-focus="body2_topicSentence">Giữ quan điểm, sửa Thân bài 2</button><p class="instruction">Nếu bạn vẫn muốn giữ lựa chọn ở đầu bài. Sửa đoạn rồi Check lại.</p></div></div>'
   :canContinueWriting&&relation==='passed'?'<div class="section-actions"><button type="button" class="primary" data-continue-writing>Viết mở bài →</button></div>':'';
@@ -34,7 +37,7 @@ export function outlineSections(state,{field,comments,statusLabels,canContinueWr
 }
 
 export function outlineJourney(state){
- if(state.activity==='lesson4')return [['prompt','Đề bài','?',false],...[1,2].map(n=>['body'+n,'Thân bài '+n,n,state.steps[bodyKey(n,'topic')]?.status==='passed']),['relation','Kết quả',3,false]]
+ if(state.activity==='lesson4')return [['prompt','Đề bài','?',false],...[1,2].map(n=>['body'+n,'Thân bài '+n,n,state.steps[bodyKey(n,'topic')]?.status==='passed']),['relation','Kết quả',3,[1,2].every(n=>state.steps[bodyKey(n,'topic')]?.status==='passed')]]
   .map(([target,title,number,done])=>`<button class="nav-item ${done?'done':''}" data-target="${target}"><span>${done?'✓':number}</span><span>${title}</span></button>`).join('');
  return [['prompt','Đề bài','?',false],['position','Quan điểm',1,!!state.responses.stance],
   ...[1,2].map(n=>['body'+n,'Thân bài '+n,n+1,state.steps[bodyKey(n,'topic')]?.status==='passed']),

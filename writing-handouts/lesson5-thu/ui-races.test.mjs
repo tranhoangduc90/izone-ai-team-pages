@@ -89,7 +89,7 @@ test('R-UI-REPLY-RENDER · mất ACK rồi dựng lại trang vẫn giữ reques
  const h=fixture(),old=replyForm(),fresh=replyForm('');old.form.dataset.replyId='stable-id';old.form.dataset.replyBody=old.form.elements.body.value;
  let calls=0;h.context.document.querySelectorAll=s=>s==='[data-thread-reply]'?(calls++===0?[old.form]:[fresh.form]):[];
  h.context.savedContent=()=>'';h.context.approvalLabel=()=>'';h.context.threadsView=()=>'';h.context.renderJourney=()=>'';h.context.renderProcessing=()=>'';
- const source=fs.readFileSync(root+'/lesson5-thu/app.js','utf8');const start=source.indexOf('function render(){'),end=source.indexOf('function hasReplyDraft()',start);
+ const source=fs.readFileSync(root+'/lesson5-thu/app.js','utf8');const start=source.indexOf('function render(){'),end=source.indexOf('function renderLesson4Progress()',start);
  vm.runInContext(source.slice(start,end),h.context);h.run('render()');
  assert.equal(fresh.form.dataset.replyId,'stable-id');assert.equal(fresh.form.dataset.replyBody,old.form.dataset.replyBody);assert.equal(fresh.form.elements.body.value,old.form.elements.body.value);
 });

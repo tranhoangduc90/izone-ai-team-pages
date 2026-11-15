@@ -12,3 +12,6 @@ body[data-activity="lesson4"] .reading-practice-gate { display: flow-root; }
   body[data-activity="lesson4"] .lesson4-page-title,
   body[data-activity="lesson4"] .share-practice { margin-inline: 14px; }
 }
+
+#lesson4-progress { color: #152b4e; font-weight: 600; flex-basis: 100%; }
+#lesson4-progress a { margin-inline-start: .75em; text-decoration: underline; }
