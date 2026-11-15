@@ -1,0 +1,49 @@
+body.substitute-listening-flow[data-substitute-stage="listening"] {
+  overflow-y: auto;
+}
+
+body.substitute-listening-flow[data-substitute-stage="listening"] #app,
+#listeningView.cbt-listening-form,
+#listeningView .cbt-semantic-stage,
+#listeningView .cbt-semantic-pane,
+#listeningView .cbt-content-viewport,
+#listeningView .cbt-listening-section {
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+}
+
+#listeningView.cbt-listening-form:not([hidden]),
+#listeningView.cbt-listening-form .cbt-semantic-pane {
+  display: block;
+}
+
+#listeningView .cbt-listening-section {
+  scroll-margin-top: 5rem;
+}
+
+#listeningView .cbt-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+#listeningView [hidden] {
+  display: none !important;
+}
+
+.substitute-listening-report {
+  margin: .5rem 0;
+  padding: .5rem .75rem;
+  border-left: 3px solid #155b8f;
+  background: #eaf4fc;
+  color: #133f61;
+}
+
+.substitute-listening-report-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

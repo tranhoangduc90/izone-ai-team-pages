@@ -449,10 +449,32 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       const proof=proofOf(getState()),context=bindingCache.get(ownerKey);
       if(proof.clientRunId!==owner.clientRunId||proof.examSessionId!==owner.examSessionId
         ||JSON.stringify(proof)!==ownerKey||context?.identityConfirmed!==true||context.bindingId!==current.bindingId)return false;
-      const phases=['download_verified','player_ready','started','ended','early_confirmed','interrupted_local','interrupted_ack','submission_local','submission_ack'];
+      const phases=['download_verified','player_ready','started','ended','early_confirmed','interrupted_local','interrupted_ack','submission_local','submission_ack','manual_report_classified','manual_report_delivery','question_package_verified','question_view_opened'];
       const startTrace=listeningStartPhases.has(detail?.phase);
       if(!startTrace&&!phases.includes(detail?.phase))return false;
       const metadata={telemetryVersion:startTrace?2:1,phase:detail.phase,assetId:testSlug};
+      if(detail.phase==='manual_report_classified'){
+        if(detail.mapVersion!==1||!['planned_silence','expected_audible','unverified'].includes(detail.decision))return false;
+        metadata.mapVersion=1;
+        metadata.decision=detail.decision;
+        if(typeof detail.gapId==='string'&&/^before-q[1-9][0-9]?$/.test(detail.gapId))metadata.gapId=detail.gapId;
+        if(Number.isInteger(detail.remainingSeconds)&&detail.remainingSeconds>=0&&detail.remainingSeconds<=600)
+          metadata.remainingSeconds=detail.remainingSeconds;
+        if(['asset_unverified','position_unstable','position_unverified','player_not_advancing'].includes(detail.reason))
+          metadata.reason=detail.reason;
+      }
+      if(detail.phase==='manual_report_delivery'){
+        if(detail.mapVersion!==1||!['expired','rejected','text_accepted','photo_accepted'].includes(detail.status))return false;
+        metadata.mapVersion=1;
+        metadata.deliveryStatus=detail.status;
+      }
+      if(['question_package_verified','question_view_opened'].includes(detail.phase)){
+        if(detail.parts!==4||detail.questions!==40)return false;
+        metadata.parts=detail.parts;
+        metadata.questions=detail.questions;
+        if(Number.isInteger(detail.images)&&detail.images>=0&&detail.images<=40)metadata.images=detail.images;
+        if(typeof detail.displayReady==='boolean')metadata.displayReady=detail.displayReady;
+      }
       if(startTrace){
         if(!Number.isSafeInteger(detail.commandSequence)||detail.commandSequence<1)return false;
         if(!Number.isSafeInteger(detail.commandStep)||detail.commandStep<1||detail.commandStep>5)return false;
