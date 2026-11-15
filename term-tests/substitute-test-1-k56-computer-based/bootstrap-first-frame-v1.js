@@ -55,7 +55,7 @@
   }
 
   if(!localDemo){query.set('demo','exam');query.set('grading','server');location.replace(location.pathname+'?'+query.toString());return;}
-  const offline=await import('./offline-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1').catch(()=>null);
+  const offline=await import('./offline-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1&report=20261115-v1').catch(()=>null);
   try {
     if(query.get('reset')==='1'){
       if(query.get('resetOwner')!=='done'&&window.SUBSTITUTE_STATE.canReset(testConfig.slug))window.SUBSTITUTE_STATE.clear(testConfig.slug);
@@ -80,7 +80,7 @@
       const registration=await navigator.serviceWorker.ready;
       const urls=[...document.querySelectorAll('script[src],link[href],img[src]')]
         .map(element=>element.src||element.href).filter(url=>url&&!new URL(url).pathname.includes('/exam-journal/'));
-      for(const path of ['../substitute-shared/native-exam-ui.mjs','./offline-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1','../substitute-shared/backup-export-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1','../substitute-shared/listening-outbox-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1','../substitute-shared/submission-recovery-v1.mjs?v=20261114-submission-observations-v1','../substitute-k56-shared/app-first-frame-v1.js','../substitute-shared/exam-view-first-frame-v1.js',
+      for(const path of ['../substitute-shared/native-exam-ui.mjs','./offline-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1&report=20261115-v1','../substitute-shared/backup-export-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1','../substitute-shared/listening-outbox-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1','../substitute-shared/submission-recovery-v1.mjs?v=20261114-submission-observations-v1','../substitute-k56-shared/app-first-frame-v1.js','../substitute-shared/exam-view-first-frame-v1.js',
         './annotations.js','../substitute-shared/listening-report-v1.mjs','../substitute-shared/listening-report-maps-v1.mjs',
         '../substitute-shared/listening-report-evidence-v1.mjs','../substitute-shared/listening-report-outbox-v1.mjs',
         '../substitute-shared/listening-prepare-v1.mjs',
@@ -92,6 +92,7 @@
         '../shared/audio-source-choice-audio-status-v1.js?v=20261027-v1&audio=20261028-part-rescue-v1&status=20261111-audio-status-v1',
         '../shared/cbt-audio-download-status.mjs?v=20261111-audio-status-v1','../../shared/audio/transport-audio-status-v1.mjs'])
         urls.push(new URL(path,location.href).href);
+      urls.push(...(verifiedListeningPackage?.imageUrls||[]));
       registration.active?.postMessage({type:'PRECACHE',urls});
     }).catch(()=>{window.SUBSTITUTE_OFFLINE_STATUS='shell_cache_failed';});
   }

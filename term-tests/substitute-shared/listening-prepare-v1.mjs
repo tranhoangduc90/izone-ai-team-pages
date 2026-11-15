@@ -35,5 +35,5 @@ export async function verifyListeningPackage(content, config, signal){
     if(!image.naturalWidth||!image.naturalHeight)throw Error('Chưa đọc được ảnh của đề Listening.');
   }));
   signal.throwIfAborted();
-  return {parts:sections.length,questions:seen.size,images:images.size};
+  return {parts:sections.length,questions:seen.size,images:images.size,imageUrls:[...images]};
 }
