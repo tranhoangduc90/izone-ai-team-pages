@@ -289,7 +289,7 @@ export const ASSET_HASHES={
   "../k67-shared/answer-explanations.js": "9bdd5c7f3a9a15d9157a79ecdbf5bd6c3ec8544a0405fd692661fc1ed132c045",
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
-  "../mini-test-k56/offline.mjs": "82f23d4662219d45c93c6fd3b6bf50f7890d4ed954be13acedf41abfc76609b3",
+  "../mini-test-k56/offline.mjs": "a270e35a3cb674e87a56cc0727e771790e6621ec6f027242c622fce3f006db46",
   "../mini-test-k56/test-config.js": "0629f850b5571a83c272322c0d9ecc22bcda2dc5c48ecfe24af4600f0ad3d7ca",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
@@ -343,4 +343,4 @@ export const ASSET_HASHES={
   "listening-report-evidence-v1.mjs": "5df2147c8e06cb8b5bf2ab586ac096984f5c6e4744b74122d024dd20b2245090",
   "../k56-audio-recovery-mini-report-v1.js": "feb7fbe5bca8dca59cb3474096689f4c952814757a8a9e8432c7dc22efd581a5"
 };
-export const ASSET_BUILD_ID="b18ec74f88562a4da76725200f6c037c935abc7d750a5e001904c379e8f51f56";
+export const ASSET_BUILD_ID="8b0e9bd9b99ecd9ac52a48c0079e3529f2c693708192ecd0e411c142f7a4812b";
