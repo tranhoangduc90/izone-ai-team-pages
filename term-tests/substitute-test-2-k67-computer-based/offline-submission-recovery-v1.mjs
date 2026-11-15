@@ -59,7 +59,7 @@ async function put(storeName,item){
 }
 export async function saveSnapshot(identity,kind,value){
  const scope=normalizeScope(identity);
- if(!['lobby','app','ui'].includes(kind))throw Error('OFFLINE_KIND_INVALID');
+ if(!['lobby','app','ui','listening-report'].includes(kind))throw Error('OFFLINE_KIND_INVALID');
  const serialized=JSON.stringify(value);
  if(serialized.length>4*1024*1024)throw Error('OFFLINE_SNAPSHOT_TOO_LARGE');
  return put('snapshots',{key:key(scope,kind),owner:owner(scope),kind,scope,updatedAt:Date.now(),value:JSON.parse(serialized)});
