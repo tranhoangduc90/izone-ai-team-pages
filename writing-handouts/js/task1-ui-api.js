@@ -35,7 +35,6 @@ export function createApi(base = "", { classRoster = false } = {}) {
   const studentFetch = (url, options) => fetchJson(url, classRoster ? { ...options, credentials: "include" } : options);
   return {
     roster: (slug) => fetchJson(endpoint(root, `activities/${encodeURIComponent(slug)}/roster`)),
-    claimClassMember: (slug, body) => studentFetch(endpoint(root, `activities/${encodeURIComponent(slug)}/class-members/claim`), jsonOptions("POST", body, { "X-Izone-Csrf": "1" })),
     registerProvisional: (activitySlug, classRef, displayName, pin, duplicateConfirmed = false, requestId = createRequestId()) => fetchJson(endpoint(root, `activities/${encodeURIComponent(activitySlug)}/provisional-students`), jsonOptions("POST", { classRef, displayName, pin, duplicateConfirmed, requestId })),
     createSession: (activitySlug, classRef, studentRef, accessCode) => studentFetch(endpoint(root, "sessions"), jsonOptions("POST", { activitySlug, classRef, studentRef, ...(accessCode ? { accessCode } : {}), requestId: createRequestId() })),
     session: (sessionRef) => studentFetch(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}`)),
@@ -112,8 +111,8 @@ export function createTeacherApi(base = "") {
       endpoint(root, `admin/activities/${encodeURIComponent(activitySlug)}/class-members`),
       teacherJson("POST", { ...body, classRef }),
     ).then(result => result.data),
-    reissueClassMember: ({ activitySlug, classRef }, body) => teacherFetch(
-      endpoint(root, `admin/activities/${encodeURIComponent(activitySlug)}/class-members/invitation`),
+    retryClassMember: ({ activitySlug, classRef }, body) => teacherFetch(
+      endpoint(root, `admin/activities/${encodeURIComponent(activitySlug)}/class-members/retry`),
       teacherJson("POST", { ...body, classRef }),
     ).then(result => result.data),
     liveActivity: (slug, classRef = "") => {

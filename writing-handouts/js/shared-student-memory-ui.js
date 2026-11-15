@@ -30,9 +30,8 @@ export function installStudentMemory(options) {
   function sync() {
     const { student } = selection();
     const temporary = Boolean(student && !officialStudent(student)) || Boolean(form.querySelector('[id$="provisional-panel"]:not([hidden])'));
-    checkbox.disabled = temporary || student?.classManaged || identity.read().status === 'unavailable';
-    status.textContent = student?.classManaged ? 'Hồ sơ do giảng viên thêm dùng liên kết để xác nhận trên thiết bị này.'
-      : temporary ? 'Hồ sơ tạm giữ mã 4 số, chưa được nhớ sang bài khác.'
+    checkbox.disabled = temporary || identity.read().status === 'unavailable';
+    status.textContent = temporary ? 'Hồ sơ tạm giữ mã 4 số, chưa được nhớ sang bài khác.'
       : 'Lần sau trình duyệt tự nhận bạn và mở đúng bài. Bỏ tick nếu dùng máy chung.';
   }
   function choose(group, student) {
@@ -54,7 +53,7 @@ export function installStudentMemory(options) {
       if (version !== selectionGeneration || busy || activeStudentRef) return;
       if (resolved.status !== 'unique') { sync(); return; }
       const candidates = groups.filter(g => !requested || classMatches(g, requested)).flatMap(group =>
-        group.students.filter(student => !student.classManaged && officialStudent(student)).flatMap(student => resolved.aliases
+        group.students.filter(student => officialStudent(student)).flatMap(student => resolved.aliases
           .filter(alias => alias.studentRef === studentRefOf(student)).map(alias => ({ group, student, alias }))));
       const matches = classSelect.value ? candidates.filter(c => classRefOf(c.group) === classSelect.value) : candidates;
       if (matches.length !== 1) {
@@ -109,7 +108,7 @@ export function installStudentMemory(options) {
       const { group, student } = selection();
       if (classRefOf(group || {}) !== opened.classRef || studentRefOf(student || {}) !== opened.studentRef) throw new Error('Phiên chưa khớp lớp và người đã chọn.');
       activeStudentRef = opened.studentRef;
-      if (!pinned && !student.classManaged) await identity.commit(context, { automatic: Boolean(automatic), remember }).then(result => {
+      if (!pinned) await identity.commit(context, { automatic: Boolean(automatic), remember }).then(result => {
         if (!['ok', 'empty'].includes(result.status)) notice('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.');
       }).catch(() => notice('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.'));
       identity.pin(opened.studentRef, { classRef: opened.classRef });

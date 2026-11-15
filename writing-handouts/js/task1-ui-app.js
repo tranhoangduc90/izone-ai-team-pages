@@ -1,6 +1,6 @@
-import { createApi } from "./task1-ui-api.js?v=20260911-load-guard-v1&startup=20261026-v2&roster=20261111-v1";
-import { redeemSwRosterLink } from "../../shared/sw-class-roster.mjs?v=20261111-v1";
-import { installStudentMemory } from "./shared-student-memory-ui.js?v=20261018-identity-v1&roster=20261111-v1";
+import { createApi } from "./task1-ui-api.js?v=20260911-load-guard-v1&startup=20261026-v2&roster=20261115-v1";
+import { clearLegacySwInvitation } from "../../shared/sw-class-roster.mjs?v=20261115-v1";
+import { installStudentMemory } from "./shared-student-memory-ui.js?v=20261115-v1";
 import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelayWithJitter, randomDelay, rebaseLocalProgress, retryDelay, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260921-draft-result-v1";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { appendInlineMarkdown, appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
@@ -612,20 +612,13 @@ function closeWithKeepalive() {
 async function init() {
   try {
     await loadManifest(); const roster = await app.api.roster(app.activitySlug); app.roster = roster.data;
-    let claimed;
-    let claimError;
-    try {
-      claimed = await redeemSwRosterLink(body => app.api.claimClassMember(app.activitySlug, body).then(result => result.data));
-    } catch (error) {
-      claimError = error;
-    }
+    clearLegacySwInvitation();
     $("resume-recent").hidden = !(await getLatestDraft(`${app.activitySlug}:`));
     renderClassOptions();
     $("class-id").addEventListener("change", updateStudentOptions); $("student-name").addEventListener("change", updateAccessCode); installTask1Entry({ app, openSession, updateStudentOptions, updateAccessCode, saveRemote, studentsForClass });
     // Giữ bộ nhớ/nhận diện chung và kho nháp hiện hành khi chuyển giao diện.
-    if (!claimError && app.studentMemoryConfig?.enabled !== false) app.studentMemory = installStudentMemory({ config: app.studentMemoryConfig, apiBase: app.apiBase,
+    if (app.studentMemoryConfig?.enabled !== false) app.studentMemory = installStudentMemory({ config: app.studentMemoryConfig, apiBase: app.apiBase,
       roster: app.roster, form: $("identity-form"), classSelect: $("class-id"), studentSelect: $("student-name"),
-      skipInitialRestore: Boolean(claimed),
       refreshStudents: updateStudentOptions, refreshAccessCode: updateAccessCode, resetIdentityFields,
       resumeButton: $("resume-recent"), workspace: $("workspace"),
       workspaceActions: $("workspace").querySelector(".actions"), notice: showNotice,
@@ -660,20 +653,6 @@ async function init() {
     });
     document.addEventListener("visibilitychange", () => document.hidden ? (clearTimeout(app.pollTimer), clearTimeout(app.teacherCommentTimer)) : (schedulePoll(), schedulePresence(), refreshTeacherComments()));
     window.addEventListener("beforeunload", (event) => { if (app.dirty) { closeWithKeepalive(); event.preventDefault(); event.returnValue = ""; } });
-    if (claimed) {
-      $("class-id").value = claimed.classRef;
-      updateStudentOptions();
-      $("student-name").value = claimed.studentRef;
-      await openSession({ preventDefault() {} });
-      if (app.identity) {
-        const teacher = new URL("./teacher.html", location.href);
-        teacher.search = location.search;
-        $("task1-teacher-link").href = teacher.href;
-      }
-    } else if (claimError) {
-      $("identity-error").hidden = false;
-      $("identity-error").textContent = claimError.message;
-    }
   } catch (error) { $("task-summary").textContent = error.message; $("identity-form").querySelector('button[type="submit"]').disabled = true; setSaveState("Không thể khởi động bài luyện"); }
 }
 init();
