@@ -10,9 +10,9 @@ const { chromium } = createRequire(resolve(modules, 'playwright/package.json'))(
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const base = 'https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/';
 const entries = [
-  ['term-test-1', 'term-test-1-audio.html', true],
-  ['term-test-2', 'term-test-2-audio.html', false],
-  ['mini-test-lesson-5', 'mini-test-listening-audio.html', false]
+  ['term-test-1', 'term-test-1-audio.html'],
+  ['term-test-2', 'term-test-2-audio.html'],
+  ['mini-test-lesson-5', 'mini-test-listening-audio.html']
 ];
 const live = process.argv.includes('--live');
 const routes = entries.filter(([slug]) =>
@@ -21,7 +21,7 @@ const routes = entries.filter(([slug]) =>
 );
 
 try {
-  for (const [slug, path, timeWindow] of routes) {
+  for (const [slug, path] of routes) {
     const context = await browser.newContext({ timezoneId: 'Asia/Saigon' });
     await context.clock.setFixedTime(new Date('2026-11-12T18:44:00+07:00'));
     await context.addInitScript(() => {
@@ -59,6 +59,7 @@ try {
       await page.locator('#audioRetry').waitFor();
       assert.equal(await page.locator('#status').textContent(), 'Chưa xác nhận được quyền tải audio.');
       assert.equal(await page.locator('#btnCheckVol').isEnabled(), false);
+      assert.equal(await page.locator('#btnPlayMain').isEnabled(), false);
       assert.deepEqual(pagesRequests, []);
       await page.evaluate(() => { delete window.paperAudioLoad; });
       await page.locator('#audioRetry').click();
@@ -69,18 +70,12 @@ try {
     assert.equal(result.outcome, 'ready', JSON.stringify(result));
     assert.equal(result.bytes, ASSETS[slug].byteLength);
     assert.ok(result.sources.includes('cloudflare'), JSON.stringify(result));
-    assert.equal(await page.locator('#btnPlayMain').isEnabled(), !timeWindow);
+    assert.equal(await page.locator('#btnPlayMain').isEnabled(), true);
     await page.locator('#btnCheckVol').click();
     await page.waitForFunction(() => document.getElementById('audioTest').currentTime > 0.05);
     await page.locator('#btnConfirmVol').click();
     assert.equal(await page.locator('#audioTest').evaluate(node => node.paused), true);
-    if (timeWindow) {
-      for (const [clock, disabled] of [['18:45', false], ['18:59', false], ['19:00', true]]) {
-        await context.clock.setFixedTime(new Date('2026-11-12T' + clock + ':00+07:00'));
-        await page.waitForFunction(expected => document.getElementById('btnPlayMain').disabled === expected, disabled);
-      }
-    }
-    if (slug === 'term-test-2') {
+    if (slug === 'term-test-1' || slug === 'term-test-2') {
       assert.equal(await page.evaluate(() => window.playDisabledWhileLoading), true);
       await context.clock.setFixedTime(new Date('2026-11-12T19:00:00+07:00'));
       await page.reload();
@@ -91,7 +86,7 @@ try {
       assert.equal(await page.locator('#status').textContent(), 'Đang phát audio thi.');
     }
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ live, ...result, soundCheck: true, timeWindow }));
+    console.log(JSON.stringify({ live, ...result, soundCheck: true }));
     await context.close();
   }
 } finally {
