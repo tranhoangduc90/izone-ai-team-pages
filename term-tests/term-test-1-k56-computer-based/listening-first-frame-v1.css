@@ -1,0 +1,37 @@
+/* Listening giữ nội dung và đường cuộn khi CSS trình bày tải muộn. */
+body[data-k56-design]:has(#listeningView:not([hidden])) #app {
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+body[data-k56-design] #listeningView:not([hidden]) .cbt-content-viewport,
+body[data-k56-design] #listeningView:not([hidden]) .cbt-listening-section {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+body[data-k56-design] #listeningView .cbt-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.substitute-listening-report:not([hidden]) {
+  position: fixed;
+  z-index: 110;
+  inset: 12px 12px auto auto;
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 24px));
+  margin: 0;
+  padding: 12px 16px;
+  color: #143c63;
+  border: 1px solid #b0c8e3;
+  border-radius: 8px;
+  background: #edf5ff;
+  pointer-events: none;
+}
+.substitute-listening-report-announcement {
+  position: absolute;
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
