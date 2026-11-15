@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-2-k67-listening-makeup",
-  "build": "issue611-c7857a7513655a1a",
+  "build": "issue611-75ca724c116885b9",
   "assets": [
     {
       "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
@@ -119,10 +119,6 @@
       "sha256": "45160e724036d14f16c2f40304b88b14e4fa654db956e86d1d319b9edb3d191a"
     },
     {
-      "path": "../substitute-skill-shared/listening-journal-v1.mjs",
-      "sha256": "5ff958d58187d2c119f2395d67c3e95e6e9f7e5202fa99ff76146d828c53d684"
-    },
-    {
       "path": "../substitute-skill-shared/native-listening.mjs",
       "sha256": "f656d3c5aa88e8c40da73af0415fed68e50ea18f58e131702c674a3b020e48f9"
     },
@@ -135,20 +131,12 @@
       "sha256": "d84aa63c1a5541d88bc7839c4aeac5fc623dfc93e448fc86fe474039d17f1455"
     },
     {
-      "path": "../substitute-skill-shared/objective-controller.mjs",
-      "sha256": "2786c0741e2d7a62abf46c02320411e3254fefd6ad4bc7357ed2fb9e6eb26d40"
-    },
-    {
       "path": "../substitute-skill-shared/objective-listening-audio-v3.mjs",
       "sha256": "aa00c2500269ed70395dcaf3f728bb867c2d7e80806b0d5e9d6f0a99ef55a536"
     },
     {
       "path": "../substitute-skill-shared/objective.css",
       "sha256": "eaf08a2420ac0222be00c2cba161ea89efbaa26d44118fb2188f5918dabe039e"
-    },
-    {
-      "path": "../substitute-skill-shared/objective.mjs",
-      "sha256": "5defd2131b514bce87fa554752811ab024cf639bcbaa6a8ff361fdbd14542a98"
     },
     {
       "path": "../substitute-skill-shared/offline-worker.js",
@@ -196,7 +184,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "60a21aacfd466fd1463690f64e2fc08a382b07f64323d88ad9ceb259ad7a9745"
+      "sha256": "e2bbaf2b49fb02cafad080d83e72352bbaddb73cc4cbf302df2bfccb6735a465"
     },
     {
       "path": "sw.js",
@@ -205,6 +193,38 @@
     {
       "path": "../substitute-skill-shared/submission-journal-v1.mjs",
       "sha256": "d047605cd8a0c988885f7818aac8e03141e2ce76eb66054913fe8512f021fa2b"
+    },
+    {
+      "path": "../substitute-skill-shared/objective-listening-report-v1.mjs",
+      "sha256": "1b85c972a27034e68f7f2623660a9a9de94ea48684121f4d0917ea9a7a3e66ac"
+    },
+    {
+      "path": "../substitute-skill-shared/objective-controller-listening-report-v1.mjs",
+      "sha256": "083821811828e7e8898bdd6eaae28a912468e8c851334d9eac6535b8338b8d85"
+    },
+    {
+      "path": "../substitute-skill-shared/listening-journal-report-v1.mjs",
+      "sha256": "91e4ca553d0178b7dda1455978bfa018d9c8c3a3ce09b65f6b798c2e2b08ee62"
+    },
+    {
+      "path": "../substitute-shared/listening-flow-v1.css",
+      "sha256": "856e008959299cb17df3ee96a5046d376f9a16cffbe0f0609d9120926497d876"
+    },
+    {
+      "path": "../substitute-shared/listening-report-v1.mjs",
+      "sha256": "cbad6d9a7308fcf18a6d027c4096f382cd5dbf567a1029e9b6de2f536ce87613"
+    },
+    {
+      "path": "../substitute-shared/listening-report-maps-v1.mjs",
+      "sha256": "2998d86a1380ea8b7e5eae013868b17fbf9ef10136c7fe7bdbac570a97d00826"
+    },
+    {
+      "path": "../substitute-shared/standalone-listening-report-v1.mjs",
+      "sha256": "da67852bcc8d52b39f40166bc6aa73b18a4bd7ead0ee7763a697754b80799aa3"
+    },
+    {
+      "path": "../term-test-2-computer-based/listening-report-evidence-v1.mjs",
+      "sha256": "da745421b217f85ac7f7cdd39b270f67b8453567cc041c2a338f1abf985c7d54"
     }
   ]
 }
