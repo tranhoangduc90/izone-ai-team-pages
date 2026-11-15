@@ -180,9 +180,13 @@ if(!process.env.TERM2_FULL_ROUND&&!process.env.K56_FIXTURE_IMPORT_ONLY)for(const
    await p.evaluate(()=>window.K56_TERM2_OFFLINE.player.dispatchEvent(new Event('error')));
    await p.waitForTimeout(1000);assert.equal(await p.locator('#listeningView').isVisible(),true);assert.equal(await p.evaluate(()=>window.K56_TERM2_OFFLINE.record.sections.listening.sealed),false);
    const decision=await p.evaluate(()=>window.K56_LISTENING_AUDIO.beforeAutoSubmit());assert.equal(decision.submit,false);
-   await p.reload();await wait(p,()=>window.K56_TERM2_APP_READY&&window.K56_TERM2_OFFLINE.playerReady,'Reload Listening offline');
-   assert.equal(await p.locator('#listeningQuestions input[data-number]').first().inputValue(),'answer kept offline');
-   await p.click('#submitListening');await p.click('#startReading');
+   await p.reload();
+   const acknowledge=p.getByRole('button',{name:'Tôi đã hiểu. Đến phần thi tiếp theo.'});
+   await acknowledge.waitFor();
+   assert.ok(Object.values(await p.evaluate(()=>window.K56_TERM2_OFFLINE.record.snapshot.drafts.listening)).includes('answer kept offline'));
+   assert.equal(await p.evaluate(()=>window.K56_TERM2_OFFLINE.record.sections.listening.interrupted),true);
+   assert.equal(await p.evaluate(()=>Boolean(window.K56_TERM2_OFFLINE.record.sections.listening.sealed)),false);
+   await acknowledge.click();await p.getByRole('button',{name:'Bắt đầu Reading',exact:true}).click();
   } else {await wait(p,()=>window.K56_TERM2_APP_READY,'Reading trước ready');await p.getByRole('button',{name:'Bắt đầu Reading',exact:false}).first().click();}
   await p.locator('#readingQuestions input[data-number]').first().fill('reading kept offline');
   await p.reload();await wait(p,()=>window.K56_TERM2_APP_READY,'Reload Reading offline');
