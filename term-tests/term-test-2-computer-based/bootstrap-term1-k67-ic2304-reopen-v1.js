@@ -933,6 +933,18 @@
         if (!recoverFromServerReset(error, student)) throw error;
         prepared = await prepareSession();
       }
+      if (testConfig.slug === 'term-test-1' && !listeningOnly
+          && prepared.officialResultReady === true && prepared.studentRef === studentRef) {
+        const {content, ...result} = await apiRequest('/api/term-tests/result', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({officialTerm1:{classCode,studentRef},includeContent:true})
+        });
+        if (result.officialTerm1 !== true || result.studentRef !== studentRef || result.testSlug !== testConfig.slug
+            || !result.writing?.submitted) throw new Error('Kết quả trả về chưa khớp người học.');
+        rememberPreparedStudent(studentRef);
+        await enterExam({content, officialTerm1Result:result});
+        return;
+      }
       const continuation = testConfig.slug === 'term-test-1' && !listeningOnly
         && ['listening','reading','writing'].includes(prepared.continuationSection)
         && prepared.continuationSection === prepared.nextSection && prepared.studentRef === studentRef;
@@ -1116,6 +1128,7 @@
       verifiedIdentity: offlineSection ? null : boundIdentity,
       offlineSectionIdentity: offlineSection && boundIdentity ? { ...boundIdentity, section: offlineSection } : null,
       miniJourney:journey,
+      officialTerm1Result:started.officialTerm1Result,
       playNewListening,
       reconcileListening: Boolean(state.pendingSubmissions?.listening && !started.listeningSubmitted),
       audioAppReady: appReady,
@@ -1128,7 +1141,7 @@
       audioVolume: Number(state.audioVolume) || 1,
       officialAudioElement: audioElement,
       officialAudioUrl: officialObjectUrl,
-      skipListeningAudio: timerOnly || Boolean(offlineSection||journey||state.pendingSubmissions?.listening) || (started.examMode === 'read_first' ? started.nextSection !== 'listening' || Boolean(started.listeningSubmitted) : Boolean(state.attemptToken || started.listeningSubmitted))
+      skipListeningAudio: timerOnly || Boolean(offlineSection||journey||started.officialTerm1Result||state.pendingSubmissions?.listening) || (started.examMode === 'read_first' ? started.nextSection !== 'listening' || Boolean(started.listeningSubmitted) : Boolean(state.attemptToken || started.listeningSubmitted))
     });
     previewAudio.remove();
     revokePreview();

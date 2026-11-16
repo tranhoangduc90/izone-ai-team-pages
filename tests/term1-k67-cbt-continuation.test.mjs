@@ -15,7 +15,9 @@ const require = createRequire(resolve(process.env.USERPROFILE,
   '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json'));
 const { chromium } = require('playwright');
 
-test('Term 1 CBT opens the remaining Reading skill in a separate profile', { timeout:90_000 }, async () => {
+for (const essay of ['', 'Synthetic Writing answer for the isolated grading queue']) test(
+  'Term 1 CBT continues after offline Reading and reopens Writing ' + (essay ? 'while grading' : 'with Band 0'),
+  { timeout:90_000 }, async () => {
   const socket = createServer().listen(0, '127.0.0.1');
   await once(socket, 'listening');
   const port = socket.address().port;
@@ -27,6 +29,8 @@ test('Term 1 CBT opens the remaining Reading skill in a separate profile', { tim
   const fixture = spawn(process.execPath, ['tools/preview-exam-order.mjs', pages], { cwd:backend, windowsHide:true,
     env:{ ...process.env, K67_ORDER_NATIVE_URL:'', K67_PREVIEW_PORT:String(port),
       K67_PREVIEW_TERM1_PARALLEL_ENTRY:'true', K67_PREVIEW_TERM1_CBT_JOURNEY:'on',
+      K67_PREVIEW_TERM1_WRITING_HOLD:'true',
+      K67_PREVIEW_WRITING_RESULT:essay ? 'true' : 'false',
       K67_PREVIEW_AUDIO_PROTECTION:'true', K67_PREVIEW_AUDIO_OWNER:'true' },
     stdio:['ignore', 'ignore', 'pipe'] });
   let browser;
@@ -108,6 +112,74 @@ test('Term 1 CBT opens the remaining Reading skill in a separate profile', { tim
       const visible = (await page.locator('body').innerText()).slice(0, 800);
       throw new Error(JSON.stringify({visible, preparations, errors}), {cause:error});
     });
+    const resultReads = [];
+    function observeResultReads(tab) {
+      tab.on('request', request => {
+        const pathname = new URL(request.url()).pathname;
+        if (['/api/term-tests/result','/api/term-tests/result/review'].includes(pathname)) {
+          resultReads.push(request.postDataJSON());
+        }
+      });
+    }
+    observeResultReads(page);
+    await page.getByRole('button', { name:'Bắt đầu Writing', exact:true }).click();
+    if (essay) await page.locator('textarea[data-writing-task="task2"]').fill(essay);
+    page.once('dialog', dialog => dialog.accept());
+    await page.locator('#submitWriting').click();
+    const result = page.locator('#resultView');
+    const viewResult = page.locator('#viewResult');
+    await page.waitForFunction(() => !document.getElementById('resultView')?.hidden
+      || (!document.getElementById('resultReadyView')?.hidden && !document.getElementById('viewResult')?.disabled));
+    if (!(await result.isVisible())) await viewResult.click();
+    const initialHeading = essay ? 'Bài Writing của bạn đang được chấm' : 'Điểm và bài chấm Writing';
+    await result.getByRole('heading', {name:initialHeading}).waitFor();
+
+    const fresh = await browser.newContext({ baseURL:base });
+    const reopened = await fresh.newPage();
+    observeResultReads(reopened);
+    reopened.on('pageerror', error => errors.push(error.message));
+    await reopened.goto(pagePath);
+    await reopened.locator('#bootstrapStudent').selectOption(identity.studentRef);
+    await reopened.getByRole('button', { name:'Xác nhận, tiếp tục', exact:true }).click();
+    const reopenedResult = reopened.locator('#resultView');
+    await reopenedResult.getByRole('heading', {name:initialHeading}).waitFor();
+    await reopenedResult.getByRole('button', {name:'Xem lại toàn bộ bài làm'}).click();
+    await reopened.getByRole('dialog').waitFor();
+    if (essay) {
+      await reopened.getByRole('button', {name:'Đóng phần xem lại bài làm'}).click();
+      const details = reopenedResult.locator('.detail-block').first();
+      await details.evaluate(node => { node.open = true; node.dataset.fixturePreserved = 'true'; });
+      await reopened.waitForResponse(response => response.url().endsWith('/api/term-tests/result')
+        && response.request().postDataJSON()?.officialTerm1 && !response.request().postDataJSON()?.includeContent);
+      assert.equal(await details.getAttribute('data-fixture-preserved'),'true');
+      const workerId = 'term1-browser-fake-grader';
+      const headers = {'x-writing-test-sync':'fixture-k67-local-writing-grader-only'};
+      async function worker(path, data) {
+        const response = await first.request.post(path,{headers,data});
+        const body = await response.json();
+        assert.ok(response.ok(), path + ' ' + JSON.stringify(body));
+        return body;
+      }
+      const jobsPath = '/api/term-tests/writing-grading/jobs/';
+      const {jobs:[dispatch]} = await worker(jobsPath+'claim',{workerId});
+      assert.equal(dispatch.essay,essay);
+      await worker(jobsPath+'dispatch-complete',{workerId,jobId:dispatch.jobId});
+      assert.equal((await worker('/preview/writing-collect-due/'+accepted.attemptToken,{})).jobs,1);
+      const {jobs:[collect]} = await worker(jobsPath+'claim',{workerId});
+      const criteria = ['TR','CC','LR','GRA'].map(code => ({code,bandScore:6,feedback:'Nhận xét giả'}));
+      await worker(jobsPath+'result',{workerId,jobId:collect.jobId,runKey:collect.runKey,result:{taskScore:6,criteria}});
+      await reopenedResult.getByRole('heading', {name:'Điểm và bài chấm Writing'}).waitFor({timeout:20_000});
+      assert.equal(await details.getAttribute('data-fixture-preserved'),'true');
+      assert.equal(await details.evaluate(node => node.open),true);
+      const portalReadback = await (await first.request.get('/preview/writing-portal')).json();
+      assert.deepEqual(portalReadback.map(({attemptToken,grades})=>[attemptToken,grades.writing]),[[accepted.attemptToken,6]]);
+    }
+    assert.match(await reopenedResult.locator('.is-overall').innerText(), essay ? /Band 6/ : /Band 0/);
+    assert.ok(resultReads.length >= 3);
+    for (const payload of resultReads) {
+      assert.deepEqual(payload.officialTerm1, identity);
+      assert.equal(payload.attemptToken,undefined);
+    }
     assert.deepEqual(audioDownloads, []);
     assert.deepEqual(errors, []);
   } finally {

@@ -76,6 +76,7 @@
   let storageKey = paperIdentity ? paperPointerKey : `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
   const persistedSession = paperIdentity ? paperIdentity.current().state : miniAnswerSheet ? {} : readSession();
   const incoming = window.TERM_TEST_BOOTSTRAP?.sessionState;
+  const officialTerm1Result = window.TERM_TEST_BOOTSTRAP?.officialTerm1Result;
   const offlineIdentity = window.TERM_TEST_BOOTSTRAP?.offlineSectionIdentity;
   const offlineReadingIdentity = offlineIdentity?.section === 'reading';
   const offlineListeningIdentity = offlineIdentity?.section === 'listening';
@@ -84,7 +85,7 @@
     && incomingIdentity.studentRef === incoming.studentRef
     && ((incomingIdentity.attemptToken && incomingIdentity.attemptToken === incoming.attemptToken)
       || (incomingIdentity.examSessionToken && incomingIdentity.examSessionToken === incoming.examSessionToken));
-  const restoredSession = canUseIncoming
+  const restoredSession = officialTerm1Result ? {studentRef:officialTerm1Result.studentRef} : canUseIncoming
     ? { ...incoming, ...(persistedSession.studentRef === incoming.studentRef
       && persistedSession.attemptToken === incoming.attemptToken
       && persistedSession.examSessionToken === incoming.examSessionToken ? persistedSession : {}) }
@@ -907,6 +908,15 @@
   }
 
   let journeyResultReadyCopy;
+  function officialTerm1Identity() {
+    if (!officialTerm1Result && miniJourney?.view().continuationSection !== 'writing') return null;
+    return {classCode,studentRef:state.studentRef};
+  }
+
+  function journeyResultReady() {
+    return Boolean(miniJourney?.resultToken() || miniJourney?.continuationReceipt?.()?.nextSection === 'result');
+  }
+
   let continuationSavedCard;
   function updateContinuationSaved() {
     if (!continuationSavedCard) {
@@ -945,7 +955,7 @@
   function updateJourneyResultReady() {
     const card = elements.resultReadyView;
     if (!miniJourney || !writingConfig || card.hidden) return;
-    const waiting = !miniJourney.resultToken();
+    const waiting = !journeyResultReady();
     if (card.dataset.awaitingReceipt === String(waiting)) return;
     const fields = [card.querySelector('.eyebrow'), card.querySelector('h2'), card.querySelector('p:not(.eyebrow)')];
     journeyResultReadyCopy ||= fields.map(field => field.textContent);
@@ -1073,6 +1083,10 @@
   }
 
   async function apiRequest(path, options = {}, submission = null) {
+    const official = officialTerm1Identity();
+    if (official && options.method === 'POST' && /^\/api\/term-tests\/result(?:\/(?:review|explanations))?$/.test(path)) {
+      return rawApiRequest(path, {...options, body:JSON.stringify({officialTerm1:official})});
+    }
     if(miniJourney){
       const prefix=`/api/term-tests/${testConfig.slug}/`;
       const match=path.startsWith(prefix)&&/^(reading|listening)(?:\/(start|draft))?$/.exec(path.slice(prefix.length));
@@ -1708,7 +1722,7 @@
     const grading = state.result?.writing?.grading;
     return Boolean(
       !demoMode
-      && state.attemptToken
+      && state.attemptToken && !officialTerm1Identity()
       && state.writingSubmitted
       && !grading?.ready
       && grading?.status !== 'review_required'
@@ -1802,7 +1816,7 @@
   }
 
   async function refreshWritingGrading() {
-    if (demoMode || !state.attemptToken) return;
+    if (demoMode || (!state.attemptToken && !officialTerm1Identity())) return;
     if (writingGradingPollInFlight) {
       writingGradingRefreshRequested = true;
       return;
@@ -1819,7 +1833,10 @@
       });
       if (!writingSubmission.current(requestedWritingOwner)) return;
       writingSubmission.readAvailable();
-      applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
+      if (payload.officialTerm1 && state.result?.completedAt === payload.completedAt
+          && JSON.stringify(state.result.writing?.grading) === JSON.stringify(payload.writing?.grading)
+          && JSON.stringify(state.result.result) === JSON.stringify(payload.result)) return;
+      if (!officialTerm1Result) applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
       renderResult(payload);
       if (payload.writing?.grading?.ready) {
         stopWritingGradingPolling();
@@ -3224,7 +3241,7 @@
     elements.viewFullAttempt.hidden = !(
       !listeningOnly
       && (!miniAnswerSheet || Boolean(window.TERM_TEST_ATTEMPT_REVIEW?.open))
-      && state.attemptToken
+      && (state.attemptToken || officialTerm1Identity())
       && payload.completed
       && (!writingConfig || payload.writing?.submitted)
       && !demoMode
@@ -3257,9 +3274,16 @@
     }
     state.resultDetailsIdentity = identity;
     if (!writingConfig || payload.writing?.submitted) {
+      const official = officialTerm1Identity();
       window.K67_ANSWER_EXPLANATIONS?.attach({
         container: elements.questionDetails, payload, attemptToken: state.attemptToken,
-        testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest
+        testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest,
+        ...(official ? {
+          reviewKey:JSON.stringify([official.classCode,official.studentRef,payload.completedAt]),
+          loadReview:()=>apiRequest('/api/term-tests/result/explanations', {
+            method:'POST', headers:{'Content-Type':'application/json'}
+          })
+        } : {})
       });
     }
     const performanceSections = skills.map(([title, skill]) => renderSkillPerformance(title, skill));
@@ -3319,7 +3343,7 @@
   }
 
   async function loadResult(button) {
-    if (miniJourney && writingConfig && !miniJourney.resultToken()) {
+    if (miniJourney && writingConfig && !journeyResultReady()) {
       updateJourneyResultReady();
       return;
     }
@@ -3344,7 +3368,7 @@
         showNotice(
           payload.result.listeningStatus === 'interrupted'
             ? 'Listening bị gián đoạn. Liên hệ giảng viên để nhận bài thay thế.'
-            : portalNotice(payload.portalSyncStatus, payload.completed),
+            : payload.officialTerm1 ? 'Bài đã được chấm.' : portalNotice(payload.portalSyncStatus, payload.completed),
           ['pending', 'queued'].includes(payload.portalSyncStatus) ? '' : 'success'
         );
       }
@@ -3942,7 +3966,7 @@
                 ? `Đã hết ${writingMinutes} phút và hệ thống đã thu bài Writing. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.`
                 : 'Đã nộp Writing thành công. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.', 'success');
           }
-          if(!saved.localOnly||miniJourney?.resultToken())await loadResult(elements.viewResult);
+          if(!saved.localOnly||journeyResultReady())await loadResult(elements.viewResult);
       } catch (error) {
         if (!writingSubmission.current(writingOwner)) return;
         if (state.writingSubmitted) { writingSubmission.readUnavailable(); await writingSubmission.inspect(); return; }
@@ -4568,6 +4592,27 @@
 
   async function initialize() {
     if(miniJourney){await initializeMiniJourney();return;}
+    if (officialTerm1Result) {
+      state.studentName = officialTerm1Result.studentName;
+      state.className = officialTerm1Result.className;
+      window.K67_EXAM_ORDER?.apply(state,officialTerm1Result);
+      state.listeningSubmitted = true;
+      state.readingSubmitted = true;
+      state.completed = true;
+      state.writingSubmitted = true;
+      elements.studentSelect.replaceChildren(new Option(state.studentName, state.studentRef, true, true));
+      elements.studentSelect.disabled = true;
+      elements.classLabel.textContent = 'Lớp ' + state.className;
+      // Resolve the shared readiness promise before mounting the completed-result controls.
+      listeningViewReady?.resolve();
+      renderResult(officialTerm1Result);
+      setStage('result');
+      if (!officialTerm1Result.writing?.grading?.ready) {
+        showNotice(writingGradingNotice(officialTerm1Result.writing?.grading),'success');
+        scheduleWritingGradingRefresh();
+      }
+      return;
+    }
     elements.listeningTitle.textContent = testConfig.listening.title;
     elements.readingTitle.textContent = testConfig.reading.title;
     appendInstructions(elements.listeningInstructions, testConfig.listening.description);
