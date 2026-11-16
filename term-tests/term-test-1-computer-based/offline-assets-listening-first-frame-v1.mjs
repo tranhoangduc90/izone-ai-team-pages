@@ -226,14 +226,14 @@ export const ASSET_HASHES={
   "../term-test-1-k56-computer-based/worker-listening-first-frame-v1.mjs": "490f6fbd598c78803cba75ef07cbd1cfcafaf6a6158538152d6143ee79f1271f",
   "../term-test-1/test-config.js": "82de9c261e20fc107ed0c0b76c4e8b48d6b9e4d64f03d86bf2060a51e411cc4b",
   "../term-test-2-computer-based/audio-loader-audio-status-v1.js": "a7399bba30177f98a291033678c0cd4d41909b5ea499c162f1b15a4b9c0eead3",
-  "../term-test-2-computer-based/bootstrap-term1-k67-ic2304-reopen-v1.js": "0c95e8ac1506ee78b494f8bf6c00a19993d91b970c3f28616aa3e7d68738eb9c",
+  "../term-test-2-computer-based/bootstrap-term1-k67-ic2304-reopen-v1.js": "fe45afe5679d7a3d176f086b74af8bef8b3a027b65b8649ebfe87c7bd2fe54a3",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "../term-test-2-computer-based/listening-report-evidence-v1.mjs": "da745421b217f85ac7f7cdd39b270f67b8453567cc041c2a338f1abf985c7d54",
   "../term-test-2-computer-based/listening-view-term1-k67-v1.js": "1f1fd89794e14a5345ca8c75c346f1aa3942a7672ed5e3add605bfb5d63ce380",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index-listening-first-frame-v1.html": "17a7aac8507cd4deeee9f16a20b903013e448693a4e91578a9541bd080411476",
+  "index-listening-first-frame-v1.html": "8c35b2d958137a87eca8fc5d56ae2908c731b89feee414fc9f26d671f277bcfb",
   "offline-worker-listening-first-frame-v1.js": "24e13af382509391ab90d0023ea7a425129e159bc0261791536b5ebc6f10cf2e",
   "../k67-shared/listening-term1-mini-flow-v1.css": "79c530e3c31485e04869c5369d1f33610236cb667e4e0baa299e5db9bac5eec1"
 };
-export const ASSET_BUILD_ID="001fa959e34167bc3c43aec30eaa3d9a8efb30b45574c5b1b022f6dbf27b6c0a";
+export const ASSET_BUILD_ID="60e087796929ffc21a5c04f37d44bf59fb1f18f95536e0e38d132d9027d8fb7c";
