@@ -189,7 +189,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
         if(started?.recordK67Submission){attach(started.adopt(getState));return;}
       }catch{}
       if(inFlight)return;
-      inFlight=import('../shared/exam-journal/bridge-k67-paper-v1.mjs?v=20261112-submission-metadata-v2&submissionReconnect=1')
+      inFlight=import('../shared/exam-journal/bridge-k67-paper-v1.mjs?v=20261112-submission-metadata-v2&submissionReconnect=1&journalPilot=20261116-v1')
         .then(({connectExamJournal})=>{
           if(!journal&&!stopped)attach(connectExamJournal({enabled:true,endpoint,testSlug:slug,build,getState}));
         }).catch(()=>{}).finally(()=>{inFlight=null;});
