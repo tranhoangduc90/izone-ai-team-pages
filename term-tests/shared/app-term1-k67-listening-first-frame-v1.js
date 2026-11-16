@@ -790,6 +790,7 @@
   });
 
   let listeningSavedCopy;
+  let reopenedListeningScore = null;
   function updateListeningSavedCopy() {
     const card = elements.listeningSavedView;
     if (card.hidden) return;
@@ -811,6 +812,10 @@
       heading: listeningSavedCopy.heading,
       copy: 'Bài Listening đã lưu trên thiết bị và đang chờ đồng bộ. Bạn có thể mở Reading để tiếp tục làm bài.',
       eyebrow: 'Listening đã lưu trên máy',
+    } : reopenedListeningScore && reopenedListeningScore.attemptToken === state.attemptToken ? {
+      ...listeningSavedCopy,
+      heading: reopenedListeningScore.label,
+      copy: 'Điểm Listening đã được lưu. Bạn có thể tiếp tục làm Reading.',
     } : listeningSavedCopy;
     for (const [node, value] of [[heading, nextCopy.heading], [copy, nextCopy.copy], [eyebrow, nextCopy.eyebrow]]) {
       if (node.textContent !== value) node.textContent = value;
@@ -2117,12 +2122,22 @@
   }
 
   async function restoreAttemptFromServer() {
-    if (!state.attemptToken) return null;
+    const attemptToken = state.attemptToken;
+    if (!attemptToken) return null;
     const payload = await apiRequest('/api/term-tests/result', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ attemptToken: state.attemptToken })
+      body: JSON.stringify({ attemptToken })
     });
+    if (attemptToken !== state.attemptToken) return null;
+    const score = payload.result?.listening;
+    if (testConfig.slug === 'term-test-1' && classCode === 'IC2304' &&
+        payload.className === classCode && payload.attemptToken === attemptToken && !payload.completed &&
+        Number.isInteger(score?.correct) && score.total === 40) {
+      const band = typeof score.band === 'number'
+        ? score.band.toLocaleString('vi-VN', { minimumFractionDigits: 1 }) : score.band;
+      reopenedListeningScore = { attemptToken, label: 'Listening · ' + score.correct + '/40 · Band ' + band };
+    } else reopenedListeningScore = null;
     state.studentName = payload.studentName || state.studentName;
     state.className = payload.className || state.className;
     state.completed = Boolean(payload.completed);
