@@ -139,7 +139,7 @@
   const recoveryOwner = () => JSON.stringify([storageKey, state.studentRef, state.examSessionToken, state.attemptToken, state.generation || 0]);
   function connectTermJournal() {
     if (appConfig.EXAM_JOURNAL_ENABLED !== true) return;
-    void import('../shared/exam-journal/bridge-k56-term-v1.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&termK56Audio=20261108-v2').then(({ connectExamJournal }) => {
+    void import('../shared/exam-journal/bridge-k56-term-v1.mjs?journalPilot=20261116-term2-v1&v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&termK56Audio=20261108-v2').then(({ connectExamJournal }) => {
       examJournal = connectExamJournal({ enabled: true,
         endpoint: appConfig.EXAM_JOURNAL_BASE_URL || appConfig.API_BASE_URL + '/api/term-tests/' + testConfig.slug,
         testSlug: testConfig.slug, build: offline?.build || appConfig.EXAM_JOURNAL_BUILD || 'unknown',
