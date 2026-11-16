@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; form-action 'none'; base-uri 'none'">
+<title>Khôi phục bài làm Term Test 1 K67</title>
+<link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg?v=20261105">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px; color: #17283f; background: #f4f7fb; font: 16px/1.55 system-ui, sans-serif; }
+  main { max-width: 760px; margin: auto; padding: clamp(16px, 5vw, 32px); background: #fff; border: 1px solid #c5d1e0; border-radius: 12px; }
+  h1 { margin-top: 0; font-size: clamp(23px, 5vw, 32px); line-height: 1.2; }
+  button, select { font: inherit; margin: 4px 8px 4px 0; padding: 8px 14px; }
+  button { cursor: pointer; }
+  textarea { display: block; width: 100%; min-height: 210px; margin: 12px 0; padding: 12px; font: inherit; }
+  details { border-top: 1px solid #c5d1e0; padding-top: 12px; margin-top: 20px; }
+  summary { cursor: pointer; font-weight: 650; }
+  h2 { font-size: 20px; }
+  label { display: block; margin: 10px 0; }
+  input { display: block; width: min(100%, 400px); padding: 8px; font: inherit; }
+  a { color: #154a87; font-weight: 650; }
+</style>
+<main>
+  <h1>Khôi phục bài làm Term Test 1 K67</h1>
+  <p>Dùng đúng thiết bị, trình duyệt và hồ sơ đã thi. Giữ nguyên tab làm bài nếu tab đó còn mở.</p>
+  <section id="offline-section" hidden>
+    <h2>Bài làm từ file HTML offline</h2>
+    <div id="recovery"></div>
+    <h2>Bài làm từ link thi chính thức của lớp</h2>
+    <p>Mở trang cứu hộ bên dưới, nhập mã lớp và họ tên đã chọn khi vào bài.</p>
+    <p><a href="https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/term-test-1-k67-recovery/" target="_blank" rel="noopener noreferrer">Mở cứu hộ bài thi chính thức</a></p>
+  </section>
+  <section id="online-section" hidden>
+    <h2>Bài làm từ link thi chính thức của lớp</h2>
+    <p>Trang đọc bản lưu của Term Test 1 K67 thi trên máy. Họ tên, mã lớp và bài làm chỉ được xử lý trong trình duyệt này.</p>
+    <form id="online-form" autocomplete="off">
+      <label for="class-code">Mã lớp</label>
+      <input id="class-code" required maxlength="20" placeholder="IC2304" spellcheck="false">
+      <label for="student-name">Họ và tên đã chọn khi vào bài</label>
+      <input id="student-name" required maxlength="160">
+      <button type="submit">Tìm bài đã lưu</button>
+    </form>
+    <div id="online-result" aria-live="polite"></div>
+  </section>
+  <details>
+    <summary>Dành cho người hỗ trợ kỹ thuật khi chưa tìm thấy bản lưu</summary>
+    <p>Nếu tab gốc còn mở, người hỗ trợ có thể chạy đoạn dưới trong Console của <strong>chính tab làm bài</strong> để tìm cả bản chỉ có trong tab đó. Chọn đúng bài của học viên, tải file và mở kiểm tra trước khi đóng tab.</p>
+    <textarea id="support-code" aria-label="Mã xuất bài trong tab gốc" readonly spellcheck="false"></textarea>
+  </details>
+</main>
+<script>
+async function recoverTerm1K67(inExamTab, requested = {}) {
+  const origin = 'https://tranhoangduc90.github.io';
+  const prefix = '/izone-ai-team-pages/term-tests/';
+  const path = location.pathname.replace(/\/index\.html$/, '/');
+  const search = new URLSearchParams(location.search);
+  const officialExam = location.origin === origin && path === prefix + 'term-test-1-computer-based/';
+  const online = inExamTab ? officialExam : location.origin === origin && path === prefix + 'term-test-1-k67-recovery/';
+  const offlineExam = location.protocol === 'file:' && window.TERM_TEST_STORAGE_SCOPE === ':standalone-20261115' &&
+    window.TERM_TEST_CONFIG?.slug === 'term-test-1' && document.getElementById('writingView');
+  const key = 'izone-test:term-test-1::standalone-20261115';
+  if (inExamTab && ((!offlineExam && !officialExam) ||
+      (officialExam && (search.has('demo') || search.has('retakeGrant'))))) {
+    console.info('Hãy chọn Console của tab làm bài Term Test 1 K67 chính thức hoặc file HTML ngày 15/11.');
+    return;
+  }
+
+  const classCode = String(inExamTab ? search.get('class') || '' : requested.classCode || '').trim().toUpperCase();
+  const studentName = online ? (inExamTab ? window.prompt('Nhập họ và tên đã chọn khi vào bài') : requested.studentName) : '';
+  if (online && inExamTab && studentName === null) return;
+  const nameKey = value => String(value || '').normalize('NFC').trim().replace(/\s+/gu, ' ').toLocaleLowerCase('vi');
+  const stores = ['localStorage', 'sessionStorage'];
+  const candidates = [];
+  const seen = new Set();
+  const text = value => typeof value === 'string' ? value : '';
+  const fieldValues = values => Array.from({length: 40}, (_, i) => text(values?.[i + 1]));
+  function addCandidate({source, attempt, sequence, submittedAt, essay, listening, reading, generation}) {
+    const signature = JSON.stringify([attempt, generation, essay, listening, reading]);
+    if (seen.has(signature) || ![essay, ...listening, ...reading].some(value => value.trim())) return;
+    seen.add(signature);
+    candidates.push({source, attempt, sequence, submittedAt, essay, listening, reading, generation});
+  }
+
+  function readJson(storage, storageKey) {
+    try { return JSON.parse(storage.getItem(storageKey)); } catch { return null; }
+  }
+
+  const uuidPattern = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+  const uuidRegex = new RegExp('^' + uuidPattern + '$', 'i');
+  const uuid = value => typeof value === 'string' && uuidRegex.test(value);
+  let storageReadFailed = false;
+
+  async function readJourneyDb(add) {
+    const database = 'izone-term1-k67-journey-v1';
+    try {
+      if (!window.indexedDB) throw new Error('IndexedDB unavailable');
+      if (typeof indexedDB.databases === 'function' && !(await indexedDB.databases()).some(d => d.name === database)) return;
+      await new Promise((resolve, reject) => {
+        const open = indexedDB.open(database);
+        let absent = false;
+        open.onupgradeneeded = () => { absent = true; open.transaction.abort(); };
+        open.onerror = () => absent ? resolve() : reject(open.error);
+        open.onblocked = () => reject(new Error('IndexedDB blocked'));
+        open.onsuccess = () => {
+          const db = open.result;
+          if (!db.objectStoreNames.contains('records')) { db.close(); reject(new Error('Missing records')); return; }
+          const tx = db.transaction('records', 'readonly');
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onabort = tx.onerror = () => { db.close(); reject(tx.error); };
+          const store = tx.objectStore('records');
+          const root = classCode + ':';
+          const request = store.openKeyCursor(IDBKeyRange.bound(root, root + '\uffff'));
+          request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) return;
+            const recordKey = cursor.primaryKey;
+            if (typeof recordKey === 'string' && recordKey.split(':').length === 4) {
+              const record = store.get(recordKey);
+              record.onsuccess = () => add(recordKey, record.result, 'IndexedDB');
+            }
+            cursor.continue();
+          };
+        };
+      });
+    } catch { storageReadFailed = true; }
+  }
+
+  async function collectOfficial() {
+    if (!/^IC\d{1,12}$/.test(classCode) || !nameKey(studentName)) return 'Nhập mã lớp IC và họ tên đã chọn khi vào bài.';
+    const activeKey = 'izone-test:term-test-1:' + classCode;
+    const archivePrefix = 'izone-test-expired:term-test-1:' + classCode + ':';
+    const journeyVersion = 'term1-k67-cbt-journey-v1';
+    const journeyPrefix = journeyVersion + ':' + classCode + ':';
+    const pendingPrefix = 'izone-writing-pending-v1:';
+    const pinned = inExamTab ? history.state?.izoneStudentProductStateV1 : null;
+    const tabRef = pinned?.classCode === classCode && pinned.product === 'term-test-1' && uuid(pinned.studentRef)
+      ? pinned.studentRef : '';
+    const matches = [];
+    const pendingWriting = [];
+    const inputName = nameKey(studentName);
+    const sameName = saved => uuid(saved?.studentRef) && (!tabRef || tabRef === saved.studentRef)
+      && nameKey(saved.studentName) === inputName;
+    function matchState(saved, source, expectedRef = '', expectedSession = '') {
+      if (!sameName(saved) || expectedRef && saved.studentRef !== expectedRef ||
+          expectedSession && saved.examSessionToken !== expectedSession ||
+          !uuid(saved.attemptToken) && !uuid(saved.examSessionToken)) return;
+      matches.push({saved, source});
+    }
+    function matchJourney(recordKey, record, storageName) {
+      const [, studentRef, session, generation] = recordKey.split(':');
+      const owner = record?.package;
+      if (owner?.version !== journeyVersion || !sameName(owner) || owner.studentRef !== studentRef ||
+          !uuid(session) || owner.examSessionToken !== session || String(owner.generation) !== generation ||
+          !/^\d+$/.test(generation) || owner.classCode && owner.classCode !== classCode) return;
+      matches.push({saved: {...owner, drafts: record.drafts, writingRevision: record.revisions?.writing},
+        source: 'Bản lưu hành trình · ' + storageName, journey: record});
+    }
+
+    for (const store of stores) {
+      try {
+        const storage = window[store];
+        const label = store === 'localStorage' ? 'localStorage' : 'sessionStorage';
+        matchState(readJson(storage, activeKey), 'Bản lưu chính thức · ' + label);
+        for (let i = 0; i < storage.length; i++) {
+          const storageKey = storage.key(i) || '';
+          if (storageKey.startsWith(activeKey + ':student:')) {
+            const ref = storageKey.slice((activeKey + ':student:').length);
+            if (uuid(ref)) matchState(readJson(storage, storageKey), 'Bản lưu chính thức · ' + label, ref);
+          } else if (storageKey.startsWith(archivePrefix)) {
+            const session = storageKey.slice(archivePrefix.length);
+            if (uuid(session)) matchState(readJson(storage, storageKey)?.state, 'Phiên đã hết hiệu lực · ' + label, '', session);
+          } else if (storageKey.startsWith(journeyPrefix)) {
+            const recordKey = storageKey.slice(journeyVersion.length + 1);
+            if (recordKey.split(':').length === 4) matchJourney(recordKey, readJson(storage, storageKey), label);
+          } else if (storageKey.startsWith(pendingPrefix + '["term-test-1","' + classCode + '",')) {
+            const pending = readJson(storage, storageKey);
+            if (pending?.owner !== storageKey.slice(pendingPrefix.length)) continue;
+            try {
+              const [slug, cls, ref, attempt] = JSON.parse(pending.owner);
+              if (slug === 'term-test-1' && cls === classCode && uuid(ref) && uuid(attempt))
+                pendingWriting.push({ref, attempt, payload: pending.payload});
+            } catch { /* Owner không đúng định dạng. */ }
+          }
+        }
+      } catch { storageReadFailed = true; }
+    }
+    await readJourneyDb(matchJourney);
+    if (new Set(matches.map(({saved}) => saved.studentRef)).size > 1) {
+      return 'Có nhiều học viên trùng họ tên trong lớp này. Hãy nhờ giảng viên hỗ trợ từ tab làm bài đã xác nhận đúng học viên.';
+    }
+
+    for (const {saved, source, journey} of matches) {
+      const attempt = uuid(saved.attemptToken) ? saved.attemptToken : saved.examSessionToken;
+      function getPendingAnswers(skill) {
+        const pending = saved.pendingSubmissions?.[skill];
+        if (!pending) return undefined;
+        try {
+          const [binding, ref, session, ownerAttempt, generation] = JSON.parse(pending.owner);
+          if ([activeKey, activeKey + ':student:' + saved.studentRef].includes(binding) && ref === saved.studentRef
+              && session === saved.examSessionToken && ownerAttempt === saved.attemptToken &&
+              Number(generation || 0) === Number(saved.generation || 0)) return pending.answers ?? pending.body?.answers;
+        } catch { /* Gói không có định danh hợp lệ. */ }
+        return undefined;
+      }
+      const listening = fieldValues(getPendingAnswers('listening') ?? saved.frozenAnswers?.listening
+        ?? saved.drafts?.listening ?? journey?.pending?.find?.(entry => entry?.section === 'listening')?.answers);
+      const reading = fieldValues(getPendingAnswers('reading') ?? saved.frozenAnswers?.reading
+        ?? saved.drafts?.reading ?? journey?.readingReview?.answers ?? journey?.readingEvidence?.answers);
+      const addWriting = (value, suffix = '', requireText = true) => {
+        const essay = text(value?.task2);
+        if (requireText && !essay.trim()) return;
+        addCandidate({source: source + suffix, attempt, sequence: journey?._revision ?? saved.writingRevision,
+          generation: saved.generation, submittedAt: 0, essay, listening, reading});
+      };
+      addWriting(saved.drafts?.writing, '', false);
+      addWriting(saved.writingConfirmedDraft, ' · bản đã xác nhận lưu');
+      addWriting(saved.writingConflict, ' · bản có xung đột');
+      if (saved.writingUnconfirmedDraft?.attemptToken === saved.attemptToken &&
+          saved.writingUnconfirmedDraft?.studentRef === saved.studentRef) {
+        addWriting(saved.writingUnconfirmedDraft, ' · bản chờ xác nhận lưu');
+      }
+      if (Array.isArray(saved.writingRecovery)) for (const draft of saved.writingRecovery) addWriting(draft, ' · Writing giữ lại');
+      if (Array.isArray(journey?.pending)) for (const pending of journey.pending) {
+        if (pending?.section === 'writing') addWriting(pending.answers, ' · bản Writing chờ đồng bộ');
+      }
+      addWriting(journey?.writingEvidence?.answers, ' · bản Writing đã lưu trước hạn');
+      addWriting(journey?.writingUnverifiedDraft?.answers, ' · bản Writing chưa xác nhận');
+      for (const pending of pendingWriting) {
+        if (pending.ref === saved.studentRef && pending.attempt === saved.attemptToken)
+          addWriting(pending.payload, ' · bản Writing chờ nộp');
+      }
+    }
+    return '';
+  }
+
+  function collectOffline() {
+    const snapshots = [];
+    for (const store of stores) {
+      try {
+        const saved = readJson(window[store], key);
+        if (typeof saved?.attemptToken !== 'string' || !/^[a-f0-9-]{16,64}$/i.test(saved.attemptToken)) continue;
+        if (!saved.drafts || !['listening', 'reading', 'writing'].includes(saved.skill)) continue;
+        snapshots.push({saved, source: store === 'localStorage' ? 'Bản lưu trên trình duyệt' : 'Bản lưu trong tab'});
+      } catch {
+        // Có trình duyệt chặn truy cập bộ lưu của file HTML.
+      }
+    }
+    snapshots.sort((a, b) => (Number(b.saved.sequence) || 0) - (Number(a.saved.sequence) || 0));
+    for (const {saved, source} of snapshots) {
+      const f = saved.frozenAnswers;
+      const d = saved.drafts;
+      addCandidate({
+        source, attempt: saved.attemptToken, sequence: saved.sequence, submittedAt: saved.submittedAt,
+        essay: text(f?.writing?.task2 ?? d.writing?.task2),
+        listening: fieldValues(f?.listening ?? d.listening), reading: fieldValues(f?.reading ?? d.reading)
+      });
+      const draftEssay = text(d.writing?.task2);
+      if (draftEssay.trim() && typeof f?.writing?.task2 === 'string' && draftEssay !== f.writing.task2) {
+        addCandidate({
+          source: source + ' · bản nháp Writing', attempt: saved.attemptToken, sequence: saved.sequence,
+          submittedAt: 0, essay: draftEssay, listening: fieldValues(f?.listening ?? d.listening),
+          reading: fieldValues(f?.reading ?? d.reading)
+        });
+      }
+    }
+  }
+
+  if (!online) collectOffline();
+  const onlineMessage = online ? await collectOfficial() : '';
+  if (inExamTab && !online) {
+    function readFields(id) {
+      const fields = document.querySelectorAll('#' + id + ' :is(input,select)[data-number]');
+      return fieldValues(Object.fromEntries(Array.from(fields, field => [field.dataset.number, field.value])));
+    }
+    const essay = document.querySelector('.writing-editor[data-writing-task="task2"]');
+    if (essay) {
+      const listening = readFields('listeningQuestions');
+      const reading = readFields('readingQuestions');
+      const raw = JSON.stringify([essay.value, listening, reading]);
+      if (!candidates.some(candidate => JSON.stringify([candidate.essay, candidate.listening, candidate.reading]) === raw)) {
+        addCandidate({source: 'Nội dung trong các ô của tab gốc', attempt: '', sequence: null, submittedAt: 0,
+          essay: essay.value, listening, reading});
+      }
+    }
+  }
+
+  const target = inExamTab ? document.createElement('section') : document.getElementById(online ? 'online-result' : 'recovery');
+  target.replaceChildren();
+  function element(tag, label) {
+    const node = document.createElement(tag);
+    if (label) node.textContent = label;
+    return node;
+  }
+  function button(label, handler) {
+    const node = element('button', label);
+    node.type = 'button';
+    node.addEventListener('click', handler);
+    return node;
+  }
+  if (inExamTab) {
+    document.getElementById('term1-k67-recovery-overlay')?.remove();
+    target.id = 'term1-k67-recovery-overlay';
+    target.style.cssText = 'position:fixed;z-index:2147483647;inset:5vh 5vw;overflow:auto;padding:24px;background:white;color:#17283f;border:2px solid #17283f;box-shadow:0 0 0 100vmax #0006;font:16px/1.5 system-ui';
+    target.append(element('h2', 'Khôi phục bài làm Term Test 1 K67'), button('Đóng khung khôi phục', () => target.remove()));
+    (document.querySelector('dialog[open]') || document.body).append(target);
+  }
+  if (online && storageReadFailed) target.append(element('p', 'Có vùng lưu chưa đọc được trong trình duyệt này.'));
+  if (onlineMessage) {
+    target.append(element('p', onlineMessage));
+    return;
+  }
+  if (!candidates.length) {
+    const hint = online
+      ? 'Chưa tìm thấy bài khớp mã lớp và họ tên. Kiểm tra lại thông tin, thiết bị và hồ sơ trình duyệt đã thi. Nếu tab gốc còn mở, nhờ người hỗ trợ đọc bản lưu của tab đó.'
+      : inExamTab
+      ? 'Chưa đọc được nội dung bài từ các ô trả lời hay bản lưu của tab này.'
+      : 'Chưa tìm thấy bài trong trình duyệt này. Thử đúng trình duyệt, hồ sơ và thiết bị đã làm bài. Nếu bài gốc còn mở, hãy sao chép phần Writing đang hiện và nhờ người hỗ trợ lấy dữ liệu trong tab gốc.';
+    target.append(element('p', hint));
+    return;
+  }
+
+  const note = element('p', 'Kiểm tra câu trả lời và bài Writing bên dưới có đúng bài của bạn. Sau đó tải file và gửi riêng cho giảng viên kèm họ tên và mã lớp.');
+  if (online) candidates.sort((a, b) => Number(Boolean(b.essay.trim())) - Number(Boolean(a.essay.trim())));
+  const pick = element('select');
+  pick.setAttribute('aria-label', 'Chọn bản bài làm');
+  const status = element('p');
+  status.setAttribute('role', 'status');
+  const preview = element('textarea');
+  preview.readOnly = true;
+  preview.setAttribute('aria-label', 'Nội dung bài đã khôi phục');
+  if (inExamTab) preview.style.cssText = 'display:block;box-sizing:border-box;width:100%;height:45vh;margin-top:12px;font:inherit';
+  const count = answers => answers.filter(value => value.trim()).length;
+  const words = essay => essay.trim().split(/\s+/).filter(Boolean).length;
+  for (const [i, candidate] of candidates.entries()) {
+    const option = element('option', candidate.source + ' · ' + (candidate.attempt.slice(0, 8) || 'tab đang mở')
+      + ' · Writing ' + words(candidate.essay) + ' từ');
+    option.value = String(i);
+    pick.append(option);
+  }
+  function showCandidate() {
+    const c = candidates[Number(pick.value)];
+    const essayStatus = c.essay.trim() ? words(c.essay) + ' từ Writing' : 'Writing trống trong bản này';
+    status.textContent = count(c.listening) + '/40 câu Listening, ' + count(c.reading) + '/40 câu Reading, ' + essayStatus + '.';
+    const format = answers => answers.map((value, i) => (i + 1) + '. ' + value).join('\n');
+    const savedTime = Number.isFinite(c.submittedAt) && c.submittedAt > 0 && c.submittedAt < 8640000000000000
+      ? new Date(c.submittedAt).toISOString() : 'Chưa có trong bản này';
+    preview.value = [
+      'BẢN KHÔI PHỤC BÀI LÀM TERM TEST 1 K67',
+      'Nguồn: ' + c.source,
+      ...(online ? ['Lớp: ' + classCode, 'Họ và tên: ' + String(studentName).trim(), 'Thế hệ phiên: ' + (c.generation ?? 'Không có')] : []),
+      'Mã đối chiếu lượt: ' + ((online ? c.attempt.slice(0, 8) : c.attempt) || 'Không đọc được mã lượt từ các ô trả lời'),
+      'Phiên bản bản lưu: ' + (Number.isFinite(c.sequence) ? c.sequence : 'Không có'),
+      ...(!online ? ['Mốc nộp trên thiết bị: ' + savedTime] : ['Bản xuất từ dữ liệu thiết bị']),
+      '',
+      'LISTENING', format(c.listening), '',
+      'READING', format(c.reading), '',
+      'WRITING TASK 2', c.essay
+    ].join('\n');
+  }
+  target.append(note, pick, status, button('Tải bài đã khôi phục', () => {
+    const c = candidates[Number(pick.value)];
+    const url = URL.createObjectURL(new Blob([preview.value], {type: 'text/plain;charset=utf-8'}));
+    const link = element('a');
+    link.href = url;
+    link.download = 'Bai-khoi-phuc-Term-Test-1-K67-' + (c.attempt.slice(0, 8) || 'tab-goc') + '.txt';
+    target.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }), button('Chọn toàn bộ để sao chép', () => { preview.focus(); preview.select(); }), preview);
+  pick.addEventListener('change', showCandidate);
+  showCandidate();
+}
+
+document.getElementById('support-code').value = '(' + recoverTerm1K67.toString() + ')(true);';
+if (location.protocol === 'file:') {
+  document.getElementById('offline-section').hidden = false;
+  void recoverTerm1K67(false);
+} else {
+  document.getElementById('online-section').hidden = false;
+  const form = document.getElementById('online-form');
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const submit = form.querySelector('button');
+    const output = document.getElementById('online-result');
+    submit.disabled = true;
+    output.textContent = 'Đang đọc bản lưu trên trình duyệt…';
+    try {
+      await recoverTerm1K67(false, {
+        classCode: document.getElementById('class-code').value,
+        studentName: document.getElementById('student-name').value
+      });
+    } catch {
+      output.textContent = 'Trình duyệt gặp lỗi khi đọc bản lưu. Hãy giữ nguyên tab thi nếu vẫn mở.';
+    } finally {
+      submit.disabled = false;
+    }
+  });
+}
+</script>
+</html>
