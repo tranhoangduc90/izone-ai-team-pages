@@ -72,6 +72,43 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     attemptToken:String(metadataOnly&&state.examSessionToken?'':state.attemptToken || ''),examSessionToken:String(state.examSessionToken || ''),
     clientRunId:String(state.clientRunId || ''),examSessionId:String(state.examSessionId || ''),historyEpoch:String(state.historyEpoch || state._substitute?.historyEpoch || ''),
     generation:Number(state.generation || 0),pageVisitId:visitId,...(fallbackSkill?{skillFallback:fallbackSkill}:{}) });
+  let cloudLegacy;
+  const pilotMeta = testSlug==='term-test-1' && path.includes('term-test-1-computer-based')
+    ? doc.querySelector?.('meta[name="izone-term1-journal-ingress"]') : null;
+  const pilotClass = pilotMeta?.getAttribute?.('data-class');
+  const configuredIngress = pilotMeta && (!pilotClass || pilotClass===getState().classCode) ? pilotMeta.content : null;
+  if (metadataOnly && configuredIngress) {
+    let ingress;
+    try {
+      const parsed = new URL(configuredIngress);
+      if (parsed.protocol==='https:' && !parsed.username && !parsed.password && !parsed.search && !parsed.hash) ingress=parsed.href;
+    } catch {}
+    if (ingress) {
+      let transport;
+      const getTransport = () => transport ??= Promise.all([
+        import('./k67-pilot-browser-transport.mjs'),
+        import('./k67-pilot-legacy-drain.mjs'),
+      ]).then(([{ createK67PilotFlush }, { createK67LegacyDrain }]) => {
+        const options = { target, ingress, fetcher, recorder, getCurrent:()=>stopped?null:current,
+          getProof:()=>proofOf(getState()), onHealth:health };
+        cloudLegacy = createK67LegacyDrain(options);
+        return createK67PilotFlush({ ...options, outbox });
+      });
+      recorder.flush = async (settings = {}) => {
+        if (stopped || (settings.keepalive && !transport)) return { status:'deferred', acknowledgedCount:0 };
+        try {
+          const sendActive = await getTransport();
+          if (stopped) return { status:'deferred', acknowledgedCount:0 };
+          const active = await sendActive(settings);
+          const legacy = await cloudLegacy.flush(settings);
+          return { ...active, acknowledgedCount:active.acknowledgedCount+legacy.acknowledgedCount };
+        } catch {
+          health({ status:'degraded', errorCode:'K67_CLOUD_TRANSPORT_UNAVAILABLE' });
+          return { status:'degraded', acknowledgedCount:0 };
+        }
+      };
+    }
+  }
   const capturedBinding=context=>({bindingId:context.bindingId,auth:{ticket:context.ticket,ticketId:context.ticketId,issuedAt:context.issuedAt,expiresAt:context.expiresAt},versions:context.versions||{}});
   const audioRecord=(type,data,binding)=>{try{const work=recorder.record(type,data,binding);if(work?.catch)void work.catch(()=>health({status:'gap',errorCode:'JOURNAL_AUDIO_RECORD_FAILED'}));}catch{health({status:'gap',errorCode:'JOURNAL_AUDIO_RECORD_FAILED'});}};
   async function loadBinding(proof){
@@ -430,7 +467,8 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     async stop() { stopped = true;clearInterval(timer);mutation.disconnect();observer.stop();for (const stop of audioStops.values()) stop();
       for(const discard of [...audioPending])discard();bindingCache.clear();win[registryKey]?.delete(connectionKey);
       if(win.EXAM_JOURNAL_AUDIO_TRANSFER===audioFactory)win.EXAM_JOURNAL_AUDIO_TRANSFER=previousAudioFactory;
-      win.removeEventListener('error',runtimeError);win.removeEventListener('unhandledrejection',runtimeError);await recorder.idle();recorder.stop();await outbox.close(); }
+      win.removeEventListener('error',runtimeError);win.removeEventListener('unhandledrejection',runtimeError);await recorder.idle();recorder.stop();
+      await cloudLegacy?.close();await outbox.close(); }
   };
   const previousAudioFactory=win.EXAM_JOURNAL_AUDIO_TRANSFER,audioFactory=(metadata,options)=>api.startAudioTransfer(metadata,options);
   win.EXAM_JOURNAL_AUDIO_TRANSFER=audioFactory;if(!win[registryKey])win[registryKey]=new Map();win[registryKey].set(connectionKey,api);return api;

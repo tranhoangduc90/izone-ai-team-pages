@@ -183,7 +183,7 @@
     if(miniJourney?.connectJournal&&!miniJourney.paper){
       miniJourney.connectJournal({endpoint,build,getState:getJournalState,onConnected:bridge=>{examJournal=bridge;}});
     }else{
-      void import('../shared/exam-journal/bridge-recovery-v1.mjs?v=20261112-submission-metadata-v2').then(({connectExamJournal})=>{
+      void import('../shared/exam-journal/bridge-recovery-v1.mjs?v=20261116-term1-pilot-v1').then(({connectExamJournal})=>{
         examJournal=connectExamJournal({enabled:true,endpoint,testSlug:testConfig.slug,build,getState:getJournalState});
         miniJourney?.setJournal?.(examJournal);
       }).catch(()=>{});
