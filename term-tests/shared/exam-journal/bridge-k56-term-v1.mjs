@@ -81,7 +81,7 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       try {
         openingCloud ??= import('./pilot-browser-dispatch.mjs').then(({ connectCloudJournal }) => {
           if (stopped) return null;
-          cloud = connectCloudJournal({ target, config: ingress, fetcher, recorder, outbox,
+          cloud = connectCloudJournal({ target, config: ingress, fetcher, recorder, outbox, restoreLegacy: metadataOnly,
             getCurrent: () => stopped ? null : current, getProof: () => proofOf(getState()), onHealth: health });
           return cloud;
         });

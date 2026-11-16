@@ -1,4 +1,4 @@
-export function connectCloudJournal({ target, config, fetcher, recorder, outbox, getCurrent, getProof, onHealth }) {
+export function connectCloudJournal({ target, config, fetcher, recorder, outbox, getCurrent, getProof, onHealth, restoreLegacy }) {
   let ingress;
   try {
     ingress = new URL(config);
@@ -12,7 +12,7 @@ export function connectCloudJournal({ target, config, fetcher, recorder, outbox,
     import('./k67-pilot-legacy-drain.mjs'),
   ]).then(([{ createK67PilotFlush }, { createK67LegacyDrain }]) => {
     const options = { target, ingress: ingress.href, fetcher, recorder, getCurrent, getProof, onHealth };
-    legacy = createK67LegacyDrain(options);
+    if (restoreLegacy) legacy = createK67LegacyDrain(options);
     return createK67PilotFlush({ ...options, outbox });
   });
   async function flush(settings = {}) {
@@ -21,6 +21,7 @@ export function connectCloudJournal({ target, config, fetcher, recorder, outbox,
       const send = await initialize();
       if (closed) return { status: 'deferred', acknowledgedCount: 0 };
       const active = await send(settings);
+      if (!legacy) return active;
       const retained = await legacy.flush(settings);
       return { ...active, acknowledgedCount: active.acknowledgedCount + retained.acknowledgedCount };
     } catch {
