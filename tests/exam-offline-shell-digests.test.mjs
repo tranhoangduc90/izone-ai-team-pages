@@ -35,8 +35,11 @@ for (const entry of await readdir(root, { withFileTypes: true })) {
     assert.deepEqual(await assetMismatches(route, ASSETS, ASSET_HASHES), []);
   });
 
-  if (!k56RecoveryRoutes.has(entry.name)) continue;
-  for (const name of k56RecoveryManifests) {
+  const versionedManifests = k56RecoveryRoutes.has(entry.name) ? k56RecoveryManifests : [];
+  if (entry.name === 'term-test-1-computer-based') {
+    versionedManifests.push('offline-assets-listening-first-frame-v1.mjs');
+  }
+  for (const name of versionedManifests) {
     test(`${entry.name} ${name} matches its published files`, async () => {
       const worker = await readFile(new URL(name.replace('assets-', 'worker-').replace('.mjs', '.js'), route), 'utf8');
       assert.ok(worker.includes(`'./${name}'`));
