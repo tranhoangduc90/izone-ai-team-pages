@@ -72,6 +72,26 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     attemptToken:String(metadataOnly&&state.examSessionToken?'':state.attemptToken || ''),examSessionToken:String(state.examSessionToken || ''),
     clientRunId:String(state.clientRunId || ''),examSessionId:String(state.examSessionId || ''),historyEpoch:String(state.historyEpoch || state._substitute?.historyEpoch || ''),
     generation:Number(state.generation || 0),pageVisitId:visitId,...(fallbackSkill?{skillFallback:fallbackSkill}:{}) });
+  const ingress = testSlug==='term-test-1-k56' && path.includes('term-test-1-k56-computer-based')
+    ? doc.querySelector?.('meta[name="izone-term1-k56-journal-ingress"]')?.content : null;
+  let cloud, openingCloud;
+  if (ingress) {
+    recorder.flush = async (settings = {}) => {
+      if (stopped || (settings.keepalive && !openingCloud)) return { status: 'deferred', acknowledgedCount: 0 };
+      try {
+        openingCloud ??= import('./pilot-browser-dispatch.mjs').then(({ connectCloudJournal }) => {
+          if (stopped) return null;
+          cloud = connectCloudJournal({ target, config: ingress, fetcher, recorder, outbox,
+            getCurrent: () => stopped ? null : current, getProof: () => proofOf(getState()), onHealth: health });
+          return cloud;
+        });
+        return await (await openingCloud)?.flush(settings) ?? { status: 'deferred', acknowledgedCount: 0 };
+      } catch {
+        health({ status: 'degraded', errorCode: 'CLOUD_TRANSPORT_UNAVAILABLE' });
+        return { status: 'degraded', acknowledgedCount: 0 };
+      }
+    };
+  }
   const capturedBinding=context=>({bindingId:context.bindingId,auth:{ticket:context.ticket,ticketId:context.ticketId,issuedAt:context.issuedAt,expiresAt:context.expiresAt},versions:context.versions||{}});
   const audioRecord=(type,data,binding)=>{try{const work=recorder.record(type,data,binding);if(work?.catch)void work.catch(()=>health({status:'gap',errorCode:'JOURNAL_AUDIO_RECORD_FAILED'}));}catch{health({status:'gap',errorCode:'JOURNAL_AUDIO_RECORD_FAILED'});}};
   async function loadBinding(proof){
@@ -430,7 +450,7 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     async stop() { stopped = true;clearInterval(timer);mutation.disconnect();observer.stop();for (const stop of audioStops.values()) stop();
       for(const discard of [...audioPending])discard();bindingCache.clear();win[registryKey]?.delete(connectionKey);
       if(win.EXAM_JOURNAL_AUDIO_TRANSFER===audioFactory)win.EXAM_JOURNAL_AUDIO_TRANSFER=previousAudioFactory;
-      win.removeEventListener('error',runtimeError);win.removeEventListener('unhandledrejection',runtimeError);await recorder.idle();recorder.stop();await outbox.close(); }
+      win.removeEventListener('error',runtimeError);win.removeEventListener('unhandledrejection',runtimeError);await recorder.idle();recorder.stop();await cloud?.close();await outbox.close(); }
   };
   const previousAudioFactory=win.EXAM_JOURNAL_AUDIO_TRANSFER,audioFactory=(metadata,options)=>api.startAudioTransfer(metadata,options);
   win.EXAM_JOURNAL_AUDIO_TRANSFER=audioFactory;if(!win[registryKey])win[registryKey]=new Map();win[registryKey].set(connectionKey,api);return api;

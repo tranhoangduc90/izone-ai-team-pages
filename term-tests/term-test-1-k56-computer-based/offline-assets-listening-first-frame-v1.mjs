@@ -278,7 +278,7 @@ export const ASSET_HASHES={
   "../k56-offline-shared/worker-term-submission-recovery-v1.mjs": "f63a7138eeacadc6335f1cb646d0b60658a5c49426bff445670f814b500451c5",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/app-term-submission-recovery-v1.js": "36b80dde15199302c4a6e9831b1513657247ca60bffb05aa24d5a3a09616e4c1",
-  "../k56-shared/app-term1-listening-first-frame-v1.js": "4b2b511cbe1814b97c4f1aaece16d34da2498d95820e5560000ff65fd3314cb3",
+  "../k56-shared/app-term1-listening-first-frame-v1.js": "bb4757ebd2949c99990da9f2edb07f8e6c7fb41b66b8818cb0f6f58b6c29d4cd",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/public-audio-audio-status-v1.mjs": "30c109b154046f13fef9f9b53e722b35b3f268fa60d2d874b507a9fed077e24c",
   "../k56-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
@@ -304,7 +304,7 @@ export const ASSET_HASHES={
   "../shared/desktop-exam-guard.js": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460",
   "../shared/exam-clock.js": "54e54acbe25ceea6670cf96afb683d583430e088eac28a753a8f028775072fbd",
   "../shared/exam-journal/audio-delivery.mjs": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4",
-  "../shared/exam-journal/bridge-k56-term-v1.mjs": "5b682c516732fc4099bd6c86b52de554ec6264cee5c06d7aeecd6bb0a9007347",
+  "../shared/exam-journal/bridge-k56-term-v1.mjs": "1acd96aaf1291fa6cd2278c65476f2872552288efd39de88b20683fcd5c4e60b",
   "../shared/exam-journal/outbox.mjs": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f",
   "../shared/exam-journal/recorder.mjs": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76",
   "../shared/exam-order.js": "b8bfff8d4e8e16fd487db614423ec1e83230196695b7572b48ef284a3faebd88",
@@ -329,9 +329,9 @@ export const ASSET_HASHES={
   "assets/figures/rovio.png": "9f2d562f1ffd3b98536b5b11658844b7d75655da48b4bd3ebfa04a2a3ff8cc9d",
   "audio-loader-audio-status-v1.js": "e1c66b92e2c2ef6b99448827748a293a5f6cf06341d6f04368a49d2c8b58493b",
   "audio-whole-audio-status-v1.mjs": "8f8b9258d5ff72b680e2f4c760442b326e99272e9dcf16c3e8d8675d0175d6da",
-  "bootstrap-listening-first-frame-v1.js": "322d7c5891044f9d659a526186ca2e23ca3bc34210150638d8b6424629819071",
+  "bootstrap-listening-first-frame-v1.js": "870d0e3c486eefd55cff4332c08640835dd7c350972cb33642ca7faa5057da67",
   "content.js": "498e78b7e9490fc75bda0f7c47826ba69abfca64f0e46d6f0319833c7060aec3",
-  "index-listening-first-frame-v1.html": "41e646e0b435ddab7cea0745934ecfd99aad03159497af90c9c8de37e66cd5b1",
+  "index-listening-first-frame-v1.html": "3478eeaddad67112302ddccbe311bc586659a1bbf50ff8ec33324bf408c71b67",
   "layout-updates.css": "e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351",
   "listening-first-frame-v1.css": "6e4672ceaa118d8cf81782d9ae99db117a5611364087852ee934f7bd6508347a",
   "listening-first-frame-v1.js": "2c3c9d4e563fe0fea01c892cda811a94684bcb0e16cc4882b8f2e98adcbaa661",
@@ -344,4 +344,4 @@ export const ASSET_HASHES={
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb",
   "worker-listening-first-frame-v1.mjs": "490f6fbd598c78803cba75ef07cbd1cfcafaf6a6158538152d6143ee79f1271f"
 };
-export const ASSET_BUILD_ID="a295574fb7df1713e9cae2b2bc00a61b8c88f5e30173381c7c17d874ca058f0c";
+export const ASSET_BUILD_ID="4829dc585f5b7d6604c91606a6ade056947ace0d58d4aa17774f4b16707b5915";
