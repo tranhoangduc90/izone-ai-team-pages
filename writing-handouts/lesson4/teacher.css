@@ -1,0 +1,41 @@
+body {
+  margin: 0;
+  background: #f5f7fa;
+  color: #152b4e;
+  font: 1.125rem/1.5 "Source Sans 3", sans-serif;
+}
+.teacher-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: .6rem max(1rem, calc((100% - 60rem) / 2));
+  background: white;
+  border-top: 4px solid #bd242b;
+  border-bottom: 1px solid #dbe3ed;
+}
+.teacher-header img { object-fit: contain; }
+main { max-width: 60rem; margin: 1.5rem auto; padding: 0 1rem 2rem; }
+h1 { font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.2; }
+h2, h3 { line-height: 1.2; }
+.panel {
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  background: white;
+  border: 1px solid #dbe3ed;
+  border-radius: .75rem;
+}
+.panel h3 { margin: 0; }
+dt { font-weight: 700; }
+dd { margin: 0 0 .75rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+button {
+  border: 1px solid #8c9db2;
+  border-radius: .4rem;
+  background: white;
+  color: inherit;
+  font: inherit;
+  padding: .35rem .75rem;
+  cursor: pointer;
+}
+#google-signin { margin-top: .75rem; }
+#login-error { color: #9b2227; }

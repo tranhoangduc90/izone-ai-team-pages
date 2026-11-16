@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="vi" data-izone-theme="master170">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; connect-src https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://lh3.googleusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Xem dàn ý · Writing Lesson 4</title>
+  <link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg">
+  <link rel="stylesheet" href="../../shared/master170/theme.css">
+  <link rel="stylesheet" href="./teacher.css?v=20261117">
+  <script src="../../shared/teacher-single-sign-on.js?v=20261026-startup2" data-izone-teacher-product="handout67"></script>
+  <script type="module" src="./teacher.mjs?v=20261117"></script>
+</head>
+<body>
+  <header class="teacher-header">
+    <img src="../../shared/master170/assets/izone-logo-color.png" alt="IZONE" width="126" height="42">
+    <button id="logout" type="button" hidden>Đăng xuất</button>
+  </header>
+  <main>
+    <h1>Writing Lesson 4 · Dàn ý học viên</h1>
+    <p id="notice" role="status">Đang mở dàn ý…</p>
+    <section id="login" class="panel" hidden>
+      <h2>Đăng nhập để xem dàn ý</h2>
+      <label><input id="remember" type="checkbox" checked> Tự đăng nhập Google trên thiết bị này</label>
+      <div id="google-signin"></div>
+      <p id="login-error" role="alert" hidden></p>
+    </section>
+    <article id="outline" hidden>
+      <h2 id="student"></h2>
+      <p id="progress"></p>
+      <div id="bodies"></div>
+    </article>
+  </main>
+</body>
+</html>
