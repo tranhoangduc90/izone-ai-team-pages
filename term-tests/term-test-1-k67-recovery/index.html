@@ -31,6 +31,11 @@
     <p>Mở trang cứu hộ bên dưới, nhập mã lớp và họ tên đã chọn khi vào bài.</p>
     <p><a href="https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/term-test-1-k67-recovery/" target="_blank" rel="noopener noreferrer">Mở cứu hộ bài thi chính thức</a></p>
   </section>
+  <section id="tai-file-cuu-ho-offline" hidden>
+    <h2>Bài làm từ file HTML offline</h2>
+    <p>Tải file cứu hộ rồi mở file vừa tải bằng đúng trình duyệt và hồ sơ đã dùng để thi.</p>
+    <p><a href="./?download=html" download="Cuu-bai-Term-Test-1-K67.html">Tải file cứu hộ offline</a></p>
+  </section>
   <section id="online-section" hidden>
     <h2>Bài làm từ link thi chính thức của lớp</h2>
     <p>Trang đọc bản lưu của Term Test 1 K67 thi trên máy. Họ tên, mã lớp và bài làm chỉ được xử lý trong trình duyệt này.</p>
@@ -401,6 +406,7 @@ if (location.protocol === 'file:') {
   const form = document.getElementById('online-form');
   const params = new URLSearchParams(location.hash.slice(1));
   const invited = params.has('ref');
+  document.getElementById('tai-file-cuu-ho-offline').hidden = invited;
   const fingerprint = params.get('ref') || '';
   const invitedClass = params.get('class') || '';
   const validInvite = invited && /^[a-f0-9]{64}$/.test(fingerprint) && /^IC\d{1,12}$/.test(invitedClass);
