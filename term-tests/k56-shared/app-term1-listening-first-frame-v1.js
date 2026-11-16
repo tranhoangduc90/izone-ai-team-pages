@@ -2633,10 +2633,8 @@
     const identity = JSON.stringify([payload.className, payload.studentRef || state.studentRef || payload.studentName, payload.attemptToken || state.attemptToken]);
     const previousBlocks = state.resultDetailsIdentity === identity
       ? Array.from(elements.questionDetails.children) : [];
+    const review = fallbackSkill ? new Map((payload.review || []).map(item => [item.number, item])) : new Map();
     const detailBlocks = skills.map(([title, skill]) => {
-      const explanations = fallbackSkill ? payload.review
-        : title === 'Listening' ? result.listeningReview : null;
-      const review = new Map((explanations || []).map(item => [item.number, item]));
       const fingerprint = JSON.stringify(review.size ? [skill.details || [], [...review.values()]] : skill.details || []);
       const previous = previousBlocks.find(block => block.dataset.skill === title);
       if (previous?.dataset.details === fingerprint) return previous;
