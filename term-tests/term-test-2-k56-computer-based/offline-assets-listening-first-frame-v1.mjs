@@ -173,7 +173,12 @@ export const ASSETS=[
   "offline-worker-listening-first-frame-v1.js",
   "passages.js",
   "styles.css",
-  "worker-listening-first-frame-v1.mjs"
+  "worker-listening-first-frame-v1.mjs",
+  "../shared/exam-journal/pilot-browser-dispatch.mjs",
+  "../shared/exam-journal/k67-pilot-browser-transport.mjs",
+  "../shared/exam-journal/k67-pilot-legacy-drain.mjs",
+  "../shared/exam-journal/k67-pilot-browser-policy.mjs",
+  "../shared/exam-journal/sealed-batch.mjs"
 ];
 export const ASSET_HASHES={
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -284,7 +289,7 @@ export const ASSET_HASHES={
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/public-audio-audio-status-v1.mjs": "30c109b154046f13fef9f9b53e722b35b3f268fa60d2d874b507a9fed077e24c",
   "../k56-shared/teacher-session-client.js": "e23d770dc0a4beb35a5b9751990cfd9667e1ea2568d0bffb3125e721dafefa27",
-  "../k56-test2-shared/app-term2-listening-first-frame-v1.js": "6d79fa96a66bedace13bf8e4bedd4b8f9796bcefc9a3848160af2b775626431f",
+  "../k56-test2-shared/app-term2-listening-first-frame-v1.js": "a6f48f9e8d92c1683a6721ac123312621a0ce3f5ce1e515d670bbcb9e6b0e58d",
   "../k56-test2-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-test2-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-writing-feedback/styles.css": "5f1990abcb8a2a38b7168dfbaa56565e0faece43c4c4c15c146ef6c800fca99e",
@@ -308,7 +313,7 @@ export const ASSET_HASHES={
   "../shared/desktop-exam-guard.js": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460",
   "../shared/exam-clock.js": "54e54acbe25ceea6670cf96afb683d583430e088eac28a753a8f028775072fbd",
   "../shared/exam-journal/audio-delivery.mjs": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4",
-  "../shared/exam-journal/bridge-k56-term-v1.mjs": "d71e260958252f50dadd3ba9ec03046f7fa95c6f3ed6ae2caed61bb0731f0f38",
+  "../shared/exam-journal/bridge-k56-term-v1.mjs": "910e6aa3dd826bc8640f65c7d153a2bc0e9010a354edcf3c8c09718336575351",
   "../shared/exam-journal/outbox.mjs": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f",
   "../shared/exam-journal/recorder.mjs": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76",
   "../shared/exam-order.js": "b8bfff8d4e8e16fd487db614423ec1e83230196695b7572b48ef284a3faebd88",
@@ -335,10 +340,10 @@ export const ASSET_HASHES={
   "assets/figures/writing-waste.png": "c77f854bcb39a1481d525d768ccbab8532c09dc5dbfe549c100c3149a8e8688d",
   "audio-loader-audio-status-v1.js": "e1c66b92e2c2ef6b99448827748a293a5f6cf06341d6f04368a49d2c8b58493b",
   "audio-whole-audio-status-v1.mjs": "35e9d1b41441ab68979c9f98245781e3fa526153a20c25e6d480965108a07c35",
-  "bootstrap-listening-first-frame-v1.js": "a90803d357b9ad3cd121405ff504c460287bbfedd7ef6e94c678b89ed86c6dae",
+  "bootstrap-listening-first-frame-v1.js": "f3b736084071b5ba15805a1764fc3cdf435a4fd62bb3a86176c70ad260db5837",
   "content.js": "61653a59ae0b7427f5de300cbbc6ceb0121a668664811436802cdfa89a370aa5",
   "exam.css": "b89325ce97e1efef761f3f8996aecef28a35b02cef20ac1a24f6521d1ada3012",
-  "index-listening-first-frame-v1.html": "4ece1317a3c933ceb0298fe058aabe372f4581b9ca65579beb5f08ad4aa71f57",
+  "index-listening-first-frame-v1.html": "bf6580de729156a788d30680b47ad220ee7c55255a0de30d4dfb2ead24d9ac10",
   "layout-updates.css": "f4e81684b6a9c416b72bc7c3ceccdc2e39dda0d0c569f2cd11a6dd7daff3fe9a",
   "listening-first-frame-v1.css": "6e4672ceaa118d8cf81782d9ae99db117a5611364087852ee934f7bd6508347a",
   "listening-first-frame-v1.js": "5194318652dbd963547aafdf1395487b3e316dffe428f719f775d297726db546",
@@ -350,6 +355,11 @@ export const ASSET_HASHES={
   "offline-worker-listening-first-frame-v1.js": "c6d34fa807d3b6ed5f5453c049884b501b89b8627048e12791fcfa18565b5388",
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042",
-  "worker-listening-first-frame-v1.mjs": "490f6fbd598c78803cba75ef07cbd1cfcafaf6a6158538152d6143ee79f1271f"
+  "worker-listening-first-frame-v1.mjs": "490f6fbd598c78803cba75ef07cbd1cfcafaf6a6158538152d6143ee79f1271f",
+  "../shared/exam-journal/pilot-browser-dispatch.mjs": "62eb01e189523b03d7f9ccc633df0aae7b92d7f84178cdf25004be6ccc4b2858",
+  "../shared/exam-journal/k67-pilot-browser-transport.mjs": "a38d467efe78cc77dc5bc889d1d13fdf42f32f39057d40c0ea5da1ffae73a59c",
+  "../shared/exam-journal/k67-pilot-legacy-drain.mjs": "f72cc09561248980cb7276f61df5287f6225483ce7b92918b8e71637308f4727",
+  "../shared/exam-journal/k67-pilot-browser-policy.mjs": "d4afd6aa20e02bdc3daaa668e2a7f71eb0d76c3936a42df750daa87d822b9e6d",
+  "../shared/exam-journal/sealed-batch.mjs": "9507dbf9f26e78a3f0df7d18e78f697588a02571ac88bb90d8cec7340a7661f2"
 };
-export const ASSET_BUILD_ID="14e8b92d1355bf3e7c520a20c45c1a15825e3d78f41e7907682602b636fa32a5";
+export const ASSET_BUILD_ID="a8773fb997a13419ffabb5e675edab89f128593ceae51b5d3cb99e01736b6d7a";

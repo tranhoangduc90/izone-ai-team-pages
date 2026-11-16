@@ -308,7 +308,7 @@ export const ASSET_HASHES={
   "../shared/desktop-exam-guard.js": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460",
   "../shared/exam-clock.js": "54e54acbe25ceea6670cf96afb683d583430e088eac28a753a8f028775072fbd",
   "../shared/exam-journal/audio-delivery.mjs": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4",
-  "../shared/exam-journal/bridge-k56-term-v1.mjs": "d71e260958252f50dadd3ba9ec03046f7fa95c6f3ed6ae2caed61bb0731f0f38",
+  "../shared/exam-journal/bridge-k56-term-v1.mjs": "910e6aa3dd826bc8640f65c7d153a2bc0e9010a354edcf3c8c09718336575351",
   "../shared/exam-journal/outbox.mjs": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f",
   "../shared/exam-journal/recorder.mjs": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76",
   "../shared/exam-order.js": "b8bfff8d4e8e16fd487db614423ec1e83230196695b7572b48ef284a3faebd88",
@@ -354,4 +354,4 @@ export const ASSET_HASHES={
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="973a4ab02bb96fe0717cbde8c4cade05d5e9a92040ee781b67c41b5af63d1247";
+export const ASSET_BUILD_ID="4a2072fe4e410eda35e543082147a7f5e12d586ec904a5cabc8861241d8e171c";

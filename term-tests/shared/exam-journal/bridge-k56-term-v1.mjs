@@ -72,8 +72,9 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     attemptToken:String(metadataOnly&&state.examSessionToken?'':state.attemptToken || ''),examSessionToken:String(state.examSessionToken || ''),
     clientRunId:String(state.clientRunId || ''),examSessionId:String(state.examSessionId || ''),historyEpoch:String(state.historyEpoch || state._substitute?.historyEpoch || ''),
     generation:Number(state.generation || 0),pageVisitId:visitId,...(fallbackSkill?{skillFallback:fallbackSkill}:{}) });
-  const ingress = testSlug==='term-test-1-k56' && path.includes('term-test-1-k56-computer-based')
-    ? doc.querySelector?.('meta[name="izone-term1-k56-journal-ingress"]')?.content : null;
+  const term = /^term-test-([12])-k56$/.exec(testSlug)?.[1];
+  const ingress = term && path.includes(testSlug+'-computer-based')
+    ? doc.querySelector?.(`meta[name="izone-term${term}-k56-journal-ingress"]`)?.content : null;
   let cloud, openingCloud;
   if (ingress) {
     recorder.flush = async (settings = {}) => {
