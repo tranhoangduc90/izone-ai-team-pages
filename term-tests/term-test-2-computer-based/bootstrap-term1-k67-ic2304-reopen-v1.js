@@ -843,6 +843,70 @@
     return blob;
   }
 
+  function prepareSessionFor(studentRef, timeoutMs) {
+    return apiRequest(`/api/term-tests/${testConfig.slug}/session/prepare`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        classCode,studentRef,
+        ...(testConfig.slug==='term-test-1' && !listeningOnly ? {term1ContinuationVersion:1} : {}),
+        retakeGrant:retakeGrant || undefined,
+        examSessionToken:state.examSessionToken || undefined,
+        legacyElapsedSeconds:legacyListeningResume ? Math.floor(legacyUiState.audioTime) : 0
+      })
+    },timeoutMs);
+  }
+
+  async function openTerm1Prepared(prepared, studentRef, preparationStatus) {
+    if (testConfig.slug!=='term-test-1' || listeningOnly || prepared.studentRef!==studentRef) return false;
+    if (prepared.officialResultReady === true) {
+      const {content, ...result} = await apiRequest('/api/term-tests/result', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({officialTerm1:{classCode,studentRef},includeContent:true})
+      });
+      if (result.officialTerm1 !== true || result.studentRef !== studentRef || result.testSlug !== testConfig.slug
+          || !result.writing?.submitted) throw new Error('Kết quả trả về chưa khớp người học.');
+      rememberPreparedStudent(studentRef);
+      await enterExam({content, officialTerm1Result:result});
+      return true;
+    }
+    if (!['listening','reading','writing'].includes(prepared.continuationSection)
+        || prepared.continuationSection!==prepared.nextSection) return false;
+    if (!isUuid(prepared.examSessionToken) || (prepared.attemptToken && !isUuid(prepared.attemptToken))) {
+      throw new Error('Phiên trả về chưa khớp người học. Nháp cũ được giữ nguyên.');
+    }
+    const sameScope = state.examSessionToken===prepared.examSessionToken
+      && Number(state.generation)===Number(prepared.generation);
+    const confirmProgress = sameScope && state.continuationResume===prepared.examSessionToken;
+    rememberPreparedStudent(studentRef);
+    const previousState = state;
+    saveState({
+      examSessionToken:prepared.examSessionToken,
+      generation:Number(prepared.generation)||0,
+      attemptToken:prepared.attemptToken||'',
+      continuationSection:prepared.continuationSection,
+      continuationResume:null,
+      ...(sameScope ? {} : {
+        drafts:{listening:{},reading:{},writing:{task1:'',task2:''}},
+        draftRevisions:{}, draftAckRevisions:{}, pendingSubmissions:{},
+        frozenAnswers:{listening:null,reading:null}, result:null, attemptReview:null,
+        writingStarted:false, writingSubmitted:false, writingDirty:false,
+        writingStartedAt:null, writingDeadlineAt:null, writingRevision:0,
+      }),
+    });
+    window.K67_EXAM_ORDER.apply(state,prepared);
+    try {
+      if (await openJourneyLobby(true,false,preparationStatus,confirmProgress)) return true;
+      throw new Error('Chưa mở được phần thi còn lại. Hãy thử lại khi có mạng.');
+    } catch (error) {
+      await miniJourney?.close();
+      miniJourney = null;
+      state = previousState;
+      window.K67_EXAM_ORDER.apply(state,state);
+      saveState();
+      throw error;
+    }
+  }
+
   async function prepareSelectedStudent(retry = false) {
     const studentRef = elements.bootstrapStudent.value;
     const student = roster.find(item => item.ref === studentRef);
@@ -914,67 +978,20 @@
           if (!recoverFromServerReset(error, student)) throw error;
         }
       }
-      const prepareSession = () => apiRequest(`/api/term-tests/${testConfig.slug}/session/prepare`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          classCode,
-          studentRef,
-          ...(testConfig.slug === 'term-test-1' && !listeningOnly ? {term1ContinuationVersion:1} : {}),
-          retakeGrant: retakeGrant || undefined,
-          examSessionToken: state.examSessionToken || undefined,
-          legacyElapsedSeconds: legacyListeningResume ? Math.floor(legacyUiState.audioTime) : 0
-        })
-      });
       let prepared;
       try {
-        prepared = await prepareSession();
+        prepared = await prepareSessionFor(studentRef);
       } catch (error) {
         if (!recoverFromServerReset(error, student)) throw error;
-        prepared = await prepareSession();
+        prepared = await prepareSessionFor(studentRef);
       }
-      if (testConfig.slug === 'term-test-1' && !listeningOnly
-          && prepared.officialResultReady === true && prepared.studentRef === studentRef) {
-        const {content, ...result} = await apiRequest('/api/term-tests/result', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({officialTerm1:{classCode,studentRef},includeContent:true})
-        });
-        if (result.officialTerm1 !== true || result.studentRef !== studentRef || result.testSlug !== testConfig.slug
-            || !result.writing?.submitted) throw new Error('Kết quả trả về chưa khớp người học.');
-        rememberPreparedStudent(studentRef);
-        await enterExam({content, officialTerm1Result:result});
-        return;
-      }
-      const continuation = testConfig.slug === 'term-test-1' && !listeningOnly
-        && ['listening','reading','writing'].includes(prepared.continuationSection)
-        && prepared.continuationSection === prepared.nextSection && prepared.studentRef === studentRef;
+      if (await openTerm1Prepared(prepared,studentRef,preparationStatus)) return;
       if ((sharedIdentity || demoJourneyEntry) && (!isUuid(prepared.examSessionToken)
           || (prepared.attemptToken && !isUuid(prepared.attemptToken))
           || (prepared.studentRef && prepared.studentRef !== studentRef)
-          || (state.examSessionToken && state.examSessionToken !== prepared.examSessionToken && !continuation)))
+          || (state.examSessionToken && state.examSessionToken !== prepared.examSessionToken)))
         throw new Error('Phiên trả về chưa khớp người học. Nháp cũ được giữ nguyên.');
       rememberPreparedStudent(studentRef);
-      if (continuation) {
-        const sameScope = state.examSessionToken === prepared.examSessionToken
-          && Number(state.generation) === Number(prepared.generation);
-        saveState({
-          examSessionToken: prepared.examSessionToken,
-          generation: Number(prepared.generation) || 0,
-          attemptToken: prepared.attemptToken || '',
-          continuationSection: prepared.continuationSection,
-          continuationResume: null,
-          ...(sameScope ? {} : {
-            drafts: {listening:{},reading:{},writing:{task1:'',task2:''}},
-            draftRevisions: {}, draftAckRevisions: {}, pendingSubmissions: {},
-            frozenAnswers: {listening:null,reading:null}, result: null, attemptReview: null,
-            writingStarted: false, writingSubmitted: false, writingDirty: false,
-            writingStartedAt: null, writingDeadlineAt: null, writingRevision: 0,
-          }),
-        });
-        window.K67_EXAM_ORDER.apply(state, prepared);
-        if (await openJourneyLobby(true,false,preparationStatus)) return;
-        throw new Error('Chưa mở được phần thi còn lại. Hãy thử lại khi có mạng.');
-      }
       const localListeningNewer = Number(state.draftRevisions?.listening || 0) > Number(prepared.listeningDraftRevision || 0);
       saveState({
         examSessionToken: prepared.examSessionToken,
@@ -1188,7 +1205,7 @@
     await enterExam({...view,content:miniJourney.content},null,'',miniJourney,playNewListening);
   }
 
-  async function openJourneyLobby(prepare=false,recover=false,preparationStatus){
+  async function openJourneyLobby(prepare=false,recover=false,preparationStatus,confirmProgress=false){
     if (timerOnly) return false;
     const slug=testConfig.slug;
     if(!['mini-test-lesson-5','term-test-1','term-test-2'].includes(slug)||listeningOnly||!(sharedIdentity||demoJourneyEntry)||!isUuid(state.studentRef)||!isUuid(state.examSessionToken))return false;
@@ -1203,6 +1220,15 @@
     const scope=miniCbtScope();
     const existing=await findMiniJourney(scope,slug);
     if (!existing && (!prepare || (state.completed && !scope.continuationSection))) return false;
+    const saved = existing?.record;
+    const confirmedConflict = saved?.officialConflict && state.continuationResume===scope.examSessionToken;
+    if (slug==='term-test-1' && !prepare && !recover && navigator.onLine!==false
+        && saved?.package.term1ParallelEntry
+        && (confirmedConflict || (!saved.package.continuationSection && !saved.pending.length && !saved.readingReview))) {
+      const prepared = await prepareSessionFor(scope.studentRef,3000).catch(()=>null);
+      if (prepared && state.examSessionToken===scope.examSessionToken && state.studentRef===scope.studentRef
+          && await openTerm1Prepared(prepared,scope.studentRef,preparationStatus)) return true;
+    }
     if(existing&&slug==='term-test-1'&&classCode==='IC2304'&&!prepare&&!recover&&navigator.onLine!==false){
       // Keep the local journey available if a server result cannot be confirmed.
       if (isUuid(state.attemptToken) &&
@@ -1223,7 +1249,7 @@
     const audioStatus=preparationStatus || beginAudioDownloadStatus(elements.bootstrapDownloadStatus,
       elements.bootstrapDownloadProgress,{formatBytes,preparing:true});
     try{
-      miniJourney=await openMiniJourney({scope,request:apiRequest,existing,prepare,slug,
+      miniJourney=await openMiniJourney({scope,request:apiRequest,existing,prepare,confirmProgress,slug,
         pagesOnly:window.K67_RESCUE_AUDIO_SOURCE==='pages',
         onProgress:audioStatus.progress,onPhase:audioStatus.phase});
       if(!miniJourney){audioStatus.restore();return false;}

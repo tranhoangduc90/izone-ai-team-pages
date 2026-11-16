@@ -930,9 +930,20 @@
       button.className = 'button button-primary';
       button.addEventListener('click', async () => {
         const receipt = miniJourney.continuationReceipt();
-        if (!receipt || receipt.nextSection === 'result') return;
+        if (!miniJourney.officialConflict?.() && receipt?.nextSection !== 'writing') return;
+        if (navigator.onLine===false) {
+          status.textContent = 'Hãy kết nối mạng để đọc tiến độ chính thức.';
+          return;
+        }
+        button.disabled = true;
+        const previous = state.continuationResume;
         state.continuationResume = state.examSessionToken;
-        saveSession();
+        if (!saveSession()) {
+          state.continuationResume = previous;
+          button.disabled = false;
+          status.textContent = 'Chưa lưu được yêu cầu mở lại. Bạn có thể tải bản đã lưu trên thiết bị.';
+          return;
+        }
         allowExamNavigation = true;
         await miniJourney.close();
         location.reload();
@@ -944,12 +955,14 @@
     }
     const {panel,heading,status,button} = continuationSavedCard;
     const receipt = miniJourney.continuationReceipt();
+    const conflict = miniJourney.officialConflict?.();
     const skill = miniJourney.view().continuationSection === 'listening' ? 'Listening' : 'Reading';
     panel.hidden = false;
-    heading.textContent = receipt ? 'Đã nộp ' + skill : 'Đã lưu ' + skill + ' trên thiết bị';
+    heading.textContent = conflict ? 'Tiến độ bài thi đã thay đổi'
+      : receipt ? 'Đã nộp ' + skill : 'Đã lưu ' + skill + ' trên thiết bị';
     status.textContent = miniJourney.message();
-    button.textContent = 'Tiếp tục Writing';
-    button.hidden = receipt?.nextSection !== 'writing';
+    button.textContent = conflict ? 'Mở lại theo tiến độ chính thức' : 'Tiếp tục Writing';
+    button.hidden = !conflict && receipt?.nextSection !== 'writing';
   }
 
   function updateJourneyResultReady() {
@@ -2331,8 +2344,18 @@
 
   function confirmIncomplete(answered, skillLabel) {
     const total = skillLabel === 'Listening' ? testConfig.listening.controls.length : testConfig.reading.controls.length;
-    if (answered === total) return true;
-    return ((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${skillLabel} hiện có ${answered}/${total} câu đã nhập. Bạn vẫn muốn nộp bài?`);
+    const journey = miniJourney?.view();
+    const firstSubmission = journey?.term1ParallelEntry && !journey.listeningSubmitted && !journey.readingSubmitted;
+    if (answered === total && !firstSubmission) return true;
+    const message = [
+      answered!==total && `${skillLabel} hiện có ${answered}/${total} câu đã nhập.`,
+      firstSubmission && 'Bản nộp hợp lệ đầu tiên được máy chủ lưu sẽ được tính cho tên đã chọn.',
+      answered!==total ? 'Bạn vẫn muốn nộp bài?' : 'Bạn muốn nộp bài?'
+    ].filter(Boolean).join(' ');
+    try { examJournal?.dialog(message,'opened'); } catch {}
+    const accepted = window.confirm(message);
+    try { examJournal?.dialog(message,accepted?'confirmed':'cancelled'); } catch {}
+    return accepted;
   }
 
   function setBusy(button, busy, busyText, normalText) {
@@ -4532,11 +4555,13 @@
     });
     if (!miniJourney.paper) miniJourney.changed.addEventListener('change', updateListeningSavedCopy);
     if (writingConfig) miniJourney.changed.addEventListener('change', updateJourneyResultReady);
-    if (['listening','reading'].includes(view.continuationSection)) {
+    if (view.continuationSection || typeof miniJourney.officialConflict==='function') {
       miniJourney.changed.addEventListener('change', () => {
         if (state.stage === 'continuation-saved') updateContinuationSaved();
+        else if (miniJourney.officialConflict?.()) setStage('continuation-saved');
       });
-      if (view.nextSection==='result') {
+      if (miniJourney.officialConflict?.()
+          || (['listening','reading'].includes(view.continuationSection) && view.nextSection==='result')) {
         setStage('continuation-saved');
         return;
       }
