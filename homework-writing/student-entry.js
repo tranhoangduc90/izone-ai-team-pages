@@ -26,9 +26,16 @@ const template = `<div class="login-layout hw-student-entry">
   </section>
 </div>`;
 
-export function mountStudentEntry(root, { personal, rememberedDifferent, onTeacher, onChange, onChoose }) {
+export function mountStudentEntry(root, { personal, compact = false, rememberedDifferent, onTeacher, onChange, onChoose }) {
   root.innerHTML = template;
   const find = id => root.querySelector('#' + id);
+  if (compact) {
+    const form = root.querySelector('.login-card');
+    form.querySelector('.hw-login-subtitle').remove();
+    form.querySelector('.hw-entry-footer').remove();
+    form.removeAttribute('class');
+    root.replaceChildren(form);
+  }
   const group = find('hw-entry-class');
   const name = find('hw-entry-student');
   const note = find('hw-entry-note');
@@ -67,8 +74,8 @@ export function mountStudentEntry(root, { personal, rememberedDifferent, onTeach
     note.textContent = different ? 'Link Homework khác người học đã nhớ. Chỉ tiếp tục nếu đây là bài của bạn.' :
       'Bài mở từ Docs cá nhân. Nếu đây là Docs của người khác, hãy mở lại từ Docs của bạn.';
     find('hw-entry-change').hidden = false;
-    find('hw-student-title').textContent = match ? 'Xác nhận họ và tên của bạn' : 'Bạn học lớp nào?';
-    open.firstChild.textContent = match ? 'Tiếp tục ' : 'Mở bài Writing ';
+    find('hw-student-title').textContent = compact || match ? 'Xác nhận họ và tên của bạn' : 'Bạn học lớp nào?';
+    open.firstChild.textContent = compact ? 'Xác nhận và vào bài ' : match ? 'Tiếp tục ' : 'Mở bài Writing ';
     if (match) {
       note.hidden = false;
       note.textContent = 'Bài này được giao cho tài khoản Google ' + match.account + '.';
@@ -86,7 +93,7 @@ export function mountStudentEntry(root, { personal, rememberedDifferent, onTeach
   open.addEventListener('click', () => {
     const choice = selected();
     if (busy || !choice) return;
-    if (!match) { void onChoose(choice); return; }
+    if (compact || !match) { void onChoose(choice); return; }
     pendingChoice = choice;
     dialog.returnValue = '';
     find('hw-entry-confirm-summary').textContent = [match.account, choice.name, choice.classCode].join(' · ');
@@ -99,6 +106,6 @@ export function mountStudentEntry(root, { personal, rememberedDifferent, onTeach
     else open.focus();
   });
   find('hw-entry-change').addEventListener('click', onChange);
-  find('hw-entry-teacher').addEventListener('click', onTeacher);
+  find('hw-entry-teacher')?.addEventListener('click', onTeacher);
   return { profiles, setBusy };
 }

@@ -18,7 +18,7 @@ installStyles();
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const writingHandoff=globalThis.handout67WritingHandoff;
-const verifiedOpening=writingHandoff?.verifiedDocsStudent?$('verified-handout-opening'):null;
+const verifiedOpening=writingHandoff?.verifiedDocsStudent?(writingHandoff.openingHost||$('verified-handout-opening')):null;
 const api=createClient(writingHandoff?.apiBase||globalThis.handout67ApiBase||'https://ducizone.ddns.net/api/handout67/v1',writingHandoff?.request);
 let lesson=globalThis.handout67Lesson||{activity:'lesson5'};
 const courseIdentity=createCourseStudentIdentity({product:'handout67',entry:lesson.activity,requestIdentity:requestMappingStudentIdentity});
@@ -403,7 +403,8 @@ async function openVerifiedHandout(){
   if(!result)return;
   student=owner.studentRef;names[student]=owner.displayName;
   displayHandout(result);
-  verifiedOpening.hidden=true;
+  if(writingHandoff.finishOpening)writingHandoff.finishOpening();
+  else verifiedOpening.hidden=true;
   $('logout').hidden=true;
  }catch(error){
   if(epoch===generation)writingHandoff.showOpeningError(verifiedOpening,error,openVerifiedHandout);

@@ -1,7 +1,9 @@
 import runtime from '../../homework-writing/runtime-config.js?v=20261111-ic2363';
-import { frontendConfiguration, createOnlineAccess } from '../../homework-writing/online-access.js?v=20261113-single-entry';
+import { frontendConfiguration, createOnlineAccess } from '../../homework-writing/online-access.js?v=20261116-single-confirmation';
 
-const root = document.getElementById('lesson-access');
+const card = document.getElementById('lesson-access');
+const root = document.getElementById('lesson-access-body');
+const openingStatus = root.querySelector('[role="status"]');
 const config = frontendConfiguration(runtime);
 const query = new URLSearchParams(location.search);
 const assignment = query.get('assignment');
@@ -22,8 +24,15 @@ function showOpeningError(host, error, retry) {
   button.type = 'button';
   button.className = 'primary';
   button.textContent = 'Thử lại';
-  button.onclick = retry;
+  button.onclick = () => {
+    showOpening();
+    retry();
+  };
   host.replaceChildren(status, button);
+}
+
+function showOpening() {
+  if (openingStatus.parentElement !== root) root.replaceChildren(openingStatus);
 }
 
 async function start() {
@@ -31,11 +40,12 @@ async function start() {
       !/^hw-k67-writing-lesson4-\d+$/.test(assignment || '') || !/^[\w-]{20,200}$/.test(documentId || '')) {
     throw Object.assign(Error('WRITING_ENTRY_REQUIRED'), { status: 403 });
   }
-  const access = createOnlineAccess(config, { onReady: enter });
+  const access = createOnlineAccess(config, { onReady: enter, showOpening, compactStudentEntry: true });
   async function enter(session) {
     const studentRef = access.verifiedDocsOwner();
     const stamp = access.stamp();
     if (session.person?.role !== 'student' || !studentRef) throw Object.assign(Error('WRITING_ENTRY_REQUIRED'), { status: 403 });
+    showOpening();
     const apiBase = config.apiBase + '/student/assignments/' + encodeURIComponent(assignment) + '/handout-editor';
     function request(input, options = {}) {
       const url = new URL(input);
@@ -50,8 +60,13 @@ async function start() {
     }
     globalThis.handout67WritingHandoff = Object.freeze({
       apiBase, request, verifiedDocsStudent: studentRef, showOpeningError,
+      openingHost: root,
+      finishOpening() {
+        card.hidden = true;
+        document.getElementById('lesson-access-style')?.remove();
+      },
     });
-    await import('../shared/loader.mjs?v=20261115-lesson4-progress');
+    await import('../shared/loader.mjs?v=20261116-lesson4-entry');
   }
   await enter(await access.open(root));
 }

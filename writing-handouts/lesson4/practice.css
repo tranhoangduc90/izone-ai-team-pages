@@ -15,3 +15,8 @@ body[data-activity="lesson4"] .reading-practice-gate { display: flow-root; }
 
 #lesson4-progress { color: #152b4e; font-weight: 600; flex-basis: 100%; }
 #lesson4-progress a { margin-inline-start: .75em; text-decoration: underline; }
+
+#lesson-access { width: min(540px, calc(100% - 32px)); margin-inline: auto; }
+#lesson-access h1 { font-size: clamp(1.45rem, 4.5vw, 1.85rem); text-align: start; }
+#lesson-access-body .field { margin-block: 12px; }
+#lesson-access-body .hw-entry-link { margin-top: 12px; }
