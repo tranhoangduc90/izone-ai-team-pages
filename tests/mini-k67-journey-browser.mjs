@@ -13,6 +13,7 @@ const pages=fileURLToPath(new URL('../',import.meta.url));
 const backend=process.env.K67_BACKEND;
 assert.ok(backend,'Set K67_BACKEND to the isolated backend package.');
 const full=process.env.K67_JOURNEY_FULL==='1';
+const checkListeningLayout=process.env.K67_JOURNEY_CHECK_LISTENING_LAYOUT==='1';
 const eofJournal=process.env.K67_JOURNEY_EOF_JOURNAL==='1';
 const writingOnly=process.env.K67_JOURNEY_WRITING_ONLY==='1';
 const term1=process.env.K67_JOURNEY_TERM1==='1';
@@ -34,6 +35,31 @@ assert.ok(!rescueClass||(term2&&['IC2213','IC2207'].includes(rescueClass)),'Sele
 const modes=process.env.K67_JOURNEY_ORDER?[process.env.K67_JOURNEY_ORDER]:['lis_first','read_first'];
 const require=createRequire(resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json'));
 const {chromium}=require('playwright');
+
+async function verifyListeningLayout(page) {
+  const viewport=page.viewportSize();
+  try {
+    for (const [width,height] of [[1024,600],[1280,560],[1366,768]]) {
+      await page.setViewportSize({width,height});
+      const layout=await page.locator('#listeningView').evaluate(form=>{
+        const nav=form.querySelector('.cbt-question-nav-wrap');
+        const part=form.querySelector('.cbt-listening-section:not([hidden])');
+        const fields=[...part.querySelectorAll('input[data-number],select[data-number]')]
+          .filter(field=>field.getClientRects().length);
+        const gaps=[fields[0],fields.at(-1)].filter(Boolean).map(field=>{
+          field.scrollIntoView({block:'center',behavior:'instant'});
+          const rect=field.getBoundingClientRect();
+          return document.elementFromPoint((rect.left+rect.right)/2,(rect.top+rect.bottom)/2)===field;
+        });
+        return {gap:nav.getBoundingClientRect().top-part.getBoundingClientRect().bottom,
+          accessible:gaps.length===2&&gaps.every(Boolean)};
+      });
+      assert.ok(layout.gap>=-1&&layout.accessible,JSON.stringify({width,height,...layout}));
+    }
+  } finally {
+    await page.setViewportSize(viewport);
+  }
+}
 
 for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_000:term1?8_300_000:2_650_000):writingOnly?4_200_000:upgrade?180_000:120_000},async()=>{
   assert.ok(['lis_first','read_first'].includes(mode));
@@ -305,6 +331,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         continue;
       }
       if(section==='listening'){
+        if(checkListeningLayout) await verifyListeningLayout(page);
         const answer=await field.inputValue();
         if(eofJournal)await page.evaluate(()=>{
           const player=document.getElementById('miniJourneyAudio');
@@ -355,6 +382,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           assert.equal(await field.inputValue(),answer);
           await page.getByRole('button',{name:'Nghe tiếp',exact:true}).click();
           log('offline_audio_resumed');
+          if(checkListeningLayout) await verifyListeningLayout(page);
         }
         await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.ended,
           null,{timeout:full?(term?2_000_000:1_100_000):20_000});

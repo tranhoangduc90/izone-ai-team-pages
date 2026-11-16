@@ -114,7 +114,8 @@ export const ASSETS=[
   "../term-test-2-computer-based/listening-view-term1-k67-v1.js",
   "../term-test-2-computer-based/styles.css",
   "index-listening-first-frame-v1.html",
-  "offline-worker-listening-first-frame-v1.js"
+  "offline-worker-listening-first-frame-v1.js",
+  "../k67-shared/listening-term1-mini-flow-v1.css"
 ];
 export const ASSET_HASHES={
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -231,7 +232,8 @@ export const ASSET_HASHES={
   "../term-test-2-computer-based/listening-report-evidence-v1.mjs": "da745421b217f85ac7f7cdd39b270f67b8453567cc041c2a338f1abf985c7d54",
   "../term-test-2-computer-based/listening-view-term1-k67-v1.js": "1f1fd89794e14a5345ca8c75c346f1aa3942a7672ed5e3add605bfb5d63ce380",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index-listening-first-frame-v1.html": "f814c2124b21c145e88dca20e7fd893c775402ffb82e7814e2e3fb30560b3f01",
-  "offline-worker-listening-first-frame-v1.js": "24e13af382509391ab90d0023ea7a425129e159bc0261791536b5ebc6f10cf2e"
+  "index-listening-first-frame-v1.html": "989a8ec471fd858a94b59df7032e4bd5738a4889d98102ffbb2f9e792f79cba1",
+  "offline-worker-listening-first-frame-v1.js": "24e13af382509391ab90d0023ea7a425129e159bc0261791536b5ebc6f10cf2e",
+  "../k67-shared/listening-term1-mini-flow-v1.css": "79c530e3c31485e04869c5369d1f33610236cb667e4e0baa299e5db9bac5eec1"
 };
-export const ASSET_BUILD_ID="c0d0c4cf30be70014a3e53f3a6d0193569765b68faaacf0c800ce942ef85cb42";
+export const ASSET_BUILD_ID="f3b4477199f7eac95ac04862beef94d2453c015f64586f5481d1b4a091707b1a";
