@@ -114,7 +114,16 @@ export const ASSETS=[
   "journey-mini-k67-audio-v2.mjs",
   "journey.mjs",
   "offline-worker-listening-first-frame-v1.js",
-  "resilience-audio-status-v2.mjs"
+  "resilience-audio-status-v2.mjs",
+  "../shared/exam-journal/pilot-browser-dispatch.mjs",
+  "../shared/exam-journal/k67-pilot-browser-transport.mjs",
+  "../shared/exam-journal/k67-pilot-legacy-drain.mjs",
+  "../shared/exam-journal/k67-pilot-browser-policy.mjs",
+  "../shared/exam-journal/sealed-batch.mjs",
+  "../shared/exam-journal/bridge-k67-paper-v1.mjs",
+  "../shared/exam-journal/outbox.mjs",
+  "../shared/exam-journal/recorder.mjs",
+  "../shared/exam-journal/audio-delivery.mjs"
 ];
 export const ASSET_HASHES={
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -221,17 +230,26 @@ export const ASSET_HASHES={
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-test-1-k56-computer-based/worker-listening-first-frame-v1.mjs": "490f6fbd598c78803cba75ef07cbd1cfcafaf6a6158538152d6143ee79f1271f",
   "../term-test-2-computer-based/audio-loader-audio-status-v1.js": "a7399bba30177f98a291033678c0cd4d41909b5ea499c162f1b15a4b9c0eead3",
-  "../term-test-2-computer-based/bootstrap-mini-k67-listening-first-frame-v1.js": "d53809d2cbd3930a8da7539f46af752e1c816079ff69888aa72c55c7f160e09b",
+  "../term-test-2-computer-based/bootstrap-mini-k67-listening-first-frame-v1.js": "5e648c97dafac6e0c65e025adfaf72c3159201a75b73958741bb0f09d677b472",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "../term-test-2-computer-based/listening-report-evidence-v1.mjs": "da745421b217f85ac7f7cdd39b270f67b8453567cc041c2a338f1abf985c7d54",
   "../term-test-2-computer-based/listening-view-mini-k67-v1.js": "a9ab15348983db4fdfb9cbfa8239e1326a36eb84f40398664d61b4bd0f29f21b",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "./journey-mini-k67-listening-first-frame-v1.mjs": "6e4c1523d385df1930434ba5da87f75ec461e21c42959119fc3b862ae882e684",
-  "index-listening-first-frame-v1.html": "dc368dd74933465778b014ceeedd02ad276122346c15e87a05f618e53a352482",
+  "./journey-mini-k67-listening-first-frame-v1.mjs": "fcd893d18c761f84673f5772c26599845d93eb8b96f70e0319744749f95909ed",
+  "index-listening-first-frame-v1.html": "f3efa1c6b5688e091f0027d0ebbbe2c19470f0760156a6971640502618ceb782",
   "journey-mini-k67-audio-v2.mjs": "7042805f2b89d9cff46031c5c5a628f1a09b0a17fc2e9ca2c2f194919b4d9176",
   "journey.mjs": "e6bdb3be01b65f1acd43e40ab29e4806c7f3759860a17b5f8d0381a4ce6dae1e",
   "offline-worker-listening-first-frame-v1.js": "d7c7014c8f062675114b90da36f5c816a2aa9a9d0187afd9bb4ae6fdd6c758c0",
-  "resilience-audio-status-v2.mjs": "7c74293a558505055148bb239607dffc83a0883459084c7ec45489368cf5d964"
+  "resilience-audio-status-v2.mjs": "7c74293a558505055148bb239607dffc83a0883459084c7ec45489368cf5d964",
+  "../shared/exam-journal/pilot-browser-dispatch.mjs": "62eb01e189523b03d7f9ccc633df0aae7b92d7f84178cdf25004be6ccc4b2858",
+  "../shared/exam-journal/k67-pilot-browser-transport.mjs": "a38d467efe78cc77dc5bc889d1d13fdf42f32f39057d40c0ea5da1ffae73a59c",
+  "../shared/exam-journal/k67-pilot-legacy-drain.mjs": "f72cc09561248980cb7276f61df5287f6225483ce7b92918b8e71637308f4727",
+  "../shared/exam-journal/k67-pilot-browser-policy.mjs": "d4afd6aa20e02bdc3daaa668e2a7f71eb0d76c3936a42df750daa87d822b9e6d",
+  "../shared/exam-journal/sealed-batch.mjs": "9507dbf9f26e78a3f0df7d18e78f697588a02571ac88bb90d8cec7340a7661f2",
+  "../shared/exam-journal/bridge-k67-paper-v1.mjs": "46b5d6ad18f385d5d548d8fd0a4993b66be476ebd7d152fa4babe8550cf14968",
+  "../shared/exam-journal/outbox.mjs": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f",
+  "../shared/exam-journal/recorder.mjs": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76",
+  "../shared/exam-journal/audio-delivery.mjs": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4"
 };
-export const ASSET_BUILD_ID="68f34518e0ec2a655a127fed7605fefc7cdf1598cc29ecd3b3b7b282fbd32c25";
+export const ASSET_BUILD_ID="7dff17ee04ff26eac85f73829a1c760e0749a5f6bc48c1fb8df8a2a79d9d2d2a";

@@ -75,7 +75,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     await context.route('**/*',route=>{
       const url=new URL(route.request().url());
       if(r2Fail&&url.hostname.endsWith('.r2.cloudflarestorage.com'))return route.abort();
-      return (url.origin===base&&(eofJournal||!url.pathname.includes('/exam-journal')))
+      const journalRequest=url.pathname.startsWith('/api/')&&/\/(?:exam-journal|journal-[^/]+)(?:\/|$)/.test(url.pathname);
+      return (url.origin===base&&(eofJournal||!journalRequest))
         ||(r2Smoke&&(url.hostname.endsWith('.r2.cloudflarestorage.com')||url.hostname==='tranhoangduc90.github.io'))
         ?route.continue():route.abort();
     });
