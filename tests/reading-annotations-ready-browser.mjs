@@ -25,8 +25,10 @@ test('Reading tải chậm vẫn mở được Highlight và lưu đúng chữ �
  // Fixture thao tác chọn chữ dùng đúng cầu nối đã được app phát ra, không có nháp học viên thật.
  const quote='Đoạn văn thử để học viên chọn một phần và lưu Highlight đúng vị trí.';
  await page.evaluate(quote=>{
-  const attempt={annotations:[]};window.annotationFixture={attempt,saves:0};
-  Object.assign(window.ReadingInteractionBridge,{current:()=>attempt,scope:()=> 'annotation-fixture',writable:()=>true,save:()=>{window.annotationFixture.saves++;return true;}});
+  const attempt={annotations:[]};window.annotationFixture={attempt,saves:0,feedback:''};
+  Object.assign(window.ReadingInteractionBridge,{current:()=>attempt,scope:()=> 'annotation-fixture',writable:()=>true,
+   annotationLimit:()=>1,annotationFits:()=>true,annotationFeedback:text=>window.annotationFixture.feedback=text,
+   save:()=>{window.annotationFixture.saves++;return true;}});
   document.querySelector('#app').innerHTML='<section id="readingView"><article class="cbt-reading-passage"><p id="fixture-passage"></p></article></section>';
   document.querySelector('#fixture-passage').textContent=quote;
   window.ReadingAnnotations.install();
@@ -37,6 +39,13 @@ test('Reading tải chậm vẫn mở được Highlight và lưu đúng chữ �
  });
  await page.locator('.cbt-annotation-toolbar').getByRole('button',{name:'Highlight',exact:true}).click();
  assert.equal(await page.locator('#fixture-passage .cbt-annotation-mark').innerText(),quote.slice(0,12));
- const result=await page.evaluate(()=>({count:window.annotationFixture.attempt.annotations.length,saves:window.annotationFixture.saves,text:document.querySelector('#fixture-passage').textContent}));
- assert.equal(result.count,1);assert(result.saves>0);assert.equal(result.text,quote);
+ await page.locator('#fixture-passage').evaluate(element=>{
+  const range=document.createRange();range.setStart(element.lastChild,4);range.setEnd(element.lastChild,10);
+  const selection=getSelection();selection.removeAllRanges();selection.addRange(range);document.dispatchEvent(new Event('selectionchange'));
+ });
+ await page.locator('.cbt-annotation-toolbar').getByRole('button',{name:'Note',exact:true}).click();
+ const result=await page.evaluate(()=>({count:window.annotationFixture.attempt.annotations.length,saves:window.annotationFixture.saves,
+  text:document.querySelector('#fixture-passage').textContent,feedback:window.annotationFixture.feedback}));
+ assert.equal(result.count,1);assert.equal(result.saves,1);assert.equal(result.text,quote);
+ assert.match(result.feedback,/tối đa 1 mục/);
 });
