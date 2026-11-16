@@ -216,7 +216,7 @@
       }).catch(()=>showNotice('Chưa lưu được nháp trên máy. Hãy tải bài làm về máy.','error'));
     }
     const serialized = JSON.stringify({
-      generation: miniGeneration,
+      generation: miniJourney?.view().generation ?? miniGeneration,
       studentRef: state.studentRef,
       studentName: state.studentName,
       studentIdentitySource: state.studentIdentitySource,
@@ -224,6 +224,8 @@
       clientSubmissionStudentRef: state.clientSubmissionStudentRef,
       examSessionToken: state.examSessionToken,
       attemptToken: state.attemptToken,
+      continuationSection: miniJourney?.view().continuationSection,
+      continuationResume: state.continuationResume,
       listeningStartedAt: state.listeningStartedAt,
       listeningDeadlineAt: state.listeningDeadlineAt,
       readingDeadlineAt: state.readingDeadlineAt,
@@ -899,11 +901,47 @@
       elements.resultReadyView.hidden = false;
       updateJourneyResultReady();
     }
+    if (stage === 'continuation-saved') updateContinuationSaved();
     if (stage === 'result') elements.resultView.hidden = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   let journeyResultReadyCopy;
+  let continuationSavedCard;
+  function updateContinuationSaved() {
+    if (!continuationSavedCard) {
+      const panel = document.createElement('section');
+      panel.className = 'panel';
+      const heading = document.createElement('h2');
+      const status = document.createElement('p');
+      status.setAttribute('role', 'status');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'button button-primary';
+      button.addEventListener('click', async () => {
+        const receipt = miniJourney.continuationReceipt();
+        if (!receipt || receipt.nextSection === 'result') return;
+        state.continuationResume = state.examSessionToken;
+        saveSession();
+        allowExamNavigation = true;
+        await miniJourney.close();
+        location.reload();
+      });
+      panel.append(heading, status, button);
+      elements.resultReadyView.before(panel);
+      views.push(panel);
+      continuationSavedCard = {panel,heading,status,button};
+    }
+    const {panel,heading,status,button} = continuationSavedCard;
+    const receipt = miniJourney.continuationReceipt();
+    const skill = miniJourney.view().continuationSection === 'listening' ? 'Listening' : 'Reading';
+    panel.hidden = false;
+    heading.textContent = receipt ? 'Đã nộp ' + skill : 'Đã lưu ' + skill + ' trên thiết bị';
+    status.textContent = miniJourney.message();
+    button.textContent = 'Tiếp tục Writing';
+    button.hidden = receipt?.nextSection !== 'writing';
+  }
+
   function updateJourneyResultReady() {
     const card = elements.resultReadyView;
     if (!miniJourney || !writingConfig || card.hidden) return;
@@ -3606,6 +3644,11 @@
       submitted = true;
       if (response.cbtOfflineReceipt) await miniCbt.applied('listening');
       elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
+      if (response.continuationSection) {
+        hideNotice();
+        setStage('continuation-saved');
+        return;
+      }
       if (miniJourney && !miniJourney.paper && writingConfig) {
         hideNotice();
       } else if (response.localOnly) {
@@ -3746,6 +3789,11 @@
       submitted = true;
       if (response.cbtOfflineReceipt) await miniCbt.applied('reading');
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
+      if (response.continuationSection) {
+        hideNotice();
+        setStage('continuation-saved');
+        return;
+      }
       if (response.examMode === 'read_first' && !response.completed) {
         showNotice(response.localOnly ? 'Reading đã lưu trên máy. Tiếp tục Listening khi bạn sẵn sàng.'
           : 'Reading đã được lưu. Tiếp tục Listening khi bạn sẵn sàng.', 'success');
@@ -4460,6 +4508,15 @@
     });
     if (!miniJourney.paper) miniJourney.changed.addEventListener('change', updateListeningSavedCopy);
     if (writingConfig) miniJourney.changed.addEventListener('change', updateJourneyResultReady);
+    if (['listening','reading'].includes(view.continuationSection)) {
+      miniJourney.changed.addEventListener('change', () => {
+        if (state.stage === 'continuation-saved') updateContinuationSaved();
+      });
+      if (view.nextSection==='result') {
+        setStage('continuation-saved');
+        return;
+      }
+    }
     if(view.needsListeningAcknowledgment)await showJourneyInterruption();
     else if(view.nextSection==='listening') {
       await window.TERM_TEST_BOOTSTRAP?.listeningScriptsReady;

@@ -615,7 +615,7 @@
       return;
     }
     if (miniJourney) {
-      const listeningFirst = miniJourney.view().examMode !== 'read_first';
+      const listeningFirst = miniJourney.needsAudio() && miniJourney.view().nextSection === 'listening';
       elements.bootstrapStart.disabled = preparing || (listeningFirst && (!previewHeard || (miniJourney.continuity() && !journeyPlayer?.canPlay)));
       if (listeningFirst && !elements.bootstrapStart.disabled) {
         window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart, true);
@@ -906,7 +906,7 @@
     try {
       // Chọn lại đúng học viên sau khi đi qua link cứu hộ vẫn ưu tiên lượt đã giữ trên thiết bị.
       if (await openJourneyLobby(false, false, preparationStatus)) return;
-      if (state.attemptToken) {
+      if (state.attemptToken && !state.continuationSection) {
         try {
           await resumeAfterListening();
           return;
@@ -920,6 +920,7 @@
         body: JSON.stringify({
           classCode,
           studentRef,
+          ...(testConfig.slug === 'term-test-1' && !listeningOnly ? {term1ContinuationVersion:1} : {}),
           retakeGrant: retakeGrant || undefined,
           examSessionToken: state.examSessionToken || undefined,
           legacyElapsedSeconds: legacyListeningResume ? Math.floor(legacyUiState.audioTime) : 0
@@ -932,12 +933,36 @@
         if (!recoverFromServerReset(error, student)) throw error;
         prepared = await prepareSession();
       }
+      const continuation = testConfig.slug === 'term-test-1' && !listeningOnly
+        && ['listening','reading','writing'].includes(prepared.continuationSection)
+        && prepared.continuationSection === prepared.nextSection && prepared.studentRef === studentRef;
       if ((sharedIdentity || demoJourneyEntry) && (!isUuid(prepared.examSessionToken)
           || (prepared.attemptToken && !isUuid(prepared.attemptToken))
           || (prepared.studentRef && prepared.studentRef !== studentRef)
-          || (state.examSessionToken && state.examSessionToken !== prepared.examSessionToken)))
+          || (state.examSessionToken && state.examSessionToken !== prepared.examSessionToken && !continuation)))
         throw new Error('Phiên trả về chưa khớp người học. Nháp cũ được giữ nguyên.');
       rememberPreparedStudent(studentRef);
+      if (continuation) {
+        const sameScope = state.examSessionToken === prepared.examSessionToken
+          && Number(state.generation) === Number(prepared.generation);
+        saveState({
+          examSessionToken: prepared.examSessionToken,
+          generation: Number(prepared.generation) || 0,
+          attemptToken: prepared.attemptToken || '',
+          continuationSection: prepared.continuationSection,
+          continuationResume: null,
+          ...(sameScope ? {} : {
+            drafts: {listening:{},reading:{},writing:{task1:'',task2:''}},
+            draftRevisions: {}, draftAckRevisions: {}, pendingSubmissions: {},
+            frozenAnswers: {listening:null,reading:null}, result: null, attemptReview: null,
+            writingStarted: false, writingSubmitted: false, writingDirty: false,
+            writingStartedAt: null, writingDeadlineAt: null, writingRevision: 0,
+          }),
+        });
+        window.K67_EXAM_ORDER.apply(state, prepared);
+        if (await openJourneyLobby(true,false,preparationStatus)) return;
+        throw new Error('Chưa mở được phần thi còn lại. Hãy thử lại khi có mạng.');
+      }
       const localListeningNewer = Number(state.draftRevisions?.listening || 0) > Number(prepared.listeningDraftRevision || 0);
       saveState({
         examSessionToken: prepared.examSessionToken,
@@ -1111,7 +1136,7 @@
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
     const journeyVersion=timerOnly?'&listeningTimer=2':journey?'&offlineJourney=20261107-term1-v1':'';
     await loadScript(cbtAssetUrl('listening-view-term1-k67-v1.js','20261115-v1'));
-    await loadScript('../shared/app-term1-k67-listening-first-frame-v1.js?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v9&continuity=20261110-v1&journalPilot=20261116-v1&reopenScore=20261117-v1'+journeyVersion);
+    await loadScript('../shared/app-term1-k67-listening-first-frame-v1.js?parallelEntry=20261117-v1&v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v9&continuity=20261110-v1&journalPilot=20261116-v1&reopenScore=20261117-v1'+journeyVersion);
     await listeningViewReady.promise;
     window.K67_PRODUCT_LISTENING_VIEW.attach();
     if (appReady) await appReady.promise;
@@ -1121,7 +1146,8 @@
 
   function miniCbtScope() {
     return { classCode, studentRef: state.studentRef, examSessionToken: state.examSessionToken,
-      attemptToken: state.attemptToken, generation: Number(state.generation) || 0 };
+      attemptToken: state.attemptToken, generation: Number(state.generation) || 0,
+      continuationSection: state.continuationSection || undefined };
   }
 
   function showListeningLoadError(error) {
@@ -1160,10 +1186,10 @@
       try{saved=JSON.parse(sessionStorage.getItem(storageKey)||'null');}catch{return false;}
       if(saved?.studentRef!==state.studentRef||saved?.examSessionToken!==state.examSessionToken)return false;
     }
-    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-term1-k67-listening-first-frame-v1.mjs?journalStart=20261114-term1-v1&v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
+    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-term1-k67-listening-first-frame-v1.mjs?parallelEntry=20261117-v1&journalStart=20261114-term1-v1&v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
     const scope=miniCbtScope();
     const existing=await findMiniJourney(scope,slug);
-    if(!existing&&(!prepare||state.completed))return false;
+    if (!existing && (!prepare || (state.completed && !scope.continuationSection))) return false;
     if(existing&&slug==='term-test-1'&&classCode==='IC2304'&&!prepare&&!recover&&navigator.onLine!==false){
       // Keep the local journey available if a server result cannot be confirmed.
       if (isUuid(state.attemptToken) &&
@@ -1188,8 +1214,24 @@
         pagesOnly:window.K67_RESCUE_AUDIO_SOURCE==='pages',
         onProgress:audioStatus.progress,onPhase:audioStatus.phase});
       if(!miniJourney){audioStatus.restore();return false;}
+      if (state.continuationResume === scope.examSessionToken && navigator.onLine !== false
+          && miniJourney.continuationReceipt()?.nextSection === 'writing') {
+        await miniJourney.close();
+        miniJourney = null;
+        return false;
+      }
       await verifyListeningPreparation(miniJourney.content,testConfig,AbortSignal.timeout(10000));
       if(miniJourney.activated()){audioStatus.restore();await enterJourney();return true;}
+      if (!miniJourney.needsAudio()) {
+        const section = miniJourney.view().continuationSection === 'reading' ? 'Reading' : 'Writing';
+        elements.bootstrapPreviewStep.hidden = true;
+        elements.bootstrapDownloadStep.dataset.state = 'complete';
+        elements.bootstrapStartStep.dataset.state = 'active';
+        elements.bootstrapStart.textContent = 'Bắt đầu ' + section;
+        elements.bootstrapStartStatus.textContent = 'Đồng hồ bắt đầu khi bạn bấm mở phần thi.';
+        audioStatus.finish('Đã lưu phần ' + section + ' trên thiết bị.', {ready:true});
+        return true;
+      }
       audioStatus.phase('Đang chuẩn bị trình phát…');
       revokePreview();
       if(miniJourney.continuity()){
@@ -1222,7 +1264,7 @@
     if(!['mini-test-lesson-5','term-test-1','term-test-2'].includes(slug)||!(sharedIdentity||demoJourneyEntry)||listeningOnly||(state.studentRef&&!demoJourneyEntry))return false;
     if(document.getElementById('miniJourneyRecovery'))return true;
     const mode=query.get('mode');
-    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-term1-k67-listening-first-frame-v1.mjs?journalStart=20261114-term1-v1&v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
+    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-term1-k67-listening-first-frame-v1.mjs?parallelEntry=20261117-v1&journalStart=20261114-term1-v1&v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
     const match=await miniJourneyRecovery(classCode,['lis_first','read_first'].includes(mode)?mode:'',slug);
     if(!match)return false;
     const form=document.createElement('form');form.id='miniJourneyRecovery';form.className='cbt-bootstrap-identity';
@@ -1435,7 +1477,7 @@
       if(preparing||elements.bootstrapStart.disabled)return;
       preparing=true;setStartAvailability();
       previewAudio.pause();
-      if(miniJourney.continuity()&&miniJourney.view().examMode!=='read_first')miniJourney.markListeningStart();
+      if(miniJourney.continuity()&&miniJourney.view().nextSection==='listening')miniJourney.markListeningStart();
       try{await miniJourney.begin();await enterJourney(true);}
       catch(error){
         if (miniJourney.activated()) showListeningLoadError(error);
@@ -1826,7 +1868,7 @@
     let restoreError=null;
     // Có mã lượt: xác minh trực tiếp, không dựng lại danh sách cả lớp để mở lại bài.
     // Lỗi giữ nguyên token/nháp và không tự tạo lượt mới hoặc bắt đầu đồng hồ.
-    if(classCode!=='CODEXDEMO806'&&!listeningOnly&&!timerOnly
+    if(classCode!=='CODEXDEMO806'&&!listeningOnly&&!timerOnly&&!state.continuationSection
       &&isUuid(state.studentRef)&&isUuid(state.attemptToken)) {
       const identity=elements.bootstrapStudent.closest('.cbt-bootstrap-identity');
       identity.hidden=true;
