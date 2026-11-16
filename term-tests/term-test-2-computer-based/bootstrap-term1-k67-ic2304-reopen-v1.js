@@ -966,6 +966,10 @@
         }
       });
       window.K67_EXAM_ORDER?.apply(state, prepared);
+      // A completed IC2304 result can reopen without the audio owner's device.
+      if (testConfig.slug === 'term-test-1' && classCode === 'IC2304' &&
+          prepared.listeningSubmitted && prepared.readingSubmitted &&
+          await resumeAfterListening({ completedOnly: true })) return;
       if(!prepared.listeningSharedClock && await openJourneyLobby(true,false,preparationStatus))return;
       if (state.pendingSubmissions?.listening && !prepared.listeningSubmitted && !state.attemptToken) {
         await enterListeningReadback(prepared);
@@ -1161,6 +1165,9 @@
     const existing=await findMiniJourney(scope,slug);
     if(!existing&&(!prepare||state.completed))return false;
     if(existing&&slug==='term-test-1'&&classCode==='IC2304'&&!prepare&&!recover&&navigator.onLine!==false){
+      // Keep the local journey available if a server result cannot be confirmed.
+      if (isUuid(state.attemptToken) &&
+          await resumeAfterListening({ completedOnly: true }).catch(() => false)) return true;
       try {
         await apiRequest('/api/term-tests/term-test-1/session/'+scope.examSessionToken+'/preview',{},3000);
       } catch(error) {
@@ -1287,7 +1294,7 @@
     await enterExam(started);
   }
 
-  async function resumeAfterListening() {
+  async function resumeAfterListening({ completedOnly = false } = {}) {
     const started = await apiRequest(`/api/term-tests/${testConfig.slug}/session/resume-attempt`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1299,6 +1306,11 @@
     });
     // Chỉ bỏ tải danh sách sau khi máy chủ trả đúng mã lượt vừa yêu cầu.
     if(started.attemptToken!==state.attemptToken)throw new Error('Mã lượt trả về không khớp bài đang lưu.');
+    const completedOnServer = testConfig.slug === 'term-test-1' && classCode === 'IC2304' &&
+      started.listeningSubmitted === true && started.readingSubmitted === true &&
+      Boolean(started.completedAt && started.writingSubmittedAt) &&
+      started.examSessionToken === state.examSessionToken;
+    if (completedOnly && !completedOnServer) return false;
     rememberPreparedStudent(state.studentRef);
     const orderDrafts=window.K67_EXAM_ORDER?.restoreDrafts(state,started);
     saveState({
@@ -1333,7 +1345,7 @@
     });
     window.K67_EXAM_ORDER?.apply(state, started);
     if(orderDrafts)saveState(orderDrafts);
-    if (await openJourneyLobby()) return;
+    if (!completedOnServer && await openJourneyLobby()) return true;
     if(classCode!=='CODEXDEMO806'&&!listeningOnly) {
       restoredIdentity=Object.freeze({testSlug:testConfig.slug,classCode,className:activeClassName,
         studentRef:state.studentRef,studentName:state.studentName,attemptToken:state.attemptToken});
@@ -1354,6 +1366,7 @@
       return;
     }
     await enterExam(started);
+    return true;
   }
 
   elements.bootstrapPreview.addEventListener('click', async () => {
