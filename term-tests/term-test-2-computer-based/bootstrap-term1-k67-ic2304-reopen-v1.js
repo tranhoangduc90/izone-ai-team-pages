@@ -1111,7 +1111,7 @@
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
     const journeyVersion=timerOnly?'&listeningTimer=2':journey?'&offlineJourney=20261107-term1-v1':'';
     await loadScript(cbtAssetUrl('listening-view-term1-k67-v1.js','20261115-v1'));
-    await loadScript('../shared/app-term1-k67-listening-first-frame-v1.js?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v9&continuity=20261110-v1&journalPilot=20261116-v1'+journeyVersion);
+    await loadScript('../shared/app-term1-k67-listening-first-frame-v1.js?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v9&continuity=20261110-v1&journalPilot=20261116-v1&reopenScore=20261117-v1'+journeyVersion);
     await listeningViewReady.promise;
     window.K67_PRODUCT_LISTENING_VIEW.attach();
     if (appReady) await appReady.promise;

@@ -5,9 +5,8 @@
   const product = 'term-test-1';
   const classCode = 'IC2304';
   const search = new URLSearchParams(location.search);
-  const endOfSupport = Date.parse('2026-11-17T00:00:00Z');
   if (search.get('class')?.trim().toUpperCase() !== classCode || navigator.onLine === false
-    || Date.now() >= endOfSupport || search.has('retakeGrant')) {
+    || search.has('retakeGrant')) {
     document.body.append(script);
     return;
   }
