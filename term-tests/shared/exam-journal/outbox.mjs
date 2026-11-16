@@ -160,7 +160,7 @@ export class IndexedOutbox {
       };
     });
   }
-  async acknowledge(binding, ids) {
+  async acknowledge(binding, ids, onAcknowledged) {
     return this.transaction((tx, done, fail) => {
       const events = tx.objectStore('events'), usage = tx.objectStore('usage'), read = usage.get('bytes');
       read.onsuccess = () => {
@@ -181,7 +181,11 @@ export class IndexedOutbox {
                 };
               }
             }
-            if (--remaining === 0) { usage.put(Math.max(0, used), 'bytes'); done(ids.length); }
+            if (--remaining === 0) {
+              usage.put(Math.max(0, used), 'bytes');
+              onAcknowledged?.(usage, new Set(unique));
+              done(ids.length);
+            }
           };
         }
       };

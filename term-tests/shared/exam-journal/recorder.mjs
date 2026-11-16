@@ -28,7 +28,7 @@ function assertAcknowledged(current,batch,reply){
 
 export function createRecorder({ outbox, context, transport, build, onHealth = () => {},
   uuid = () => crypto.randomUUID(), clock = () => Date.now(), monotonic = () => performance.now(),
-  maxPending = 128, maxMemoryBytes = 1024 * 1024 }) {
+  maxPending = 128, maxMemoryBytes = 1024 * 1024, durableBatches = false }) {
   const pageVisitId = uuid(), started = monotonic(), fields = new Map(), sequences = new Map(), fallback = [],losses=new Map(),writes=[];
     let sequence = 0, serial = Promise.resolve(), queued = 0, activeWrites=[],draining = false, flushing = false,liveFlushing=false,exitFlushing=false,memoryBytes = 0,
     lost = 0, nextTry = 0, failures = 0, stopped = false, lastBinding = '',storageReported=false,exitBytes=0,exitRequests=0;
@@ -179,8 +179,10 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
   }
   async function flush({ force = false, keepalive = false } = {}) {
     if (stopped || (!force && clock() < nextTry)) return { status: 'deferred' };
-    if(keepalive&&(exitFlushing||exitRequests))return flushPending(true)||{status:'deferred'};
-    if(keepalive||draining||flushing){const live=flushPending(keepalive);if(live)return live;}
+    if (!durableBatches) {
+      if(keepalive&&(exitFlushing||exitRequests))return flushPending(true)||{status:'deferred'};
+      if(keepalive||draining||flushing){const live=flushPending(keepalive);if(live)return live;}
+    }
     if(flushing)return {status:'deferred'};
     if(keepalive)exitFlushing=true;
     let current = scope(),exitReservation=0,exitReservedIds=[];
@@ -193,9 +195,9 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
       try {
         const durable = outbox.nextBatch ? await outbox.nextBatch(options) : null;
         if (durable) current = durable;
-        if (current) batch = durable?.events || await outbox.list(current.bindingId, options);
-      } catch {storageUnavailable=true;}
-      if (!batch.length && fallback.length) {
+        if (current) batch = durable?.events || (durableBatches ? [] : await outbox.list(current.bindingId, options));
+      } catch(error) {if(durableBatches)throw error;storageUnavailable=true;}
+      if (!durableBatches && !batch.length && fallback.length) {
         const active=scope();
         if(active)for(const row of fallback)if(row.binding===active.bindingId && row.auth?.ticketId!==active.auth?.ticketId){row.auth=active.auth;row.blocked=false;}
         const first=fallback.find(row=>!row.blocked && row.auth);
@@ -207,9 +209,15 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
       }
       if (!current) return { status:'no_identity' };
       if(keepalive){
-        let bytes=size({schemaVersion:1,bindingId:current.bindingId,auth:current.auth,events:[]}),count=0;
-        for(const event of batch){const added=size(event)+(count?1:0);if(count>=100||bytes+added>Math.min(46*1024,60*1024-exitBytes))break;bytes+=added;count++;}
-        batch=batch.slice(0,count);
+        const limit=Math.min(46*1024,60*1024-exitBytes);
+        if(durableBatches){
+          // A sealed send can leave on pagehide only if the entire packet fits.
+          if(size({schemaVersion:1,bindingId:current.bindingId,auth:current.auth,events:batch})>limit)return {status:'deferred'};
+        }else{
+          let bytes=size({schemaVersion:1,bindingId:current.bindingId,auth:current.auth,events:[]}),count=0;
+          for(const event of batch){const added=size(event)+(count?1:0);if(count>=100||bytes+added>limit)break;bytes+=added;count++;}
+          batch=batch.slice(0,count);
+        }
       }
       if (batch.length) {
         const body={schemaVersion:1,bindingId:current.bindingId,auth:current.auth,events:batch};
