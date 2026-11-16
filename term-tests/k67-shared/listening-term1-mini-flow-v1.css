@@ -1,0 +1,15 @@
+/* Let the document scroll while Listening displays the whole active part. */
+body.design67.cbt-mode:is([data-k67-design="term-test-1"],[data-k67-design="mini-test-lesson-5"]):has(#listeningView.cbt-listening-form:not([hidden])) #app {
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+body.design67.cbt-mode:is([data-k67-design="term-test-1"],[data-k67-design="mini-test-lesson-5"]):has(#listeningView.cbt-listening-form:not([hidden])) .page-shell {
+  flex: 1 0 auto;
+}
+
+body.design67.cbt-mode:is([data-k67-design="term-test-1"],[data-k67-design="mini-test-lesson-5"]) #listeningView.cbt-listening-form:not([hidden]) {
+  flex: 0 0 auto;
+  grid-template-rows: auto auto;
+}

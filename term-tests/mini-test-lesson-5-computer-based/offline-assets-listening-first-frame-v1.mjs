@@ -123,7 +123,8 @@ export const ASSETS=[
   "../shared/exam-journal/bridge-k67-paper-v1.mjs",
   "../shared/exam-journal/outbox.mjs",
   "../shared/exam-journal/recorder.mjs",
-  "../shared/exam-journal/audio-delivery.mjs"
+  "../shared/exam-journal/audio-delivery.mjs",
+  "../k67-shared/listening-term1-mini-flow-v1.css"
 ];
 export const ASSET_HASHES={
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -237,7 +238,7 @@ export const ASSET_HASHES={
   "../term-test-2-computer-based/listening-view-mini-k67-v1.js": "a9ab15348983db4fdfb9cbfa8239e1326a36eb84f40398664d61b4bd0f29f21b",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
   "./journey-mini-k67-listening-first-frame-v1.mjs": "fcd893d18c761f84673f5772c26599845d93eb8b96f70e0319744749f95909ed",
-  "index-listening-first-frame-v1.html": "f3efa1c6b5688e091f0027d0ebbbe2c19470f0760156a6971640502618ceb782",
+  "index-listening-first-frame-v1.html": "8b2186b1a660d4eba491e7926dab5eb7b912cdb54125fd5a099a4f6895546ae0",
   "journey-mini-k67-audio-v2.mjs": "7042805f2b89d9cff46031c5c5a628f1a09b0a17fc2e9ca2c2f194919b4d9176",
   "journey.mjs": "e6bdb3be01b65f1acd43e40ab29e4806c7f3759860a17b5f8d0381a4ce6dae1e",
   "offline-worker-listening-first-frame-v1.js": "d7c7014c8f062675114b90da36f5c816a2aa9a9d0187afd9bb4ae6fdd6c758c0",
@@ -250,6 +251,7 @@ export const ASSET_HASHES={
   "../shared/exam-journal/bridge-k67-paper-v1.mjs": "46b5d6ad18f385d5d548d8fd0a4993b66be476ebd7d152fa4babe8550cf14968",
   "../shared/exam-journal/outbox.mjs": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f",
   "../shared/exam-journal/recorder.mjs": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76",
-  "../shared/exam-journal/audio-delivery.mjs": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4"
+  "../shared/exam-journal/audio-delivery.mjs": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4",
+  "../k67-shared/listening-term1-mini-flow-v1.css": "79c530e3c31485e04869c5369d1f33610236cb667e4e0baa299e5db9bac5eec1"
 };
-export const ASSET_BUILD_ID="7dff17ee04ff26eac85f73829a1c760e0749a5f6bc48c1fb8df8a2a79d9d2d2a";
+export const ASSET_BUILD_ID="a0fd6e71e4c40b92d3db2a2fd61cb184f6585e2ba67f144748b3f4eaf03df4f7";
