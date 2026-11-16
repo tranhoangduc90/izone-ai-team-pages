@@ -107,11 +107,23 @@
     if(h.status!=='not_started'&&h.status!=='blocked'&&!h.jobs?.some(j=>j.status==='blocked')&&!(h.status==='verified'&&h.cta==='verified'))homeworkTimer=setTimeout(refreshHomework,4000);
   }
   function bodyOf(source){return {answers:structuredClone(source.answers||{}),annotations:structuredClone(source.annotations||[]),notes:source.notes||'',flags:[...(source.flags||[])]};}
+  const draftByteLength=operation=>new TextEncoder().encode(JSON.stringify(operation)).length;
+  const draftByteLimit=250*1024;
+  const largeDraftMessage='Nháp vượt dung lượng máy chủ. Rút ngắn hoặc xóa bớt Highlight/Note rồi thử lưu lại.';
+  function annotationFits(source,candidate,replacedId){
+    const body=bodyOf(source),items=body.annotations;
+    const operation={body,baseRevision:revision,mutationId:'00000000-0000-0000-0000-000000000000'};
+    body.annotations=replacedId?items.map(item=>item.id===replacedId?candidate:item):[...items,candidate];
+    const size=draftByteLength(operation);
+    if(size<=draftByteLimit-4096)return true;
+    body.annotations=items;
+    return Boolean(replacedId&&size<draftByteLength(operation));
+  }
   function saveBackup(){try{localStorage.setItem(backupKey,JSON.stringify(pending));}catch{state.error='Không lưu được bản dự phòng trên thiết bị.';}}
   function schedule(source){
     if(access?.teacher||blocked)return false;
-    pending={body:bodyOf(source),mutationId:crypto.randomUUID(),baseRevision:revision};saveBackup();
-    state.status='dirty';state.error=null;emit();clearTimeout(timer);timer=setTimeout(()=>flush().catch(()=>{}),500);return false;
+    pending={body:bodyOf(source),mutationId:crypto.randomUUID(),baseRevision:revision,runNo};state.status='dirty';state.error=null;saveBackup();
+    emit();clearTimeout(timer);timer=setTimeout(()=>flush().catch(()=>{}),500);return false;
   }
   async function flush(){
     if(blocked)throw Object.assign(new Error(blocked.code),{code:blocked.code,status:blocked.status});
@@ -119,13 +131,29 @@
     if(state.conflict)throw Object.assign(new Error('Bản máy chủ đã thay đổi. Giữ bản đang viết và đối chiếu trước khi ghi tiếp.'),{code:'DRAFT_REVISION_CONFLICT'});
     if(!pending)return;
     const operation=pending;operation.baseRevision=revision;saveBackup();
+    const wire={body:operation.body,mutationId:operation.mutationId,baseRevision:operation.baseRevision};
+    if(draftByteLength(wire)>draftByteLimit){
+      state.status='error';state.error=largeDraftMessage;emit();
+      throw Object.assign(new Error(largeDraftMessage),{code:'DRAFT_TOO_LARGE'});
+    }
     const captured=journalBinding;
     try{captured?.queued(operation.mutationId,operation.baseRevision);}catch{}
     state.status='saving';emit();
     processing=(async()=>{
       try{
-        const value=await request(prefix+'/draft'+(access?.config?.capabilities?.compactDraftAck?'?ack=compact-v1':''),json('PUT',operation),true,
-          {binding:captured,kind:'draft.exchange',traceId:operation.mutationId,baseRevision:operation.baseRevision});
+        const url=prefix+'/draft'+(access?.config?.capabilities?.compactDraftAck?'?ack=compact-v1':'');
+        const observation={binding:captured,kind:'draft.exchange',traceId:operation.mutationId,baseRevision:operation.baseRevision};
+        const send=()=>request(url,json('PUT',wire),false,observation);
+        let value;
+        try{value=await send();}
+        catch(error){
+          if(error.code!=='NETWORK_ERROR')throw error;
+          const latest=await request(prefix+'/draft',{},false);
+          if((latest.runNo||1)!==runNo||latest.revision<wire.baseRevision)
+            throw Object.assign(new Error('Bản nháp trên máy chủ đã đổi. Cần đối chiếu trước khi lưu.'),{code:'DRAFT_REVISION_CONFLICT'});
+          // Replay the identical mutation. The server returns the prior receipt or enforces CAS.
+          value=await send();
+        }
         revision=value.revision;runNo=value.runNo||runNo;state.savedAt=value.savedAt;state.completeness=value.completeness;
         if(pending===operation){pending=null;localStorage.removeItem(backupKey);state.status='saved';}
         else{pending.baseRevision=revision;saveBackup();state.status='dirty';}
@@ -149,8 +177,12 @@
     bindJournal(readingJournal);
     let restored=false;
     try{const backup=JSON.parse(localStorage.getItem(backupKey)||'null');
-      if(backup?.body&&backup.baseRevision===revision){pending=backup;draft.body=backup.body;state.status='dirty';restored=true;}
-      else if(backup?.body&&JSON.stringify(backup.body)!==JSON.stringify(draft.body)){state.error='Có bản chưa lưu trên thiết bị cần đối chiếu.';}
+      if(backup?.body&&backup.baseRevision===revision&&(backup.runNo===undefined||backup.runNo===runNo)){pending=backup;draft.body=backup.body;state.status='dirty';restored=true;}
+      else if(backup?.body&&JSON.stringify(backup.body)!==JSON.stringify(draft.body)){
+        // Preserve the unsent revision if an edit starts a new local draft.
+        localStorage.setItem(backupKey+':conflict',JSON.stringify(backup));
+        state.error='Có bản chưa lưu trên thiết bị cần đối chiếu.';
+      }
     }catch{}
     emit();refreshHomework();return {content,identity,draft,history:history.attempts,restored,config:access?.config};
   }
@@ -192,5 +224,5 @@
     if(!observer&&!observerStarting)restartObservation();
     return ()=>{if(practiceWatch===watch)practiceWatch=null;};
   }
-  window.ReadingServerClient={initialize,schedule,flush,submit,getAttempt,getDraft,getHistory,historyDetail,poll,stopPoll,changePerson,changeIdentity,reset,practice,savePractice,watchPractice,state,get identity(){return identity;},get revision(){return revision;},get runNo(){return runNo;},get initialHistory(){return initialHistory;},get access(){return access;}};
+  window.ReadingServerClient={initialize,schedule,flush,submit,getAttempt,getDraft,getHistory,historyDetail,poll,stopPoll,changePerson,changeIdentity,reset,practice,savePractice,watchPractice,annotationFits,state,get identity(){return identity;},get revision(){return revision;},get runNo(){return runNo;},get initialHistory(){return initialHistory;},get access(){return access;}};
 }());

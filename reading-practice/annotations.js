@@ -299,6 +299,11 @@
   function addAnnotation(kind) {
     syncStorageScope();
     if (!pendingSelection || !pendingSelection.root.isConnected || !bridge.writable()) return;
+    const limit=bridge.annotationLimit?.();
+    if (Number.isSafeInteger(limit) && state.annotations.length>=limit) {
+      bridge.annotationFeedback?.(`Bài này hỗ trợ tối đa ${limit} mục Highlight và Note. Bạn có thể xóa một mục để thêm mục mới.`);
+      return;
+    }
     const annotation = {
       id: createId(),
       rootKey: pendingSelection.rootKey,
@@ -310,6 +315,10 @@
       kind,
       note: ''
     };
+    if(bridge.annotationFits?.(annotation)===false){
+      bridge.annotationFeedback?.('Bản nháp gần giới hạn dung lượng. Hãy bôi đoạn ngắn hơn hoặc xóa một mục.');
+      return;
+    }
     state.annotations.push(annotation);
     const stored = saveState();
     if (!stored && !['dirty', 'saving'].includes(materialSaveState()?.status)) return;
@@ -466,7 +475,13 @@
     back.addEventListener('click', () => openNoteList(noteSkillFilter || annotation.skill));
     textarea.addEventListener('input', () => {
       if(!bridge.writable()){textarea.readOnly=true;return;}
-      annotation.note = textarea.value.slice(0, 4000);
+      const note=textarea.value.slice(0,4000);
+      if(bridge.annotationFits?.({...annotation,note},annotation.id)===false){
+        textarea.value=annotation.note||'';
+        bridge.annotationFeedback?.('Ghi chú vượt dung lượng bản nháp. Hãy rút ngắn ghi chú.');
+        return;
+      }
+      annotation.note=note;
       const stored = saveState();
       showNoteSaveStatus(saved, stored);
     });

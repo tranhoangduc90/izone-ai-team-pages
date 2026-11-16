@@ -78,7 +78,9 @@ function completed(){if(serverMode&&state?.serverAttempt)return state.serverAtte
 function timeLabel(iso){return iso?new Date(iso).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'chưa lưu';}
 function isResult(){return state.status==='review';}
 function writable(){return !teacher&&!serverClient?.state?.accessRevoked&&state?.status==='draft'&&(!headings()||homeworkDemo||window.ReadingSharePractice?.isAccepted()===true);}
-window.ReadingInteractionBridge={current:()=>state,scope:()=>content?.version+':'+state?.id,writable,save:persist,showPane:setMobilePane,closeGeneralNotes:()=>{generalNotesOpen=false;document.querySelector('#notes-panel')?.setAttribute('hidden','');}};
+window.ReadingInteractionBridge={current:()=>state,scope:()=>content?.version+':'+state?.id,writable,save:persist,showPane:setMobilePane,
+ annotationLimit:()=>300,annotationFeedback:toast,annotationFits:(candidate,replacedId)=>!serverMode||serverClient.annotationFits?.(state,candidate,replacedId)!==false,
+ closeGeneralNotes:()=>{generalNotesOpen=false;document.querySelector('#notes-panel')?.setAttribute('hidden','');}};
 function feedbackHtml(id){
   if(!isResult())return '';
   const f=state.feedback?.[id];if(!f)return '';

@@ -47,6 +47,8 @@ let PASSAGE={},HEADINGS=[],MCQ=[],SUMMARY=[],NAMES=[],ENDINGS=[],EXPERTS=[],ENDI
 let db={students:{}},studentId='',route='',routeParams=new URLSearchParams(),lastTick=0,lastSave=0;
 let saveError=false,simulatedOffline=false,toastTimeout,modalAction=null,fontSize=17,lease=null,queue=Promise.resolve(),debounce,networkFailed=false,busy=false,ready=false;
 let activeMs=0,leaseBaseline=0,lastPulse=0,checkpointKey='',pendingOperation=null,pulsePending=false,activating=false;
+let annotationLimit=100;
+const jsonByteLength=value=>new TextEncoder().encode(JSON.stringify(value)).length;
 const resultCache=new Map();
 let backgroundExplanation=false;
 let readingJournalBridge=null,readingJournalReady=null,readingJournalScope=null,readingJournalEpoch=0,readingJournalPending=0,lastJournalTimer='';
@@ -151,7 +153,7 @@ function showActivity(label,busy=true,onRetry){
  return ()=>{if(host.parentNode===toast){toast.replaceChildren();delete toast.dataset.gradingActivity;toast.hidden=true;}};
 }
 function notify(message){const t=document.querySelector('#toast');delete t.dataset.gradingActivity;t.textContent=message;t.hidden=false;clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.hidden=true,4000);}
-function footer(){return `<footer class="page-footer">IZONE · Reading thực chiến · Buổi ${LESSON.lesson}</footer>`;}
+function footer(){return `<footer class="page-footer">IZONE · Reading thực chiến · Buổi ${LESSON.lesson}${hasAnnotationBackup()?textBtn('Xem Highlight/Note đã sao lưu','show-annotation-backup'):''}</footer>`;}
 courseIdentity.subscribe(()=>{if(identity)notify('Người đã nhớ ở tab khác vừa đổi. Bài tại đây vẫn giữ nguyên người và nháp.');});
 async function loginSelected(id,classCode,{selection=null,remember=true}={}){
  const context=selection?courseIdentity.automaticContext(selection):courseIdentity.prepare(id,sharedEntry?CLASSES.find(c=>c.id===classCode)?.classCode:classCode);
@@ -201,6 +203,23 @@ async function changeStudent(){
 function completionCopy(a){const first=record()?.firstCompleted;return a.no===1?'Hoàn thành ngay từ lần đầu.':first&&first!==a.no?`Kết quả lượt luyện lại số ${a.no} · Lần hoàn thành đầu tiên: lượt ${first}.`:`Hoàn thành sau ${a.no-1} lần reset · Kết quả của lần làm bài số ${a.no}.`;}
 function identityBar(){return `<div class="identity-bar"><span><strong>${escape(identity?.name)}</strong> <span>· Lớp ${escape(identity?.classCode)}</span></span>${textBtn('Đổi người học','change-student')}</div>`;}
 function cacheKey(){return `reading-practice67-draft:${identity?.bindingId}`;}
+function annotationBackupKey(){return `${cacheKey()}:annotations:${current()?.id}`;}
+function hasAnnotationBackup(){
+ if(!identity||!current())return false;
+ try{return Boolean(localStorage.getItem(annotationBackupKey()));}catch{return false;}
+}
+function showAnnotationBackup(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(annotationBackupKey()));
+  if(saved?.attemptId!==current()?.id||!Array.isArray(saved.snapshot?.annotations))return;
+  const items=saved.snapshot.annotations.map(a=>`<li>${escape(a.quote)}${a.note?`<p>${escape(a.note)}</p>`:''}</li>`).join('');
+  const answers=Object.entries(saved.snapshot.answers||{}).filter(([,value])=>String(value).trim())
+   .map(([number,value])=>`<li>Câu ${escape(number)} · ${escape(value)}</li>`).join('');
+  openModal('Bản đã sao lưu trên thiết bị',
+   `<p>Bản trên thiết bị của lần làm này.</p>${answers?`<details><summary>Đáp án</summary><ul>${answers}</ul></details>`:''}<ol>${items}</ol>`,
+   'Đóng',()=>{});
+ }catch{notify('Chưa đọc được bản Highlight/Note trên thiết bị.');}
+}
 function snapshot(){const a=current();return{answers:a.answers,flags:a.flags,notes:a.notes,annotations:a.annotations,scroll:a.scroll,activeQuestion:a.activeQuestion,tab:a.tab,mobilePane:a.mobilePane||'passage',notesOpen:!!a.notesOpen,highlighted:a.highlighted,sequence:a.sequence,activeMs:Math.round(activeMs)};}
 function persist(schedule=true){
  if(!current())return true;
@@ -211,6 +230,7 @@ function persist(schedule=true){
 function showStorageError(){app.innerHTML=`<section class="notice-panel card card-pad"><h1>Chưa lưu được bài trên thiết bị</h1><p>Đồng hồ đã dừng. Giữ nguyên tab và cho phép trình duyệt lưu dữ liệu để bảo toàn phần vừa nhập.</p>${btn('Thử lưu lại','retry-save')}</section>`;}
 function apply(response,{preserve=false}={}){
  const journalContext=response.readingJournal;
+ if(Number.isSafeInteger(response.annotationLimit)&&response.annotationLimit>0)annotationLimit=response.annotationLimit;
  response=expandPracticeHistory(response,{identity,attempts:record()?.attempts});
  for(const attempt of response.attempts||[])if(attempt.detailsLoaded===false)resultCache.delete(attempt.id);
  serverCapabilities=response.capabilities||{};
@@ -261,34 +281,103 @@ async function sendPulse(){
 function savedStatus(text){const el=document.querySelector('.autosave-status');if(el)el.textContent=text;}
 function stopLocal(reason){consumeTime();rememberScroll();lastTick=0;clearTimeout(debounce);if(current()){current().status='paused';current().pauseReason=reason;persist(false);observeReadingTimer('paused',reason);}closeModal();if(!saveError)navigate('resume');}
 function tick(){if(current()?.status!=='running'||route!=='exercise')return;if(document.hidden||!navigator.onLine){pause(document.hidden?'hidden':'offline');return;}consumeTime();updateProgress();if(performance.now()-lastSave>900)persist(false);if(current().remainingMs<=0){finish('timeout');return;}if(performance.now()-lastPulse>4500)sendPulse();}
+function clearPendingOperation(){
+ pendingOperation=null;
+ try{sessionStorage.removeItem(`reading-operation:${identity.bindingId}`);}catch{}
+}
 async function perform(action,payload){
  if(busy||activating)return;busy=true;clearTimeout(debounce);
  const op=pendingOperation?.action===action?pendingOperation:{action,payload:{operationId:crypto.randomUUID(),...payload}};pendingOperation=op;
  const clearActivity=action==='submit'?showActivity('Đang gửi bài…'):null;
  try{sessionStorage.setItem(`reading-operation:${identity.bindingId}`,JSON.stringify(op));persist(false);
- await serial(async()=>{const response=await request(`/${action}`,op.payload);pendingOperation=null;sessionStorage.removeItem(`reading-operation:${identity.bindingId}`);apply(response);persist(false);lastPulse=performance.now();
+ await serial(async()=>{const response=await request(`/${action}`,op.payload);clearPendingOperation();apply(response);persist(false);lastPulse=performance.now();
   if(current()?.status==='submitted'){lastTick=0;await loadResult(current().no);}else if(response.lease){
    // Đề mở sau ACK tạo lượt. Gửi mốc kích hoạt cùng lúc mở đề, không chờ thêm ACK để chạy giờ.
    const id=current().id,proof=lease;current().status='running';lastTick=performance.now();activating=true;busy=false;observeReadingTimer('running','user');navigate('exercise');
    try{const activated=await request('/activate',{attemptId:id,lease:proof});if(current()?.id===id&&lease?.id===proof.id&&current().status==='running'&&route==='exercise')apply(activated,{preserve:true});}finally{setActivating(false);}
   }else{lastTick=0;current().status='paused';lease=null;navigate('resume');}
- });}catch(e){stopLocal(e.code);notify(e.message);}finally{clearActivity?.();busy=false;}
+ });}catch(e){
+  if(['ANNOTATION_LIMIT','DRAFT_TOO_LARGE','INVALID_DRAFT'].includes(e.code))clearPendingOperation();
+  stopLocal(e.code);notify(e.message);
+ }finally{clearActivity?.();busy=false;}
 }
 function begin(){if(current()?.status==='submitted'){loadResult(current().no);return;}if(current())return resume();perform('begin',{owner:TAB});}
+let readingStatusPending=false;
+async function retryPendingOperation(operation){
+ if(readingStatusPending||busy)return;
+ readingStatusPending=true;
+ const bindingId=identity?.bindingId;
+ try{
+  const saved=await request('/state');
+  if(identity?.bindingId!==bindingId||saved.identity?.bindingId!==bindingId||pendingOperation!==operation)return;
+  const latest=saved.attempts?.at(-1);
+  if(latest?.status==='submitted'||latest&&operation.payload.attemptId&&latest.id!==operation.payload.attemptId){
+   clearPendingOperation();apply(saved);recoverLocal();
+   if(latest.status==='submitted')await loadResult(latest.no);
+   else navigate('resume');
+   return;
+  }
+  await perform(operation.action,operation.payload);
+ }catch(error){notify(error.message);}
+ finally{readingStatusPending=false;}
+}
 function resume(){
  if(!navigator.onLine){notify('Khôi phục kết nối trước khi tiếp tục.');return;}
- if(pendingOperation){perform(pendingOperation.action,pendingOperation.payload);return;}
+ if(pendingOperation){void retryPendingOperation(pendingOperation);return;}
  const a=current();if(!a)return begin();
  let recovery;
- try{const local=JSON.parse(localStorage.getItem(cacheKey()));if(local?.attemptId===a.id&&local.lease&&local.snapshot.sequence>=a.sequence)recovery={snapshot:local.snapshot,lease:local.lease};}catch{}
+ try{const local=JSON.parse(localStorage.getItem(cacheKey()));
+  if(local?.attemptId===a.id&&local.lease?.id===a.leaseId&&local.snapshot.sequence>=a.sequence){
+   recovery={snapshot:local.snapshot,lease:local.lease};
+   if(recovery.snapshot.annotations.length>annotationLimit||!fitsResume(a.id,recovery)){
+    reviewRecoveryAnnotations(a.id,local);
+    return;
+   }
+  }
+ }catch{}
  perform('resume',{attemptId:a.id,owner:TAB,...(recovery?{recovery}:{})});
+}
+function fitsResume(attemptId,recovery){
+ return jsonByteLength({attemptId,owner:TAB,operationId:TAB,recovery})<=512*1024;
+}
+function reviewRecoveryAnnotations(attemptId,local){
+ const annotations=local.snapshot.annotations;
+ const choices=annotations.map((a,index)=>`<li><label><input type="checkbox" value="${index}" checked> ${escape(a.quote)}${a.note?` · ${escape(a.note)}`:''}</label></li>`).join('');
+ const selected=()=>Array.from(modal.querySelectorAll('input:checked'),input=>annotations[Number(input.value)]);
+ const recover=items=>({snapshot:{...local.snapshot,annotations:items},lease:local.lease});
+ const body=`<p>Chọn tối đa ${annotationLimit} mục vừa dung lượng gửi. Đáp án được giữ. Bản Highlight/Note đầy đủ vẫn xem được trên thiết bị.</p><p role="status" data-recovery-status></p><ol>${choices}</ol>`;
+ let selectedRecovery;
+ openModal('Chọn Highlight/Note để tiếp tục',body,'Tiếp tục với mục đã chọn',()=>{
+  if(current()?.id!==attemptId||!selectedRecovery)return;
+  try{localStorage.setItem(annotationBackupKey(),JSON.stringify(local));}
+  catch{notify('Chưa giữ được bản Highlight/Note đầy đủ trên thiết bị. Hãy giữ trang này mở.');return;}
+  perform('resume',{attemptId,owner:TAB,recovery:selectedRecovery});
+ });
+ const update=()=>{
+  const items=selected(),value=recover(items),valid=items.length<=annotationLimit&&fitsResume(attemptId,value);
+  selectedRecovery=valid?value:null;
+  modal.querySelector('[data-recovery-status]').textContent=`${items.length} mục đã chọn${valid?'':' · hãy bỏ chọn thêm mục'}`;
+  modal.querySelector('[data-action="confirm-modal"]').disabled=!valid;
+ };
+ modal.querySelector('ol').addEventListener('change',update);
+ update();
 }
 function pause(reason='manual',shouldRender=true){
  const a=current();if(!a||a.status!=='running'||a.owner!==TAB)return;
- consumeTime();rememberScroll();persist(false);const input={attemptId:a.id,lease,snapshot:snapshot()};
+ consumeTime();rememberScroll();if(!persist(false))return;
+ const input={attemptId:a.id,lease,snapshot:snapshot()};
  a.status='paused';a.pauseReason=reason;lastTick=0;clearTimeout(debounce);closeModal();
  observeReadingTimer('paused',reason);
- if(navigator.onLine)serial(async()=>{try{const response=await request('/pause',input,false,true);if(current()?.id===input.attemptId&&lease?.id===input.lease.id){apply(response,{preserve:true});persist(false);if(current().status==='submitted')await loadResult(current().no);}}catch(e){notify(e.message);}});
+ const keepalive=reason==='hidden'||reason==='closed';
+ // A large draft is already stored locally and can be recovered with the same lease.
+ if(navigator.onLine&&(!keepalive||jsonByteLength(input)<=64*1024))serial(async()=>{
+  try{
+   const response=await request('/pause',input,false,keepalive);
+   if(current()?.id===input.attemptId&&lease?.id===input.lease.id){
+    apply(response,{preserve:true});persist(false);if(current().status==='submitted')await loadResult(current().no);
+   }
+  }catch(e){notify(e.message);}
+ });
  if(shouldRender&&!saveError)navigate('resume');
 }
 function finish(method){if(busy||activating||!current()||!['running','paused'].includes(current().status))return;consumeTime();rememberScroll();lastTick=0;persist(false);perform('submit',{attemptId:current().id,lease,snapshot:snapshot(),method});}
@@ -450,7 +539,7 @@ function exercise() {
     fontSize=17;
     try{const preference=JSON.parse(localStorage.getItem(cacheKey()+':font'));if(preference?.attemptId===a.id&&[90,100,110,120].includes(preference.percent))fontSize=17*preference.percent/100;}catch{}
     app.innerHTML=`<header class="topbar"><a class="design-brand" href="#docs"><img class="m170-logo" src="../shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"></a><h1>Reading thực chiến · Buổi ${LESSON.lesson}</h1><details class="identity-options homework-options"><summary><span class="homework-student">${escape(student()?.name)} · </span>Lần ${a.no}</summary><div class="identity-options-body"><p>${escape(student()?.name)} · Lớp ${escape(identity?.classCode)}</p>${textBtn('Tạm dừng','pause')}${textBtn('Reset bài','request-reset')}${textBtn('Tô đoạn đang chọn','highlight')}${identity?.documentUrl?'<a href="#docs">Xem tài liệu bài tập ↗</a>':'<a href="#docs">Thông tin bài luyện</a>'}</div></details></header>
-    <div class="page-shell"><section id="readingView" class="panel test-panel cbt-test-form" data-design-pane="${a.mobilePane||'passage'}" aria-label="Bài Reading"><div class="cbt-semantic-stage questions-grid"><div class="cbt-semantic-pane"><div class="cbt-toolbar"><div class="cbt-test-heading"><div><h2>Reading - ${total()} câu</h2></div><div class="cbt-toolbar-controls"><nav class="cbt-part-nav" aria-label="Passage"><button type="button" class="cbt-part-button is-active" data-action="jump" data-question="${firstQuestion()}">${LESSON.passage?`Passage ${LESSON.passage}`:'Bài đọc'} · Q${firstQuestion()}–${lastQuestion()}</button></nav><div class="cbt-text-size"><button type="button" class="cbt-tool-button" data-action="font-down" aria-label="Giảm cỡ chữ">A−</button><strong id="font-percent">${Math.round(fontSize/17*100)}%</strong><button type="button" class="cbt-tool-button" data-action="font-up" aria-label="Tăng cỡ chữ">A+</button></div><button type="button" class="cbt-tool-button" data-action="notes">Notes</button></div><div class="cbt-heading-actions"><div id="timer" class="cbt-reading-clock">Còn <strong>${timeLabel(a.remainingMs)}</strong><span>/ ${FULL_TIME/60000} phút</span></div><span class="answer-count" id="answered-progress"></span><span class="autosave-status" data-status="saved">Đã lưu trên thiết bị</span><button type="button" class="button button-primary cbt-heading-submit" data-action="request-submit">Nộp bài Reading</button></div></div><nav class="reading-view-switch" aria-label="Vùng Reading"><button type="button" data-action="mobile-pane" data-pane="passage" aria-pressed="${(a.mobilePane||'passage')==='passage'}">Bài đọc</button><button type="button" data-action="mobile-pane" data-pane="questions" aria-pressed="${a.mobilePane==='questions'}">Câu hỏi</button></nav></div><div class="cbt-content-viewport" data-font-size="${Math.round(fontSize/17*100)}"><section class="cbt-reading-section"><article class="cbt-reading-passage" id="passage-scroll" aria-label="Bài đọc"><header class="cbt-passage-header"><span>PASSAGE ${LESSON.passage}</span><h3>${escape(LESSON.title)}</h3></header><div class="cbt-passage-body"><p class="passage-subtitle">${escape(LESSON.subtitle)}</p>${Object.entries(PASSAGE).map(([letter,text])=>`<div id="paragraph-${letter}" class="cbt-passage-paragraph paragraph ${a.highlighted.includes(letter)?'highlighted':''}" data-paragraph="${letter}">${isRobots()?'':`<span class="cbt-paragraph-label">${letter}</span>`}<p>${escape(text)}</p></div>`).join('')}${isRobots()?`<div class="passage-footnotes"><p>* terraforming: modifying a planet’s atmosphere to suit human needs</p><p>** singularity: the point when robots will be able to start creating ever more sophisticated versions of themselves</p></div>`:''}</div></article><article class="cbt-reading-questions" id="question-scroll" aria-label="Câu hỏi"></article></section></div></div></div><div class="cbt-question-nav-wrap"><div class="cbt-review-bar"><span id="review-count"></span><button type="button" class="cbt-review-open" data-action="review">Rà soát bài</button></div><nav class="cbt-question-nav" aria-label="Đi đến câu hỏi">${Object.keys(KEY).map(n=>`<button type="button" class="cbt-question-button" data-action="jump" data-question="${n}" aria-label="Câu ${n}">${n}</button>`).join('')}</nav><aside id="review-panel" class="cbt-review-panel" hidden></aside></div></section></div><aside class="cbt-note-panel" id="notes-panel" hidden><header><strong>Ghi chú cá nhân</strong><button type="button" class="cbt-review-close" data-action="notes" aria-label="Đóng ghi chú">×</button></header><div class="homework-notes"><label for="notes">Tự lưu cùng lần làm bài</label><textarea id="notes" placeholder="Nén ý, từ khóa hoặc điểm cần kiểm lại…">${escape(a.notes)}</textarea></div></aside><footer class="reading-demo-footer">IZONE · Reading thực chiến · Buổi ${LESSON.lesson}</footer>`;
+    <div class="page-shell"><section id="readingView" class="panel test-panel cbt-test-form" data-design-pane="${a.mobilePane||'passage'}" aria-label="Bài Reading"><div class="cbt-semantic-stage questions-grid"><div class="cbt-semantic-pane"><div class="cbt-toolbar"><div class="cbt-test-heading"><div><h2>Reading - ${total()} câu</h2></div><div class="cbt-toolbar-controls"><nav class="cbt-part-nav" aria-label="Passage"><button type="button" class="cbt-part-button is-active" data-action="jump" data-question="${firstQuestion()}">${LESSON.passage?`Passage ${LESSON.passage}`:'Bài đọc'} · Q${firstQuestion()}–${lastQuestion()}</button></nav><div class="cbt-text-size"><button type="button" class="cbt-tool-button" data-action="font-down" aria-label="Giảm cỡ chữ">A−</button><strong id="font-percent">${Math.round(fontSize/17*100)}%</strong><button type="button" class="cbt-tool-button" data-action="font-up" aria-label="Tăng cỡ chữ">A+</button></div><button type="button" class="cbt-tool-button" data-action="notes">Notes</button></div><div class="cbt-heading-actions"><div id="timer" class="cbt-reading-clock">Còn <strong>${timeLabel(a.remainingMs)}</strong><span>/ ${FULL_TIME/60000} phút</span></div><span class="answer-count" id="answered-progress"></span><span class="autosave-status" data-status="saved">Đã lưu trên thiết bị</span><button type="button" class="button button-primary cbt-heading-submit" data-action="request-submit">Nộp bài Reading</button></div></div><nav class="reading-view-switch" aria-label="Vùng Reading"><button type="button" data-action="mobile-pane" data-pane="passage" aria-pressed="${(a.mobilePane||'passage')==='passage'}">Bài đọc</button><button type="button" data-action="mobile-pane" data-pane="questions" aria-pressed="${a.mobilePane==='questions'}">Câu hỏi</button></nav></div><div class="cbt-content-viewport" data-font-size="${Math.round(fontSize/17*100)}"><section class="cbt-reading-section"><article class="cbt-reading-passage" id="passage-scroll" aria-label="Bài đọc"><header class="cbt-passage-header"><span>PASSAGE ${LESSON.passage}</span><h3>${escape(LESSON.title)}</h3></header><div class="cbt-passage-body"><p class="passage-subtitle">${escape(LESSON.subtitle)}</p>${Object.entries(PASSAGE).map(([letter,text])=>`<div id="paragraph-${letter}" class="cbt-passage-paragraph paragraph ${a.highlighted.includes(letter)?'highlighted':''}" data-paragraph="${letter}">${isRobots()?'':`<span class="cbt-paragraph-label">${letter}</span>`}<p>${escape(text)}</p></div>`).join('')}${isRobots()?`<div class="passage-footnotes"><p>* terraforming: modifying a planet’s atmosphere to suit human needs</p><p>** singularity: the point when robots will be able to start creating ever more sophisticated versions of themselves</p></div>`:''}</div></article><article class="cbt-reading-questions" id="question-scroll" aria-label="Câu hỏi"></article></section></div></div></div><div class="cbt-question-nav-wrap"><div class="cbt-review-bar"><span id="review-count"></span><button type="button" class="cbt-review-open" data-action="review">Rà soát bài</button></div><nav class="cbt-question-nav" aria-label="Đi đến câu hỏi">${Object.keys(KEY).map(n=>`<button type="button" class="cbt-question-button" data-action="jump" data-question="${n}" aria-label="Câu ${n}">${n}</button>`).join('')}</nav><aside id="review-panel" class="cbt-review-panel" hidden></aside></div></section></div><aside class="cbt-note-panel" id="notes-panel" hidden><header><strong>Ghi chú cá nhân</strong><button type="button" class="cbt-review-close" data-action="notes" aria-label="Đóng ghi chú">×</button></header><div class="homework-notes"><label for="notes">Tự lưu cùng lần làm bài</label><textarea id="notes" placeholder="Nén ý, từ khóa hoặc điểm cần kiểm lại…">${escape(a.notes)}</textarea></div></aside><footer class="reading-demo-footer">IZONE · Reading thực chiến · Buổi ${LESSON.lesson}${hasAnnotationBackup()?textBtn('Xem Highlight/Note đã sao lưu','show-annotation-backup'):''}</footer>`;
     renderQuestions(); updateProgress(); setActivating(activating);
     const questionNav=document.querySelector('.cbt-question-nav');
     questionNav.style.setProperty('--reading-question-count',String(total()));
@@ -751,7 +840,7 @@ document.addEventListener('click',event=>{
   'open-assignment':()=>navigate('login'),'show-docs':()=>identity?.documentUrl?window.open(identity.documentUrl,'_blank','noopener'):navigate('docs'),
   'change-student':changeStudent,
   begin,resume,pause:()=>pause(),'request-reset':requestReset,'request-submit':requestSubmit,'show-result':()=>loadResult(a.no),
-  'close-modal':closeModal,'confirm-modal':()=>{const fn=modalAction;closeModal();fn?.();},
+  'close-modal':closeModal,'confirm-modal':()=>{const fn=modalAction;closeModal();fn?.();},'show-annotation-backup':showAnnotationBackup,
   tab:()=>switchTab(target.dataset.tab),jump:()=>jump(n),passage:()=>changePassage(target.dataset.passage),
   flag:()=>{if(!writable())return;a.flags=a.flags.includes(n)?a.flags.filter(x=>x!==n):[...a.flags,n];persist();updateProgress();},
   review:()=>review(),'review-filter':()=>review(target.dataset.filter),'close-review':()=>document.querySelector('#review-panel').hidden=true,
@@ -792,7 +881,11 @@ function recoverLocal(){
  const serverSequence=a.sequence;
  try{const local=JSON.parse(localStorage.getItem(cacheKey()));
   if(local?.attemptId===a.id&&local.lease?.id===a.leaseId&&local.snapshot.sequence>=a.sequence){Object.assign(a,local.snapshot);a.remainingMs=Math.min(a.remainingMs,local.remainingMs);lease=local.lease;activeMs=local.snapshot.activeMs;pendingOperation=pendingOperation||local.pendingOperation||null;}
-  else{lease=null;activeMs=0;}
+  else{
+   if(local?.attemptId===a.id&&local.snapshot?.sequence>serverSequence&&!hasAnnotationBackup())
+    localStorage.setItem(annotationBackupKey(),JSON.stringify(local));
+   lease=null;activeMs=0;
+  }
   emitReadingJournal('restore',{state:local?local?.attemptId===a.id&&local.lease?.id===a.leaseId&&local.snapshot.sequence>=serverSequence?'local':'rejected':'server',
    serverSequence,...(Number.isSafeInteger(local?.snapshot?.sequence)?{localSequence:local.snapshot.sequence}:{}),
    leaseMatches:Boolean(local&&local.lease?.id===a.leaseId),attemptMatches:Boolean(local&&local.attemptId===a.id),remainingMs:Math.max(0,Math.round(a.remainingMs))});
@@ -824,6 +917,13 @@ explanationDialog.addEventListener('pointercancel',()=>{explanationPressedOutsid
 explanationDialog.addEventListener('close',()=>{observeReadingDialog(explanationDialog,'explanation','closed');explanationTrigger?.focus();explanationTrigger=null;});
 window.addEventListener('resize',()=>{if(explanationDialog.open)setTimeout(alignExplanationEvidence,60);});
 window.ReadingInteractionBridge={current,questionIds:()=>LESSON.questionIds,scope:()=>`${identity?.bindingId}:${current()?.id||''}`,writable,
+ annotationLimit:()=>annotationLimit,annotationFeedback:notify,
+ annotationFits:(candidate,replacedId)=>{
+  const draft=snapshot(),items=draft.annotations;
+  draft.annotations=replacedId?items.map(item=>item.id===replacedId?candidate:item):[...items,candidate];
+  const size=jsonByteLength(draft);
+  return size<=512*1024-4096||Boolean(replacedId&&size<jsonByteLength({...draft,annotations:items}));
+ },
  revealAnnotation:annotation=>{const id=/^reading-(?:passage|questions)-(.+)$/.exec(annotation.rootKey||'')?.[1];if(LESSON.passages?.some(p=>p.id===id))changePassage(id);},
  save:()=>{if(!writable())return false;consumeTime();return persist();},showPane:setMobilePane,
  closeGeneralNotes:()=>{const panel=document.querySelector('#notes-panel');if(panel)panel.hidden=true;if(current())current().notesOpen=false;}};
