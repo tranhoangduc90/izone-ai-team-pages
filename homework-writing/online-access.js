@@ -1,6 +1,6 @@
 import {createCourseStudentIdentity} from './identity/course-student-identity.js';
 import {createStudentIdentityMemory} from './identity/student-identity.js';
-import {mountStudentEntry} from './student-entry.js?v=20261111-self-match';
+import {mountStudentEntry} from './student-entry.js?v=20261116-single-confirmation';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const changed=()=>Object.assign(Error('Người hoặc bài đang mở đã đổi. Chưa dùng phản hồi cũ.'),{stale:true,handled:true});
@@ -17,7 +17,7 @@ export function frontendConfiguration(config,location=globalThis.location){
   if((api.protocol!=='https:'&&!(api.protocol==='http:'&&api.hostname==='127.0.0.1'&&location.hostname==='127.0.0.1'))||api.username||api.password||api.search||api.hash||!api.pathname.endsWith('/api'))throw Error('API Homework online chưa đúng phạm vi.');
   return {mode:'online',studentEntry:config.studentEntry===true,studentEntryMemory:config.studentEntryMemory,apiBase:api.href.replace(/\/$/,''),ssoScript:new URL(config.ssoScript||'../shared/teacher-single-sign-on.js',location.href).href};
 }
-export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=>{},onReady=()=>{}}={}){
+export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=>{},onReady=()=>{},showOpening,compactStudentEntry=false}={}){
   const query=new URLSearchParams(location.search);let context=query.has('documentId')?{documentId:query.get('documentId'),assignmentId:query.get('assignment')}:null;
   if(context&&(!/^[A-Za-z0-9_-]{20,200}$/.test(context.documentId||'')||!context.assignmentId))throw Error('Link Docs chưa chỉ rõ bài Homework.');
   let intent=['teacher','operator'].includes(query.get('mode'))?query.get('mode'):query.get('teacher')==='1'?'teacher':'student';
@@ -81,7 +81,9 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
     course.pin(value.identity.ownerId,{classRef:value.identity.courseId});const u=new URL(location.href);if(u.searchParams.has('fresh')){u.searchParams.delete('fresh');try{history.replaceState(history.state,'',u);}catch{}}return rememberSession(value,value.identity);
   }
   async function open(root,{forceChoose=false}={}){
-    invalidate();const stamp=epoch;root.innerHTML='<p class="loading" role="status">Đang kiểm tra quyền vào Homework…</p>';
+    invalidate();const stamp=epoch;
+    if(showOpening)showOpening();
+    else root.innerHTML='<p class="loading" role="status">Đang kiểm tra quyền vào Homework…</p>';
     publicConfig=await raw('/access/config');if(stamp!==epoch)throw changed();
     if(publicConfig.version!==1||publicConfig.product!=='homework-writing-5667-local'||publicConfig.mode!=='online'||publicConfig.teacherConsumer!=='homeworkwriting')throw Error('Máy chủ chưa bật đúng điểm nối Homework online.');
     if(teacherIntent())return openTeacher(root,stamp);
@@ -140,6 +142,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
       let ready=initial,credential='';
       const picker=mountStudentEntry(root,{
         personal:!!context,
+        compact:compactStudentEntry&&!!context,
         rememberedDifferent:row=>{
           if(scopedIdentity(row)){const stored=scopedRemembered();return stored&&stored!==row.studentRef;}
           const stored=memory.read();
