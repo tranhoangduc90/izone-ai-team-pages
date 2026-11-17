@@ -232,8 +232,8 @@ async function openDetail(studentRef){
  if(hasThreadDraft()&&!window.confirm('Có lời góp ý chưa gửi. Bỏ bản nháp này để mở bài khác?'))return;
  composer=null;detailSession=null;
  const current=epoch;detailVersion=null;detailSequence++;activitySequence++;selected={studentRef,ref:row.sessionRef};$('detail').hidden=false;if(!$('detail').open)$('detail').showModal();$('detail-name').textContent=row.displayName;delete $('detail-content').dataset.session;$('detail-content').textContent=row.sessionRef?'Đang tải bài…':'Học viên chưa bắt đầu bài làm.';$('comment-form').hidden=true;$('comment-submit').disabled=true;$('comment-text').value='';$('comment-status').textContent='';
- if(row.sessionRef){try{await readDetail(row.sessionRef);}catch(e){if(current===epoch&&selected?.ref===row.sessionRef)report(e);}}
  $('detail').scrollTop=0;
+ if(row.sessionRef){try{await readDetail(row.sessionRef);}catch(e){if(current===epoch&&selected?.ref===row.sessionRef)report(e);}}
 }
 async function enter(){
  const current=++epoch;
