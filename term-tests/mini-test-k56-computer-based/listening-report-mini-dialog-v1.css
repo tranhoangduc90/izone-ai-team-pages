@@ -1,0 +1,22 @@
+/* Scoped Mini adaptation of its existing identity/interruption dialog. */
+#k67ListeningReportChoices {
+  width: min(510px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 26px 20px 20px;
+  border: 0;
+  border-radius: 14px;
+  background: white;
+  color: #173b67;
+  box-shadow: 0 20px 60px #14284640;
+  font: 15px/1.5 system-ui, sans-serif;
+}
+#k67ListeningReportChoices::backdrop { background: #10223b80; }
+#k67ListeningReportChoices h2 { margin: 0 0 12px; }
+#k67ListeningReportChoices .cbt-identity-confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+#k67ListeningReportChoices .cbt-identity-confirmation-actions button { width: auto; }
