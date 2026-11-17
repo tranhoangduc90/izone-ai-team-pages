@@ -213,8 +213,8 @@ export const ASSET_HASHES={
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../substitute-shared/listening-report-v1.mjs": "cbad6d9a7308fcf18a6d027c4096f382cd5dbf567a1029e9b6de2f536ce87613",
   "../substitute-test-1-k67-computer-based/assets/figures/home-improvement-store.png": "feab5540ce3cac2115201f167f1a05cf5b916021e4ec2c4f67912728290aa150",
-  "../teacher/app.js": "c98028a3d3969953b9432a279b67f53e5ff47d5d3671559b92658b29b3ce3cbc",
-  "../teacher/index.html": "670c6ff3e63d42e075d7951e62bb2971f756256a828bd06d38c8470afebcc8a8",
+  "../teacher/app.js": "7d306cbcb1fc09fd5421e8cf03f096808635fd6bae22fb1b414587240e7619fa",
+  "../teacher/index.html": "e5d6c7a86eb0fb510d4da569e50823762f6e9165b935f35dca77f9b6e491db9a",
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
@@ -224,10 +224,10 @@ export const ASSET_HASHES={
   "bootstrap-audio-status-v2.js": "129dded9216b6e1f3b9999e133c215ce839778a495c0d62f53af78974ef9f4c8",
   "bootstrap-term2-k67-listening-first-frame-v1.js": "a1b10e0531d5e880ec93412f34b5b8c9b28ba4d2108e8859951d85d51f44c4f4",
   "enhance.js": "b2fa19b00fb7f2615207a4b3a03deb8baae8d258a8d2abec26be39d3b3fc7883",
-  "index-listening-first-frame-v1.html": "319c21676a0f5c2f52c2f405f0f4de934fef002d65cd4757cca000abce56abca",
+  "index-listening-first-frame-v1.html": "203adc203f1393ac7ca302b893f073c009d48a7bee722173ac1175f3d52c9e92",
   "interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
-  "listening-first-frame-v1.css": "9b3d6ce42f19cac776ab6d4b75609da4935f7a35e36e847c5812cab66e825eb2",
+  "listening-first-frame-v1.css": "240dd2a276b00b5735fc10209e9784f8ef90cbf688c6ef824b3ca7fde7cfaed8",
   "listening-first-frame-v1.js": "a84d5c182723e729134ad43aa8f73bf16ed499a1e5f3568f92e433b8d91f0eba",
   "listening-preparation-v1.mjs": "9063a0351614abdb337a437d9e3d37a39f0c79f523cdebdb940fd86a791ce057",
   "listening-report-evidence-v1.mjs": "da745421b217f85ac7f7cdd39b270f67b8453567cc041c2a338f1abf985c7d54",
@@ -236,4 +236,4 @@ export const ASSET_HASHES={
   "offline-worker-listening-first-frame-v1.js": "0b5f0ff5771fe77d3d2d4c9ede091f96d02f9d74503125542210aa1306d6d4e3",
   "styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3"
 };
-export const ASSET_BUILD_ID="d245768a14e185bec242a088c6402bceaa4eb12856ce3caf73629232294679e7";
+export const ASSET_BUILD_ID="b0f912e0b9e87e24dbb4c708bf4b1bcf94811cd354007d5981bc2cea770ba24b";
