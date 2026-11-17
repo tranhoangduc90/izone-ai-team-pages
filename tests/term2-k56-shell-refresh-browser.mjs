@@ -12,7 +12,7 @@ test('Term2 refreshed shell installs cold, keeps speaker continuation stable and
   await p.goto(f.url);await p.locator('#bootstrapStudent option[value="'+f.student+'"]').waitFor({state:'attached'});
   await p.selectOption('#bootstrapStudent',f.student);await p.click('#confirmIdentity');
   await wait(p,()=>window.K56_TERM2_OFFLINE?.record?.ready,'Refreshed Term2 verified shell ready');
-  assert.match(await p.evaluate(()=>navigator.serviceWorker.controller.scriptURL),/offline-worker-listening-report-v3\.js/);
+  assert.match(await p.evaluate(()=>navigator.serviceWorker.controller.scriptURL),/offline-worker-listening-report-v4\.js/);
   await p.click('#bootstrapPreview');await p.click('#bootstrapStart');
   await wait(p,()=>window.K56_TERM2_OFFLINE?.player?.currentTime>.8,'Term2 playback ready');
   await p.getByRole('button',{name:'Báo lỗi âm thanh',exact:true}).click();
@@ -37,7 +37,7 @@ test('Term2 refreshed shell installs cold, keeps speaker continuation stable and
   assert.equal([...f.receipts.values()].filter(row=>row.kind==='interrupt').length,1);
   assert.deepEqual(f.errors,[]);
   await writeFile(resolve(output,'TERM2_K56_SHELL_REFRESH_BROWSER_PROOF.json'),JSON.stringify({
-   coldShell:'offline-worker-listening-report-v3.js',stableButtonFrames:frames,oneInterruptionReceipt:true,
+   coldShell:'offline-worker-listening-report-v4.js',stableButtonFrames:frames,oneInterruptionReceipt:true,
    readingRestored:after,boundary:'Real browser and media, synthetic API; original native business evidence retained'
   },null,2));
  }finally{await f.close();}
