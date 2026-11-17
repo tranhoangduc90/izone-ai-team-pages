@@ -22,6 +22,8 @@ def write(path,value):
 runtime=(shared/'runtime-term2-parallel-entry-v1.mjs').read_text(encoding='utf-8')
 runtime=once(runtime,'if(!run.prepared.term2ParallelEntry||!progress)return false;',
     "if(!run.prepared[profile.parallelEntryFlag??'term2ParallelEntry']||!progress)return false;")
+runtime=once(runtime,'supersededLocalOperations:clone(record.supersededLocalOperations||[]),',
+    'supersededLocalOperations:(record.supersededLocalOperations||[]).map(({operationId,section,kind,revision,occurredAt,dependency,payload})=>clone({operationId,section,kind,revision,occurredAt,dependency,payload})),')
 write(shared/'runtime-parallel-entry-v2.mjs',runtime)
 
 offline=(route/'offline-submission-recovery-v1.mjs').read_text(encoding='utf-8')

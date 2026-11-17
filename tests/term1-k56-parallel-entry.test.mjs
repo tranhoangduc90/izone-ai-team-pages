@@ -19,7 +19,7 @@ async function fixture(progress={}){
 test('Term1 official progress preserves the losing local text without inventing a receipt',async()=>{
  const r=await fixture(),id=randomUUID();
  r.record.sections.listening={operationId:id,startedAt:new Date().toISOString()};
- r.record.operations=[{operationId:id,section:'listening',kind:'seal',payload:{answers:{'32a':'pair a','32b':'pair b'}}}];
+ r.record.operations=[{...r.scope,operationId:id,section:'listening',kind:'seal',payload:{answers:{'32a':'pair a','32b':'pair b'}}}];
  assert.equal(typeof r.acceptOfficialProgress,'function','The current Term1 UI must understand the native official progress response');
  assert.equal(r.acceptOfficialProgress({listening:'sealed',reading:'open',writing:'open'}),true);
  assert.equal(r.sectionResponse().nextSection,'reading');
@@ -27,7 +27,8 @@ test('Term1 official progress preserves the losing local text without inventing 
  assert.deepEqual(r.record.supersededLocalOperations[0].payload.answers,{'32a':'pair a','32b':'pair b'});
  assert.equal(r.record.snapshot.drafts.writing.task2,'Local Task 2');
  assert.equal(r.record.prepared.generation,4);
- assert.match(exportHtml(r.record),/pair a/);
+ const exported=exportHtml(r.record);assert.match(exported,/pair a/);
+ for(const value of [r.scope.attemptToken,r.scope.examSessionToken,r.scope.ownerId])assert.equal(exported.includes(value),false,'Export keeps local answers without native session scope');
 });
 
 test('Term1 resume reads official progress and keeps a durable local Reading draft',async()=>{

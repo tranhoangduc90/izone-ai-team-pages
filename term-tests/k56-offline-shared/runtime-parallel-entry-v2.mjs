@@ -48,7 +48,7 @@ function exportHtml(record){
   runReference:profile.runPrefix+String(p.attemptToken||'').slice(0,8),generation:p.generation,examMode:s.examMode||p.examMode,revision:record._revision,
   drafts:clone(s.drafts||{}),sections:clone(record.sections||{}),player:clone(record.player||{}),
   receipts:Object.fromEntries(Object.entries(record.receipts||{}).map(([key,r])=>[key,Object.fromEntries(['version','receiptId','operationId','payloadHash','section','kind','acceptedRevision','status','reason','serverCommittedAt'].filter(k=>r[k]!==undefined).map(k=>[k,r[k]]))])),
-  supersededLocalOperations:clone(record.supersededLocalOperations||[]),
+  supersededLocalOperations:(record.supersededLocalOperations||[]).map(({operationId,section,kind,revision,occurredAt,dependency,payload})=>clone({operationId,section,kind,revision,occurredAt,dependency,payload})),
   pending:(record.operations||[]).map(o=>({operationId:o.operationId,section:o.section,kind:o.kind,revision:o.revision,
    ...(record.heldSubmissions?.[o.operationId]?{capturedAt:o.occurredAt,held:clone(record.heldSubmissions[o.operationId])}:{})})),createdAt:new Date().toISOString()};
  for(const skill of ['listening','reading','writing']){

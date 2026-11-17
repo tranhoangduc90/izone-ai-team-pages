@@ -4,6 +4,8 @@
 
 Gói riêng gửi capability Term 1, nhận tiến độ chính thức, đi tới phần còn mở và giữ nội dung cục bộ chưa được nhận để tải ra. Biên nhận đã có không bị thay bằng cờ tiến độ. Giữ kho/namespace/generation và mốc tuyệt đối của lượt cũ. Khi khôi phục online, tải vỏ offline mới ở nền; lỗi nâng cấp giữ vỏ đã xác minh và bài hiện tại. Entry bất biến và đủ 182 tài nguyên được ghim theo byte LF; các tệp gói cũ giữ nguyên.
 
+Phần tải nội dung cục bộ chưa được nhận chỉ xuất trường nội dung/chẩn đoán của thao tác, không mang attempt/session/owner scope gốc sang HTML. Ca RED/GREEN dùng đúng thao tác có scope thật của fixture; giữ nguyên đáp án 32a–32b và Task 2. Đây là sửa riêng phép xuất, không đổi wire receipt hoặc dữ liệu IndexedDB đang lưu.
+
 Bổ sung Báo lỗi âm thanh bằng component lựa chọn hiện hành: khoảng im lặng, Cancel, không nghe thấy, rè và ba loại thiết bị. Chỉ thay khối tương tác báo lỗi trong view Term 1, giữ bốn Part, 41 ô/40 điểm với 32a–32b, Reading 26 câu và Writing Task 2. Nút sau “Loa ngoài” dùng CSS ổn định được phát cùng gói cache Term 2 K56.
 
 Đã kiểm bằng dữ liệu giả, tuần tự một browser:
