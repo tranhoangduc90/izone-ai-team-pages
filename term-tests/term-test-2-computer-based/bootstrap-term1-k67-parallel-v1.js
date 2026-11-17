@@ -31,6 +31,7 @@
   if(!window.IZONE_AUDIO_SOURCE_CHOICE)await loadScript('../shared/audio-source-choice.js?v=20261027-v1&audio=20261028-part-rescue-v1&status=20261111-audio-status-v1');
   const {verifyListeningPreparation}=await import('../k67-shared/listening-preparation-k67-v1.mjs');
   const {attachListeningReport,createListeningReportOutbox,sendListeningReport}=await import('../k67-shared/listening-report-k67-v1.mjs');
+  const {attachListeningReportChoices}=await import('../k67-shared/listening-report-choices-v1.mjs');
   function observeReport(phase,fields={}){
     if(appConfig.EXAM_JOURNAL_ENABLED!==true)return;
     const slug=testConfig.slug;
@@ -1610,7 +1611,10 @@
     const startOwner = window.K67_AUDIO_OWNER;
     const startGeneration = Number(state.generation)||0;
     try {
-      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller-term2-report-v1.js?rev=20261016-reading-recovery-v1&termEof=20261108-v1&listeningTimer=2'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':'&termsEof=20261107-v1'));
+      if (!window.K67_LISTENING_PROTECTION) {
+        const controller=testConfig.slug==='term-test-1'?'listening-controller-term1-report-v1.js':'listening-controller-term2-report-v1.js';
+        await loadScript('../k67-shared/'+controller+'?rev=20261016-reading-recovery-v1&termEof=20261108-v1&listeningTimer=2'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':'&termsEof=20261107-v1'));
+      }
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;
@@ -1655,8 +1659,9 @@
       const outbox=createListeningReportOutbox({slug,mode:'online',sessionId:startToken,generation:startGeneration,observe:observeReport,
         send:input=>sendListeningReport({apiBase:appConfig.API_BASE_URL,slug,
           body:{...input,...(window.K67_AUDIO_OWNER?.fields()||{})}})});
-      window.K67_ACTIVE_LISTENING?.configureReports({outbox,
-        attach:options=>attachListeningReport({slug,...options,assetHash:audioHash,observe:observeReport})});
+      const attachReport=slug==='term-test-1'?attachListeningReportChoices:attachListeningReport;
+      window.K67_ACTIVE_LISTENING?.configureReports({outbox,observe:observeReport,
+        attach:options=>attachReport({slug,...options,assetHash:audioHash,observe:observeReport})});
       if(!window.K67_ACTIVE_LISTENING)outbox.close();
       officialObjectUrl = URL.createObjectURL(new Blob([decrypted], { type: 'audio/mpeg' }));
       officialAudio.src = officialObjectUrl;

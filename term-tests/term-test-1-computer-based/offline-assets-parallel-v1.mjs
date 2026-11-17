@@ -116,6 +116,10 @@ export const ASSETS=[
   "index-listening-first-frame-v1.html",
   "offline-worker-listening-first-frame-v1.js",
   "../k67-shared/listening-term1-mini-flow-v1.css",
+  "../k67-shared/continuity-player-term1-report-v1.mjs",
+  "../k67-shared/listening-controller-term1-report-v1.js",
+  "../k67-shared/listening-report-choices-v1.mjs",
+  "../k67-shared/listening-report-choices-v1.css",
   "../mini-test-lesson-5-computer-based/journey-term1-k67-parallel-v1.mjs",
   "../shared/app-term1-k67-parallel-v1.js",
   "../term-test-2-computer-based/bootstrap-term1-k67-parallel-v1.js",
@@ -242,12 +246,16 @@ export const ASSET_HASHES={
   "index-listening-first-frame-v1.html": "f3cdb85c188501a5b8d1fba4f19860dc8fd9e97b7918901df11492bc21f84dd9",
   "offline-worker-listening-first-frame-v1.js": "24e13af382509391ab90d0023ea7a425129e159bc0261791536b5ebc6f10cf2e",
   "../k67-shared/listening-term1-mini-flow-v1.css": "79c530e3c31485e04869c5369d1f33610236cb667e4e0baa299e5db9bac5eec1",
-  "../mini-test-lesson-5-computer-based/journey-term1-k67-parallel-v1.mjs": "49b9a24db568ff45808b1f81d1c86ac631b2184fd5c23c32429195881e38ae37",
+  "../k67-shared/continuity-player-term1-report-v1.mjs": "7894bc91c7034c357c42d8e723e4e4d5aa30bf71ee41b6d414d5d3fe099f688f",
+  "../k67-shared/listening-controller-term1-report-v1.js": "1f7487289879df40b8b1cfb6b27971564ddd8e6143b666a13933b59badf74ac1",
+  "../k67-shared/listening-report-choices-v1.mjs": "dacd6141aa3ee4ef20ae5208dcbad527eb9ac2e4a6d8fb4d38af5c30fcf06e1e",
+  "../k67-shared/listening-report-choices-v1.css": "e1c2b8d36bb0681a82efbf108a4580880ef0561daa63a38266d3634c98cfaea9",
+  "../mini-test-lesson-5-computer-based/journey-term1-k67-parallel-v1.mjs": "40f31c097bf5d9d1e3c83e3edf23387b221e35aa7da386f244a7a2079be7bcbe",
   "../shared/app-term1-k67-parallel-v1.js": "63bb55d377a22ef86f220f53253041878d58f0feb53d44d3b900098f1e354b9e",
-  "../term-test-2-computer-based/bootstrap-term1-k67-parallel-v1.js": "7a8e4e111170808db64804a7a8931c2d0b35652c3b20fb1d8be83524880a9d8d",
+  "../term-test-2-computer-based/bootstrap-term1-k67-parallel-v1.js": "a7ef854fcdc529273e3af4c66d40108ed5bed86649882dc703c79aa7d5ae7052",
   "recover-ic2304-20261116.js": "179a3b7e375ce5ab5e13df7db97c1e1d0c37e3b4e1a18b8ec9c56299434d04be",
   "recover-term1-k67-parallel-v1.js": "885c0d3534f6c1aba4ad28f3ff57cbceb73ab4cbb1abd080f5d48b351998cea0",
-  "index-parallel-v1.html": "8d1e0a7e59340a0c0d11cf2782c60bc53c82d45b0eb4546a78c4f40a60ae25f7",
+  "index-parallel-v1.html": "ef684cd0ff856c8c513bb22b36d03cd38a50836116e41e10ce90b60a3ba2c386",
   "offline-worker-parallel-v1.js": "22db760a6061392121e6950011a44b12ea80bc480df05c7440105b7d1631fece"
 };
-export const ASSET_BUILD_ID="4893f1603625567740df6d287e1473f7af2dba9d0b53fed14c95530343c2218c";
+export const ASSET_BUILD_ID="53ce3e7956cafe1987190f1dba0ba03d814907922249959e57b429a34a69f89e";

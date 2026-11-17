@@ -1,7 +1,9 @@
 import { createOfflineRuntime } from '../k56-offline-shared/runtime-term2-k67-recovery-v1.mjs?v=20261107-mini-v3';
 import { downloadTermAudio } from '../k56-offline-shared/whole-audio-terms-cbt-audio-status-v1.mjs?v=20261111-audio-milestones-v2';
 import { mountOfflineListeningPlayer, prepareContinuityAudio, mountContinuityListeningPlayer } from '../k67-shared/offline-journey-ui-term2-report-v1.mjs';
-import {attachListeningReport,createListeningReportOutbox,sendListeningReport} from '../k67-shared/listening-report-k67-v1.mjs';
+import { mountContinuityListeningPlayer as mountTerm1ListeningPlayer } from '../k67-shared/continuity-player-term1-report-v1.mjs';
+import { attachListeningReportChoices } from '../k67-shared/listening-report-choices-v1.mjs';
+import {createListeningReportOutbox,sendListeningReport} from '../k67-shared/listening-report-k67-v1.mjs';
 
 const miniSlug='mini-test-lesson-5';
 const term1Slug='term-test-1';
@@ -546,13 +548,14 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
     notify(pendingMessage());void flush();return view();
   }
 
-  async function storeOperation(section,payload,reviewReading=false){
+  async function storeOperation(section,payload,reviewReading=false,reportId){
     const {section:skill}=payload;
     const previousDraft=record.drafts[skill], previousRevision=record.revisions[skill];
     const interrupted=payload.outcome==='interrupted';
     savingOperation=true;
     section.operationId=payload.operationId;
     if(interrupted)section.interrupted=true;
+    if(reportId)section.reportId=reportId;
     // Older clients only send entries in pending. Keep this snapshot out of that queue.
     if(reviewReading)record.readingReview=payload;
     else record.pending.push(payload);
@@ -569,6 +572,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
       if(reviewReading)delete record.readingReview;
       else record.pending.splice(record.pending.indexOf(payload),1);
       delete section.operationId;
+      if(reportId)delete section.reportId;
       if(interrupted)delete section.interrupted;
       else {
         if(previousDraft===undefined)delete record.drafts[skill];else record.drafts[skill]=previousDraft;
@@ -579,19 +583,23 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
     }finally{savingOperation=false;}
   }
 
-  async function interrupt(reason,reportDraft){
+  async function interrupt(reason,report){
     const section=record.sections.listening;
     if(section?.interrupted)return view();
     if(!continuity()||savingOperation||!section?.startedAt||section.operationId||section.eofAt||next()!=='listening')
       throw new Error('Listening đã có kết quả.');
     const preceding=order()[order().indexOf('listening')-1];
-    const payload={...owner,operationId:crypto.randomUUID(),section:'listening',
+    const reportId=reason==='learner_report'?report?.reportId:undefined;
+    const payload={...owner,operationId:reportId??crypto.randomUUID(),section:'listening',
       previousOperationId:preceding?record.sections[preceding].operationId:null,
       startedAt:section.startedAt,capturedAt:now(),revision:record.revisions.listening||0,
       automatic:false,eofAt:null,heardSeconds:0,answers:{},outcome:'interrupted'};
-    await storeOperation(section,payload);
+    await storeOperation(section,payload,false,reportId);
     observe('listening_interrupted',{operationId:payload.operationId,reason});
-    if(reason==='learner_report'&&reportDraft)void reportOutbox?.add(payload.operationId,reportDraft);
+    if(reportId){
+      observeReport('report_interruption_device_saved',{reportVersion:2,reportId,operationId:payload.operationId});
+      if(report.evidence)void reportOutbox?.add(payload.operationId,report.evidence);
+    }
     playing?.stop();playing=null;
     preparedPlayer?.release();preparedPlayer=null;
     notify('Listening gián đoạn đã lưu trên máy · Chờ đồng bộ');
@@ -700,6 +708,10 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
         observeSubmission('submission_receipt_verified',pending,{via:checked?.persisted?'readback':'send'});
         if(continuity()&&pending.section==='listening')
           observe('listening_server_received',{operationId:pending.operationId,outcome:pending.outcome||'submitted'});
+        if(pending.outcome==='interrupted'&&record.sections.listening?.reportId===pending.operationId)
+          observeReport('report_interruption_server_received',{reportVersion:2,reportId:pending.operationId,
+            operationId:pending.operationId,payloadHash:receipt.payloadHash,
+            ...(receipt.receiptId?{receiptId:receipt.receiptId}:{})});
         if(pendingHead())notify(pendingMessage());
       }
       if(!pendingHead())notify('Máy chủ đã xác nhận nhận bài');
@@ -742,8 +754,9 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
     const section=record.sections.listening;
     if(playing||next()!=='listening'||!section)return;
     const timing=record.package.timing;
+    const mountContinuity=reportOutbox?mountTerm1ListeningPlayer:mountContinuityListeningPlayer;
     const player=continuity()
-      ? mountContinuityListeningPlayer({...options,attachReport:reportOutbox?options=>attachListeningReport({slug,...options,assetHash:record.package.audioManifest?.sha256,observe:observeReport}):undefined,section,timing,now,persist,observe,
+      ? mountContinuity({...options,attachReport:reportOutbox?options=>attachListeningReportChoices({slug,...options,assetHash:record.package.audioManifest?.sha256,observe:observeReport}):undefined,section,timing,now,persist,observe,
           observeDecision:observeListeningDecision,
           onPlaying:() => {
             section.playbackConfirmed=true;
