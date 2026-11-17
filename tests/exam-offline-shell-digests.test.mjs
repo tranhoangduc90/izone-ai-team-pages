@@ -39,6 +39,7 @@ for (const entry of await readdir(root, { withFileTypes: true })) {
   if (['term-test-1-computer-based', 'term-test-2-computer-based'].includes(entry.name)) {
     versionedManifests.push('offline-assets-listening-first-frame-v1.mjs', 'offline-assets-parallel-v1.mjs');
   }
+  if (entry.name === 'term-test-2-computer-based') versionedManifests.push('offline-assets-browser-cloud-v1.mjs');
   if (entry.name === 'term-test-2-k56-computer-based') versionedManifests.push('offline-assets-listening-report-v2.mjs');
   for (const name of versionedManifests) {
     test(`${entry.name} ${name} matches its published files`, async () => {
