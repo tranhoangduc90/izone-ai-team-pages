@@ -18,6 +18,20 @@ installStyles();
 const base=(globalThis.handout67ApiBase||'https://ducizone.ddns.net/api/handout67/v1')+'/teacher';
 const lessonActivity=globalThis.handout67Lesson?.activity||'lesson5';
 const $=id=>document.getElementById(id);
+const refreshPreview=lessonActivity==='lesson5'&&new URLSearchParams(globalThis.location?.search).get('preview')==='refresh';
+if(refreshPreview){
+ document.body.dataset.refreshPreview='true';
+ const label=document.createElement('p');
+ label.className='refresh-preview-label';
+ label.textContent='Bản xem trước · Dữ liệu thật · Chỉ đọc';
+ $('updated').before(label);
+ const icon=document.createElement('span');
+ icon.className='refresh-preview-icon';
+ icon.textContent='↻';
+ icon.setAttribute('aria-hidden','true');
+ $('refresh').prepend(icon);
+ $('refresh').setAttribute('aria-label','Cập nhật');
+}
 const authView=createTeacherAuthState({panel:$('login'),notice:$('teacher-startup-status'),retry:()=>boot(),hideOnReady:true});
 let googleSetup;
 async function setupGoogle(){
@@ -44,8 +58,10 @@ let epoch=0,rows=[],selected=null,timer=null,loading=false,sending=false,detailS
 let activitySequence=0,activityRef=null,activityEvents=[],activityCursor=null;
 let detailSession=null,composer=null,activeClass='';
 let readGeneration=0;
+let pendingManualRefresh=false;
 const hasThreadDraft=()=>!!composer||!!$('comment-text').value.trim()||[...document.querySelectorAll('[data-thread-reply] textarea')].some(el=>el.value.trim());
 async function request(path,method='GET',body){
+ if(refreshPreview&&method!=='GET'&&path!=='/session')throw Error('PREVIEW_READ_ONLY');
  if(multi&&body){const b=bodyIndexOf(body.field||body.section||detailSession?.commentThreads?.find(t=>t.ref===body.threadRef)?.field);if(b!==null)body={...body,bodyIndex:b};}
  const payload=body===undefined?undefined:JSON.stringify(body);
  const requestEpoch=epoch;
@@ -62,17 +78,28 @@ function report(error,target='error'){const node=$(target);node.textContent=erro
 function renderRows(){
  const q=$('search').value.trim().toLocaleLowerCase('vi'),filter=$('status-filter').value;
  const filtered=ordered(rows.filter(r=>r.displayName.toLocaleLowerCase('vi').includes(q)&&(filter==='all'||rowState(r)===filter)),$('order').value);
- $('summary').innerHTML=Object.entries(states).map(([key,label])=>`<button class="teacher-summary-card" data-filter="${key}" data-state="${key}" aria-pressed="${filter===key}"><span>${label}</span><strong>${rows.filter(r=>rowState(r)===key).length}</strong></button>`).join('');
+ const summary=Object.entries(states).map(([key,label])=>`<button class="teacher-summary-card" data-filter="${key}" data-state="${key}" aria-pressed="${filter===key}"><span>${label}</span><strong>${rows.filter(r=>rowState(r)===key).length}</strong></button>`).join('');
+ if(refreshPreview)patchHTML($('summary'),summary);else $('summary').innerHTML=summary;
  const focused=document.activeElement?.dataset.student;
  const groups=new Map();for(const r of filtered){const key=r.sessionRef?r.dashboard?.priority??3:5;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);}
- $('students').innerHTML=[...groups].map(([key,list])=>`<section class="group"><div class="group-heading"><h2>${['Cần hỗ trợ','Lỗi hoặc chờ quá hạn','Bài đã sửa và HV trả lời','Đang làm bài','Đã thông qua','Chưa bắt đầu'][key]} <span class="group-count">${list.length}</span></h2></div><div class="teacher-students">${list.map(r=>card(r,{order:ORDER,totalFields:Object.values(FIELDS).flat().filter(k=>k!=='positionLimit').length})).join('')}</div></section>`).join('')||'<p class="empty">Không có học viên phù hợp.</p>';
+ const students=[...groups].map(([key,list])=>`<section class="group"><div class="group-heading"><h2>${['Cần hỗ trợ','Lỗi hoặc chờ quá hạn','Bài đã sửa và HV trả lời','Đang làm bài','Đã thông qua','Chưa bắt đầu'][key]} <span class="group-count">${list.length}</span></h2></div><div class="teacher-students">${list.map(r=>card(r,{order:ORDER,totalFields:Object.values(FIELDS).flat().filter(k=>k!=='positionLimit').length})).join('')}</div></section>`).join('')||'<p class="empty">Không có học viên phù hợp.</p>';
+ if(refreshPreview)patchHTML($('students'),students);else $('students').innerHTML=students;
  if(focused)$('students').querySelector(`[data-student="${CSS.escape(focused)}"]`)?.focus({preventScroll:true});
  $('list-description').textContent=`${filtered.length}/${rows.length} học viên · hỗ trợ và bài đáng chú ý lên trước`;
 }
 function schedule(){clearTimeout(timer);if(!$('dashboard').hidden&&!document.hidden)timer=setTimeout(()=>refresh(),5000);}
 async function refresh(forceDetail=false){
- if(loading||document.hidden||$('dashboard').hidden)return;clearTimeout(timer);loading=true;const generation=++readGeneration,current=epoch,classRef=$('class-select').value;
- try{const value=await request('/students?class='+encodeURIComponent(classRef)+'&activity='+encodeURIComponent(lessonActivity));if(current!==epoch||classRef!==$('class-select').value)return;rows=value.students;renderRows();$('updated').textContent='Đã cập nhật '+new Date().toLocaleTimeString('vi-VN')+' · đọc lại sau 5 giây';$('error').hidden=true;if(selected?.ref&&!sending)await readDetail(selected.ref,{activity:forceDetail});}catch(e){if(current===epoch)report(e);}finally{if(generation===readGeneration){loading=false;if(current===epoch)schedule();}}
+ if(document.hidden||$('dashboard').hidden)return;
+ if(loading){if(refreshPreview&&forceDetail)pendingManualRefresh=true;return;}
+ clearTimeout(timer);loading=true;const generation=++readGeneration,current=epoch,classRef=$('class-select').value;
+ if(refreshPreview&&forceDetail)$('refresh').setAttribute('aria-busy','true');
+ try{const value=await request('/students?class='+encodeURIComponent(classRef)+'&activity='+encodeURIComponent(lessonActivity));if(current!==epoch||classRef!==$('class-select').value)return;rows=value.students;renderRows();$('updated').textContent='Đã cập nhật '+new Date().toLocaleTimeString('vi-VN')+' · đọc lại sau 5 giây';$('error').hidden=true;if(selected?.ref&&!sending)await readDetail(selected.ref,{activity:forceDetail});}catch(e){if(current===epoch)report(e);}finally{if(generation===readGeneration){
+  loading=false;
+  if(refreshPreview)$('refresh').removeAttribute('aria-busy');
+  const repeat=pendingManualRefresh;
+  pendingManualRefresh=false;
+  if(current===epoch){if(repeat)void refresh(true);else schedule();}
+ }}
 }
 function snapshot(note){return Object.entries(note.snapshot||{}).map(([k,v])=>(labels[k]||k)+': '+v).join('\n\n');}
 function renderDetail(session){
@@ -168,6 +195,12 @@ async function openDetail(studentRef){
 }
 async function enter(){
  const current=++epoch;
+ if(refreshPreview){
+  delete $('summary').dataset.readHtml;
+  delete $('students').dataset.readHtml;
+  $('refresh').removeAttribute('aria-busy');
+  pendingManualRefresh=false;
+ }
  const result=await request('/classes?activity='+encodeURIComponent(lessonActivity));if(current!==epoch)return;
  $('class-select').innerHTML=result.classes.map(c=>`<option value="${escape(c.classRef)}">${escape(c.className)}</option>`).join('');
  if(!result.classes.length)throw Object.assign(new Error('TEACHER_FORBIDDEN'),{status:403});
@@ -207,7 +240,7 @@ function showThreads(refs){
  const node=$('thread-'+refs.split(',')[0]);node?.scrollIntoView({block:'center'});node?.querySelector('textarea')?.focus({preventScroll:true});
 }
 async function startComposer(root,range){
- if(!root||!detailSession||sending||composer)return;
+ if(refreshPreview||!root||!detailSession||sending||composer)return;
  const field=root.dataset.selectField,text=detailSession.responses[field],ref=selected?.ref,current=epoch;
  if(!text?.trim())return;
  const hash=await fieldHash(text);if(current!==epoch||selected?.ref!==ref||!root.isConnected||composer||sending)return;

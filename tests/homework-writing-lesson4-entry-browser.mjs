@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { createState } from '../writing-handouts/lesson5-demo/core.mjs';
+import { lessonEntryClass } from '../writing-handouts/shared/test-class-entry.mjs';
 import { serveDirectory } from './fixtures/static-ui-server.mjs';
 
 const { chromium } = createRequire(resolve(process.env.USERPROFILE,
@@ -22,6 +23,14 @@ const editor = '/student/assignments/' + assignment + '/handout-editor';
 const token = 'A'.repeat(43);
 const challenge = 'M'.repeat(43);
 const csrf = '1';
+
+test('Lesson 5 shows the course roster on its plain link and retains exact class links', () => {
+  const expanded = {activity:'lesson5',classes:['IC2304','IC2363'],defaultClass:'IC2304'};
+  assert.equal(lessonEntryClass(expanded),'');
+  assert.equal(lessonEntryClass(expanded,'?class=ic2363'),'IC2363');
+  assert.throws(()=>lessonEntryClass(expanded,'?class=IC9999'),/CLASS_NOT_OPEN/);
+  assert.equal(lessonEntryClass({...expanded,classes:['IC2304']}),'IC2304');
+});
 
 async function exercise(t, options, verify) {
   const server = process.env.LESSON4_ENTRY_SITE ? null : await serveDirectory(resolve(import.meta.dirname, '..'));
@@ -47,7 +56,8 @@ async function exercise(t, options, verify) {
       }
     }).observe(document, { subtree: true, childList: true, attributes: true });
   });
-  const targetLesson={activity:'lesson5',number:5,body:2,title:'Luyện thử Lesson 5',topic:'Synthetic topic.',classes:[classRef],ideaHint:'Chọn tác hại.'};
+  const extraClass='IC9998';
+  const targetLesson={activity:'lesson5',number:5,body:2,title:'Luyện thử Lesson 5',topic:'Synthetic topic.',classes:[classRef,extraClass],defaultClass:classRef,ideaHint:'Chọn tác hại.'};
   const target={...createState(0,targetLesson),ref:'lesson5-fixture-session',activity:'lesson5',classRef,studentRef};
   let lastSaved=null;
   await page.context().route('**/*', async route => {
@@ -67,7 +77,7 @@ async function exercise(t, options, verify) {
     if(options.transfer&&url.pathname.startsWith('/api/handout67/v1')){
       const path=url.pathname.slice('/api/handout67/v1'.length);
       const students=[{studentRef,displayName:person.label}];
-      const classes=[{classRef,className:classRef,students}];
+      const classes=[{classRef,className:classRef,students},{classRef:extraClass,className:extraClass,students:[]}];
       if(path==='/lessons/lesson5')return send({ok:true,lesson:targetLesson});
       if(path==='/roster')return send({ok:true,classes});
       if(path==='/sessions'){
@@ -176,6 +186,7 @@ test('Lesson 5 retains manual entry and shows the verified transfer and latest d
     const manual=await page.context().newPage();
     await manual.goto(site+'/writing-handouts/lesson5/');
     await manual.locator('#student-select option[value="'+studentRef+'"]').waitFor({state:'attached'});
+    assert.equal(await manual.locator('#class-select option').count(),2);
     if(await manual.locator('#identity').isVisible()){
       await manual.locator('#student-select').selectOption(studentRef);
       await manual.locator('#login-form button[type=submit]').click();
@@ -184,6 +195,11 @@ test('Lesson 5 retains manual entry and shows the verified transfer and latest d
     await manual.locator('#field-idea1').waitFor();
     assert.equal(await manual.locator('#field-idea1').inputValue(),'');
     await manual.close();
+    const classLink=await page.context().newPage();
+    await classLink.goto(site+'/writing-handouts/lesson5/?class=ic9998');
+    await classLink.locator('#class-select option[value="IC9998"]').waitFor({state:'attached'});
+    assert.deepEqual(await classLink.locator('#class-select option').evaluateAll(options=>options.map(option=>option.value)),['IC9998']);
+    await classLink.close();
     await page.getByRole('button',{name:'Dùng idea ở Lesson 5'}).click();
     await page.waitForURL('**/writing-handouts/lesson5/');
     await page.locator('#field-idea1').waitFor();
@@ -197,11 +213,36 @@ test('Lesson 5 retains manual entry and shows the verified transfer and latest d
     assert.equal(target.responses.idea1,'Nháp mới của học viên');
     assert.equal(target.steps.topic.status,'draft');
     const teacher=await page.context().newPage();
-    await teacher.goto(site+'/writing-handouts/lesson5/teacher.html');
-    await teacher.locator('[data-student="'+studentRef+'"]').click();
+    await teacher.goto(site+'/writing-handouts/lesson5/teacher.html?preview=refresh');
+    const studentCard=teacher.locator('[data-student="'+studentRef+'"]');
+    await studentCard.waitFor();
+    const refresh=teacher.getByRole('button',{name:'Cập nhật',exact:true});
+    for(const width of [390,1440]){
+      await teacher.setViewportSize({width,height:560});
+      await teacher.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
+      const before=await refresh.boundingBox();
+      assert.ok(before.width<=145&&before.height>=44&&before.height<=54);
+      await teacher.evaluate(()=>scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
+      assert.ok(await teacher.evaluate(()=>scrollY>0));
+      assert.deepEqual(await refresh.boundingBox(),before);
+      const card=await studentCard.elementHandle();
+      await Promise.all([
+        teacher.waitForResponse(response=>response.url().includes('/teacher/students?')&&response.ok()),
+        refresh.click(),
+      ]);
+      assert.equal(await card.evaluate(element=>element.isConnected),true);
+      assert.deepEqual(await refresh.boundingBox(),before);
+    }
+    await studentCard.click();
     await teacher.locator('#lesson5-outline-source').waitFor();
     assert.match(await teacher.locator('#lesson5-outline-source').innerText(),/Homework Lesson 4.*Cập nhật/);
     assert.match(await teacher.locator('[data-field-read=idea1]').innerText(),/Nháp mới của học viên/);
+    assert.equal(await teacher.locator('#comment-form').isVisible(),false);
+    await teacher.locator('#detail').evaluate(dialog=>dialog.scrollTop=dialog.scrollHeight);
+    assert.equal(await teacher.locator('#detail-refresh').evaluate(button=>{
+      const {x,y,width,height}=button.getBoundingClientRect();
+      return button.contains(document.elementFromPoint(x+width/2,y+height/2));
+    }),true);
     const content=await teacher.locator('[data-field-read=idea1]').elementHandle();
     for(let i=0;i<3;i++)await teacher.waitForResponse(response=>response.url().includes('/teacher/sessions/'+target.ref)&&response.ok(),{timeout:8000});
     assert.equal(await content.evaluate(el=>el.isConnected),true);
