@@ -29,7 +29,8 @@ async function exercise(t, options, verify) {
   const origin = new URL(site).origin;
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   t.after(async () => { await browser.close(); await server?.close(); });
-  const page = await browser.newPage({ viewport: { width: options.mobile ? 390 : 1360, height: 850 } });
+  const context=await browser.newContext({viewport:{width:options.mobile?390:1360,height:850}});
+  const page=await context.newPage();
   page.setDefaultTimeout(6000);
   const calls = [];
   const confirmed = [];
@@ -46,22 +47,65 @@ async function exercise(t, options, verify) {
       }
     }).observe(document, { subtree: true, childList: true, attributes: true });
   });
-  await page.route('**/*', async route => {
+  const targetLesson={activity:'lesson5',number:5,body:2,title:'Luyện thử Lesson 5',topic:'Synthetic topic.',classes:[classRef],ideaHint:'Chọn tác hại.'};
+  const target={...createState(0,targetLesson),ref:'lesson5-fixture-session',activity:'lesson5',classRef,studentRef};
+  let lastSaved=null;
+  await page.context().route('**/*', async route => {
     const request = route.request();
     const url = new URL(request.url());
     if (url.origin === origin) return route.continue();
-    const prefix = '/homework-writing67-api/api';
-    if (!url.pathname.startsWith(prefix)) return route.abort();
-    const path = url.pathname.slice(prefix.length);
     const headers = {
       'access-control-allow-origin': origin, 'access-control-allow-credentials': 'true',
       'access-control-allow-headers': 'content-type,authorization,x-hw-access,x-hw-csrf,x-hw-student,x-hw-document,x-hw-assignment,x-hw-handout,if-none-match',
-      'access-control-allow-methods': 'GET,POST,OPTIONS',
+      'access-control-allow-methods': 'GET,POST,PUT,OPTIONS',
     };
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
+    const send = (json, status = 200) => route.fulfill({ json, status, headers });
+    if (options.transfer && url.pathname === '/teacher-session-api/v1/restore/handout67') {
+      return send({ ok: true });
+    }
+    if(options.transfer&&url.pathname.startsWith('/api/handout67/v1')){
+      const path=url.pathname.slice('/api/handout67/v1'.length);
+      const students=[{studentRef,displayName:person.label}];
+      const classes=[{classRef,className:classRef,students}];
+      if(path==='/lessons/lesson5')return send({ok:true,lesson:targetLesson});
+      if(path==='/roster')return send({ok:true,classes});
+      if(path==='/sessions'){
+        const input=request.postDataJSON();
+        if(input.lesson5IdeaTicket){
+          assert.equal(input.studentRef,studentRef);
+          assert.equal(input.lesson5IdeaTicket,'verified-lesson4-fixture-ticket');
+          Object.assign(target.responses,{idea1:'Tiền sinh hoạt thiếu hụt',idea2:'Tăng rác điện tử'});
+          target.lesson5IdeaSource={fields:['idea1','idea2'],status:'draft',sourceVersion:4};
+          lastSaved=new Date().toISOString();
+        }
+        if(target.lesson5IdeaSource&&!input.lesson5IdeaTicket&&request.headers().authorization!=='Bearer writing5-fixture')
+          return send({ok:false,error:'LESSON5_HOMEWORK_AUTH_REQUIRED'},403);
+        return send({ok:true,session:target,token:target.lesson5IdeaSource?'writing5-fixture':'manual-fixture'});
+      }
+      if(path==='/sessions/'+target.ref+'/responses'){
+        Object.assign(target.responses,request.postDataJSON().responses);
+        target.version++;lastSaved=new Date().toISOString();
+        return send({ok:true,session:target});
+      }
+      if(path==='/sessions/'+target.ref+'/checks'){
+        assert.equal(request.postDataJSON().section,'topic');
+        target.submittedSections=['topic'];
+        target.steps.topic={status:'passed',history:[],approval:{source:'ai'}};
+        return send({ok:true,session:target},202);
+      }
+      if(path==='/sessions/'+target.ref||path==='/teacher/sessions/'+target.ref)return send({ok:true,session:target});
+      if(path==='/teacher/session')return send({ok:true,reviewer:{email:'teacher@example.test'}});
+      if(path==='/teacher/classes')return send({ok:true,classes});
+      if(path==='/teacher/students')return send({ok:true,students:[{...students[0],sessionRef:target.ref,updatedAt:lastSaved,passed:0}]});
+      if(path==='/teacher/sessions/'+target.ref+'/activity')return send({ok:true,events:[]});
+      return send({ok:false},404);
+    }
+    const prefix = '/homework-writing67-api/api';
+    if (!url.pathname.startsWith(prefix)) return route.abort();
+    const path = url.pathname.slice(prefix.length);
     calls.push(path);
     if (options.slow) await new Promise(resolve => setTimeout(resolve, 160));
-    const send = (json, status = 200) => route.fulfill({ json, status, headers });
     if (path === '/access/config') return send({ version: 1, product: 'homework-writing-5667-local', mode: 'online',
       teacherConsumer: 'homeworkwriting', privateDocsEntry: true });
     if (path === '/access/student/link') {
@@ -86,17 +130,23 @@ async function exercise(t, options, verify) {
     if (path === editor + '/sessions') {
       assert.deepEqual(request.postDataJSON(), { activity: 'lesson4', classRef, studentRef });
       assert.equal(request.headers()['x-hw-csrf'], csrf);
-      return send({ ok: true, token: 'B'.repeat(43), session: { ...createState(0, lesson), activity: 'lesson4',
-        outlineOnly: true, classRef, studentRef, ref: 'fixture-session' } });
+      const s={...createState(0,lesson),activity:'lesson4',outlineOnly:true,classRef,studentRef,ref:'fixture-session'};
+      if(options.transfer){
+        s.lesson5IdeaAvailable=true;
+        Object.assign(s.responses,{body1_idea1:'Bị quảng cáo hấp dẫn',body2_idea1:'Tiền sinh hoạt thiếu hụt',body2_idea2:'Tăng rác điện tử'});
+      }
+      return send({ok:true,token:'B'.repeat(43),session:s});
     }
-    if (path === editor + '/sessions/fixture-session/practice') return send({ ok: true, practice: { status: 'not_started' } });
+    if(path===editor+'/sessions/fixture-session'&&options.transfer)return send({ok:true,
+      lesson5IdeaTicket:'verified-lesson4-fixture-ticket',session:{ref:'fixture-session'}});
+    if (path === editor + '/sessions/fixture-session/practice') return send({ ok: true, practice: { status: options.transfer?'accepted':'not_started' } });
     return send({ ok: false }, 404);
   });
 
   const query = new URLSearchParams({ mode: 'student', assignment, documentId, workspace: 'k67' });
   await page.goto(site + '/writing-handouts/lesson4/?' + query);
   await page.locator('#hw-entry-student').selectOption('0');
-  await verify({ page, calls, confirmed });
+  await verify({page,calls,confirmed,site,target});
 }
 
 test('Lesson 4 asks for name confirmation once, then restores without remounting the waiting card', async t => {
@@ -117,6 +167,50 @@ test('Lesson 4 asks for name confirmation once, then restores without remounting
     assert.equal(calls.includes('/access/student/link'), false);
     assert.equal(await page.locator('#identity').isVisible(), false);
     assert.equal(await page.locator('#confirm').isVisible(), false);
+  });
+});
+
+test('Lesson 5 retains manual entry and shows the verified transfer and latest draft to the teacher',async t=>{
+  await exercise(t,{transfer:true,mobile:true},async({page,site,target})=>{
+    await page.getByRole('button',{name:'Xác nhận và vào bài'}).click();
+    const manual=await page.context().newPage();
+    await manual.goto(site+'/writing-handouts/lesson5/');
+    await manual.locator('#student-select option[value="'+studentRef+'"]').waitFor({state:'attached'});
+    if(await manual.locator('#identity').isVisible()){
+      await manual.locator('#student-select').selectOption(studentRef);
+      await manual.locator('#login-form button[type=submit]').click();
+      await manual.locator('#confirm-button').click();
+    }
+    await manual.locator('#field-idea1').waitFor();
+    assert.equal(await manual.locator('#field-idea1').inputValue(),'');
+    await manual.close();
+    await page.getByRole('button',{name:'Dùng idea ở Lesson 5'}).click();
+    await page.waitForURL('**/writing-handouts/lesson5/');
+    await page.locator('#field-idea1').waitFor();
+    assert.equal(await page.locator('#field-idea1').inputValue(),'Tiền sinh hoạt thiếu hụt');
+    assert.equal(await page.locator('#field-idea2').inputValue(),'Tăng rác điện tử');
+    assert.equal(await page.locator('#field-topicSentence').inputValue(),'');
+    assert.match(await page.locator('#homework-ideas-transfer').innerText(),/nháp Homework Lesson 4/);
+    await page.locator('#field-idea1').fill('Nháp mới của học viên');
+    await page.locator('#field-topicSentence').fill('Chi tiêu thừa gây hại cho tài chính và môi trường.');
+    await page.waitForFunction(()=>document.getElementById('save-state')?.textContent==='Đã lưu trên máy chủ');
+    assert.equal(target.responses.idea1,'Nháp mới của học viên');
+    assert.equal(target.steps.topic.status,'draft');
+    const teacher=await page.context().newPage();
+    await teacher.goto(site+'/writing-handouts/lesson5/teacher.html');
+    await teacher.locator('[data-student="'+studentRef+'"]').click();
+    await teacher.locator('#lesson5-outline-source').waitFor();
+    assert.match(await teacher.locator('#lesson5-outline-source').innerText(),/Homework Lesson 4.*Cập nhật/);
+    assert.match(await teacher.locator('[data-field-read=idea1]').innerText(),/Nháp mới của học viên/);
+    const content=await teacher.locator('[data-field-read=idea1]').elementHandle();
+    for(let i=0;i<3;i++)await teacher.waitForResponse(response=>response.url().includes('/teacher/sessions/'+target.ref)&&response.ok(),{timeout:8000});
+    assert.equal(await content.evaluate(el=>el.isConnected),true);
+    await teacher.close();
+    await page.getByRole('button',{name:'Check chất lượng Topic Sentence'}).click();
+    await page.locator('#field-b1').waitFor();
+    await page.reload();
+    await page.locator('#field-b1').waitFor();
+    assert.equal(target.steps.topic.status,'passed');
   });
 });
 

@@ -999,6 +999,8 @@
     elements.bootstrapStudent.disabled = true;
     try {
       // Chọn lại đúng học viên sau khi đi qua link cứu hộ vẫn ưu tiên lượt đã giữ trên thiết bị.
+      if (!retakeGrant && !state.attemptToken && !state.listeningStartedAt && !state.readingStartedAt &&
+          await window.K67_STANDALONE_WRITING?.open(studentRef, student.name, elements.bootstrapStudent)) return;
       if (await openJourneyLobby(false, false, preparationStatus)) return;
       if (state.attemptToken && !state.continuationSection) {
         try {

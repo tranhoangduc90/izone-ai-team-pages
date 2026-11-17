@@ -30,6 +30,7 @@ const sessionClient = createTeacherSessionClient({
 });
 const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 let loginGeneration = 0;
+let standaloneWritingForScope = null;
 const renderReadingRegion=createTeacherReadingRegions();
 const commitResultSections=createTeacherResultSections();
 const initialParams = new URLSearchParams(window.location.search);
@@ -257,12 +258,14 @@ function refreshTabScrollLayout(behavior = 'auto') {
 function renderOverviewRows() {
   elements.overviewBody.replaceChildren(...state.students.map(student => {
     const result = student.result;
+    const standaloneWriting = student.writing?.standalone === true;
     const row = document.createElement('tr');
     const nameCell = document.createElement('td');
     nameCell.append(createNode('span', 'teacher-student-name', studentDisplayName(student)));
     const listeningCell = createNode('td', 'teacher-band',
-      result?.listeningStatus === 'interrupted' && !result.listening ? 'Gián đoạn' : formatBand(result?.listening?.band));
-    const readingCell = createNode('td', 'teacher-band', result ? formatBand(result.reading?.band) : '—');
+      result?.listeningStatus === 'interrupted' && !result.listening ? 'Gián đoạn'
+        : standaloneWriting && !result?.listening ? '' : formatBand(result?.listening?.band));
+    const readingCell = createNode('td', 'teacher-band', result?.reading ? formatBand(result.reading.band) : standaloneWriting ? '' : '—');
     const writing = student.writing || { status: 'not_submitted' };
     const taskNumbers = configuredWritingTasks();
     const writingCell = document.createElement('td');
@@ -283,7 +286,8 @@ function renderOverviewRows() {
       )
     );
     const statusCell = document.createElement('td');
-    statusCell.append(createNode('span', `teacher-status ${student.status}`, statusLabel(student.status)));
+    statusCell.append(createNode('span', `teacher-status ${student.status}`,
+      standaloneWriting && student.status === 'not_started' ? 'Đã chấm Writing' : statusLabel(student.status)));
     const actionCell = document.createElement('td');
     const openButton = createNode('button', 'button button-secondary teacher-open-button', 'Xem');
     openButton.type = 'button';
@@ -578,7 +582,7 @@ function openTeacherWritingFeedback(studentName, writing) {
   const essay = createNode(
     'div',
     `writing-feedback-essay${essayValue.trim() ? '' : ' is-empty'}`,
-    essayValue.trim() || 'Chưa có nội dung bài viết.'
+    writing.standalone ? essayValue : (essayValue.trim() || 'Chưa có nội dung bài viết.')
   );
   essay.lang = 'en';
   sourcePane.append(essay);
@@ -641,7 +645,10 @@ async function loadTeacherWritingDetail(student, taskNumber, button) {
   if (!selectedClass || !student || ![1, 2].includes(taskNumber)) return;
   const isCurrent = teacherDetailIsCurrent(selectedClass, student, button);
   const cacheKey = [selectedClass.id, state.selectedTestSlug, student.ref, taskNumber, student.writing?.updatedAt || ''].join('|');
-  let payload = state.writingDetailCache.get(cacheKey);
+  const standaloneDetail = student.writing?.standaloneDetail;
+  let payload = standaloneDetail?.taskNumber === taskNumber
+    ? { studentName: studentDisplayName(student), writing: standaloneDetail }
+    : state.writingDetailCache.get(cacheKey);
   const originalText = button.querySelector('strong')?.textContent || '';
   try {
     button.disabled = true;
@@ -775,6 +782,24 @@ function savedProgressButton(student){
 }
 
 function renderStudentResult(student) {
+  if (student?.writing?.standaloneDetail) {
+    window.K67_ANSWER_EXPLANATIONS?.reset();
+    const panel = createNode('section', 'panel result-panel teacher-result-panel');
+    const heading = createNode('div', 'result-heading');
+    const headingCopy = document.createElement('div');
+    headingCopy.append(
+      createNode('p', 'eyebrow', 'Kết quả cá nhân'),
+      createNode('h2', '', studentDisplayName(student)),
+      createNode('p', '', `${getSelectedClass()?.name || ''} · ${getSelectedTest()?.title || ''}`)
+    );
+    heading.append(headingCopy, savedProgressButton(student));
+    const summaryGrid = createNode('div', 'summary-grid');
+    const { taskNumber, taskScore } = student.writing.standaloneDetail;
+    summaryGrid.append(addWritingResultSummaryButton(student, taskNumber, `Band ${formatBand(taskScore)}`, true));
+    panel.append(heading, summaryGrid);
+    elements.studentView.replaceChildren(panel);
+    return;
+  }
   if (!student || student.status !== 'completed' || !student.result) {
     window.K67_ANSWER_EXPLANATIONS?.reset();
     const empty = createNode('section', 'panel teacher-empty');
@@ -917,9 +942,62 @@ function renderActiveView() {
   updateUrl();
 }
 
+// Chỉ bổ sung điểm đã chấm riêng sau khi API giảng viên xác nhận quyền xem roster.
+async function requestResultsWithStandaloneWriting(path, options) {
+  const payload = await apiRequest(path, options);
+  const classCode = 'IC2304';
+  const testSlug = 'term-test-1';
+  if (payload.class?.id !== '1293' || payload.class.name !== classCode || payload.test?.slug !== testSlug
+      || !Array.isArray(payload.students) || !options.isCurrent()) return payload;
+
+  let unavailable = false;
+  const students = await Promise.all(payload.students.map(async student => {
+    // Điểm chính thức đi theo lượt thi và được ưu tiên khi đã có.
+    if (student.status !== 'not_started' || student.result || student.writing?.status !== 'not_submitted') return student;
+    try {
+      const response = await fetch('https://ducizone.ddns.net/webhook/k67-term1-standalone-writing-review-v1', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classCode, testSlug, studentRef: student.ref, identityConfirmed: true }),
+        credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(2500)
+      });
+      if (response.status === 404) return student;
+      if (!response.ok) throw new Error('STANDALONE_WRITING_READ_FAILED');
+      const { ok, result } = await response.json();
+      if (!ok || result?.classCode !== classCode || result.testSlug !== testSlug || result.studentRef !== student.ref
+          || result.studentName !== student.name || result.taskNumber !== 2 || !Number.isFinite(result.score)
+          || result.score < 0 || result.score > 9 || !Number.isInteger(result.score * 2)) {
+        throw new Error('STANDALONE_WRITING_RESULT_MISMATCH');
+      }
+      const { prompt, essay, wordCount, report, criteria } = result;
+      if (typeof prompt !== 'string' || !prompt.trim() || typeof essay !== 'string' || !essay.trim()
+          || !Number.isInteger(wordCount) || wordCount < 1 || typeof report !== 'string' || !report.trim()
+          || !Array.isArray(criteria) || criteria.length !== 4
+          || !['TR', 'CC', 'LR', 'GRA'].every(code =>
+            criteria.some(item => item?.code === code && Number.isFinite(item.bandScore)))) {
+        throw new Error('STANDALONE_WRITING_DETAIL_MISMATCH');
+      }
+      const standaloneDetail = { standalone: true, taskNumber: 2, taskScore: result.score,
+        prompt, essay, wordCount, report, criteria };
+      return { ...student, writing: { ...student.writing, status: 'ready', standalone: true,
+        task2State: 'complete', task2Score: result.score, writingScore: result.score, standaloneDetail } };
+    } catch {
+      unavailable = true;
+      // Nếu lần đọc này lỗi tạm thời, giữ đúng điểm đã hiện cho cùng người/lớp/bài.
+      const previous = options.isCurrent() && standaloneWritingForScope === loginGeneration
+        && state.students.find(item => item.ref === student.ref && item.writing?.standalone);
+      return previous ? { ...student, writing: previous.writing } : student;
+    }
+  }));
+  if (options.isCurrent()) {
+    if (unavailable) console.warn('term1_teacher_standalone_writing_unavailable');
+    standaloneWritingForScope = loginGeneration;
+  }
+  return { ...payload, students };
+}
+
 const loadFullResults=createScopedTeacherResults({
   current(){const cls=getSelectedClass();return state.authenticated&&cls?{generation:loginGeneration,classId:cls.id,className:cls.name,testSlug:state.selectedTestSlug}:null;},
-  request:apiRequest,
+  request:requestResultsWithStandaloneWriting,
   start(scope,quiet){state.resultsLoading=true;if(!quiet)showNotice(`Đang tải kết quả ${scope.className}...`);},
   finish(){state.resultsLoading=false;},
   apply(payload){

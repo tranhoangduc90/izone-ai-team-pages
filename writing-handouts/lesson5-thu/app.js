@@ -38,6 +38,16 @@ if(isDiscussion(lesson)){labels.chosenSolution='Phương án bạn ủng hộ';d
 if(isOpinion(lesson)){labels.agreementLevel='Mức độ đồng ý với nhận định của đề bài';labels.chosenSolution='Phương án bạn ủng hộ';labels.positionLimit='Giới hạn hoặc điều kiện · Bắt buộc khi đồng ý một phần';descriptions.outline.instruction='Chọn mức độ đồng ý và phương án bạn ủng hộ. Thân bài 1 bàn phương án không ủng hộ; thân bài 2 bảo vệ phương án ủng hộ. Nếu đồng ý một phần, chỉ rõ điều kiện và phía bạn nghiêng về. Chốt hai idea mỗi đoạn; chưa viết Topic hoặc A/X/B.';}
 const outline=isBodyOutline(lesson);
 const sharePractice=lesson.activity==='lesson4';
+const lesson5=lesson.activity==='lesson5';
+const homeworkTransferKey='izone-handout67:lesson5-homework-transfer';
+const homeworkResumeKey='izone-handout67:lesson5-homework-resume';
+const homeworkHelp='Mở Homework Lesson 4 từ Docs cá nhân và chọn “Dùng idea ở Lesson 5”.';
+function readTab(key){
+ try{return JSON.parse(sessionStorage.getItem(key));}catch{return null;}
+}
+function clearTab(key){
+ try{sessionStorage.removeItem(key);}catch{}
+}
 const saveLogBuild='20261113-save-log-v1';
 if(outline){
  labels.stance='Quan điểm của cả bài';
@@ -89,7 +99,8 @@ function stepCard(key){
   let form=local==='outline'?`${isOpinion(lesson)?field('agreementLevel',disabled):''}${field('chosenSolution',disabled)}${isOpinion(lesson)?field('positionLimit',disabled):''}${[1,2].map(n=>`<section class="preparation-body"><h3>Thân bài ${n} · ${n===1?'Đánh giá phương án không chọn':'Bảo vệ phương án chọn'}</h3><div class="field-grid">${[1,2].map(i=>field(bodyKey(n,'idea'+i),disabled)).join('')}</div></section>`).join('')}`:local==='topic'?`<h3>${isPrepared(lesson)?'Hai idea đã chốt của':'Chốt idea cho'} thân bài ${b||lesson.body||2}</h3><div class="field-grid">${field(prefix('idea1'),disabled,isPrepared(lesson))}${field(prefix('idea2'),disabled,isPrepared(lesson))}</div>${field(prefix('topicSentence'),disabled)}`:(type==='a'||type==='x'?'':field(key,disabled));
   const words=FIELDS[key].reduce((total,f)=>total+state.responses[f].trim().split(/\s+/).filter(Boolean).length,0);
   const submitted=(state.submittedSections||[]).includes(key)||step.history.length>0;
-  const attestation=step.status!=='passed'?`<div class="attest-wrap"><button type="button" data-attest="${key}" ${submitted?'':'disabled'}>GV xác nhận có thể bỏ qua comment</button><small>${submitted?'Bạn tự nhấn sau khi được GV đồng ý miệng.':'Cần gửi chấm ít nhất một lần trước khi xác nhận.'}</small></div>`:'';
+  const attestLabel=lesson5&&key==='topic'?'Giảng viên đã thông qua idea cho thân bài':'GV xác nhận có thể bỏ qua comment';
+  const attestation=step.status!=='passed'?`<div class="attest-wrap"><button type="button" data-attest="${key}" ${submitted?'':'disabled'}>${attestLabel}</button><small>${submitted?'Bạn tự nhấn sau khi được GV đồng ý miệng.':'Cần gửi chấm ít nhất một lần trước khi xác nhận.'}</small></div>`:'';
   const current=`<div class="step-grid"><article class="answer-card"><div class="step-heading"><div><p class="kicker">${['topic','outline'].includes(local)?'Chuẩn bị nội dung':`Ý ${n} · ${type.toUpperCase()} trong A–X–B`}</p><h3>${def.title}</h3></div><span class="badge ${step.status}">${statusLabels[step.status]}</span></div><p class="instruction">${def.instruction}</p>${chain(key)}${form}<p class="error" id="error-${key}" role="alert" hidden></p><div class="section-actions"><span class="word-count" data-count="${key}">${words} từ</span><button data-check="${key}" class="primary" ${disabled?'disabled':''}>${step.status==='passed'?'Đã đạt · giữ nguyên':step.status==='pending'?'Đang chấm…':def.button+(type==='b'?` ${n}`:'')}</button></div>${attestation}</article>${comments(key)}</div>`;
   return step.status==='passed'?`<details class="prior-step expandable" id="step-${key}" data-status="passed"><summary><span class="section-title">${title}</span><span class="badge passed">✓ Đã đạt</span><span class="expand-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path class="vertical" d="M12 5v14"/></svg></span></summary>${current}</details>`:`<section id="step-${key}" class="step" data-status="${step.status}" aria-label="${title}">${current}</section>`;
 }
@@ -134,6 +145,49 @@ function render(){
   checkFeedback.sync(state.responses,state.ref);
   syncWritingPrompt();
   renderLesson4Progress();
+  renderHomeworkIdeas();
+}
+function renderHomeworkIdeas(){
+ if(!state.ref||!(lesson5||sharePractice))return;
+ let region=$('homework-ideas-transfer');
+ if(!region){
+  region=document.createElement('div');
+  region.id='homework-ideas-transfer';
+  $('save-state').after(region);
+ }
+ if(lesson5){
+  const source=state.lesson5IdeaSource;
+  const text=source?`${source.fields.map(key=>labels[key]).join(', ')} được điền ban đầu từ ${source.status==='checked'?'Homework Lesson 4':'nháp Homework Lesson 4'}.`:'Bạn có thể nhập ý trực tiếp. Nếu muốn lấy ý đã chuẩn bị, '+homeworkHelp;
+  if(region.textContent!==text)region.textContent=text;
+  region.hidden=state.steps.topic.status==='passed'&&!source;
+  return;
+ }
+ const eligible=writingHandoff?.verifiedDocsStudent&&state.lesson5IdeaAvailable;
+ region.hidden=!eligible;
+ if(region.firstChild||!eligible)return;
+ const button=document.createElement('button');
+ const status=document.createElement('span');
+ button.type='button';button.className='secondary';button.textContent='Dùng idea ở Lesson 5';
+ status.setAttribute('role','status');
+ region.append(button,status);
+ button.addEventListener('click',async()=>{
+  const ref=state.ref,epoch=generation;
+  button.disabled=true;
+  try{
+   if(!await flush()||epoch!==generation||ref!==state.ref)throw Error('DRAFT_UNSAVED');
+   const result=await api.read(ref);
+   if(epoch!==generation||ref!==state.ref||result.session?.ref!==ref)return;
+   if(!result.lesson5IdeaTicket){
+    status.textContent=' Chưa thể lấy ý. Hãy kiểm tra bài đã lưu và lớp đã được mở Lesson 5.';
+    return;
+   }
+   sessionStorage.setItem(homeworkTransferKey,JSON.stringify({
+    ticket:result.lesson5IdeaTicket,classRef:state.classRef,studentRef:state.studentRef
+   }));
+   location.assign(new URL('../lesson5/',location.href));
+  }catch{status.textContent=' Chưa chuyển được ý. Bài Lesson 4 vẫn được giữ; hãy thử lại.';}
+  finally{button.disabled=false;}
+ });
 }
 function renderLesson4Progress() {
  if(!sharePractice||!state.ref)return;
@@ -286,7 +340,9 @@ function handoutAccessLost(){
 }
 function show(view){for(const id of ['identity','confirm','workspace'])$(id).hidden=id!==view;window.scrollTo({top:0});}
 function draftKey(){return 'izone-handout67:draft:'+state.ref;}
-function keepDraft(){try{localStorage.setItem(draftKey(),JSON.stringify({ref:state.ref,changes:{...dirty},responses:{...state.responses},savedAt:Date.now()}));return true;}catch{message('Thiết bị chưa giữ được nháp. Hãy sao chép nội dung trước khi đóng trang.');return false;}}
+function draftStorage(){return state.lesson5IdeaSource?sessionStorage:localStorage;}
+function readDraft(){return draftStorage().getItem(draftKey())||(state.lesson5IdeaSource?localStorage.getItem(draftKey()):null);}
+function keepDraft(){try{draftStorage().setItem(draftKey(),JSON.stringify({ref:state.ref,changes:{...dirty},responses:{...state.responses},savedAt:Date.now()}));return true;}catch{message('Thiết bị chưa giữ được nháp. Hãy sao chép nội dung trước khi đóng trang.');return false;}}
 function enqueue(action){const result=serial.then(action);serial=result.catch(()=>{});return result;}
 function apply(value){state=value;render();}
 function failure(error){
@@ -324,7 +380,7 @@ async function flush(){
      }
     }
    }
-   if(!Object.keys(dirty).length){try{localStorage.removeItem(draftKey());}catch{}note('');}
+   if(!Object.keys(dirty).length){try{draftStorage().removeItem(draftKey());}catch{}note('');}
    return true;
   }catch(error){if(epoch===generation)failure(error);return false;}
   finally{if(epoch===generation){busy=false;saveInFlight=false;}}
@@ -345,8 +401,8 @@ async function poll(){
  }catch(error){if(epoch===generation){if(verifiedOpening&&[401,403].includes(error.status))handoutAccessLost();else note('Kết nối đang gián đoạn. Bài đã gửi vẫn được giữ; trang sẽ kiểm lại.');}}
  finally{if(epoch===generation)schedulePoll();}
 }
-async function openHandout(classRef,selectedStudent,isCurrent){
- const result=await api.open({activity:lesson.activity,classRef,studentRef:selectedStudent});
+async function openHandout(classRef,selectedStudent,isCurrent,ticket){
+ const result=await api.open({activity:lesson.activity,classRef,studentRef:selectedStudent,...(ticket?{lesson5IdeaTicket:ticket}:{})});
  if(!isCurrent())return null;
  if(!result.token||!result.session?.ref||result.session.activity!==lesson.activity||result.session.classRef!==classRef||result.session.studentRef!==selectedStudent)
   throw Object.assign(Error('SESSION_OWNER_MISMATCH'),{status:403});
@@ -369,15 +425,17 @@ function displayHandout(result){
    practice:()=>scoped(()=>api.practice(ref)),savePractice:body=>scoped(()=>api.savePractice(ref,body))});
  }
  $('save-state').textContent='Đã mở bài từ máy chủ';
- try{$('restore-draft').hidden=!localStorage.getItem(draftKey());}catch{$('restore-draft').hidden=true;}
+ try{$('restore-draft').hidden=!readDraft();}catch{$('restore-draft').hidden=true;}
  schedulePoll();
 }
-async function enter({selection=null,pinned=false}={}){
+async function enter({selection=null,pinned=false,transfer=null}={}){
  const epoch=++generation;const button=$('confirm-button');button.disabled=true;
  const selectedStudent=student,classRef=$('class-select').value;
  const context=selection?courseIdentity.automaticContext(selection):courseIdentity.prepare(selectedStudent,'');
  try {
-  const result=await openHandout(classRef,selectedStudent,()=>epoch===generation&&student===selectedStudent&&$('class-select').value===classRef);
+  const saved=lesson5?readTab(homeworkResumeKey):null;
+  if(lesson5)api.setToken(saved?.classRef===classRef&&saved.studentRef===selectedStudent?saved.token:'');
+  const result=await openHandout(classRef,selectedStudent,()=>epoch===generation&&student===selectedStudent&&$('class-select').value===classRef,transfer?.ticket);
   if(!result)return;
   if(selection&&!courseIdentity.isCurrent(selection))throw new Error('IDENTITY_CHANGED');
   if(!pinned)await courseIdentity.commit(context,{automatic:Boolean(selection),remember:$('remember').checked}).then(value=>{
@@ -386,7 +444,17 @@ async function enter({selection=null,pinned=false}={}){
   if(epoch!==generation||student!==selectedStudent)return;
   courseIdentity.pin(selectedStudent,{classRef});
   displayHandout(result);
- }catch(error){message('Chưa mở được bài. Hãy thử lại; bài đã lưu vẫn được giữ.');}
+  if(lesson5&&result.session.lesson5IdeaSource){
+   try{sessionStorage.setItem(homeworkResumeKey,JSON.stringify({classRef,studentRef:selectedStudent,token:result.token}));}catch{}
+  }
+  if(transfer)clearTab(homeworkTransferKey);
+ }catch(error){
+  if(epoch!==generation)return;
+  if(transfer)clearTab(homeworkTransferKey);
+  if(lesson5&&(transfer||error.message==='LESSON5_HOMEWORK_AUTH_REQUIRED')){
+   message('Chưa xác minh được bài Lesson 4. '+homeworkHelp);
+  }else message('Chưa mở được bài. Hãy thử lại; bài đã lưu vẫn được giữ.');
+ }
  finally{button.disabled=false;}
 }
 async function openVerifiedHandout(){
@@ -439,6 +507,7 @@ async function changeStudent(){
  if(!await flush()||Object.keys(dirty).length){message('Chưa lưu xong nháp; bài vẫn giữ nguyên người.');return;}
  if((await courseIdentity.forget()).status!=='empty'){message('Chưa bỏ được ghi nhớ. Bài và nháp vẫn được giữ.');return;}
  generation++;clearTimeout(pollTimer);clearTimeout(saveTimer);api.setToken('');pollEtag=undefined;student='';dirty={};state=createState(0,lesson);
+ if(lesson5){clearTab(homeworkTransferKey);clearTab(homeworkResumeKey);}
  $('student-select').value='';show('identity');
 }
 async function bootstrap(){
@@ -450,6 +519,16 @@ async function bootstrap(){
   if(!classes.length)throw new Error('CLASS_NOT_OPEN');
   for(const c of classes)for(const s of c.students)names[s.studentRef]=s.displayName;
   $('class-select').innerHTML=classes.map(c=>`<option value="${escape(c.classRef)}">${escape(c.className)}</option>`).join('');students();
+  if(lesson5){
+   const transfer=readTab(homeworkTransferKey);
+   const entry=transfer||readTab(homeworkResumeKey);
+   const room=classes.find(c=>c.classRef===entry?.classRef&&c.students.some(s=>s.studentRef===entry.studentRef));
+   if(room){
+    $('class-select').value=room.classRef;students();student=entry.studentRef;$('student-select').value=student;
+    return enter({pinned:true,transfer});
+   }
+   if(transfer){clearTab(homeworkTransferKey);message('Lớp trong Homework chưa được mở Lesson 5.');}
+  }
   try{await autoSelectStudent();}catch{message('Chưa kiểm được người đã nhớ. Bạn vẫn có thể chọn lớp và tên.');}
  }catch{message('Chưa tải được lớp. Hãy tải lại trang khi kết nối ổn định.');}
 }
@@ -468,7 +547,7 @@ $('read-latest').addEventListener('click',async()=>{
  catch(error){if(epoch===generation&&ref===state.ref)failure(error);}
  finally{if(epoch===generation&&ref===state.ref){busy=false;editingLocked=false;fieldControls().forEach(el=>{el.disabled=conflict||!canChangeField(el.dataset.field);});}}
 });
-$('restore-draft').addEventListener('click',()=>{if(busy||editingLocked)return;try{const saved=JSON.parse(localStorage.getItem(draftKey()));for(const [field,value] of Object.entries(saved.changes||saved.responses)){const key=ORDER.find(k=>FIELDS[k].includes(field));if(typeof value==='string'&&canChangeField(field)&&state.responses[field]!==value){state.responses[field]=value;dirty[field]=value;}}render();$('restore-draft').hidden=true;if(Object.keys(dirty).length){keepDraft();void flush();}}catch{message('Chưa đọc được nháp trên thiết bị.');}});
+$('restore-draft').addEventListener('click',()=>{if(busy||editingLocked)return;try{const saved=JSON.parse(readDraft());for(const [field,value] of Object.entries(saved.changes||saved.responses)){const key=ORDER.find(k=>FIELDS[k].includes(field));if(typeof value==='string'&&canChangeField(field)&&state.responses[field]!==value){state.responses[field]=value;dirty[field]=value;}}render();$('restore-draft').hidden=true;if(Object.keys(dirty).length){keepDraft();void flush();}}catch{message('Chưa đọc được nháp trên thiết bị.');}});
 $('workspace').addEventListener('input',event=>{
  const field=event.target.dataset.field,key=ORDER.find(k=>FIELDS[k].includes(field));if(!field||editingLocked||conflict||!canChangeField(field))return;
  state.responses[field]=event.target.value;dirty[field]=event.target.value;keepDraft();checkFeedback.sync(state.responses,state.ref);$('save-state').textContent='Đang lưu…';clearTimeout(saveTimer);saveTimer=setTimeout(()=>void flush(),600);

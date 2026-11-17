@@ -40,6 +40,19 @@ test('Term 1 warm rollout keeps old Reading and new Listening receipts through d
     assert.ok(ready,diagnostics||'Preview fixture did not start.');
     browser=await chromium.launch({channel:'msedge',headless:true,args:['--no-sandbox','--autoplay-policy=no-user-gesture-required']});
     const context=await browser.newContext({baseURL:base});
+    const mockStandaloneWriting = async target => target.addInitScript(() => {
+      const fetchOriginal = window.fetch.bind(window);
+      window.fetch = (input, options) => {
+        if (input !== 'https://ducizone.ddns.net/webhook/k67-term1-standalone-writing-review-v1') {
+          return fetchOriginal(input, options);
+        }
+        const result = window.fixtureStandaloneWriting;
+        if (!result) return Promise.resolve(new Response(null, { status: 404 }));
+        window.fixtureStandaloneRequest = JSON.parse(options.body);
+        return Promise.resolve(Response.json({ ok: true, result }));
+      };
+    });
+    await mockStandaloneWriting(context);
     const errors=[];
     const open=async mode=>{
       const page=await context.newPage();
@@ -122,6 +135,27 @@ test('Term 1 warm rollout keeps old Reading and new Listening receipts through d
     const listening=result.listening.details.find(item=>item.number===Number(listeningNumber));
     assert.equal(reading.studentAnswer,'Reading from the old shell');
     assert.equal(listening.studentAnswer,'Listening from the new shell');
+    const reviewContext = await browser.newContext({ baseURL: base });
+    await mockStandaloneWriting(reviewContext);
+    const reviewPage = await reviewContext.newPage();
+    reviewPage.on('pageerror', error => errors.push(error.message));
+    await reviewPage.goto(entry+'read_first');
+    await reviewPage.locator('#bootstrapStudent').selectOption(studentRef);
+    await reviewPage.evaluate(ref => {
+      const picker = document.getElementById('bootstrapStudent');
+      const studentName = Array.from(picker.options).find(option => option.value === ref).textContent;
+      window.fixtureStandaloneWriting = {
+        testSlug: 'term-test-1', classCode: 'IC2304', taskNumber: 2, studentRef: ref, studentName,
+        score: 6, wordCount: 3, essay: 'Synthetic practice essay', prompt: 'Synthetic prompt',
+        criteria: ['TR', 'CC', 'LR', 'GRA'].map(code => ({ code, bandScore: 6, feedback: 'Synthetic feedback' })),
+      };
+    }, studentRef);
+    await reviewPage.getByRole('button', { name: 'Xác nhận, tiếp tục', exact: true }).click();
+    const review = reviewPage.getByRole('dialog');
+    await review.getByText('Synthetic practice essay', { exact: true }).waitFor();
+    assert.deepEqual(await reviewPage.evaluate(() => window.fixtureStandaloneRequest), {
+      testSlug: 'term-test-1', classCode: 'IC2304', studentRef, identityConfirmed: true,
+    });
     assert.deepEqual(errors,[]);
   } finally {
     await browser?.close();

@@ -1,0 +1,10 @@
+.standalone-writing-dialog {
+  width: min(860px, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  overflow: auto;
+  color: var(--ink, #14233a);
+}
+.standalone-writing-dialog::backdrop { background: rgb(10 24 44 / 60%); }
+.standalone-writing-dialog .standalone-writing-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.standalone-writing-dialog details { border-top: 1px solid var(--line); padding: .8rem 0; }
+.standalone-writing-dialog summary { cursor: pointer; font-weight: 700; }
