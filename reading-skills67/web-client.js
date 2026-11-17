@@ -6,7 +6,7 @@
   if(new URLSearchParams(location.search).get('server')!=='1'&&!window.READING67_API_BASE)return;
   const prefix=window.READING67_API_BASE||new URL('../api/reading-skills67',location.href).pathname;
   const observerModule=new URL('../shared/test-state-observer.mjs?v=20261101-state1',document.currentScript?.src||new URL('web-client.js',location.href)).href;
-  const journalModule=new URL('journal.mjs?v=20261117-rh-renew-r1',document.currentScript?.src||new URL('web-client.js',location.href)).href;
+  const journalModule=new URL('journal.mjs?v=20261117-rh-route-r1',document.currentScript?.src||new URL('web-client.js',location.href)).href;
   let revision=0,identity=null,content=null,pending=null,processing=null,timer=null,pollTimer=null,generation=0,backupKey='',submitKey='',access=null,runNo=1,initialHistory=null;
   const state={status:'loading',savedAt:null,error:null,conflict:false,completeness:null,homework:null};
   let homeworkTimer=null,homeworkRead=0;

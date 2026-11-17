@@ -38,12 +38,12 @@ export function startReadingHomeworkJournal(endpoint) {
 }
 
 export function startHomeworkJournal(endpoint, product, {
-  fetcher = globalThis.fetch, Outbox = IndexedOutbox, recorderFactory = createRecorder, durableBatches = false, recoverContexts,
+  fetcher = globalThis.fetch, Outbox = IndexedOutbox, recorderFactory = createRecorder, durableBatches = false, recoverContexts, outboxName,
 } = {}) {
   if (!['reading-homework', 'listening-homework'].includes(product)) throw Error('JOURNAL_PRODUCT_DENIED');
-  const outbox = new Outbox({ name: 'izone-' + product + '-journal-v1', maxBytes: 2 * 1024 * 1024 });
+  const outbox = new Outbox({ name: outboxName ?? 'izone-' + product + '-journal-v1', maxBytes: 2 * 1024 * 1024 });
   const send = fetchTransport(endpoint, fetcher);
-  let active = null, stopped = false;
+  let active = null, recoveryAnchor = null, stopped = false;
   const recorder = recorderFactory({
     outbox, durableBatches, context: () => active,
     build: product + (durableBatches ? '-journal-20261117' : '-journal-20261105'),
@@ -56,23 +56,23 @@ export function startHomeworkJournal(endpoint, product, {
     && /^[a-f0-9-]{36}$/i.test(context.ticketId || '') && Number.isSafeInteger(context.expiresAt) && context.expiresAt > Date.now();
   async function renewPending() {
     const now = Date.now();
-    if (!recoverContexts || recovering || stopped || !active || now < nextRecovery) return;
+    if (!recoverContexts || recovering || stopped || !recoveryAnchor || now < nextRecovery) return;
     recovering = true;
     nextRecovery = now + 12_000;
     try {
-      const boundAtStart = active;
+      const boundAtStart = recoveryAnchor;
       for (const [id, until] of declinedUntil) if (until <= now) declinedUntil.delete(id);
       const ids = await outbox.expiredBindings(now + 60_000, new Set(declinedUntil.keys()));
-      if (!ids.length) return;
+      if (!ids.length || stopped || recoveryAnchor !== boundAtStart) return;
       const issued = await recoverContexts(ids);
-      if (stopped || active !== boundAtStart) return;
+      if (stopped || recoveryAnchor !== boundAtStart) return;
       const updated = new Set();
       for (const context of issued) {
-        if (stopped || active !== boundAtStart) return;
+        if (stopped || recoveryAnchor !== boundAtStart) return;
         if (!valid(context) || !ids.includes(context.bindingId) || updated.has(context.bindingId)) continue;
         const auth = authFrom(context);
         await outbox.renewBinding(context.bindingId, auth);
-        if (active === boundAtStart && active.bindingId === context.bindingId) active.auth = auth;
+        if (recoveryAnchor === boundAtStart && active?.bindingId === context.bindingId) active.auth = auth;
         updated.add(context.bindingId);
       }
       for (const id of ids) if (!updated.has(id)) declinedUntil.set(id, now + 60_000);
@@ -97,6 +97,7 @@ export function startHomeworkJournal(endpoint, product, {
     const { bindingId } = context;
     const captured = { bindingId, auth: authFrom(context) };
     active = captured;
+    recoveryAnchor = captured;
     void outbox.renewBinding(bindingId, captured.auth).then(renewPending).catch(() => {});
     const emit = data => recorder.record('homework_exchange', data, captured);
     return {
@@ -121,6 +122,11 @@ export function startHomeworkJournal(endpoint, product, {
 
   return {
     bind,
+    recoverFor(bindingId) {
+      active = null;
+      recoveryAnchor = { bindingId };
+      void renewPending();
+    },
     stop() {
       if (stopped) return;
       stopped = true;
