@@ -76,7 +76,6 @@
   let storageKey = paperIdentity ? paperPointerKey : `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
   const persistedSession = paperIdentity ? paperIdentity.current().state : miniAnswerSheet ? {} : readSession();
   const incoming = window.TERM_TEST_BOOTSTRAP?.sessionState;
-  const officialTerm1Result = window.TERM_TEST_BOOTSTRAP?.officialTerm1Result;
   const offlineIdentity = window.TERM_TEST_BOOTSTRAP?.offlineSectionIdentity;
   const offlineReadingIdentity = offlineIdentity?.section === 'reading';
   const offlineListeningIdentity = offlineIdentity?.section === 'listening';
@@ -85,7 +84,7 @@
     && incomingIdentity.studentRef === incoming.studentRef
     && ((incomingIdentity.attemptToken && incomingIdentity.attemptToken === incoming.attemptToken)
       || (incomingIdentity.examSessionToken && incomingIdentity.examSessionToken === incoming.examSessionToken));
-  const restoredSession = officialTerm1Result ? {studentRef:officialTerm1Result.studentRef} : canUseIncoming
+  const restoredSession = canUseIncoming
     ? { ...incoming, ...(persistedSession.studentRef === incoming.studentRef
       && persistedSession.attemptToken === incoming.attemptToken
       && persistedSession.examSessionToken === incoming.examSessionToken ? persistedSession : {}) }
@@ -217,7 +216,7 @@
       }).catch(()=>showNotice('Chưa lưu được nháp trên máy. Hãy tải bài làm về máy.','error'));
     }
     const serialized = JSON.stringify({
-      generation: miniJourney?.view().generation ?? miniGeneration,
+      generation: miniGeneration,
       studentRef: state.studentRef,
       studentName: state.studentName,
       studentIdentitySource: state.studentIdentitySource,
@@ -225,8 +224,6 @@
       clientSubmissionStudentRef: state.clientSubmissionStudentRef,
       examSessionToken: state.examSessionToken,
       attemptToken: state.attemptToken,
-      continuationSection: miniJourney?.view().continuationSection,
-      continuationResume: state.continuationResume,
       listeningStartedAt: state.listeningStartedAt,
       listeningDeadlineAt: state.listeningDeadlineAt,
       readingDeadlineAt: state.readingDeadlineAt,
@@ -902,73 +899,15 @@
       elements.resultReadyView.hidden = false;
       updateJourneyResultReady();
     }
-    if (stage === 'continuation-saved') updateContinuationSaved();
     if (stage === 'result') elements.resultView.hidden = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   let journeyResultReadyCopy;
-  function officialTerm1Identity() {
-    if (!officialTerm1Result && miniJourney?.view().continuationSection !== 'writing') return null;
-    return {classCode,studentRef:state.studentRef};
-  }
-
-  function journeyResultReady() {
-    return Boolean(miniJourney?.resultToken() || miniJourney?.continuationReceipt?.()?.nextSection === 'result');
-  }
-
-  let continuationSavedCard;
-  function updateContinuationSaved() {
-    if (!continuationSavedCard) {
-      const panel = document.createElement('section');
-      panel.className = 'panel';
-      const heading = document.createElement('h2');
-      const status = document.createElement('p');
-      status.setAttribute('role', 'status');
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'button button-primary';
-      button.addEventListener('click', async () => {
-        const receipt = miniJourney.continuationReceipt();
-        if (!miniJourney.officialConflict?.() && receipt?.nextSection !== 'writing') return;
-        if (navigator.onLine===false) {
-          status.textContent = 'Hãy kết nối mạng để đọc tiến độ chính thức.';
-          return;
-        }
-        button.disabled = true;
-        const previous = state.continuationResume;
-        state.continuationResume = state.examSessionToken;
-        if (!saveSession()) {
-          state.continuationResume = previous;
-          button.disabled = false;
-          status.textContent = 'Chưa lưu được yêu cầu mở lại. Bạn có thể tải bản đã lưu trên thiết bị.';
-          return;
-        }
-        allowExamNavigation = true;
-        await miniJourney.close();
-        location.reload();
-      });
-      panel.append(heading, status, button);
-      elements.resultReadyView.before(panel);
-      views.push(panel);
-      continuationSavedCard = {panel,heading,status,button};
-    }
-    const {panel,heading,status,button} = continuationSavedCard;
-    const receipt = miniJourney.continuationReceipt();
-    const conflict = miniJourney.officialConflict?.();
-    const skill = miniJourney.view().continuationSection === 'listening' ? 'Listening' : 'Reading';
-    panel.hidden = false;
-    heading.textContent = conflict ? 'Tiến độ bài thi đã thay đổi'
-      : receipt ? 'Đã nộp ' + skill : 'Đã lưu ' + skill + ' trên thiết bị';
-    status.textContent = miniJourney.message();
-    button.textContent = conflict ? 'Mở lại theo tiến độ chính thức' : 'Tiếp tục Writing';
-    button.hidden = !conflict && receipt?.nextSection !== 'writing';
-  }
-
   function updateJourneyResultReady() {
     const card = elements.resultReadyView;
     if (!miniJourney || !writingConfig || card.hidden) return;
-    const waiting = !journeyResultReady();
+    const waiting = !miniJourney.resultToken();
     if (card.dataset.awaitingReceipt === String(waiting)) return;
     const fields = [card.querySelector('.eyebrow'), card.querySelector('h2'), card.querySelector('p:not(.eyebrow)')];
     journeyResultReadyCopy ||= fields.map(field => field.textContent);
@@ -1096,10 +1035,6 @@
   }
 
   async function apiRequest(path, options = {}, submission = null) {
-    const official = officialTerm1Identity();
-    if (official && options.method === 'POST' && /^\/api\/term-tests\/result(?:\/(?:review|explanations))?$/.test(path)) {
-      return rawApiRequest(path, {...options, body:JSON.stringify({officialTerm1:official})});
-    }
     if(miniJourney){
       const prefix=`/api/term-tests/${testConfig.slug}/`;
       const match=path.startsWith(prefix)&&/^(reading|listening)(?:\/(start|draft))?$/.exec(path.slice(prefix.length));
@@ -1735,7 +1670,7 @@
     const grading = state.result?.writing?.grading;
     return Boolean(
       !demoMode
-      && state.attemptToken && !officialTerm1Identity()
+      && state.attemptToken
       && state.writingSubmitted
       && !grading?.ready
       && grading?.status !== 'review_required'
@@ -1829,7 +1764,7 @@
   }
 
   async function refreshWritingGrading() {
-    if (demoMode || (!state.attemptToken && !officialTerm1Identity())) return;
+    if (demoMode || !state.attemptToken) return;
     if (writingGradingPollInFlight) {
       writingGradingRefreshRequested = true;
       return;
@@ -1846,10 +1781,7 @@
       });
       if (!writingSubmission.current(requestedWritingOwner)) return;
       writingSubmission.readAvailable();
-      if (payload.officialTerm1 && state.result?.completedAt === payload.completedAt
-          && JSON.stringify(state.result.writing?.grading) === JSON.stringify(payload.writing?.grading)
-          && JSON.stringify(state.result.result) === JSON.stringify(payload.result)) return;
-      if (!officialTerm1Result) applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
+      applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
       renderResult(payload);
       if (payload.writing?.grading?.ready) {
         stopWritingGradingPolling();
@@ -2344,18 +2276,8 @@
 
   function confirmIncomplete(answered, skillLabel) {
     const total = skillLabel === 'Listening' ? testConfig.listening.controls.length : testConfig.reading.controls.length;
-    const journey = miniJourney?.view();
-    const firstSubmission = journey?.term1ParallelEntry && !journey.listeningSubmitted && !journey.readingSubmitted;
-    if (answered === total && !firstSubmission) return true;
-    const message = [
-      answered!==total && `${skillLabel} hiện có ${answered}/${total} câu đã nhập.`,
-      firstSubmission && 'Bản nộp hợp lệ đầu tiên được máy chủ lưu sẽ được tính cho tên đã chọn.',
-      answered!==total ? 'Bạn vẫn muốn nộp bài?' : 'Bạn muốn nộp bài?'
-    ].filter(Boolean).join(' ');
-    try { examJournal?.dialog(message,'opened'); } catch {}
-    const accepted = window.confirm(message);
-    try { examJournal?.dialog(message,accepted?'confirmed':'cancelled'); } catch {}
-    return accepted;
+    if (answered === total) return true;
+    return ((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${skillLabel} hiện có ${answered}/${total} câu đã nhập. Bạn vẫn muốn nộp bài?`);
   }
 
   function setBusy(button, busy, busyText, normalText) {
@@ -3264,7 +3186,7 @@
     elements.viewFullAttempt.hidden = !(
       !listeningOnly
       && (!miniAnswerSheet || Boolean(window.TERM_TEST_ATTEMPT_REVIEW?.open))
-      && (state.attemptToken || officialTerm1Identity())
+      && state.attemptToken
       && payload.completed
       && (!writingConfig || payload.writing?.submitted)
       && !demoMode
@@ -3297,16 +3219,9 @@
     }
     state.resultDetailsIdentity = identity;
     if (!writingConfig || payload.writing?.submitted) {
-      const official = officialTerm1Identity();
       window.K67_ANSWER_EXPLANATIONS?.attach({
         container: elements.questionDetails, payload, attemptToken: state.attemptToken,
-        testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest,
-        ...(official ? {
-          reviewKey:JSON.stringify([official.classCode,official.studentRef,payload.completedAt]),
-          loadReview:()=>apiRequest('/api/term-tests/result/explanations', {
-            method:'POST', headers:{'Content-Type':'application/json'}
-          })
-        } : {})
+        testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest
       });
     }
     const performanceSections = skills.map(([title, skill]) => renderSkillPerformance(title, skill));
@@ -3366,7 +3281,7 @@
   }
 
   async function loadResult(button) {
-    if (miniJourney && writingConfig && !journeyResultReady()) {
+    if (miniJourney && writingConfig && !miniJourney.resultToken()) {
       updateJourneyResultReady();
       return;
     }
@@ -3391,7 +3306,7 @@
         showNotice(
           payload.result.listeningStatus === 'interrupted'
             ? 'Listening bị gián đoạn. Liên hệ giảng viên để nhận bài thay thế.'
-            : payload.officialTerm1 ? 'Bài đã được chấm.' : portalNotice(payload.portalSyncStatus, payload.completed),
+            : portalNotice(payload.portalSyncStatus, payload.completed),
           ['pending', 'queued'].includes(payload.portalSyncStatus) ? '' : 'success'
         );
       }
@@ -3691,11 +3606,6 @@
       submitted = true;
       if (response.cbtOfflineReceipt) await miniCbt.applied('listening');
       elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
-      if (response.continuationSection) {
-        hideNotice();
-        setStage('continuation-saved');
-        return;
-      }
       if (miniJourney && !miniJourney.paper && writingConfig) {
         hideNotice();
       } else if (response.localOnly) {
@@ -3836,11 +3746,6 @@
       submitted = true;
       if (response.cbtOfflineReceipt) await miniCbt.applied('reading');
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
-      if (response.continuationSection) {
-        hideNotice();
-        setStage('continuation-saved');
-        return;
-      }
       if (response.examMode === 'read_first' && !response.completed) {
         showNotice(response.localOnly ? 'Reading đã lưu trên máy. Tiếp tục Listening khi bạn sẵn sàng.'
           : 'Reading đã được lưu. Tiếp tục Listening khi bạn sẵn sàng.', 'success');
@@ -3989,7 +3894,7 @@
                 ? `Đã hết ${writingMinutes} phút và hệ thống đã thu bài Writing. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.`
                 : 'Đã nộp Writing thành công. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.', 'success');
           }
-          if(!saved.localOnly||journeyResultReady())await loadResult(elements.viewResult);
+          if(!saved.localOnly||miniJourney?.resultToken())await loadResult(elements.viewResult);
       } catch (error) {
         if (!writingSubmission.current(writingOwner)) return;
         if (state.writingSubmitted) { writingSubmission.readUnavailable(); await writingSubmission.inspect(); return; }
@@ -4555,17 +4460,6 @@
     });
     if (!miniJourney.paper) miniJourney.changed.addEventListener('change', updateListeningSavedCopy);
     if (writingConfig) miniJourney.changed.addEventListener('change', updateJourneyResultReady);
-    if (view.continuationSection || typeof miniJourney.officialConflict==='function') {
-      miniJourney.changed.addEventListener('change', () => {
-        if (state.stage === 'continuation-saved') updateContinuationSaved();
-        else if (miniJourney.officialConflict?.()) setStage('continuation-saved');
-      });
-      if (miniJourney.officialConflict?.()
-          || (['listening','reading'].includes(view.continuationSection) && view.nextSection==='result')) {
-        setStage('continuation-saved');
-        return;
-      }
-    }
     if(view.needsListeningAcknowledgment)await showJourneyInterruption();
     else if(view.nextSection==='listening') {
       await window.TERM_TEST_BOOTSTRAP?.listeningScriptsReady;
@@ -4617,27 +4511,6 @@
 
   async function initialize() {
     if(miniJourney){await initializeMiniJourney();return;}
-    if (officialTerm1Result) {
-      state.studentName = officialTerm1Result.studentName;
-      state.className = officialTerm1Result.className;
-      window.K67_EXAM_ORDER?.apply(state,officialTerm1Result);
-      state.listeningSubmitted = true;
-      state.readingSubmitted = true;
-      state.completed = true;
-      state.writingSubmitted = true;
-      elements.studentSelect.replaceChildren(new Option(state.studentName, state.studentRef, true, true));
-      elements.studentSelect.disabled = true;
-      elements.classLabel.textContent = 'Lớp ' + state.className;
-      // Resolve the shared readiness promise before mounting the completed-result controls.
-      listeningViewReady?.resolve();
-      renderResult(officialTerm1Result);
-      setStage('result');
-      if (!officialTerm1Result.writing?.grading?.ready) {
-        showNotice(writingGradingNotice(officialTerm1Result.writing?.grading),'success');
-        scheduleWritingGradingRefresh();
-      }
-      return;
-    }
     elements.listeningTitle.textContent = testConfig.listening.title;
     elements.readingTitle.textContent = testConfig.reading.title;
     appendInstructions(elements.listeningInstructions, testConfig.listening.description);

@@ -114,35 +114,25 @@ export async function openTermPaperJourney({slug,classCode,studentRef,mode,reque
   return openMiniJourney({scope,request,slug:profile,existing:{store}});
 }
 
-export async function openMiniJourney({scope,request,existing,prepare=false,confirmProgress=false,slug=miniSlug,pagesOnly=false,onProgress,onPhase}) {
+export async function openMiniJourney({scope,request,existing,prepare=false,slug=miniSlug,pagesOnly=false,onProgress,onPhase}) {
   if (!navigator.locks || !crypto.subtle || !id(scope.examSessionToken) || !id(scope.studentRef)) return null;
   const {ExamStore,OfflineRuntime,version,endpoint,title,writing,paper}=journeyProfiles.get(slug);
   const store = existing?.store || await new ExamStore().open();
   const key = keyOf(scope);
-  const canFork = slug===term1Slug && existing?.record.package.term1ParallelEntry;
-  // A reload may still be releasing its own lease. Give it a short chance to finish
-  // before opening a separate session for another tab.
-  const acquire = canFork ? {signal:AbortSignal.timeout(600)} : {ifAvailable:true};
   const release = await new Promise((resolve,reject)=>{
-    navigator.locks.request(version+':'+key,acquire,lock=>{
+    navigator.locks.request(version+':'+key,{ifAvailable:true},lock=>{
       if(!lock){resolve(null);return;}
       return new Promise(done=>resolve(done));
-    }).catch(error => canFork && acquire.signal.aborted ? resolve(null) : reject(error));
+    }).catch(reject);
   });
-  if (!release) {
-    const error = new Error('Bài đang mở ở tab khác. Hãy trở lại tab đang giữ bài.');
-    if (canFork) error.code='TERM1_TAB_SCOPE_BUSY';
-    throw error;
-  }
+  if(!release) throw new Error('Bài đang mở ở tab khác. Hãy trở lại tab đang giữ bài.');
   let record;
   const changed = new EventTarget();
   let busy=false, retryAt=0, message='', stopped=false, timer;
   let playing=null, preparedPlayer=null, preparingPlayer=null, verifiedBlob=null, savingOperation=false;
   let journal, listeningStartIntent, stopJournalReconnect;
   const diagnostics=[];
-  const continuationSection=()=>record.package?.continuationSection;
-  const needsAudio=()=>!continuationSection()||continuationSection()==='listening';
-  const continuity=()=>!paper&&needsAudio()&&record.package.listeningContinuityVersion===1;
+  const continuity=()=>!paper&&record.package.listeningContinuityVersion===1;
   function drainDiagnostics(persistChanges=true) {
     while(journal?.recorder&&diagnostics.length){
       try{
@@ -233,7 +223,6 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
   const save = () => store.put(key,record);
   const notify = value=>{if(value!==message){message=value;changed.dispatchEvent(new Event('change'));}};
   const order = () => {
-    if(continuationSection())return [continuationSection()];
     const sections=record.package.examMode==='read_first'?['reading','listening']:['listening','reading'];
     if(writing)sections.push('writing');
     return sections;
@@ -311,7 +300,6 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
   try {
     record=await store.get(key);
     if(record&&!currentDemoRecord(record,scope.classCode,slug,scope.studentRef)){await close();return null;}
-    const wasReady = Boolean(record?.ready);
     if (!record?.ready) {
       if(!prepare || navigator.onLine===false){await close();return null;}
       record ||= {deviceProof:hex(crypto.getRandomValues(new Uint8Array(32))),sections:{},drafts:{},revisions:{},pending:[],receipts:{},
@@ -322,10 +310,6 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
       catch(error){if(error.status===404||error.code==='OFFLINE_NEW_DISABLED'){await close();return null;}throw error;}
       if(value.version!==version||value.examSessionToken!==scope.examSessionToken||value.studentRef!==scope.studentRef
           ||value.generation!==scope.generation||!id(value.attemptToken)||value.activatedAt!==null)throw new Error('Bản đề chưa khớp lượt được cấp.');
-      if(value.continuationSection!==scope.continuationSection
-          ||(value.continuationSection&&(slug!==term1Slug||!['listening','reading','writing'].includes(value.continuationSection)))){
-        throw new Error('Bản đề chưa khớp phần thi được cấp.');
-      }
       const {audioDownload,...bundle}=value;
       const manifest=bundle.audioManifest;
       const refresh=writing&&!pagesOnly?async()=>{
@@ -338,21 +322,19 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
         }
         return {manifest:renewed.audioManifest,download:renewed.audioDownload};
       }:undefined;
-      if(!bundle.continuationSection||bundle.continuationSection==='listening'){
-        const blob=await downloadTermAudio(slug,{pagesUrl:manifest.url,sha256:manifest.sha256,bytes:manifest.byteLength},
+      const blob=await downloadTermAudio(slug,{pagesUrl:manifest.url,sha256:manifest.sha256,bytes:manifest.byteLength},
         {audioDownload:pagesOnly?undefined:audioDownload,refresh,onProgress,onPhase});
-        onPhase?.('Đang kiểm tra bản audio đã lưu trên thiết bị…');
-        await store.put(key+':audio',{blob});
-        const stored=await store.get(key+':audio');
-        if (!(stored?.blob instanceof Blob) || stored.blob.size!==manifest.byteLength || await hash(await stored.blob.arrayBuffer())!==manifest.sha256) {
-          throw new Error('Không đọc lại được audio trên thiết bị.');
-        }
-        verifiedBlob=stored.blob;
-        if(!paper&&bundle.listeningContinuityVersion===1){
-          observe('audio_download_verified',{byteLength:stored.blob.size});
-          onPhase?.('Đang chuẩn bị trình phát…');
-          preparedPlayer=prepareContinuityAudio(stored.blob,observe);
-        }
+      onPhase?.('Đang kiểm tra bản audio đã lưu trên thiết bị…');
+      await store.put(key+':audio',{blob});
+      const stored=await store.get(key+':audio');
+      if (!(stored?.blob instanceof Blob) || stored.blob.size!==manifest.byteLength || await hash(await stored.blob.arrayBuffer())!==manifest.sha256) {
+        throw new Error('Không đọc lại được audio trên thiết bị.');
+      }
+      verifiedBlob=stored.blob;
+      if(!paper&&bundle.listeningContinuityVersion===1){
+        observe('audio_download_verified',{byteLength:stored.blob.size});
+        onPhase?.('Đang chuẩn bị trình phát…');
+        preparedPlayer=prepareContinuityAudio(stored.blob,observe);
       }
       onPhase?.('Đang kiểm tra khả năng làm bài khi mất mạng…');
       await cacheShell(OfflineRuntime,slug);
@@ -361,38 +343,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
       }
       record.package=bundle;record.ready=true;
       await save();
-    } else if (slug===term1Slug && scope.continuationSection && !continuationSection() && navigator.onLine!==false) {
-      const original = record.package;
-      const section = original.examMode==='read_first' ? 'reading' : 'listening';
-      const pending = pendingHead();
-      const rejected = confirmProgress && pending && record.officialConflict===pending.operationId;
-      if (!original.term1ParallelEntry || scope.continuationSection!==section
-          || (pending && !rejected) || Object.keys(record.receipts).length) {
-        throw new Error('Bản đã lưu chưa khớp phần thi còn mở. Bài làm vẫn được giữ trên thiết bị.');
-      }
-      const updated = await send('prepare',{classCode:scope.classCode,studentRef:scope.studentRef},null);
-      if (updated.version!==version || updated.examSessionToken!==scope.examSessionToken
-          || updated.generation!==scope.generation || updated.studentRef!==scope.studentRef
-          || updated.attemptToken!==original.attemptToken || updated.continuationSection!==section
-          || updated.activatedAt!==(record.activatedAt??null) || updated.audioManifest?.sha256!==original.audioManifest?.sha256) {
-        throw new Error('Máy chủ chưa xác nhận lại đúng bản đề và đồng hồ. Nháp trên thiết bị vẫn được giữ.');
-      }
-      record.package = {...original,continuationSection:section,examMode:updated.examMode,permit:updated.permit};
-      if (rejected) {
-        const archived = [...record.pending,...record.readingReview?[record.readingReview]:[]];
-        (record.archivedRejectedOperations ||= []).push(...archived);
-        for (const item of archived) {
-          const snapshot = record.sections[item.section];
-          if (snapshot?.operationId===item.operationId) delete snapshot.operationId;
-        }
-        record.pending = [];
-        delete record.readingReview;
-        delete record.officialConflict;
-        delete record.review;
-      }
-      await save();
-    }
-    if (wasReady && pagesOnly && navigator.onLine!==false && !navigator.serviceWorker?.controller) {
+    }else if(pagesOnly&&navigator.onLine!==false&&!navigator.serviceWorker?.controller){
       // A native attempt already prepared from the primary link can also enter from the rescue link.
       // Keep the verified attempt accessible even if this route's secondary shell cannot be installed now.
       await cacheShell(OfflineRuntime,slug).catch(()=>{});
@@ -423,15 +374,11 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
   function view(){
     const p=record.package;
     const l=record.sections.listening,r=record.sections.reading,w=record.sections.writing;
-    const listeningSubmitted=Boolean(l?.operationId&&!l.interrupted)||['reading','writing'].includes(p.continuationSection);
-    const readingSubmitted=Boolean(r?.operationId)||['listening','writing'].includes(p.continuationSection);
     return {ok:true,studentName:p.studentName,...(paper?{className:p.className,examDelivery:'answer_sheet'}:{}),
       examSessionToken:p.examSessionToken,attemptToken:p.attemptToken,generation:p.generation,
-      examMode:p.examMode,nextSection:next(),listeningSubmitted,
-      ...(p.term1ParallelEntry?{term1ParallelEntry:true}:{}),
-      ...(p.continuationSection?{continuationSection:p.continuationSection}:{}),
+      examMode:p.examMode,nextSection:next(),listeningSubmitted:Boolean(l?.operationId&&!l.interrupted),
       listeningInterrupted:Boolean(l?.interrupted),needsListeningAcknowledgment:Boolean(l?.interrupted&&!l.acknowledged),
-      readingSubmitted,completed:p.continuationSection?listeningSubmitted&&readingSubmitted:Boolean(l?.operationId&&r?.operationId),
+      readingSubmitted:Boolean(r?.operationId),completed:Boolean(l?.operationId&&r?.operationId),
       ...(writing?{writingStarted:Boolean(w?.startedAt),writingSubmitted:Boolean(w?.operationId),
         writingDeadlineAt:w?.deadline?new Date(w.deadline).toISOString():null}:{}),
       readingStartedAt:r?.startedAt?new Date(r.startedAt).toISOString():null,readingDeadlineAt:r?.deadline?new Date(r.deadline).toISOString():null,
@@ -626,9 +573,6 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
 
   function pendingMessage(){
     const pending=submissionReadback?pendingHead():null;
-    if (record.officialConflict && pending?.operationId===record.officialConflict) {
-      return 'Máy chủ đã có tiến độ chính thức. Bản trên thiết bị vẫn được giữ.';
-    }
     const review=record.review||Boolean(record.readingReview&&pending===record.readingReview);
     const reference=review&&pending?` · Mã đối soát ${pending.operationId}`:'';
     if (hasSubmissionHold(pending)) return 'Máy chủ đã giữ bản để đối soát'+reference;
@@ -686,15 +630,12 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
         if(readingReview)delete record.readingReview;
         else record.pending.shift();
         const wasReview=record.review;
-        const officialConflict=record.officialConflict;
         if(wasReview)delete record.review;
-        if (officialConflict===pending.operationId) delete record.officialConflict;
         try{await persist();}catch(error){
           if(readingReview)record.readingReview=pending;
           else record.pending.unshift(pending);
           delete record.receipts[pending.section];
           if(wasReview)record.review=wasReview;
-          if(officialConflict) record.officialConflict=officialConflict;
           throw error;
         }
         observeSubmission('submission_receipt_verified',pending,{via:checked?.persisted?'readback':'send'});
@@ -707,9 +648,6 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
       const reviewRouteMissing=error.status===404&&record.readingReview&&record.readingReview===pendingHead();
       retryAt=performance.now()+(reviewReadback||reviewRouteMissing?60_000:10_000);
       if([400,401,403,409,422].includes(error.status)){
-        if (record.package.term1ParallelEntry && error.code==='EXAM_FIRST_SUBMISSION_ACCEPTED' && pendingHead()) {
-          record.officialConflict=pendingHead().operationId;
-        }
         record.review=true;await persist().catch(()=>{});
       }
       notify(pendingMessage());
@@ -786,15 +724,11 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
       return unverified?'<h2>Bản '+skill+' giữ thêm để đối soát</h2><dl>'+Object.entries(unverified.answers)
         .map(([k,v])=>`<dt>${escape(k)}</dt><dd>${escape(v)}</dd>`).join('')+'</dl>':'';
     }).join('');
-    const rejected = (record.archivedRejectedOperations || []).map(item =>
-      `<h2>Bản ${escape(item.section)} đã gửi trước khi đồng bộ</h2><p>Mã đối soát ${escape(item.operationId)}</p><dl>`
-      + Object.entries(item.answers).map(([k,v])=>`<dt>${escape(k)}</dt><dd>${escape(v)}</dd>`).join('')+'</dl>').join('');
-    const html='<!doctype html><html lang="vi"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'"><title>Bài làm '+title+'</title><h1>Bài làm '+title+'</h1>'+body+extra+rejected+'</html>';
+    const html='<!doctype html><html lang="vi"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'"><title>Bài làm '+title+'</title><h1>Bài làm '+title+'</h1>'+body+extra+'</html>';
     const url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
     const link=document.createElement('a');link.href=url;link.download=title.replaceAll(' ','-')+'.html';link.click();setTimeout(()=>URL.revokeObjectURL(url),30_000);
   }
-  const continuationReceipt=()=>record.receipts[continuationSection()]||null;
-  const resultToken=()=>continuationSection()?null:(record.receipts[order().at(-1)]?.attemptToken||null);
+  const resultToken=()=>record.receipts[order().at(-1)]?.attemptToken||null;
   const hasReceipt = paper ? Boolean(resultToken()) : Object.keys(record.receipts).length > 0;
   if (record.review || pendingHead()) notify(pendingMessage());
   else if (hasReceipt) notify('Máy chủ đã xác nhận nhận bài');
@@ -804,8 +738,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
     sessionId:scope.examSessionToken,generation:scope.generation,observe:observeReport,
     send:input=>sendListeningReport({apiBase:globalThis.TERM_TEST_APP_CONFIG.API_BASE_URL,slug,
       body:{...input,deviceProof:record.deviceProof},permit:record.package.permit})});
-  return {content:record.package.content,paper,view,start,begin,observeReport,saveDrafts,seal,mountPlayer,verifiedAudio,download,resultToken,continuationReceipt,needsAudio,now,
-    officialConflict:()=>Boolean(record.officialConflict && pendingHead()?.operationId===record.officialConflict),
+  return {content:record.package.content,paper,view,start,begin,observeReport,saveDrafts,seal,mountPlayer,verifiedAudio,download,resultToken,now,
     activated:()=>Boolean(record.activatedAt),drafts:()=>structuredClone(record.drafts),revisions:()=>({...record.revisions}),close,changed,
     message:()=>message,reviewComplete:()=>playing?.reviewComplete()===true,
     continuity,preparePlayer,interrupt,acknowledgeInterruption,setJournal,connectJournal,markListeningStart,

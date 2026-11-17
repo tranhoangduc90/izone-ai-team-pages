@@ -5,9 +5,8 @@
   const product = 'term-test-1';
   const classCode = 'IC2304';
   const search = new URLSearchParams(location.search);
-  const parallelScope = history.state?.izoneTerm1CbtSessionV1;
   if (search.get('class')?.trim().toUpperCase() !== classCode || navigator.onLine === false
-    || search.has('retakeGrant') || parallelScope?.classCode === classCode) {
+    || search.has('retakeGrant')) {
     document.body.append(script);
     return;
   }
