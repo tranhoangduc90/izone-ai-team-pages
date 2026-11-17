@@ -1,0 +1,56 @@
+<!doctype html>
+<html data-izone-theme="master170" lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#152B4E">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Thư viện handout Writing 67 · Giảng viên</title>
+  <link rel="icon" href="../shared/izone-favicon.svg?v=20261105" type="image/svg+xml">
+  <link rel="stylesheet" href="./library.css?v=20260913-writing-sequence-v2">
+  <link rel="stylesheet" href="../shared/master170/theme.css">
+  <link rel="stylesheet" href="../shared/master170/writing-library.css">
+  <script src="../shared/teacher-single-sign-on.js?v=20261026-startup2&startup=20261026-v2" data-izone-teacher-product="handout67"></script>
+  <script defer src="../shared/red-focus-glow.js?v=20261102-r1"></script>
+</head>
+<body data-m170-product="writing-library">
+  <header class="library-hero">
+    <img class="m170-logo" src="../shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48">
+    <div>
+      <p class="eyebrow">IZONE · Dành cho giảng viên</p>
+      <h1>Thư viện handout Writing 67</h1>
+      <p>Xem đề, sao chép link học viên và mở dashboard theo từng lớp.</p>
+    </div>
+  </header>
+  <main class="library-shell">
+    <section class="panel auth-card" aria-labelledby="auth-title">
+      <div>
+        <p class="eyebrow">Khóa 67</p>
+        <h2 id="auth-title">Đang mở thư viện…</h2>
+        <p id="auth-status" role="status" aria-busy="true">Đang khôi phục đăng nhập của bạn…</p>
+      </div>
+      <div class="auth-actions">
+        <div id="google-signin" hidden></div>
+        <button id="logout-button" class="button button-secondary" type="button" hidden>Đăng xuất</button>
+      </div>
+    </section>
+    <section id="library-content" hidden>
+      <section class="panel toolbar" aria-label="Chọn lớp">
+        <div>
+          <p class="eyebrow">Khóa học</p>
+          <h2>Writing khóa 67</h2>
+          <p id="library-summary" class="muted"></p>
+        </div>
+        <label for="class-select">Lớp cần theo dõi
+          <select id="class-select"></select>
+        </label>
+      </section>
+      <p id="library-notice" class="notice" role="status" hidden></p>
+      <button id="retry-catalog" class="button button-secondary" type="button" hidden>Thử tải lại danh sách</button>
+      <section id="handout-list" class="handout-list" aria-label="Danh sách handout theo thứ tự buổi học"></section>
+    </section>
+  </main>
+  <script type="module" src="./js/library67.js?v=20261117"></script>
+</body>
+</html>
