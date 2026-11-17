@@ -59,7 +59,7 @@ async function exercise(t, options, verify) {
   const extraClass='IC9998';
   const targetLesson={activity:'lesson5',number:5,body:2,title:'Luyện thử Lesson 5',topic:'Synthetic topic.',classes:[classRef,extraClass],defaultClass:classRef,ideaHint:'Chọn tác hại.'};
   const target={...createState(0,targetLesson),ref:'lesson5-fixture-session',activity:'lesson5',classRef,studentRef,vocabulary:{},teacherComments:[]};
-  const teacherData={extraRows:[],sent:[]};
+  const teacherData={extraRows:[],sent:[],initialActivity:null};
   let lastSaved=null;
   await page.context().route('**/*', async route => {
     const request = route.request();
@@ -109,7 +109,12 @@ async function exercise(t, options, verify) {
       if(path==='/teacher/session')return send({ok:true,reviewer:{email:'teacher@example.test'}});
       if(path==='/teacher/classes')return send({ok:true,classes});
       if(path==='/teacher/students')return send({ok:true,students:[{...students[0],sessionRef:target.ref,updatedAt:lastSaved,passed:0},...teacherData.extraRows]});
-      if(path==='/teacher/sessions/'+target.ref+'/activity')return send({ok:true,events:[]});
+      if(path==='/teacher/sessions/'+target.ref+'/activity'){
+        const pending=teacherData.initialActivity;
+        teacherData.initialActivity=null;
+        if(pending)await pending;
+        return send({ok:true,events:[]});
+      }
       if(path==='/teacher/sessions/'+target.ref+'/comments'&&request.method()==='POST'){
         const input=request.postDataJSON();
         assert.equal(input.expectedVersion,target.version);
@@ -249,9 +254,21 @@ test('Lesson 5 keeps the reading position, teacher comments and verified Homewor
     await refresh.tap();
     await teacher.locator('[data-student=new-priority]').waitFor({state:'attached'});
     assert.ok(Math.abs((await studentCard.boundingBox()).y-beforeChange)<=2);
+    const dialog=teacher.locator('#detail');
+    const initialLog=Promise.withResolvers();
+    teacherData.initialActivity=initialLog.promise;
+    try {
+      await studentCard.click();
+      await teacher.locator('#lesson5-outline-source').waitFor();
+      const whileLogLoads=await dialog.evaluate(node=>{node.scrollTop=node.scrollHeight;return node.scrollTop;});
+      assert.ok(whileLogLoads>0);
+      initialLog.resolve();
+      await teacher.waitForFunction(()=>document.querySelector('#activity-state')?.textContent.startsWith('Nhật ký của đúng phiên'));
+      assert.equal(await dialog.evaluate(node=>node.scrollTop),whileLogLoads,'the initial journal must not reset the reading position');
+    } finally {
+      initialLog.resolve();
+    }
     await teacher.setViewportSize({width:1440,height:560});
-    await studentCard.click();
-    await teacher.locator('#lesson5-outline-source').waitFor();
     assert.match(await teacher.locator('#lesson5-outline-source').innerText(),/Homework Lesson 4.*Cập nhật/);
     assert.match(await teacher.locator('[data-field-read=idea1]').innerText(),/Nháp mới của học viên/);
     assert.equal(await teacher.locator('#comment-form').isVisible(),true);
@@ -261,7 +278,7 @@ test('Lesson 5 keeps the reading position, teacher comments and verified Homewor
     await notes.evaluate(input=>input.setSelectionRange(4,12));
     const reads=[];
     teacher.on('request',request=>{if(request.url().includes('/teacher/'))reads.push(new URL(request.url()).pathname);});
-    const dialog=teacher.locator('#detail'), detailButton=teacher.locator('#detail-refresh');
+    const detailButton=teacher.locator('#detail-refresh');
     for(const width of [1440,390]){
       await teacher.setViewportSize({width,height:620});
       await dialog.evaluate(node=>node.scrollTop=node.scrollHeight);
