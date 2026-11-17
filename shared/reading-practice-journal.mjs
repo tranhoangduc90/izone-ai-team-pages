@@ -50,10 +50,12 @@ function environment(){
   browser,browserMajor:bounded(Number(version?.[1]||0),999),platform};
 }
 
-export function startReadingPracticeJournal(endpoint){
- const outbox=new IndexedOutbox({name:'izone-reading-practice-journal-v1',maxBytes:2*1024*1024}),send=fetchTransport(endpoint);
+export function startReadingPracticeJournal(endpoint,{
+ outbox=new IndexedOutbox({name:'izone-reading-practice-journal-v1',maxBytes:2*1024*1024}),
+ recorderFactory=createRecorder,send=fetchTransport(endpoint),durableBatches=false,
+}={}){
  let active=null,current=null,stopped=false,resizeTimer;const channels=new Set();
- const recorder=createRecorder({outbox,context:()=>active,build:'reading-practice-journal-20261105',
+ const recorder=recorderFactory({outbox,context:()=>active,build:'reading-practice-journal-20261105',durableBatches,
   transport:(body,options)=>send({...body,events:body.events.map(packet)},options)});
  const summarize=force=>{for(const channel of channels){channel.window.flush(force);if(channel!==current&&!channel.window.pending)channels.delete(channel);}};
  const flush=options=>{void recorder.flush(options).catch(()=>{});};
@@ -67,10 +69,12 @@ export function startReadingPracticeJournal(endpoint){
   bind(context){
    if(stopped||!/^[a-f0-9]{64}$/.test(context?.bindingId||'')||typeof context.ticket!=='string'
     ||!/^[a-f0-9-]{36}$/i.test(context.ticketId||'')||!Number.isSafeInteger(context.expiresAt)||context.expiresAt<=Date.now())return null;
-   const {bindingId,ticket,ticketId,issuedAt,expiresAt}=context;
-   if(current?.captured.bindingId===bindingId){current.captured.auth={ticket,ticketId,issuedAt,expiresAt};active=current.captured;}
+   const {bindingId,ticket,ticketId,issuedAt,expiresAt,archiveLane}=context;
+   const auth={ticket,ticketId,issuedAt,expiresAt,...(archiveLane?{archiveLane}:{})};
+   const unchanged=current?.captured.auth.ticketId===ticketId;
+   if(current?.captured.bindingId===bindingId){current.captured.auth=auth;active=current.captured;}
    else{
-    retire();const captured={bindingId,auth:{ticket,ticketId,issuedAt,expiresAt}},channel={captured};let lastEnvironment='';
+    retire();const captured={bindingId,auth},channel={captured};let lastEnvironment='';
     const emit=(kind,fields,traceId,requestId)=>recorder.record('reading_diagnostic',{kind,traceId:traceId||crypto.randomUUID(),...(requestId?{requestId}:{}),fields},captured);
     channel.window=createCheckpointWindow({emit:fields=>emit('checkpoint.summary',fields)});
     channel.api={
@@ -82,8 +86,10 @@ export function startReadingPracticeJournal(endpoint){
     };
     current=channel;active=captured;channels.add(channel);channel.api.environment();
    }
-   void outbox.renewBinding(bindingId,active.auth).catch(()=>{});return current.api;
+   if(!unchanged)void outbox.renewBinding(bindingId,active.auth).catch(()=>{});
+   return current.api;
   },
+  flush,
   clear(){retire();},
   async stop(){
    if(stopped)return;stopped=true;clearInterval(timer);clearTimeout(resizeTimer);
