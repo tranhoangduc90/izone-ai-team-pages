@@ -35,13 +35,12 @@ for (const entry of await readdir(root, { withFileTypes: true })) {
     assert.deepEqual(await assetMismatches(route, ASSETS, ASSET_HASHES), []);
   });
 
-  const versionedManifests = k56RecoveryRoutes.has(entry.name) ? k56RecoveryManifests : [];
-  if (entry.name === 'term-test-1-computer-based') {
+  const versionedManifests = k56RecoveryRoutes.has(entry.name) ? [...k56RecoveryManifests] : [];
+  if (['term-test-1-computer-based', 'term-test-2-computer-based'].includes(entry.name)) {
     versionedManifests.push('offline-assets-listening-first-frame-v1.mjs', 'offline-assets-parallel-v1.mjs');
   }
-  const manifests = entry.name === 'term-test-2-k56-computer-based'
-    ? [...versionedManifests, 'offline-assets-listening-report-v2.mjs'] : versionedManifests;
-  for (const name of manifests) {
+  if (entry.name === 'term-test-2-k56-computer-based') versionedManifests.push('offline-assets-listening-report-v2.mjs');
+  for (const name of versionedManifests) {
     test(`${entry.name} ${name} matches its published files`, async () => {
       const worker = await readFile(new URL(name.replace('assets-', 'worker-').replace('.mjs', '.js'), route), 'utf8');
       assert.ok(worker.includes(`'./${name}'`));
