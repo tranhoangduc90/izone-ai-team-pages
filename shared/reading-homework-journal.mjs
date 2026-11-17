@@ -37,16 +37,55 @@ export function startReadingHomeworkJournal(endpoint) {
   return startHomeworkJournal(endpoint, 'reading-homework');
 }
 
-export function startHomeworkJournal(endpoint, product, {fetcher = globalThis.fetch} = {}) {
+export function startHomeworkJournal(endpoint, product, {
+  fetcher = globalThis.fetch, Outbox = IndexedOutbox, recorderFactory = createRecorder, durableBatches = false, recoverContexts, outboxName,
+} = {}) {
   if (!['reading-homework', 'listening-homework'].includes(product)) throw Error('JOURNAL_PRODUCT_DENIED');
-  const outbox = new IndexedOutbox({ name: 'izone-' + product + '-journal-v1', maxBytes: 2 * 1024 * 1024 });
+  const outbox = new Outbox({ name: outboxName ?? 'izone-' + product + '-journal-v1', maxBytes: 2 * 1024 * 1024 });
   const send = fetchTransport(endpoint, fetcher);
-  let active = null, stopped = false;
-  const recorder = createRecorder({
-    outbox, context: () => active, build: product + '-journal-20261105',
+  let active = null, recoveryAnchor = null, stopped = false;
+  const recorder = recorderFactory({
+    outbox, durableBatches, context: () => active,
+    build: product + (durableBatches ? '-journal-20261117' : '-journal-20261105'),
     transport: (body, options) => send({ ...body, events: body.events.map(packet) }, options),
   });
-  const flush = options => { void recorder.flush(options).catch(() => {}); };
+  const declinedUntil = new Map();
+  let recovering = false, nextRecovery = 0;
+  const authFrom = ({ ticket, ticketId, issuedAt, expiresAt }) => ({ ticket, ticketId, issuedAt, expiresAt });
+  const valid = context => /^[a-f0-9]{64}$/.test(context?.bindingId || '') && typeof context.ticket === 'string'
+    && /^[a-f0-9-]{36}$/i.test(context.ticketId || '') && Number.isSafeInteger(context.expiresAt) && context.expiresAt > Date.now();
+  async function renewPending() {
+    const now = Date.now();
+    if (!recoverContexts || recovering || stopped || !recoveryAnchor || now < nextRecovery) return;
+    recovering = true;
+    nextRecovery = now + 12_000;
+    try {
+      const boundAtStart = recoveryAnchor;
+      for (const [id, until] of declinedUntil) if (until <= now) declinedUntil.delete(id);
+      const ids = await outbox.expiredBindings(now + 60_000, new Set(declinedUntil.keys()));
+      if (!ids.length || stopped || recoveryAnchor !== boundAtStart) return;
+      const issued = await recoverContexts(ids);
+      if (stopped || recoveryAnchor !== boundAtStart) return;
+      const updated = new Set();
+      for (const context of issued) {
+        if (stopped || recoveryAnchor !== boundAtStart) return;
+        if (!valid(context) || !ids.includes(context.bindingId) || updated.has(context.bindingId)) continue;
+        const auth = authFrom(context);
+        await outbox.renewBinding(context.bindingId, auth);
+        if (recoveryAnchor === boundAtStart && active?.bindingId === context.bindingId) active.auth = auth;
+        updated.add(context.bindingId);
+      }
+      for (const id of ids) if (!updated.has(id)) declinedUntil.set(id, now + 60_000);
+      if (updated.size) await recorder.flush({ force: true });
+    } catch {
+      // Recovery uses the native API opportunistically. Outbox data stays in
+      // place if the request, grant, or local write cannot be proven.
+    } finally { recovering = false; }
+  }
+  const flush = options => {
+    if (!options?.keepalive) void renewPending();
+    void recorder.flush(options).catch(() => {});
+  };
   const online = () => flush({ force: true });
   const pagehide = () => flush({ force: true, keepalive: true });
   const timer = setInterval(() => flush(), 12_000);
@@ -54,13 +93,12 @@ export function startHomeworkJournal(endpoint, product, {fetcher = globalThis.fe
   addEventListener('pagehide', pagehide);
 
   function bind(context) {
-    if (stopped || !/^[a-f0-9]{64}$/.test(context?.bindingId || '') || typeof context.ticket !== 'string'
-      || !/^[a-f0-9-]{36}$/i.test(context.ticketId || '') || !Number.isSafeInteger(context.expiresAt)
-      || context.expiresAt <= Date.now()) return null;
-    const { bindingId, ticket, ticketId, issuedAt, expiresAt } = context;
-    const captured = { bindingId, auth: { ticket, ticketId, issuedAt, expiresAt } };
+    if (stopped || !valid(context)) return null;
+    const { bindingId } = context;
+    const captured = { bindingId, auth: authFrom(context) };
     active = captured;
-    void outbox.renewBinding(bindingId, captured.auth).catch(() => {});
+    recoveryAnchor = captured;
+    void outbox.renewBinding(bindingId, captured.auth).then(renewPending).catch(() => {});
     const emit = data => recorder.record('homework_exchange', data, captured);
     return {
       queued(traceId, baseRevision) {
@@ -84,6 +122,11 @@ export function startHomeworkJournal(endpoint, product, {fetcher = globalThis.fe
 
   return {
     bind,
+    recoverFor(bindingId) {
+      active = null;
+      recoveryAnchor = { bindingId };
+      void renewPending();
+    },
     stop() {
       if (stopped) return;
       stopped = true;
