@@ -66,7 +66,7 @@ async function start() {
         document.getElementById('lesson-access-style')?.remove();
       },
     });
-    await import('../shared/loader.mjs?v=20261116-lesson4-entry');
+    await import('../shared/loader.mjs?v=20261117-lesson5-ideas');
   }
   await enter(await access.open(root));
 }
