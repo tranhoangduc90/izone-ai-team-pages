@@ -538,8 +538,10 @@ function appendWritingComponent(parent, component, section, index, criterionCode
   parent.append(aspect);
 }
 
-function buildTeacherWritingFeedback(studentName, writing, closeButton) {
+function openTeacherWritingFeedback(studentName, writing) {
   const taskNumber = Number(writing.taskNumber);
+  const dialog = createNode('dialog', 'writing-feedback-dialog');
+  dialog.setAttribute('aria-labelledby', `teacherWritingTitle${taskNumber}`);
   const shell = createNode('div', 'writing-feedback-shell');
   const header = createNode('header', 'writing-feedback-header');
   const headerCopy = document.createElement('div');
@@ -548,11 +550,12 @@ function buildTeacherWritingFeedback(studentName, writing, closeButton) {
     createNode('h2', '', `Task ${taskNumber} · Band ${formatBand(Number(writing.taskScore))}`),
     createNode('p', '', `${Number(writing.wordCount || 0)} từ · ${writing.gradingMethod==='blank_rule'?'Điểm theo quy tắc bài trắng':'Chấm theo 4 tiêu chí IELTS'}`)
   );
-  header.append(headerCopy);
-  if (closeButton) {
-    headerCopy.querySelector('h2').id = `teacherWritingTitle${taskNumber}`;
-    header.append(closeButton);
-  }
+  headerCopy.querySelector('h2').id = `teacherWritingTitle${taskNumber}`;
+  const closeButton = createNode('button', 'writing-feedback-close', '×');
+  closeButton.type = 'button';
+  closeButton.setAttribute('aria-label', 'Đóng bài chấm Writing');
+  closeButton.addEventListener('click', () => dialog.close());
+  header.append(headerCopy, closeButton);
 
   const layout = createNode('div', 'writing-feedback-layout');
   const sourcePane = createNode('section', 'writing-feedback-source');
@@ -567,7 +570,7 @@ function buildTeacherWritingFeedback(studentName, writing, closeButton) {
     image.referrerPolicy = 'no-referrer';
     sourcePane.append(image);
   }
-  const reportSummary = writing.standalone ? cleanWritingFeedback(writing.report) : writingReportSummary(writing.report);
+  const reportSummary = writingReportSummary(writing.report);
   if (reportSummary) {
     sourcePane.append(createNode('h3', '', 'Nhận xét tổng hợp'));
     const report = createNode('div', 'writing-feedback-text writing-feedback-richtext');
@@ -599,11 +602,6 @@ function buildTeacherWritingFeedback(studentName, writing, closeButton) {
     const components = Array.from(criterion.components || []);
     const sections = writingCriterionSections(criterion.feedback);
     const componentCount = Math.max(components.length, sections.length);
-    if (writing.standalone && criterion.feedback && componentCount) {
-      const summary = createNode('div', 'writing-feedback-text writing-feedback-richtext');
-      appendSafeWritingFeedback(summary, criterion.feedback);
-      card.append(summary);
-    }
     if (componentCount) {
       const list = createNode('div', 'writing-component-list');
       for (let index = 0; index < componentCount; index += 1) {
@@ -619,17 +617,7 @@ function buildTeacherWritingFeedback(studentName, writing, closeButton) {
   }
   layout.append(sourcePane, scorePane);
   shell.append(header, layout);
-  return shell;
-}
-
-function openTeacherWritingFeedback(studentName, writing) {
-  const dialog = createNode('dialog', 'writing-feedback-dialog');
-  dialog.setAttribute('aria-labelledby', `teacherWritingTitle${Number(writing.taskNumber)}`);
-  const closeButton = createNode('button', 'writing-feedback-close', '×');
-  closeButton.type = 'button';
-  closeButton.setAttribute('aria-label', 'Đóng bài chấm Writing');
-  closeButton.addEventListener('click', () => dialog.close());
-  dialog.append(buildTeacherWritingFeedback(studentName, writing, closeButton));
+  dialog.append(shell);
   dialog.addEventListener('click', event => {
     if (event.target === dialog) dialog.close();
   });
@@ -657,7 +645,10 @@ async function loadTeacherWritingDetail(student, taskNumber, button) {
   if (!selectedClass || !student || ![1, 2].includes(taskNumber)) return;
   const isCurrent = teacherDetailIsCurrent(selectedClass, student, button);
   const cacheKey = [selectedClass.id, state.selectedTestSlug, student.ref, taskNumber, student.writing?.updatedAt || ''].join('|');
-  let payload = state.writingDetailCache.get(cacheKey);
+  const standaloneDetail = student.writing?.standaloneDetail;
+  let payload = standaloneDetail?.taskNumber === taskNumber
+    ? { studentName: studentDisplayName(student), writing: standaloneDetail }
+    : state.writingDetailCache.get(cacheKey);
   const originalText = button.querySelector('strong')?.textContent || '';
   try {
     button.disabled = true;
@@ -794,8 +785,18 @@ function renderStudentResult(student) {
   if (student?.writing?.standaloneDetail) {
     window.K67_ANSWER_EXPLANATIONS?.reset();
     const panel = createNode('section', 'panel result-panel teacher-result-panel');
-    panel.append(buildTeacherWritingFeedback(studentDisplayName(student), student.writing.standaloneDetail),
-      savedProgressButton(student));
+    const heading = createNode('div', 'result-heading');
+    const headingCopy = document.createElement('div');
+    headingCopy.append(
+      createNode('p', 'eyebrow', 'Kết quả cá nhân'),
+      createNode('h2', '', studentDisplayName(student)),
+      createNode('p', '', `${getSelectedClass()?.name || ''} · ${getSelectedTest()?.title || ''}`)
+    );
+    heading.append(headingCopy, savedProgressButton(student));
+    const summaryGrid = createNode('div', 'summary-grid');
+    const { taskNumber, taskScore } = student.writing.standaloneDetail;
+    summaryGrid.append(addWritingResultSummaryButton(student, taskNumber, `Band ${formatBand(taskScore)}`, true));
+    panel.append(heading, summaryGrid);
     elements.studentView.replaceChildren(panel);
     return;
   }
