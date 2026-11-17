@@ -48,7 +48,7 @@
     && performance.getEntriesByType('navigation')[0]?.type !== 'reload';
   let term2Offline = null;
   if (!localDemo && classCode && (classCode !== 'CODEXDEMO56' || demoOfflineEntry)) {
-    const {Term2Offline, ExamStore} = await import('./offline-submission-recovery-v1.mjs?v=20261107-k56-r2-v1');
+    const {Term2Offline, ExamStore} = await import('./offline-term2-parallel-entry-v1.mjs');
     const store=demoOfflineEntry
       ? (await import('../k56-offline-shared/demo-store-audio-status-v1.mjs?v=20261110-v1')).createDemoStore(ExamStore,testConfig.slug,classCode,query)
       : new ExamStore();
@@ -122,7 +122,7 @@
   }
   // Entry không có mã lớp có thể vừa được identity resolver gắn đúng lớp.
   if(!term2Offline&&!localDemo&&classCode&&classCode!=='CODEXDEMO56'){
-    const {Term2Offline,ExamStore}=await import('./offline-submission-recovery-v1.mjs?v=20261107-k56-r2-v1');
+    const {Term2Offline,ExamStore}=await import('./offline-term2-parallel-entry-v1.mjs');
     term2Offline=new Term2Offline({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
     term2Offline.workerPath = './offline-worker-listening-report-v2.js';
     try{await term2Offline.open();window.K56_TERM2_OFFLINE=term2Offline;}catch(error){root.textContent=error.message;return;}
@@ -702,6 +702,7 @@
           attemptToken: state.attemptToken || undefined,
           examSessionToken: state.examSessionToken || undefined,
           publicAudioVersion: 1,
+          term2ContinuationVersion: 1,
           legacyElapsedSeconds: legacyListeningResume ? legacyUiState.audioTime : 0
         })
       });
@@ -765,6 +766,7 @@
         const bytes=await decryptOfficialAudio(encryptedAudio,prepared);
         await term2Offline.finishPreparation(new Blob([bytes],{type:'audio/mpeg'}));
       }
+      if (term2Offline?.active && prepared.term2ParallelEntry) Object.assign(prepared,term2Offline.sectionResponse());
       if (prepared.nextSection !== 'listening') {
         await enterExam(prepared);
         return;

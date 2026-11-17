@@ -186,7 +186,9 @@ export const ASSETS=[
   "listening-first-frame-report-v2.js",
   "index-listening-report-v2.html",
   "worker-listening-report-v2.mjs",
-  "offline-worker-listening-report-v2.js"
+  "offline-worker-listening-report-v2.js",
+  "../k56-offline-shared/runtime-term2-parallel-entry-v1.mjs",
+  "offline-term2-parallel-entry-v1.mjs"
 ];
 export const ASSET_HASHES={
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -372,10 +374,12 @@ export const ASSET_HASHES={
   "../k67-shared/listening-report-choices-v1.css": "e1c2b8d36bb0681a82efbf108a4580880ef0561daa63a38266d3634c98cfaea9",
   "../k67-shared/listening-report-choices-v2.mjs": "ab760d1ac15cbbf634dfc8aee81631ff9ee9b807bd6a772190e6cc1f02165967",
   "../term-test-2-computer-based/listening-report-evidence-v1.mjs": "da745421b217f85ac7f7cdd39b270f67b8453567cc041c2a338f1abf985c7d54",
-  "bootstrap-listening-report-v2.js": "ea9a4200e554175bc0f09ef03ad061535f63c266de5083040d338fe4908a5179",
+  "bootstrap-listening-report-v2.js": "49a4a75922487f75ec40d5dc9792f499bd3801e9e3df969c87cea8746a1a09e4",
   "listening-first-frame-report-v2.js": "693d85514ad91f35169e9a285f1de7705ae1ca03dc41450a4148910c950dcce0",
   "index-listening-report-v2.html": "29e5fe5000dbcc1f9ca6da450fccf6af4a5474cbf0de8fe9336233fd488749f8",
   "worker-listening-report-v2.mjs": "e1e065595d3c7d2c1262b48e2e3d7959f29036b89bc32a5bb6273e0ece2f1251",
-  "offline-worker-listening-report-v2.js": "b79ac3a26af5848068147f341a3a7febb9e79f3916d89c78a55ebe609e21ca4a"
+  "offline-worker-listening-report-v2.js": "b79ac3a26af5848068147f341a3a7febb9e79f3916d89c78a55ebe609e21ca4a",
+  "../k56-offline-shared/runtime-term2-parallel-entry-v1.mjs": "61a4c472363ed6d052d81c449dbd5e59e4bf94fc5bc336ad409426072edee538",
+  "offline-term2-parallel-entry-v1.mjs": "6ca8f8c87bb7265bee9ada0ccbe6a24fc6da47cca7122596c15968671f6f8837"
 };
-export const ASSET_BUILD_ID="ce0cace2b6c43a7d9c54db84ed537d39fc7f41e66d599cd9cf45550a2ba07681";
+export const ASSET_BUILD_ID="6488ebda12d5257ed26ccc15fe698dc6ea5ffec757cd57431d0e2a5b9798d2f0";
