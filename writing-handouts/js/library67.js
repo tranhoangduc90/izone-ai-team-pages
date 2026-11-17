@@ -160,7 +160,7 @@ async function boot() {
     items = nextItems;
     const classes = new Map(items.filter(item=>!item.failed).flatMap(item=>item.allowed.map(row=>[row.classRef,row.className])));
     const select = $('class-select');
-    select.replaceChildren(...[...classes].sort(([a],[b])=>a.localeCompare(b,'vi',{numeric:true})).map(([code,label])=>new Option(label,code)));
+    select.replaceChildren(...[...classes].sort(([a],[b])=>b.localeCompare(a,'vi',{numeric:true})).map(([code,label])=>new Option(label,code)));
     select.disabled = !classes.size;
     const requested = new URLSearchParams(location.search).get('class')?.toUpperCase();
     if (classes.has(requested)) select.value = requested;
