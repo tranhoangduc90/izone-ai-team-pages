@@ -1,0 +1,57 @@
+body[data-refresh-preview] #dashboard {
+  padding-block-end: calc(58px + env(safe-area-inset-bottom, 0px));
+}
+
+.refresh-preview-label {
+  margin: 0 0 8px;
+  color: #405675;
+  font-size: .85rem;
+}
+
+body[data-refresh-preview] #refresh {
+  position: fixed;
+  z-index: 30;
+  inset-inline-end: max(18px, env(safe-area-inset-right, 0px));
+  inset-block-end: max(18px, env(safe-area-inset-bottom, 0px));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: max-content;
+  min-height: 46px;
+  padding: 9px 15px;
+  border: 1px solid #152b4e;
+  border-radius: 24px;
+  background: #152b4e;
+  color: #fff;
+  box-shadow: 0 4px 14px #152b4e24;
+  white-space: nowrap;
+}
+
+body[data-refresh-preview] #refresh:hover { background: #244570; }
+body[data-refresh-preview] #refresh:focus-visible { outline-offset: 4px; }
+
+.refresh-preview-icon {
+  display: inline-block;
+  font-size: 19px;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #refresh[aria-busy="true"] .refresh-preview-icon {
+    animation: handout-refresh-turn 900ms linear infinite;
+  }
+  @keyframes handout-refresh-turn { to { transform: rotate(360deg); } }
+}
+
+@media (max-width: 620px) {
+  body[data-refresh-preview] #refresh {
+    inset-inline-end: max(12px, env(safe-area-inset-right, 0px));
+    inset-block-end: max(12px, env(safe-area-inset-bottom, 0px));
+    padding-inline: 12px;
+  }
+}
+
+body[data-refresh-preview] :is(#comment-form, [data-comment-field], [data-thread-status], [data-thread-reply]) {
+  display: none;
+}
