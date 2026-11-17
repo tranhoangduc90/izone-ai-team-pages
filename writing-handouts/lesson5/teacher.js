@@ -88,6 +88,20 @@ function renderDetail(session){
  }
  const d=session.dashboard;
  $('detail-meta').textContent=d?`${d.filled}/${d.totalFields||Object.keys(session.responses).length} ô · ${d.passed}/${ORDER.length} phần thông qua · ${d.checks} Check · ${d.openThreads} trao đổi mở`:'';
+ if(lessonActivity==='lesson5'){
+  let sourceLine=$('lesson5-outline-source');
+  if(!sourceLine){
+   sourceLine=document.createElement('p');
+   sourceLine.id='lesson5-outline-source';sourceLine.className='fine-print';
+   content.querySelector('.recap > p').after(sourceLine);
+  }
+  const source=session.lesson5IdeaSource;
+  const lastSaved=rows.find(row=>row.sessionRef===session.ref)?.updatedAt;
+  const origin=source?`${source.fields.map(f=>names[f]).join(', ')} điền ban đầu từ ${source.status==='checked'?'Homework Lesson 4':'nháp Homework Lesson 4'}`:
+   (['idea1','idea2'].some(f=>session.responses[f]?.trim())?'Học viên nhập ý trong Lesson 5':'Chưa có ý đã lưu');
+  const text=origin+(lastSaved?' · Cập nhật '+stamp(lastSaved):'');
+  if(sourceLine.textContent!==text)sourceLine.textContent=text;
+ }
  for(const f of Object.keys(session.responses)){
   // Comment đang soạn giữ hash/range gốc; bài mới vẫn cập nhật tiến độ và các vùng khác.
   const node=content.querySelector(`[data-field-read="${f}"]`);

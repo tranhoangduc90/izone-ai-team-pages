@@ -218,8 +218,8 @@ export const ASSET_HASHES={
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../substitute-shared/listening-report-v1.mjs": "cbad6d9a7308fcf18a6d027c4096f382cd5dbf567a1029e9b6de2f536ce87613",
   "../substitute-test-1-k67-computer-based/assets/figures/home-improvement-store.png": "feab5540ce3cac2115201f167f1a05cf5b916021e4ec2c4f67912728290aa150",
-  "../teacher/app.js": "ef72c429104f0cba2ebb59918e7b0333971d3a2298f5184f72602201a9f0fde6",
-  "../teacher/index.html": "0b7b6bf8f0727258b21406dce392c5a05326fb72f10a2e3857de2b6392116b19",
+  "../teacher/app.js": "7d306cbcb1fc09fd5421e8cf03f096808635fd6bae22fb1b414587240e7619fa",
+  "../teacher/index.html": "e5d6c7a86eb0fb510d4da569e50823762f6e9165b935f35dca77f9b6e491db9a",
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
@@ -236,4 +236,4 @@ export const ASSET_HASHES={
   "offline-worker-listening-first-frame-v1.js": "24e13af382509391ab90d0023ea7a425129e159bc0261791536b5ebc6f10cf2e",
   "../k67-shared/listening-term1-mini-flow-v1.css": "79c530e3c31485e04869c5369d1f33610236cb667e4e0baa299e5db9bac5eec1"
 };
-export const ASSET_BUILD_ID="0c77b654892eab111c92efcb6568b127e16f43c08db9f9e0d5ff691774ff394a";
+export const ASSET_BUILD_ID="e24a6a670f9b39a7fc7304eb4b6fd501c25ee4b0817c16bf5e0947d0eb242ed1";
