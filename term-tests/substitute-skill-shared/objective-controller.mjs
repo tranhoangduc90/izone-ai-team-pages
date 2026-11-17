@@ -1,4 +1,5 @@
-import {nativeVisibility,updateNativeShell,audioProgress} from './native-shell.mjs';
+import {bindIdentitySelection} from './identity-selection.mjs';
+import {nativeVisibility,updateNativeShell,audioProgress} from './native-shell.mjs?v=20261117-start-scroll-v1';
 import {portalStatus} from './portal-status.mjs';
 import {DurableStore,PREFIX} from './storage.mjs';
 import {prepareWritingOffline as prepareOffline} from './offline.mjs';
@@ -245,9 +246,10 @@ async function start(){
  }catch(error){observation.emit('start_failed',{code:error.code,http:error.status});fail(error);}
  finally{busy=false;if(state?.stopPending)void sync();}
 }
-let roster=[];$('class').onchange=async()=>{const code=$('class').value;$('prepare').disabled=true;$('student').replaceChildren(new Option(code?'Chọn họ tên':'Chọn lớp trước',''));if(!code)return;try{const v=await api('roster?class='+encodeURIComponent(code),null,'GET');if($('class').value!==code)return;roster=v.students;for(const s of roster)$('student').add(new Option(s.name,s.studentRef));if(!roster.length)text('notice','Không còn học viên đủ điều kiện trong lớp này.');}catch(e){fail(e);}};$('student').onchange=()=>$('prepare').disabled=!$('student').value;
+let roster=[];
 async function classes(){const v=await api('classes',null,'GET');for(const c of v.classes)$('class').add(new Option(c.code,c.code));if(v.demo?.available)$('class').add(new Option('DEMO · Chỉ kiểm tra, không gửi Portal','DEMO'));text('prepare-status','Chọn lớp, họ tên và xác nhận đúng người trước khi làm bài.');const hinted=new URL(location.href).searchParams.get('class');if(hinted&&[...$('class').options].some(o=>o.value===hinted)){$('class').value=hinted;$('class').dispatchEvent(new Event('change'));}}
-$('prepare').onclick=()=>{text('confirm-name',roster.find(r=>r.studentRef===$('student').value)?.name||'');$('confirm-identity').showModal();};$('confirm-yes').onclick=()=>{$('confirm-identity').close();void prepare();};$('confirm-no').onclick=()=>$('confirm-identity').close();$('start').onclick=start;
+bindIdentitySelection({loadRoster:async code=>(await api('roster?class='+encodeURIComponent(code),null,'GET')).students,onRoster:rows=>{roster=rows;},onConfirm:prepare,onError:fail,isBusy:()=>busy});
+$('start').onclick=start;
 $('submit').onclick=()=>$('confirm-submit').showModal();$('accept-submit').onclick=()=>{$('confirm-submit').close();void seal();};$('cancel-submit').onclick=()=>$('confirm-submit').close();$('check-result').onclick=()=>void check();$('retry-send').onclick=()=>void sync();
 $('retry-audio').onclick=()=>void prepare();
 if(isListening){$('preview').onclick=async()=>{if(busy||!player)return;busy=true;trialPassed=false;$('heard').checked=false;$('start').disabled=true;$('preview').disabled=true;window.IZONE_CBT_AUDIO_START_LABEL?.($('start'),false);try{await player.preview(p=>{text('bootstrapPreviewStatus','Đang nghe thử '+Math.floor(p*100)+'%');window.IZONE_CBT_AUDIO_START_WAIT?.($('start'),10*(1-p));});trialPassed=true;$('heard').checked=true;text('bootstrapPreviewStatus','Đã nghe thử đủ 10 giây.');$('start').disabled=false;$('preview').disabled=false;$('preview').textContent='Nghe lại 10 giây đầu';window.IZONE_CBT_AUDIO_START_WAIT?.($('start'));window.IZONE_CBT_AUDIO_START_LABEL?.($('start'),true);}catch(e){window.IZONE_CBT_AUDIO_START_WAIT?.($('start'));fail(e);$('preview').disabled=false;}finally{busy=false;updateNativeShell(state,content,undefined,()=>persist());}};$('heard').onchange=()=>$('start').disabled=!(trialPassed&&$('heard').checked);$('cannot-hear').onclick=()=>$('confirm-stop').showModal();$('accept-stop').onclick=()=>{$('confirm-stop').close();void stop('learner_report');};$('cancel-stop').onclick=()=>$('confirm-stop').close();$('volume').oninput=()=>{if(!ownerHeld||!state?.identity)return;state.audioVolume=Number($('volume').value);player?.setVolume(state.audioVolume);$('official-volume').value=$('volume').value;void persist().catch(fail);};}

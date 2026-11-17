@@ -3,32 +3,32 @@ body.substitute-listening-flow[data-substitute-stage="listening"] {
 }
 
 body.substitute-listening-flow[data-substitute-stage="listening"] #app,
-#listeningView.cbt-listening-form,
-#listeningView .cbt-semantic-stage,
-#listeningView .cbt-semantic-pane,
-#listeningView .cbt-content-viewport,
-#listeningView .cbt-listening-section {
+body.substitute-listening-flow[data-substitute-stage="listening"] #listeningView.cbt-listening-form,
+body.substitute-listening-flow[data-substitute-stage="listening"] #listeningView .cbt-semantic-stage,
+body.substitute-listening-flow[data-substitute-stage="listening"] #listeningView .cbt-semantic-pane,
+body.substitute-listening-flow[data-substitute-stage="listening"] #listeningView .cbt-content-viewport,
+body.substitute-listening-flow[data-substitute-stage="listening"] #listeningView .cbt-listening-section {
   height: auto;
   max-height: none;
   min-height: 0;
   overflow: visible;
 }
 
-#listeningView.cbt-listening-form:not([hidden]),
-#listeningView.cbt-listening-form .cbt-semantic-pane {
+body.substitute-listening-flow[data-substitute-stage="listening"] #listeningView.cbt-listening-form:not([hidden]),
+body.substitute-listening-flow[data-substitute-stage="listening"] #listeningView.cbt-listening-form .cbt-semantic-pane {
   display: block;
 }
 
-#listeningView .cbt-listening-section {
+body.substitute-listening-flow[data-substitute-stage="listening"] #listeningView .cbt-listening-section {
   scroll-margin-top: 5rem;
 }
 
-#listeningView .cbt-table-wrap {
+body.substitute-listening-flow[data-substitute-stage="listening"] #listeningView .cbt-table-wrap {
   max-width: 100%;
   overflow-x: auto;
 }
 
-#listeningView [hidden] {
+body.substitute-listening-flow[data-substitute-stage="listening"] #listeningView [hidden] {
   display: none !important;
 }
 
