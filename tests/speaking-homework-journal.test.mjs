@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {createSpeakingRequestWindow,startSpeakingHomeworkJournal} from '../shared/speaking-homework-journal.mjs';
+import {createSpeakingRequestWindow,startSpeakingHomeworkJournal} from '../speaking-homework/journal/speaking-homework-journal.mjs';
 const response=(status,id=randomUUID())=>({status,ok:status>=200&&status<300,headers:{get:()=>id}});
 function fixture(){let at=0;const rows=[];const window=createSpeakingRequestWindow({emit:(kind,data,traceId,requestId)=>rows.push({kind,data,traceId,requestId}),now:()=>at,makeId:randomUUID});return{window,rows,advance:ms=>{at+=ms;}};}
 
