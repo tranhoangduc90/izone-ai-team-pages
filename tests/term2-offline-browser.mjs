@@ -66,7 +66,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,port=0,
   if(endpoint==='result'&&controls.resultResponse)return route.fulfill({json:controls.resultResponse});
   if(endpoint==='result/stream')return route.fulfill({status:404,json:{ok:false}});
   const content=fixtureContent||(fixtureContent=await page.evaluate(()=>window.K56_TERM_TEST_CONTENT));
-  if(native&&(endpoint.includes('/offline/')||(mini&&endpoint.endsWith('/listening/report')))){
+  if(native&&(endpoint.includes('/offline/')||(native.admission&&endpoint.endsWith('/attempt/prepare'))||(mini&&endpoint.endsWith('/listening/report')))){
    Object.assign(native.content,content);
    const response=await fetch(native.base+endpoint.slice(slug.length),{method:'POST',headers:{'content-type':'application/json','x-term2-permit':request.headers()['x-term2-permit']||'','x-exam-journal-request-id':request.headers()['x-exam-journal-request-id']||''},body:request.postData()});
    const json=await response.json();
