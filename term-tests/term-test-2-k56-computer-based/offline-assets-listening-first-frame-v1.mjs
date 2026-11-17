@@ -233,7 +233,7 @@ export const ASSET_HASHES={
   "../../shared/practice-result-view.mjs": "311ad101c6bba1ce5263f5cc04fee266eb97abb01adc690592bd09da5f4c448b",
   "../../shared/practice-teacher-tracking.mjs": "4464215d09662f36bda2c20ac8b401f399776b2cae18cfb28d7fd3a800c3b636",
   "../../shared/public-audio-audio-status-v1.mjs": "b0111fb9c2bb3e93f347a742ecc0eebb94d9c27ddebbc50de51d458978505eb2",
-  "../../shared/reading-homework-journal.mjs": "9ec9b8bdd83c577b26bb9a631f3f77a68bbc005b48f9555e48edd15272721668",
+  "../../shared/reading-homework-journal.mjs": "66693d370b2c7ed00f3487357c9de68be1281df448de0c190228086c7a133cc6",
   "../../shared/reading-practice-journal.mjs": "2db3d9faf1836cd63683604b57d12663f96597622a4852e0cc7f4f19568ab438",
   "../../shared/reading-view.mjs": "a1f5410bf3f634af3e828428a4880199c38a38aef27ebe5146286fd93b6600ec",
   "../../shared/red-focus-glow.css": "92ec0173cb14704d3d2f3beafd12356ccc3e47ca5ff9fe13a1d4c3f6aba80438",
@@ -362,4 +362,4 @@ export const ASSET_HASHES={
   "../shared/exam-journal/k67-pilot-browser-policy.mjs": "d4afd6aa20e02bdc3daaa668e2a7f71eb0d76c3936a42df750daa87d822b9e6d",
   "../shared/exam-journal/sealed-batch.mjs": "9507dbf9f26e78a3f0df7d18e78f697588a02571ac88bb90d8cec7340a7661f2"
 };
-export const ASSET_BUILD_ID="a8773fb997a13419ffabb5e675edab89f128593ceae51b5d3cb99e01736b6d7a";
+export const ASSET_BUILD_ID="0f032e555389a92207f871a0f5e7a39ad923035eb74236df4ddc53b19da98c9f";
