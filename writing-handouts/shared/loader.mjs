@@ -2,7 +2,7 @@
 // Chỉ sau khi đủ cấu hình mới mở app. Thiếu bài hoặc lỗi mạng hiện cách tải lại, không mở nhầm bài.
 // Chỉ máy xem thử tại loopback dùng API cùng origin; trang phát hành giữ API HTTPS.
 const localPreview=['127.0.0.1','localhost'].includes(location.hostname)&&['3199','3211'].includes(location.port);
-import {lessonEntryClass} from './test-class-entry.mjs?v=20261102-lesson-scope-v1';
+import {lessonEntryClass} from './test-class-entry.mjs?v=20261117-lesson5-k67-entry';
 import {installTeacherEntry} from '../../shared/teacher-entry.js?v=20261019-v1';
 const handoff=globalThis.handout67WritingHandoff;
 const apiBase=handoff?.apiBase||(localPreview?location.origin+'/api/handout67/v1':'https://ducizone.ddns.net/api/handout67/v1');
@@ -75,7 +75,8 @@ async function boot(){
    document.querySelector('.work-content>.page-title [data-lesson-text="writingLesson"]').removeAttribute('data-lesson-text');
   }
   if(localPreview){const banner=document.createElement('aside');banner.className='preview-banner';banner.innerHTML='<b>Bản xem thử riêng · Dữ liệu mẫu</b><p>Không ghi vào bài học viên thật. Check dùng Cổng AI thật; bài và góp ý lưu trong kho thử trên máy này.</p><a href="/writing-handouts/'+activity+'/">Trang học viên</a> · <a href="/writing-handouts/'+activity+'/teacher.html">Trang giảng viên</a>';document.body.prepend(banner);}
-  const texts={...lesson,classLesson:(entryClass||lesson.classes.join(', '))+' · Lesson '+lesson.number,courseLesson:'Khóa 6–7 · Writing lesson '+lesson.number,writingLesson:'Writing · Lesson '+lesson.number,contextLesson:'Khóa 67 · Lesson '+lesson.number,teacherTopic:lesson.title+(lesson.handoutMode==='two-bodies-v1'?' · Hai thân bài':' · Thân bài '+lesson.body),teacherTitle:'Theo dõi Lesson '+lesson.number,promptTitle:'Đề bài · '+lesson.title};
+  const classLabel=entryClass||(activity==='lesson5'&&lesson.classes.length>1?'Khóa 67':lesson.classes.join(', '));
+  const texts={...lesson,classLesson:classLabel+' · Lesson '+lesson.number,courseLesson:'Khóa 6–7 · Writing lesson '+lesson.number,writingLesson:'Writing · Lesson '+lesson.number,contextLesson:'Khóa 67 · Lesson '+lesson.number,teacherTopic:lesson.title+(lesson.handoutMode==='two-bodies-v1'?' · Hai thân bài':' · Thân bài '+lesson.body),teacherTitle:'Theo dõi Lesson '+lesson.number,promptTitle:'Đề bài · '+lesson.title};
   for(const el of document.querySelectorAll('[data-lesson-text]'))el.textContent=texts[el.dataset.lessonText];
   document.querySelector('[data-lesson-brand]')?.setAttribute('aria-label','IZONE Writing Lesson '+lesson.number);
   document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':activity==='lesson4'?lesson.title:'Lesson '+lesson.number+' · Writing · IZONE';
