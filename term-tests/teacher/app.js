@@ -272,7 +272,7 @@ function renderOverviewRows() {
     const writingMain = taskNumbers.length === 0
       ? 'Không có Writing'
       : writing.status === 'ready'
-      ? `Band ${standaloneWriting ? formatBand(writing.writingScore).replace('.', ',') : formatBand(Number(writing.writingScore))}`
+      ? `Band ${formatBand(Number(writing.writingScore))}`
       : writingStatusLabel(writing.status);
     writingCell.append(
       createNode('span', `teacher-writing-status ${taskNumbers.length ? writing.status : 'not_submitted'}`, writingMain),
@@ -538,10 +538,8 @@ function appendWritingComponent(parent, component, section, index, criterionCode
   parent.append(aspect);
 }
 
-function openTeacherWritingFeedback(studentName, writing) {
+function buildTeacherWritingFeedback(studentName, writing, closeButton) {
   const taskNumber = Number(writing.taskNumber);
-  const dialog = createNode('dialog', 'writing-feedback-dialog');
-  dialog.setAttribute('aria-labelledby', `teacherWritingTitle${taskNumber}`);
   const shell = createNode('div', 'writing-feedback-shell');
   const header = createNode('header', 'writing-feedback-header');
   const headerCopy = document.createElement('div');
@@ -550,12 +548,11 @@ function openTeacherWritingFeedback(studentName, writing) {
     createNode('h2', '', `Task ${taskNumber} · Band ${formatBand(Number(writing.taskScore))}`),
     createNode('p', '', `${Number(writing.wordCount || 0)} từ · ${writing.gradingMethod==='blank_rule'?'Điểm theo quy tắc bài trắng':'Chấm theo 4 tiêu chí IELTS'}`)
   );
-  headerCopy.querySelector('h2').id = `teacherWritingTitle${taskNumber}`;
-  const closeButton = createNode('button', 'writing-feedback-close', '×');
-  closeButton.type = 'button';
-  closeButton.setAttribute('aria-label', 'Đóng bài chấm Writing');
-  closeButton.addEventListener('click', () => dialog.close());
-  header.append(headerCopy, closeButton);
+  header.append(headerCopy);
+  if (closeButton) {
+    headerCopy.querySelector('h2').id = `teacherWritingTitle${taskNumber}`;
+    header.append(closeButton);
+  }
 
   const layout = createNode('div', 'writing-feedback-layout');
   const sourcePane = createNode('section', 'writing-feedback-source');
@@ -570,7 +567,7 @@ function openTeacherWritingFeedback(studentName, writing) {
     image.referrerPolicy = 'no-referrer';
     sourcePane.append(image);
   }
-  const reportSummary = writingReportSummary(writing.report);
+  const reportSummary = writing.standalone ? cleanWritingFeedback(writing.report) : writingReportSummary(writing.report);
   if (reportSummary) {
     sourcePane.append(createNode('h3', '', 'Nhận xét tổng hợp'));
     const report = createNode('div', 'writing-feedback-text writing-feedback-richtext');
@@ -582,7 +579,7 @@ function openTeacherWritingFeedback(studentName, writing) {
   const essay = createNode(
     'div',
     `writing-feedback-essay${essayValue.trim() ? '' : ' is-empty'}`,
-    essayValue.trim() || 'Chưa có nội dung bài viết.'
+    writing.standalone ? essayValue : (essayValue.trim() || 'Chưa có nội dung bài viết.')
   );
   essay.lang = 'en';
   sourcePane.append(essay);
@@ -602,6 +599,11 @@ function openTeacherWritingFeedback(studentName, writing) {
     const components = Array.from(criterion.components || []);
     const sections = writingCriterionSections(criterion.feedback);
     const componentCount = Math.max(components.length, sections.length);
+    if (writing.standalone && criterion.feedback && componentCount) {
+      const summary = createNode('div', 'writing-feedback-text writing-feedback-richtext');
+      appendSafeWritingFeedback(summary, criterion.feedback);
+      card.append(summary);
+    }
     if (componentCount) {
       const list = createNode('div', 'writing-component-list');
       for (let index = 0; index < componentCount; index += 1) {
@@ -617,7 +619,17 @@ function openTeacherWritingFeedback(studentName, writing) {
   }
   layout.append(sourcePane, scorePane);
   shell.append(header, layout);
-  dialog.append(shell);
+  return shell;
+}
+
+function openTeacherWritingFeedback(studentName, writing) {
+  const dialog = createNode('dialog', 'writing-feedback-dialog');
+  dialog.setAttribute('aria-labelledby', `teacherWritingTitle${Number(writing.taskNumber)}`);
+  const closeButton = createNode('button', 'writing-feedback-close', '×');
+  closeButton.type = 'button';
+  closeButton.setAttribute('aria-label', 'Đóng bài chấm Writing');
+  closeButton.addEventListener('click', () => dialog.close());
+  dialog.append(buildTeacherWritingFeedback(studentName, writing, closeButton));
   dialog.addEventListener('click', event => {
     if (event.target === dialog) dialog.close();
   });
@@ -779,6 +791,14 @@ function savedProgressButton(student){
 }
 
 function renderStudentResult(student) {
+  if (student?.writing?.standaloneDetail) {
+    window.K67_ANSWER_EXPLANATIONS?.reset();
+    const panel = createNode('section', 'panel result-panel teacher-result-panel');
+    panel.append(buildTeacherWritingFeedback(studentDisplayName(student), student.writing.standaloneDetail),
+      savedProgressButton(student));
+    elements.studentView.replaceChildren(panel);
+    return;
+  }
   if (!student || student.status !== 'completed' || !student.result) {
     window.K67_ANSWER_EXPLANATIONS?.reset();
     const empty = createNode('section', 'panel teacher-empty');
@@ -787,9 +807,6 @@ function renderStudentResult(student) {
       createNode('h2', '', student?.name || 'Học viên'),
       createNode('p', '', 'Chưa có kết quả tổng hợp. Bạn có thể xem phần học viên đã lưu lên hệ thống.')
     );
-    if (student?.writing?.standalone) {
-      empty.append(addResultSummaryCard('Writing Task 2', `Band ${formatBand(student.writing.task2Score).replace('.', ',')}`));
-    }
     if(student)empty.append(savedProgressButton(student));
     elements.studentView.replaceChildren(empty);
     return;
@@ -950,8 +967,18 @@ async function requestResultsWithStandaloneWriting(path, options) {
           || result.score < 0 || result.score > 9 || !Number.isInteger(result.score * 2)) {
         throw new Error('STANDALONE_WRITING_RESULT_MISMATCH');
       }
+      const { prompt, essay, wordCount, report, criteria } = result;
+      if (typeof prompt !== 'string' || !prompt.trim() || typeof essay !== 'string' || !essay.trim()
+          || !Number.isInteger(wordCount) || wordCount < 1 || typeof report !== 'string' || !report.trim()
+          || !Array.isArray(criteria) || criteria.length !== 4
+          || !['TR', 'CC', 'LR', 'GRA'].every(code =>
+            criteria.some(item => item?.code === code && Number.isFinite(item.bandScore)))) {
+        throw new Error('STANDALONE_WRITING_DETAIL_MISMATCH');
+      }
+      const standaloneDetail = { standalone: true, taskNumber: 2, taskScore: result.score,
+        prompt, essay, wordCount, report, criteria };
       return { ...student, writing: { ...student.writing, status: 'ready', standalone: true,
-        task2State: 'complete', task2Score: result.score, writingScore: result.score } };
+        task2State: 'complete', task2Score: result.score, writingScore: result.score, standaloneDetail } };
     } catch {
       unavailable = true;
       // Nếu lần đọc này lỗi tạm thời, giữ đúng điểm đã hiện cho cùng người/lớp/bài.
