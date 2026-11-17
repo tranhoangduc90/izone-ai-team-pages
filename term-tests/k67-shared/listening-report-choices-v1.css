@@ -1,0 +1,10 @@
+#k67ListeningReportChoices .k67-listening-report-choices {
+  display: grid;
+  gap: 8px;
+}
+
+#k67ListeningReportChoices .k67-listening-report-choices .button {
+  text-align: left;
+  line-height: 1.35;
+  white-space: normal;
+}

@@ -37,7 +37,7 @@ for (const entry of await readdir(root, { withFileTypes: true })) {
 
   const versionedManifests = k56RecoveryRoutes.has(entry.name) ? k56RecoveryManifests : [];
   if (entry.name === 'term-test-1-computer-based') {
-    versionedManifests.push('offline-assets-listening-first-frame-v1.mjs');
+    versionedManifests.push('offline-assets-listening-first-frame-v1.mjs', 'offline-assets-parallel-v1.mjs');
   }
   for (const name of versionedManifests) {
     test(`${entry.name} ${name} matches its published files`, async () => {

@@ -211,10 +211,10 @@ export const ASSET_HASHES={
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index.html": "605bceb2ace0a9f97692a9f482c7799ecdb00a6e2657063c45be4e21dbdefaa3",
+  "index.html": "cc80ebc1b88de5af414fcc70cce873c85e4ee64f40d8e26689e74a48137448f2",
   "offline-worker.js": "2fe1e0f6dc58d561982748784471b32eda2163cdbb26abbc503a3e75f3eebcf4",
   "recover-ic2304-20261116.js": "179a3b7e375ce5ab5e13df7db97c1e1d0c37e3b4e1a18b8ec9c56299434d04be",
   "standalone-writing-review.css": "973a3b3563d38ce54b29c46c0a95c1c176d108fe9b47d95585de7b5419fbb9e0",
   "standalone-writing-review.js": "f3952e208c44ede0aa0da0650fa1e318f1239360fbe6fbe59859b9607bab1a46"
 };
-export const ASSET_BUILD_ID="6596df6868fac12f6feb57b58fb3a3f395f1a76bf657f48e7e26edf5bb9051d7";
+export const ASSET_BUILD_ID="1c3d152a17ebb378b1b55489babba53477dde9089c46749e83484ca21502894c";
