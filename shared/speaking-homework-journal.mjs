@@ -1,9 +1,7 @@
-import {SpeakingDurableOutbox} from './speaking-durable-outbox.mjs?v=20261117-cloud-r1';
-import {createRecorder,fetchTransport,viewportSnapshot} from '../term-tests/shared/exam-journal/recorder.mjs?v=20261117-speaking-cloud-r1';
+import {IndexedOutbox} from '../term-tests/shared/exam-journal/outbox.mjs?v=20261105-diagnostics-v2';
+import {createRecorder,fetchTransport,viewportSnapshot} from '../term-tests/shared/exam-journal/recorder.mjs?v=20261105-diagnostics-v2';
 
 export const speakingJournalEnabled=true;
-const speakingCloudEndpoint='https://izone-speaking-journal-ingress.tranhoangduc90.workers.dev/api/speaking-homework-independent/journal-events';
-const routeRefreshMs=60_000;
 const uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
 const bounded=(value,max=600000)=>Math.min(max,Math.max(0,Math.round(Number.isFinite(value)?value:0)));
 const routes={'/open':'open','/doctor/list':'doctor_list','/checks/request':'check_main','/doctor/practice/request':'check_practice',
@@ -103,15 +101,10 @@ export function startSpeakingHomeworkJournal({enabled=speakingJournalEnabled,...
 function startEnabledSpeakingJournal({env=globalThis,fetcher=globalThis.fetch}={}){
  if(typeof env.addEventListener!=='function'||typeof env.document?.addEventListener!=='function'||typeof env.MutationObserver!=='function')throw Error('SPEAKING_LOG_BROWSER_UNAVAILABLE');
  let current=null,endpoint,stopped=false,resizeTimer;const channels=new Set();
- const outbox=new SpeakingDurableOutbox({name:'izone-speaking-webapp-journal-v1',maxBytes:2*1024*1024});
- const recorder=createRecorder({outbox,durableBatches:true,context:()=>current?.captured,build:'speaking-webapp-journal-20261117-cloud-r1',transport:(body,options)=>{
+ const outbox=new IndexedOutbox({name:'izone-speaking-webapp-journal-v1',maxBytes:2*1024*1024});
+ const recorder=createRecorder({outbox,context:()=>current?.captured,build:'speaking-webapp-journal-20261106',transport:(body,options)=>{
   if(!endpoint)throw Error('SPEAKING_LOG_ENDPOINT_UNAVAILABLE');
-  const {ticket,ticketId,archiveLane,cloud}=body.auth;
-  const useCloud=archiveLane==='cloud';
-  if(useCloud&&!cloud)throw Error('SPEAKING_CLOUD_GRANT_UNAVAILABLE');
-  const auth=useCloud?{ticket:cloud.ticket,ticketId:cloud.ticketId}:{ticket,ticketId};
-  const target=useCloud?speakingCloudEndpoint:endpoint+'/journal-events';
-  return fetchTransport(target)({...body,auth,events:body.events.map(packet)},options);
+  return fetchTransport(endpoint+'/journal-events')({...body,events:body.events.map(packet)},options);
  }});
  function emit(channel,kind,fields,traceId,requestId){
   if(stopped)return;const row={kind,fields,traceId:traceId||crypto.randomUUID(),...(requestId?{requestId}:{})};
@@ -121,7 +114,6 @@ function startEnabledSpeakingJournal({env=globalThis,fetcher=globalThis.fetch}={
    else if(kind==='client.request'){if(channel.beforeRequests.length<32)channel.beforeRequests.push(pending);else channel.lost++;}
    return;
   }
-  channel.routeDirty=true;
   recorder.record('speaking_diagnostic',row,channel.captured);
  }
  function contextual(channel){
@@ -136,32 +128,19 @@ function startEnabledSpeakingJournal({env=globalThis,fetcher=globalThis.fetch}={
   if(channels.size>16){const old=channels.values().next().value;if(old.captured)old.window.flush(true);channels.delete(old);}
  }
  function ensure(channel){
-  const now=Date.now();
-  const routeDue=channel.routeManaged&&channel.routeDirty&&channel.routeRefreshAt<=now;
-  const refreshAt=Math.min(channel.captured?.auth.expiresAt??0,
-   channel.captured?.auth.cloud?.expiresAt??Infinity);
-  if(stopped||channel.loading||now<channel.nextTry||refreshAt>now+60_000&&!routeDue)return;
+  if(stopped||channel.loading||channel.captured?.auth.expiresAt>Date.now()+60000||Date.now()<channel.nextTry)return;
   channel.loading=true;channel.nextTry=Date.now()+5000;
   void(async()=>{try{
    const response=await fetcher(channel.apiBase+'/journal-context',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(channel.identity),cache:'no-store',redirect:'error',signal:AbortSignal.timeout(5000)});
    if(!response.ok)return;const value=(await response.json()).journalContext;
    if(stopped||!/^[a-f0-9]{64}$/.test(value?.bindingId||'')||!uuid(value.ticketId)||typeof value.ticket!=='string'||!Number.isSafeInteger(value.expiresAt)||value.expiresAt<=Date.now())return;
    const {bindingId,ticket,ticketId,issuedAt,expiresAt}=value;
-   const candidate=value.cloud;
-   const cloud=candidate?.bindingId===bindingId&&uuid(candidate.ticketId)&&typeof candidate.ticket==='string'&&
-    candidate.ticket.length<=8192&&Number.isSafeInteger(candidate.expiresAt)&&candidate.expiresAt>Date.now()?
-    {ticket:candidate.ticket,ticketId:candidate.ticketId,expiresAt:candidate.expiresAt}:undefined;
-   const managed=value.archiveLane==='collector'||value.archiveLane==='cloud';
-   const archiveLane=managed&&value.archiveLane==='cloud'&&cloud?'cloud':'collector';
    let target=channel;
    if(channel.captured&&channel.captured.bindingId!==bindingId){
     // A native class/profile rebinding creates a new capture channel; old callbacks keep the old scope.
     if(current!==channel)return;target=makeChannel(channel.apiBase,channel.identity,channel.unitId);select(target);
    }
-   target.captured={bindingId,auth:{ticket,ticketId,issuedAt,expiresAt,archiveLane,...(cloud?{cloud}: {})}};
-   target.routeManaged=managed;
-   target.routeRefreshAt=Date.now()+routeRefreshMs;
-   target.routeDirty=false;
+   target.captured={bindingId,auth:{ticket,ticketId,issuedAt,expiresAt}};
    for(const row of [...target.beforeContext.values(),...target.beforeRequests])emit(target,row.kind,{...row.fields,observedBeforeContext:true,observationDelayMs:bounded(performance.now()-row.at)},row.traceId,row.requestId);
    target.beforeContext.clear();target.beforeRequests=[];
    if(target.lost){emit(target,'capture.health',{state:'sequence_gap',lostCount:target.lost});target.lost=0;}

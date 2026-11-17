@@ -1,4 +1,4 @@
-import { IndexedOutbox } from '../term-tests/shared/exam-journal/outbox.mjs?v=20261117-speaking-cloud-r1';
+import { IndexedOutbox } from './outbox.mjs?v=20261117-speaking-cloud-r1';
 
 const prefix = 'speaking-sealed:';
 const totalKey = 'speaking-seal-bytes';
