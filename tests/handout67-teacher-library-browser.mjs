@@ -31,10 +31,11 @@ async function fixture(t, mode) {
     const number=Number((path.split('/').at(-1).match(/^lesson(\d+)$/)||url.searchParams.get('activity')?.match(/^lesson(\d+)$/))?.[1]);
     const classA={classRef:'IC2304',className:'IC2304',studentCount:16};
     const classB={classRef:'IC2363',className:'IC2363',studentCount:8};
-    if(path==='/teacher/classes')return number===13&&mode==='partial'?send({ok:false},503):send({ok:true,classes:number===4?[classB]:number===5?[classA,classB]:[classA]});
+    const classC={classRef:'IC10002',className:'IC10002',studentCount:0};
+    if(path==='/teacher/classes')return number===13&&mode==='partial'?send({ok:false},503):send({ok:true,classes:number===4?[classB]:number===5?[classA,classB,classC]:[classA]});
     if(path==='/teacher/students')return send({ok:true,students:[]});
     if(numbers.includes(number))return send({ok:true,lesson:{activity:'lesson'+number,number,title:'Đề buổi '+number,topic:'Writing prompt for Lesson '+number,body:2,
-      classes:number===4?['IC2363']:number===5||number===7?['IC2304','IC2363']:['IC2304'],...(number===4?{outlineOnly:true,rosterScope:'lesson'}:{})}});
+      classes:number===4?['IC2363']:number===5?['IC2304','IC2363','IC10002']:number===7?['IC2304','IC2363']:['IC2304'],...(number===4?{outlineOnly:true,rosterScope:'lesson'}:{})}});
     return send({ok:false},404);
   });
   await page.goto(site.origin+'/writing-handouts/library67.html?class=IC2363');
@@ -46,6 +47,7 @@ test('K67 library keeps the reference layout and routes by lesson-specific teach
   const cards=page.locator('.handout-card');
   await cards.first().waitFor();
   assert.deepEqual(await cards.evaluateAll(nodes=>nodes.map(card=>card.dataset.activity)),numbers.map(n=>'lesson'+n));
+  assert.deepEqual(await page.locator('#class-select option').evaluateAll(options=>options.map(option=>option.value)),['IC10002','IC2363','IC2304']);
   assert.equal(await page.locator('#class-select').inputValue(),'IC2363');
   const lesson4=page.locator('[data-activity=lesson4]');
   const lesson5=page.locator('[data-activity=lesson5]');
@@ -79,6 +81,9 @@ test('K67 library keeps the reference layout and routes by lesson-specific teach
   assert.equal(await page.locator('#class-select').inputValue(),'IC2363');
   assert.equal(await page.evaluate(()=>window.opener===null),true);
   assert.equal(await dashboard.evaluate(()=>window.opener===null),true);
+  await page.goto(site.origin+'/writing-handouts/library67.html');
+  await page.locator('#library-content').waitFor();
+  assert.equal(await page.locator('#class-select').inputValue(),'IC10002');
 });
 
 test('K67 library does not request class data or show sign-in for a forbidden teacher',async t=>{
