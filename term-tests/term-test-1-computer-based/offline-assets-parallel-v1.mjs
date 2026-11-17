@@ -250,12 +250,12 @@ export const ASSET_HASHES={
   "../k67-shared/listening-controller-term1-report-v1.js": "1f7487289879df40b8b1cfb6b27971564ddd8e6143b666a13933b59badf74ac1",
   "../k67-shared/listening-report-choices-v1.mjs": "dacd6141aa3ee4ef20ae5208dcbad527eb9ac2e4a6d8fb4d38af5c30fcf06e1e",
   "../k67-shared/listening-report-choices-v1.css": "e1c2b8d36bb0681a82efbf108a4580880ef0561daa63a38266d3634c98cfaea9",
-  "../mini-test-lesson-5-computer-based/journey-term1-k67-parallel-v1.mjs": "40f31c097bf5d9d1e3c83e3edf23387b221e35aa7da386f244a7a2079be7bcbe",
-  "../shared/app-term1-k67-parallel-v1.js": "63bb55d377a22ef86f220f53253041878d58f0feb53d44d3b900098f1e354b9e",
+  "../mini-test-lesson-5-computer-based/journey-term1-k67-parallel-v1.mjs": "069afe79d684968eea474995a4c0e8c15b0822991887642069192de7603965ab",
+  "../shared/app-term1-k67-parallel-v1.js": "fd79271677149ea166a62ec2626492a6d5c251fca1fdd4db1438dd7fa8ec3285",
   "../term-test-2-computer-based/bootstrap-term1-k67-parallel-v1.js": "a7ef854fcdc529273e3af4c66d40108ed5bed86649882dc703c79aa7d5ae7052",
   "recover-ic2304-20261116.js": "179a3b7e375ce5ab5e13df7db97c1e1d0c37e3b4e1a18b8ec9c56299434d04be",
   "recover-term1-k67-parallel-v1.js": "885c0d3534f6c1aba4ad28f3ff57cbceb73ab4cbb1abd080f5d48b351998cea0",
   "index-parallel-v1.html": "ef684cd0ff856c8c513bb22b36d03cd38a50836116e41e10ce90b60a3ba2c386",
   "offline-worker-parallel-v1.js": "22db760a6061392121e6950011a44b12ea80bc480df05c7440105b7d1631fece"
 };
-export const ASSET_BUILD_ID="53ce3e7956cafe1987190f1dba0ba03d814907922249959e57b429a34a69f89e";
+export const ASSET_BUILD_ID="0ef61a3438d0bcc2a153e9dee1f2ff5ca2b8892c1942076040164d3d85b2bb8f";

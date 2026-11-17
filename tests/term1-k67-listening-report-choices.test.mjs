@@ -15,7 +15,7 @@ const pages=fileURLToPath(new URL('../',import.meta.url));
 const require=createRequire(resolve(process.env.USERPROFILE,
   '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json'));
 const {chromium}=require('playwright');
-const entry='/term-tests/term-test-1-computer-based/?class=IC2200&mode=lis_first';
+const entry='/term-tests/term-test-1-computer-based/?class=IC2200&mode=';
 const api='/api/term-tests/term-test-1';
 const label='Báo lỗi âm thanh';
 const issues=['Tôi không nghe thấy âm thanh','Tôi nghe thấy âm thanh nhưng bị rè','Cancel'];
@@ -23,7 +23,7 @@ const devices=['Headphone có dây','Headphone không dây','Loa ngoài'];
 const deviceIds=['wired_headphones','wireless_headphones','external_speaker'];
 
 test('Term 1 audio reporting preserves active Listening and links each confirmed interruption to its receipt',
-  {timeout:180_000},async()=>{
+  {timeout:210_000},async()=>{
   const socket=createServer().listen(0,'127.0.0.1');
   await once(socket,'listening');
   const {port}=socket.address();
@@ -34,6 +34,7 @@ test('Term 1 audio reporting preserves active Listening and links each confirmed
     env:{...process.env,K67_ORDER_NATIVE_URL:'',K67_PREVIEW_PORT:String(port),K67_PREVIEW_REAL_TERM1_AUDIO:'true',
       K67_PREVIEW_TERM1_CBT_JOURNEY:'on',K67_PREVIEW_TERM1_PARALLEL_ENTRY:'true',
       K67_PREVIEW_TERM1_REPORT_CASES:'true',K67_PREVIEW_LISTENING_CONTINUITY:'true',
+      K67_PREVIEW_TERM1_WRITING_HOLD:'true',K67_PREVIEW_WRITING_RESULT:'true',
       K67_PREVIEW_EXAM_JOURNAL:journal}
   });
   let browser,diagnostics='';
@@ -47,14 +48,19 @@ test('Term 1 audio reporting preserves active Listening and links each confirmed
     assert.ok(ready,diagnostics||'Preview fixture did not start.');
     browser=await chromium.launch({channel:'msedge',headless:true,args:['--no-sandbox','--autoplay-policy=no-user-gesture-required']});
     const errors=[];
-    async function open(number){
+    const studentRef=number=>'91000000-0000-4000-8000-'+String(number).padStart(12,'0');
+    async function selectLearner(number,mode){
       const context=await browser.newContext({baseURL:base,viewport:{width:1024,height:600}});
       await context.route('**/*',route=>route.request().url().startsWith(base+'/')?route.continue():route.abort());
       const page=await context.newPage();
       page.on('pageerror',error=>errors.push(error.message));
-      await page.goto(entry);
-      await page.locator('#bootstrapStudent').selectOption('91000000-0000-4000-8000-'+String(number).padStart(12,'0'));
+      await page.goto(entry+mode);
+      await page.locator('#bootstrapStudent').selectOption(studentRef(number));
       await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
+      return {context,page};
+    }
+    async function open(number){
+      const {context,page}=await selectLearner(number,'lis_first');
       await page.locator('#bootstrapPreview').click();
       await page.locator('#bootstrapStart').click();
       const audio=page.locator('#miniJourneyAudio');
@@ -75,7 +81,8 @@ test('Term 1 audio reporting preserves active Listening and links each confirmed
     async function waitForLog(context,receipt,accept){
       let checkpoints=[];
       for(let i=0;i<45;i++){
-        const response=await context.request.get('/preview/writing-journal?attempt='+receipt.attemptToken);
+        const lookup=receipt.continuationSection?'session='+receipt.examSessionToken:'attempt='+receipt.attemptToken;
+        const response=await context.request.get('/preview/writing-journal?'+lookup);
         const data=await response.json();
         assert.ok(response.ok(),data.error);
         checkpoints=data.events.map(row=>row.data?.checkpointState).filter(Boolean);
@@ -208,6 +215,64 @@ test('Term 1 audio reporting preserves active Listening and links each confirmed
       assert.ok(!JSON.stringify(rows.filter(row=>row.reportVersion===2)).includes('Draft stays with this learner'));
       await context.close();
     }
+
+    const reading=await selectLearner(5,'read_first');
+    await reading.page.locator('#bootstrapStart').click();
+    const readingAnswer=reading.page.locator('#readingQuestions input[data-number]').first();
+    const number=Number(await readingAnswer.getAttribute('data-number'));
+    await readingAnswer.fill('Reading before the audio interruption');
+    reading.page.once('dialog',dialog=>dialog.accept());
+    const readingSeal=reading.page.waitForResponse(response=>response.ok()&&response.url()===base+api+'/cbt-journey/seal');
+    await reading.page.locator('#submitReading').click();
+    const {receipt:readingReceipt}=await (await readingSeal).json();
+    await reading.context.close();
+
+    const {context,page,report,dialog}=await open(5);
+    const scope=await view(page);
+    assert.equal(scope.continuationSection,'listening');
+    assert.notEqual(scope.examSessionToken,readingReceipt.examSessionToken);
+    await report.click();
+    await dialog.getByRole('button',{name:issues[0],exact:true}).waitFor();
+    await context.setOffline(true);
+    await dialog.getByRole('button',{name:issues[0],exact:true}).click();
+    const interruption=page.getByRole('dialog',{name:'Listening gián đoạn'});
+    await interruption.getByRole('button',{name:'Tôi đã hiểu. Đến phần thi tiếp theo.',exact:true}).click();
+    const continueWriting=page.getByRole('button',{name:'Tiếp tục Writing',exact:true});
+    assert.equal(await continueWriting.isVisible(),false);
+    assert.equal((await view(page)).localOnly,true);
+    const interruptionSeal=page.waitForResponse(response=>response.ok()&&response.url()===base+api+'/cbt-journey/interrupt');
+    await context.setOffline(false);
+    const {receipt:interruptionReceipt}=await (await interruptionSeal).json();
+    assert.equal(interruptionReceipt.nextSection,'writing');
+    assert.equal(interruptionReceipt.examSessionToken,scope.examSessionToken);
+    assert.equal(interruptionReceipt.outcome,'interrupted');
+    await waitForLog(context,interruptionReceipt,logs=>logs.some(row=>row.phase==='report_interruption_server_received'
+      &&row.reportId===interruptionReceipt.operationId&&row.receiptId===interruptionReceipt.receiptId));
+    await continueWriting.click();
+    await page.getByRole('button',{name:'Bắt đầu Writing',exact:true}).click();
+    await page.locator('#writingView').waitFor({state:'visible'});
+    const writingScope=await view(page);
+    assert.equal(writingScope.continuationSection,'writing');
+    assert.equal(writingScope.listeningInterrupted,true);
+    assert.equal(writingScope.listeningSubmitted,false);
+    assert.notEqual(writingScope.examSessionToken,scope.examSessionToken);
+    const answer='Writing from the authorized continuation.';
+    await page.locator('textarea[data-writing-task="task2"]').fill(answer);
+    page.once('dialog',dialog=>dialog.accept());
+    const writingSeal=page.waitForResponse(response=>response.ok()&&response.url()===base+api+'/cbt-journey/seal');
+    await page.locator('#submitWriting').click();
+    const {receipt:writingReceipt}=await (await writingSeal).json();
+    assert.equal(writingReceipt.nextSection,'result');
+    const official=await context.request.post('/api/term-tests/result',{
+      data:{officialTerm1:{classCode:'IC2200',studentRef:studentRef(5)}}
+    });
+    assert.ok(official.ok(),await official.text());
+    const persisted=await official.json();
+    assert.equal(persisted.result.listeningStatus,'interrupted');
+    assert.equal(persisted.result.listening,null);
+    assert.equal(persisted.result.reading.details.find(item=>item.number===number).studentAnswer,'Reading before the audio interruption');
+    assert.equal(persisted.writing.task2,answer);
+    await context.close();
     assert.deepEqual(errors,[]);
   }finally{
     await browser?.close();

@@ -959,6 +959,7 @@
     const skill = miniJourney.view().continuationSection === 'listening' ? 'Listening' : 'Reading';
     panel.hidden = false;
     heading.textContent = conflict ? 'Tiến độ bài thi đã thay đổi'
+      : miniJourney.view().listeningInterrupted ? 'Listening gián đoạn'
       : receipt ? 'Đã nộp ' + skill : 'Đã lưu ' + skill + ' trên thiết bị';
     status.textContent = miniJourney.message();
     button.textContent = conflict ? 'Mở lại theo tiến độ chính thức' : 'Tiếp tục Writing';
@@ -4447,7 +4448,8 @@
     showContinuityInterruption(()=>miniJourney.acknowledgeInterruption(),view=>{
       Object.assign(state,view);
       saveSession();
-      setStage(view.nextSection==='writing'?'writing-prep':'listening-saved');
+      setStage(view.continuationSection==='listening'?'continuation-saved'
+        :view.nextSection==='writing'?'writing-prep':'listening-saved');
     });
   }
 
@@ -4561,7 +4563,7 @@
         else if (miniJourney.officialConflict?.()) setStage('continuation-saved');
       });
       if (miniJourney.officialConflict?.()
-          || (['listening','reading'].includes(view.continuationSection) && view.nextSection==='result')) {
+          || (['listening','reading'].includes(view.continuationSection) && view.nextSection==='result' && !view.needsListeningAcknowledgment)) {
         setStage('continuation-saved');
         return;
       }

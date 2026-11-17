@@ -425,15 +425,16 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
   function view(){
     const p=record.package;
     const l=record.sections.listening,r=record.sections.reading,w=record.sections.writing;
-    const listeningSubmitted=Boolean(l?.operationId&&!l.interrupted)||['reading','writing'].includes(p.continuationSection);
+    const listeningInterrupted=Boolean(l?.interrupted||p.listeningInterrupted);
+    const listeningSubmitted=!listeningInterrupted&&(Boolean(l?.operationId)||['reading','writing'].includes(p.continuationSection));
     const readingSubmitted=Boolean(r?.operationId)||['listening','writing'].includes(p.continuationSection);
     return {ok:true,studentName:p.studentName,...(paper?{className:p.className,examDelivery:'answer_sheet'}:{}),
       examSessionToken:p.examSessionToken,attemptToken:p.attemptToken,generation:p.generation,
       examMode:p.examMode,nextSection:next(),listeningSubmitted,
       ...(p.term1ParallelEntry?{term1ParallelEntry:true}:{}),
       ...(p.continuationSection?{continuationSection:p.continuationSection}:{}),
-      listeningInterrupted:Boolean(l?.interrupted),needsListeningAcknowledgment:Boolean(l?.interrupted&&!l.acknowledged),
-      readingSubmitted,completed:p.continuationSection?listeningSubmitted&&readingSubmitted:Boolean(l?.operationId&&r?.operationId),
+      listeningInterrupted,needsListeningAcknowledgment:Boolean(l?.interrupted&&!l.acknowledged),
+      readingSubmitted,completed:(listeningSubmitted||listeningInterrupted)&&readingSubmitted,
       ...(writing?{writingStarted:Boolean(w?.startedAt),writingSubmitted:Boolean(w?.operationId),
         writingDeadlineAt:w?.deadline?new Date(w.deadline).toISOString():null}:{}),
       readingStartedAt:r?.startedAt?new Date(r.startedAt).toISOString():null,readingDeadlineAt:r?.deadline?new Date(r.deadline).toISOString():null,
