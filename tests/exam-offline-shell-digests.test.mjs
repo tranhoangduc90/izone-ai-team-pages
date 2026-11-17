@@ -39,7 +39,9 @@ for (const entry of await readdir(root, { withFileTypes: true })) {
   if (entry.name === 'term-test-1-computer-based') {
     versionedManifests.push('offline-assets-listening-first-frame-v1.mjs', 'offline-assets-parallel-v1.mjs');
   }
-  for (const name of versionedManifests) {
+  const manifests = entry.name === 'term-test-2-k56-computer-based'
+    ? [...versionedManifests, 'offline-assets-listening-report-v2.mjs'] : versionedManifests;
+  for (const name of manifests) {
     test(`${entry.name} ${name} matches its published files`, async () => {
       const worker = await readFile(new URL(name.replace('assets-', 'worker-').replace('.mjs', '.js'), route), 'utf8');
       assert.ok(worker.includes(`'./${name}'`));
