@@ -38,7 +38,7 @@ async function exercise(t, options, verify) {
   const origin = new URL(site).origin;
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   t.after(async () => { await browser.close(); await server?.close(); });
-  const context=await browser.newContext({viewport:{width:options.mobile?390:1360,height:850}});
+  const context=await browser.newContext({hasTouch:!!options.mobile,viewport:{width:options.mobile?390:1360,height:850}});
   const page=await context.newPage();
   page.setDefaultTimeout(6000);
   const calls = [];
@@ -58,7 +58,8 @@ async function exercise(t, options, verify) {
   });
   const extraClass='IC9998';
   const targetLesson={activity:'lesson5',number:5,body:2,title:'Luyện thử Lesson 5',topic:'Synthetic topic.',classes:[classRef,extraClass],defaultClass:classRef,ideaHint:'Chọn tác hại.'};
-  const target={...createState(0,targetLesson),ref:'lesson5-fixture-session',activity:'lesson5',classRef,studentRef};
+  const target={...createState(0,targetLesson),ref:'lesson5-fixture-session',activity:'lesson5',classRef,studentRef,vocabulary:{},teacherComments:[]};
+  const teacherData={extraRows:[],sent:[]};
   let lastSaved=null;
   await page.context().route('**/*', async route => {
     const request = route.request();
@@ -66,7 +67,7 @@ async function exercise(t, options, verify) {
     if (url.origin === origin) return route.continue();
     const headers = {
       'access-control-allow-origin': origin, 'access-control-allow-credentials': 'true',
-      'access-control-allow-headers': 'content-type,authorization,x-hw-access,x-hw-csrf,x-hw-student,x-hw-document,x-hw-assignment,x-hw-handout,if-none-match',
+      'access-control-allow-headers': 'content-type,authorization,x-hw-access,x-hw-csrf,x-hw-student,x-hw-document,x-hw-assignment,x-hw-handout,x-handout67-csrf,if-none-match',
       'access-control-allow-methods': 'GET,POST,PUT,OPTIONS',
     };
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
@@ -107,8 +108,15 @@ async function exercise(t, options, verify) {
       if(path==='/sessions/'+target.ref||path==='/teacher/sessions/'+target.ref)return send({ok:true,session:target});
       if(path==='/teacher/session')return send({ok:true,reviewer:{email:'teacher@example.test'}});
       if(path==='/teacher/classes')return send({ok:true,classes});
-      if(path==='/teacher/students')return send({ok:true,students:[{...students[0],sessionRef:target.ref,updatedAt:lastSaved,passed:0}]});
+      if(path==='/teacher/students')return send({ok:true,students:[{...students[0],sessionRef:target.ref,updatedAt:lastSaved,passed:0},...teacherData.extraRows]});
       if(path==='/teacher/sessions/'+target.ref+'/activity')return send({ok:true,events:[]});
+      if(path==='/teacher/sessions/'+target.ref+'/comments'&&request.method()==='POST'){
+        const input=request.postDataJSON();
+        assert.equal(input.expectedVersion,target.version);
+        teacherData.sent.push(input);
+        target.teacherComments.push({...input,authorName:'Giảng viên thử',snapshot:{...target.responses}});
+        return send({ok:true,session:target});
+      }
       return send({ok:false},404);
     }
     const prefix = '/homework-writing67-api/api';
@@ -156,7 +164,7 @@ async function exercise(t, options, verify) {
   const query = new URLSearchParams({ mode: 'student', assignment, documentId, workspace: 'k67' });
   await page.goto(site + '/writing-handouts/lesson4/?' + query);
   await page.locator('#hw-entry-student').selectOption('0');
-  await verify({page,calls,confirmed,site,target});
+  await verify({page,calls,confirmed,site,target,teacherData});
 }
 
 test('Lesson 4 asks for name confirmation once, then restores without remounting the waiting card', async t => {
@@ -180,8 +188,8 @@ test('Lesson 4 asks for name confirmation once, then restores without remounting
   });
 });
 
-test('Lesson 5 retains manual entry and shows the verified transfer and latest draft to the teacher',async t=>{
-  await exercise(t,{transfer:true,mobile:true},async({page,site,target})=>{
+test('Lesson 5 keeps the reading position, teacher comments and verified Homework transfer',async t=>{
+  await exercise(t,{transfer:true,mobile:true},async({page,site,target,teacherData})=>{
     await page.getByRole('button',{name:'Xác nhận và vào bài'}).click();
     const manual=await page.context().newPage();
     await manual.goto(site+'/writing-handouts/lesson5/');
@@ -213,7 +221,8 @@ test('Lesson 5 retains manual entry and shows the verified transfer and latest d
     assert.equal(target.responses.idea1,'Nháp mới của học viên');
     assert.equal(target.steps.topic.status,'draft');
     const teacher=await page.context().newPage();
-    await teacher.goto(site+'/writing-handouts/lesson5/teacher.html?preview=refresh');
+    teacherData.extraRows=Array.from({length:12},(_,index)=>({studentRef:'student-'+index,displayName:'Học viên '+index}));
+    await teacher.goto(site+'/writing-handouts/lesson5/teacher.html');
     const studentCard=teacher.locator('[data-student="'+studentRef+'"]');
     await studentCard.waitFor();
     const refresh=teacher.getByRole('button',{name:'Cập nhật',exact:true});
@@ -228,24 +237,59 @@ test('Lesson 5 retains manual entry and shows the verified transfer and latest d
       const card=await studentCard.elementHandle();
       await Promise.all([
         teacher.waitForResponse(response=>response.url().includes('/teacher/students?')&&response.ok()),
-        refresh.click(),
+        width===390?refresh.tap():refresh.click(),
       ]);
       assert.equal(await card.evaluate(element=>element.isConnected),true);
       assert.deepEqual(await refresh.boundingBox(),before);
     }
+    await teacher.setViewportSize({width:390,height:660});
+    await studentCard.evaluate(card=>scrollBy({top:card.getBoundingClientRect().top-100,behavior:'instant'}));
+    const beforeChange=(await studentCard.boundingBox()).y;
+    teacherData.extraRows.unshift({studentRef:'new-priority',displayName:'Vừa cần hỗ trợ',sessionRef:'another-session',dashboard:{priority:0,state:'support',activity:{},stepStates:{}}});
+    await refresh.tap();
+    await teacher.locator('[data-student=new-priority]').waitFor({state:'attached'});
+    assert.ok(Math.abs((await studentCard.boundingBox()).y-beforeChange)<=2);
+    await teacher.setViewportSize({width:1440,height:560});
     await studentCard.click();
     await teacher.locator('#lesson5-outline-source').waitFor();
     assert.match(await teacher.locator('#lesson5-outline-source').innerText(),/Homework Lesson 4.*Cập nhật/);
     assert.match(await teacher.locator('[data-field-read=idea1]').innerText(),/Nháp mới của học viên/);
-    assert.equal(await teacher.locator('#comment-form').isVisible(),false);
-    await teacher.locator('#detail').evaluate(dialog=>dialog.scrollTop=dialog.scrollHeight);
-    assert.equal(await teacher.locator('#detail-refresh').evaluate(button=>{
-      const {x,y,width,height}=button.getBoundingClientRect();
-      return button.contains(document.elementFromPoint(x+width/2,y+height/2));
-    }),true);
+    assert.equal(await teacher.locator('#comment-form').isVisible(),true);
+    const notes=teacher.locator('#comment-text');
+    const note='Em giải thích thêm hậu quả của ý thứ nhất nhé.';
+    await notes.fill(note);
+    await notes.evaluate(input=>input.setSelectionRange(4,12));
+    const reads=[];
+    teacher.on('request',request=>{if(request.url().includes('/teacher/'))reads.push(new URL(request.url()).pathname);});
+    const dialog=teacher.locator('#detail'), detailButton=teacher.locator('#detail-refresh');
+    for(const width of [1440,390]){
+      await teacher.setViewportSize({width,height:620});
+      await dialog.evaluate(node=>node.scrollTop=node.scrollHeight);
+      assert.equal(await detailButton.evaluate(button=>{
+        const {x,y,width,height}=button.getBoundingClientRect();
+        return button.contains(document.elementFromPoint(x+width/2,y+height/2));
+      }),true);
+      const detailBefore=await dialog.evaluate(node=>node.scrollTop);
+      try {
+        await Promise.all([
+          teacher.waitForResponse(response=>response.url().includes('/activity?')&&response.ok(),{timeout:10000}),
+          width===390?detailButton.tap():detailButton.click(),
+        ]);
+      } catch(error) {
+        const screen=await teacher.evaluate(()=>({hidden:document.hidden,open:document.querySelector('#detail').open,
+          error:document.querySelector('#error').hidden?'':document.querySelector('#error').textContent}));
+        throw Error(JSON.stringify({reads,screen}),{cause:error});
+      }
+      assert.equal(await dialog.evaluate(node=>node.scrollTop),detailBefore);
+      assert.equal(await notes.inputValue(),note);
+      assert.deepEqual(await notes.evaluate(input=>[input.selectionStart,input.selectionEnd]),[4,12]);
+    }
     const content=await teacher.locator('[data-field-read=idea1]').elementHandle();
     for(let i=0;i<3;i++)await teacher.waitForResponse(response=>response.url().includes('/teacher/sessions/'+target.ref)&&response.ok(),{timeout:8000});
     assert.equal(await content.evaluate(el=>el.isConnected),true);
+    await teacher.locator('#comment-submit').click();
+    await teacher.waitForFunction(()=>document.querySelector('#comment-status').textContent.includes('Đã lưu góp ý'));
+    assert.deepEqual(teacherData.sent.map(input=>[input.section,input.feedback]),[['topic',note]]);
     await teacher.close();
     await page.getByRole('button',{name:'Check chất lượng Topic Sentence'}).click();
     await page.locator('#field-b1').waitFor();

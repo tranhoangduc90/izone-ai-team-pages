@@ -1,4 +1,4 @@
-body[data-refresh-preview] #dashboard {
+body[data-pinned-refresh] #dashboard {
   padding-block-end: calc(58px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -8,7 +8,7 @@ body[data-refresh-preview] #dashboard {
   font-size: .85rem;
 }
 
-body[data-refresh-preview] #refresh {
+body[data-pinned-refresh] #refresh {
   position: fixed;
   z-index: 30;
   inset-inline-end: max(18px, env(safe-area-inset-right, 0px));
@@ -28,8 +28,8 @@ body[data-refresh-preview] #refresh {
   white-space: nowrap;
 }
 
-body[data-refresh-preview] #refresh:hover { background: #244570; }
-body[data-refresh-preview] #refresh:focus-visible { outline-offset: 4px; }
+body[data-pinned-refresh] #refresh:hover { background: #244570; }
+body[data-pinned-refresh] #refresh:focus-visible { outline-offset: 4px; }
 
 .refresh-preview-icon {
   display: inline-block;
@@ -45,13 +45,13 @@ body[data-refresh-preview] #refresh:focus-visible { outline-offset: 4px; }
 }
 
 @media (max-width: 620px) {
-  body[data-refresh-preview] #refresh {
+  body[data-pinned-refresh] #refresh {
     inset-inline-end: max(12px, env(safe-area-inset-right, 0px));
     inset-block-end: max(12px, env(safe-area-inset-bottom, 0px));
     padding-inline: 12px;
   }
 }
 
-body[data-refresh-preview] :is(#comment-form, [data-comment-field], [data-thread-status], [data-thread-reply]) {
+body[data-handout-read-only] :is(#comment-form, [data-comment-field], [data-thread-status], [data-thread-reply]) {
   display: none;
 }

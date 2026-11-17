@@ -7,12 +7,13 @@ const fields={topic:'Topic Sentence',si1:'Cả chuỗi ý 1',si2:'Cả chuỗi �
 const date=value=>Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'Chưa có thời gian';
 function eventDetail(e){
  const d=e.details||{};
- if(e.kind==='content_edited')return `<details><summary>Xem nội dung trước và sau Edit</summary>${Object.keys(d.after||{}).map(k=>`<b>${esc(fields[k]||k)}</b><p class="field-read">Trước: ${esc(d.before?.[k])}</p><p class="field-read">Sau: ${esc(d.after[k])}</p>`).join('')}</details>`;
- if(d.message)return `<details><summary>Xem lời trao đổi</summary>${d.quote?`<blockquote>${esc(d.quote)}</blockquote>`:''}<p class="field-read">${esc(d.message.authorName)}: ${esc(d.message.body)}</p></details>`;
+ const key=e.event_key?` data-history="log-${esc(e.event_key)}"`:'';
+ if(e.kind==='content_edited')return `<details${key}><summary>Xem nội dung trước và sau Edit</summary>${Object.keys(d.after||{}).map(k=>`<b>${esc(fields[k]||k)}</b><p class="field-read">Trước: ${esc(d.before?.[k])}</p><p class="field-read">Sau: ${esc(d.after[k])}</p>`).join('')}</details>`;
+ if(d.message)return `<details${key}><summary>Xem lời trao đổi</summary>${d.quote?`<blockquote>${esc(d.quote)}</blockquote>`:''}<p class="field-read">${esc(d.message.authorName)}: ${esc(d.message.body)}</p></details>`;
  return '';
 }
 export function renderActivityList(events,nextCursor){
-  const rows=events.map(e=>`<li class="activity-event ${e.kind==='job_failed'?'activity-failed':''}"><div><strong>${esc(eventNames[e.kind]||e.kind)}</strong><time>${esc(date(e.event_at))}</time></div><p>${(e.section||e.details?.section||e.details?.field)?esc(fields[e.section||e.details?.section||e.details?.field]||'Topic Sentence'):e.idea_index===0?'Từ vựng chung · Cả hai ý':e.idea_index?'Từ vựng · Ý '+esc(e.idea_index):''}${e.attempt_index?' · Lượt '+esc(e.attempt_index):''}${e.details?.error?' · Mã lỗi: '+esc(e.details.error):''}</p>${eventDetail(e)}${e.job_ref?`<button class="text-button" data-log-job="${esc(e.job_ref)}">Xem nội dung gửi chấm và phản hồi AI</button>`:''}</li>`).join('');
+  const rows=events.map(e=>`<li class="activity-event ${e.kind==='job_failed'?'activity-failed':''}" data-activity-event="${esc(e.event_key)}"><div><strong>${esc(eventNames[e.kind]||e.kind)}</strong><time>${esc(date(e.event_at))}</time></div><p>${(e.section||e.details?.section||e.details?.field)?esc(fields[e.section||e.details?.section||e.details?.field]||'Topic Sentence'):e.idea_index===0?'Từ vựng chung · Cả hai ý':e.idea_index?'Từ vựng · Ý '+esc(e.idea_index):''}${e.attempt_index?' · Lượt '+esc(e.attempt_index):''}${e.details?.error?' · Mã lỗi: '+esc(e.details.error):''}</p>${eventDetail(e)}${e.job_ref?`<button class="text-button" data-log-job="${esc(e.job_ref)}">Xem nội dung gửi chấm và phản hồi AI</button>`:''}</li>`).join('');
   return `<ol class="activity-events">${rows||'<li class="empty">Chưa có nhật ký được lưu cho phiên này. Lượt trước khi bật tính năng có thể không còn đủ dữ liệu.</li>'}</ol>${nextCursor?'<button class="secondary" data-log-more="1">Xem sự kiện trước đó</button>':''}`;
 }
 export function renderActivityDetail(detail){

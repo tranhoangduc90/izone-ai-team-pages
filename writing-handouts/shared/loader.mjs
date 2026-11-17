@@ -38,6 +38,10 @@ async function boot(){
     document.body.replaceChildren(layout.content);
    }
   }else document.body.innerHTML=html;
+  if(view==='teacher'&&activity==='lesson4'){
+   document.querySelector('.topbar .brand').href='./dashboard.html';
+   document.querySelector('.topbar>.text-button').remove();
+  }
   if(view==='student'&&activity==='lesson15')document.querySelector('[data-lesson-text="classLesson"]')?.remove();
   if(view==='student'&&activity!=='lesson4')installTeacherEntry({product:'handout67',teacherPath:handoff?'../lesson3/teacher.html':'./teacher.html',context:{class:entryClass},hosts:[document.querySelector('.topbar')]});
   if(lesson.workflowMode==='whole-chain-v1'&&view==='student'){
@@ -82,7 +86,7 @@ async function boot(){
   document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':activity==='lesson4'?lesson.title:'Lesson '+lesson.number+' · Writing · IZONE';
   const editorVersion=activity==='lesson5'?'20261117-lesson5-ideas':lesson.outlineOnly||['opinion-v1','discussion-v1'].includes(lesson.preparationKind)
    ?(activity==='lesson4'?'20261117-lesson5-ideas':'20261113-save-log-v1'):'20261109-l3-v1&check=20261101-v1&poll=20261104-v1';
-  await import(view==='teacher'?'../lesson5/teacher.js?v='+(activity==='lesson5'?'20261117-lesson5-refresh-preview':'20261109-l3-v1')+'&startup=20261026-v2':'../lesson5-thu/app.js?v='+editorVersion);
+  await import(view==='teacher'?'../lesson5/teacher.js?v='+(['lesson4','lesson5'].includes(activity)?'20261117-teacher-library67':'20261109-l3-v1')+'&startup=20261026-v2':'../lesson5-thu/app.js?v='+editorVersion);
  }catch(error){
   if(fromVerifiedDocs){
    const host=handoff.openingHost||document.getElementById('lesson-access')||document.getElementById('verified-handout-opening')||document.body;
