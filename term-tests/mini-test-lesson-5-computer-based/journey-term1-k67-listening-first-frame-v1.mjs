@@ -119,13 +119,21 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
   const {ExamStore,OfflineRuntime,version,endpoint,title,writing,paper}=journeyProfiles.get(slug);
   const store = existing?.store || await new ExamStore().open();
   const key = keyOf(scope);
+  const canFork = slug===term1Slug && existing?.record.package.term1ParallelEntry;
+  // A reload may still be releasing its own lease. Give it a short chance to finish
+  // before opening a separate session for another tab.
+  const acquire = canFork ? {signal:AbortSignal.timeout(600)} : {ifAvailable:true};
   const release = await new Promise((resolve,reject)=>{
-    navigator.locks.request(version+':'+key,{ifAvailable:true},lock=>{
+    navigator.locks.request(version+':'+key,acquire,lock=>{
       if(!lock){resolve(null);return;}
       return new Promise(done=>resolve(done));
-    }).catch(reject);
+    }).catch(error => canFork && acquire.signal.aborted ? resolve(null) : reject(error));
   });
-  if(!release) throw new Error('Bài đang mở ở tab khác. Hãy trở lại tab đang giữ bài.');
+  if (!release) {
+    const error = new Error('Bài đang mở ở tab khác. Hãy trở lại tab đang giữ bài.');
+    if (canFork) error.code='TERM1_TAB_SCOPE_BUSY';
+    throw error;
+  }
   let record;
   const changed = new EventTarget();
   let busy=false, retryAt=0, message='', stopped=false, timer;

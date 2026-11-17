@@ -92,6 +92,9 @@
   let storageScope = baseStorageScope;
   let storageKey = `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
   let uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageScope}`;
+  const parallelStorageHistoryKey = 'izoneTerm1CbtSessionV1';
+  let identityBinding = null;
+  let parallelSessionToken = '';
   let sharedIdentity = null, entryIdentity = null, rememberedClasses = [];
   if (classCode !== 'CODEXDEMO806') {
     try {
@@ -120,14 +123,35 @@
       root.textContent = 'Chưa tải đủ phần mở bài. Hãy tải lại; nháp và lượt thi đã lưu vẫn được giữ.';
       return;
     }
+  } else {
+    const saved = history.state?.[parallelStorageHistoryKey];
+    if (saved?.classCode===classCode && isUuid(saved.studentRef)) {
+      applyTerm1SessionStorage(saved.examSessionToken,saved.studentRef,false);
+    }
   }
   function applyStorageBinding(binding) {
-    window.TERM_TEST_STORAGE_SCOPE = binding.scope;
+    identityBinding = binding;
     window.TERM_TEST_SHARED_IDENTITY_ENABLED = true;
-    storageScope = baseStorageScope + binding.scope;
-    storageKey = binding.keys?.state || ''; uiStorageKey = binding.keys?.ui || '';
+    const saved = history.state?.[parallelStorageHistoryKey];
+    const token = saved?.classCode===classCode && saved.studentRef===binding.studentRef ? saved.examSessionToken : '';
+    applyTerm1SessionStorage(token,binding.studentRef,false);
   }
-  let state = sharedIdentity ? sharedIdentity.current().state : readState();
+  function applyTerm1SessionStorage(token, studentRef, writeHistory = true) {
+    parallelSessionToken = testConfig.slug==='term-test-1' && !listeningOnly && !timerOnly && isUuid(token) ? token : '';
+    const suffix = parallelSessionToken ? ':session:'+parallelSessionToken : '';
+    const identityScope = identityBinding?.scope || '';
+    window.TERM_TEST_STORAGE_SCOPE = identityScope + suffix;
+    storageScope = baseStorageScope + identityScope + suffix;
+    storageKey = identityBinding ? (identityBinding.keys?.state ? identityBinding.keys.state+suffix : '')
+      : `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
+    uiStorageKey = identityBinding ? (identityBinding.keys?.ui ? identityBinding.keys.ui+suffix : '')
+      : `izone-test-ui:${testConfig.slug}:${classCode}${storageScope}`;
+    if (!writeHistory) return;
+    const marker = parallelSessionToken ? {classCode,studentRef,examSessionToken:parallelSessionToken} : null;
+    try { history.replaceState({...history.state,[parallelStorageHistoryKey]:marker},''); }
+    catch { /* The current tab keeps its exact scope in memory. */ }
+  }
+  let state = sharedIdentity && !parallelSessionToken ? sharedIdentity.current().state : readState();
   let legacyUiState = readLegacyUiState();
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
   let roster = [];
@@ -466,7 +490,8 @@
     for (const storage of availableStorages()) {
       try {
         const parsed = JSON.parse(storage.getItem(storageKey) || '{}');
-        if (Object.keys(parsed).length) return parsed;
+        if (Object.keys(parsed).length && (!parallelSessionToken || (parsed.examSessionToken===parallelSessionToken
+            && (!identityBinding || parsed.studentRef===identityBinding.studentRef)))) return parsed;
       } catch {
         // Tiếp tục với nguồn bộ nhớ còn lại.
       }
@@ -536,6 +561,7 @@
     if (error?.status !== 404 || !['ATTEMPT_NOT_FOUND', 'EXAM_SESSION_NOT_FOUND'].includes(error?.code)) return false;
     const audioVolume = Number(state.audioVolume) || 1;
     clearAllLocalAttemptData();
+    if (parallelSessionToken) applyTerm1SessionStorage('',student.ref);
     state = { audioVolume };
     legacyListeningResume = false;
     saveState({
@@ -843,14 +869,14 @@
     return blob;
   }
 
-  function prepareSessionFor(studentRef, timeoutMs) {
+  function prepareSessionFor(studentRef, timeoutMs, examSessionToken = state.examSessionToken) {
     return apiRequest(`/api/term-tests/${testConfig.slug}/session/prepare`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         classCode,studentRef,
         ...(testConfig.slug==='term-test-1' && !listeningOnly ? {term1ContinuationVersion:1} : {}),
         retakeGrant:retakeGrant || undefined,
-        examSessionToken:state.examSessionToken || undefined,
+        examSessionToken:examSessionToken || undefined,
         legacyElapsedSeconds:legacyListeningResume ? Math.floor(legacyUiState.audioTime) : 0
       })
     },timeoutMs);
@@ -879,6 +905,8 @@
     const confirmProgress = sameScope && state.continuationResume===prepared.examSessionToken;
     rememberPreparedStudent(studentRef);
     const previousState = state;
+    const previousStorage = parallelSessionToken;
+    if (prepared.term1ParallelEntry===true) applyTerm1SessionStorage(prepared.examSessionToken,studentRef);
     saveState({
       examSessionToken:prepared.examSessionToken,
       generation:Number(prepared.generation)||0,
@@ -901,6 +929,7 @@
       await miniJourney?.close();
       miniJourney = null;
       state = previousState;
+      applyTerm1SessionStorage(previousStorage,studentRef);
       window.K67_EXAM_ORDER.apply(state,state);
       saveState();
       throw error;
@@ -992,6 +1021,7 @@
           || (state.examSessionToken && state.examSessionToken !== prepared.examSessionToken)))
         throw new Error('Phiên trả về chưa khớp người học. Nháp cũ được giữ nguyên.');
       rememberPreparedStudent(studentRef);
+      if (prepared.term1ParallelEntry===true) applyTerm1SessionStorage(prepared.examSessionToken,studentRef);
       const localListeningNewer = Number(state.draftRevisions?.listening || 0) > Number(prepared.listeningDraftRevision || 0);
       saveState({
         examSessionToken: prepared.examSessionToken,
@@ -1087,7 +1117,8 @@
     const binding = sharedIdentity.select(student, { resolution, remember: !student.temporary && studentMemory.preferred });
     const volume = state.audioVolume;
     applyStorageBinding(binding);
-    state = { audioVolume: volume, drafts: { listening: {}, reading: {}, writing: { task1: '', task2: '' } }, ...binding.state };
+    state = { audioVolume: volume, drafts: { listening: {}, reading: {}, writing: { task1: '', task2: '' } },
+      ...(parallelSessionToken ? readState() : binding.state) };
     legacyUiState = readLegacyUiState();
     saveState({ studentRef: student.ref, studentName: student.name,
       studentIdentitySource: student.temporary ? 'temporary' : 'roster' });
@@ -1200,9 +1231,44 @@
 
   async function enterJourney(playNewListening = false){
     const view=miniJourney.view();
+    if (view.term1ParallelEntry===true && parallelSessionToken!==view.examSessionToken) {
+      applyTerm1SessionStorage(view.examSessionToken,state.studentRef);
+    }
     saveState({...view,drafts:{...state.drafts,...miniJourney.drafts()},draftRevisions:miniJourney.revisions()});
     revokePreview();
     await enterExam({...view,content:miniJourney.content},null,'',miniJourney,playNewListening);
+  }
+
+  async function openIndependentTerm1Tab(scope, preparationStatus) {
+    try {
+      if (navigator.onLine===false) throw new Error('Hãy kết nối mạng để mở bài trong tab này.');
+      const prepared = await prepareSessionFor(scope.studentRef,5000,null);
+      if (prepared.studentRef!==scope.studentRef || state.studentRef!==scope.studentRef
+          || state.examSessionToken!==scope.examSessionToken) {
+        throw new Error('Chưa xác nhận lại được người học cho tab này.');
+      }
+      if (prepared.officialResultReady === true) return openTerm1Prepared(prepared,scope.studentRef,preparationStatus);
+      if (prepared.term1ParallelEntry!==true || !isUuid(prepared.examSessionToken)
+          || prepared.examSessionToken===scope.examSessionToken || (prepared.attemptToken && !isUuid(prepared.attemptToken))) {
+        throw new Error('Chưa cấp được phiên riêng. Hãy thử mở lại bài.');
+      }
+      const {studentRef,studentName,studentIdentitySource,audioVolume} = state;
+      state = {studentRef,studentName,studentIdentitySource,audioVolume};
+      legacyListeningResume = false;
+      if (await openTerm1Prepared(prepared,studentRef,preparationStatus)) return true;
+      applyTerm1SessionStorage(prepared.examSessionToken,studentRef);
+      saveState({
+        examSessionToken:prepared.examSessionToken, attemptToken:prepared.attemptToken||'',
+        generation:Number(prepared.generation)||0, examMode:prepared.examMode, nextSection:prepared.nextSection,
+        listeningSubmitted:false, readingSubmitted:false, completed:false
+      });
+      window.K67_EXAM_ORDER.apply(state,prepared);
+      if (await openJourneyLobby(true,false,preparationStatus)) return true;
+      throw new Error('Chưa mở được phiên của tab này. Hãy thử lại.');
+    } catch (error) {
+      elements.bootstrapRetry.hidden = false;
+      throw error;
+    }
   }
 
   async function openJourneyLobby(prepare=false,recover=false,preparationStatus,confirmProgress=false){
@@ -1218,6 +1284,10 @@
     }
     const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-term1-k67-listening-first-frame-v1.mjs?parallelEntry=20261117-v1&journalStart=20261114-term1-v1&v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1&demoJourney=20261110-v1&audioStatus=20261111-audio-status-v1');
     const scope=miniCbtScope();
+    const opened = miniJourney?.view();
+    if (opened?.term1ParallelEntry && opened.examSessionToken===scope.examSessionToken && opened.generation===scope.generation) {
+      return true;
+    }
     const existing=await findMiniJourney(scope,slug);
     if (!existing && (!prepare || (state.completed && !scope.continuationSection))) return false;
     const saved = existing?.record;
@@ -1289,6 +1359,10 @@
       elements.bootstrapDownloadStep.dataset.state='complete';
       audioStatus.finish(slug.startsWith('term-test-')?'Đã chuẩn bị ba phần và lưu audio trên thiết bị.':'Đã chuẩn bị hai phần và lưu audio trên thiết bị.',{ready:true});
     }catch(error){
+      if (error.code==='TERM1_TAB_SCOPE_BUSY') {
+        audioStatus.restore();
+        return openIndependentTerm1Tab(scope,preparationStatus);
+      }
       audioStatus.finish('Chưa chuẩn bị được audio. Hãy thử chuẩn bị lại.');
       throw error;
     }
@@ -1324,6 +1398,7 @@
       try{
         if(sharedIdentity)bindSharedStudent({ref:bundle.studentRef,name:bundle.studentName});
         else saveState({studentRef:bundle.studentRef,studentName:bundle.studentName});
+        if (bundle.term1ParallelEntry===true) applyTerm1SessionStorage(bundle.examSessionToken,bundle.studentRef);
         saveState({examSessionToken:bundle.examSessionToken,generation:bundle.generation});
         if(!await openJourneyLobby(false,true))throw new Error('Chưa mở được bản đã lưu.');
       }catch(error){button.disabled=false;status.textContent=error.message;}
