@@ -1,5 +1,4 @@
-// Tạo từ byte public Git/Pages (text LF); không chứa đáp án hoặc quyền.
-export const ASSETS=[
+export const ASSETS = [
   "../../shared/audio/catalog.mjs",
   "../../shared/audio/chunks.mjs",
   "../../shared/audio/config.mjs",
@@ -76,9 +75,11 @@ export const ASSETS=[
   "index.html",
   "offline-submission-recovery-v1.mjs",
   "offline-worker.js",
-  "test-config.js"
+  "test-config.js",
+  "../shared/app-mini-paper-k67-browser-cloud-v1.js",
+  "offline-k67-paper-browser-cloud-v1.mjs"
 ];
-export const ASSET_HASHES={
+export const ASSET_HASHES = {
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
   "../../shared/audio/chunks.mjs": "6796d41d2da64a33b5981fb16a612535770d61ab24bfda755309fb0beb5f941c",
   "../../shared/audio/config.mjs": "8c6f4f6f92d15e44fab4016d73f76d06d1a6695b10095d32226a853a3456ef1d",
@@ -152,9 +153,11 @@ export const ASSET_HASHES={
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
-  "index.html": "cb6d816b3f0ab1bb85b3b8e62cc4446a5f064a5fb4ab37ec5a92115523d204d8",
+  "index.html": "a68acf304c2d1ee2a891af3ba2045a6e6f9c25d9029fe2927d578e612da64081",
   "offline-submission-recovery-v1.mjs": "bf127629d9ded297e528d4f7264de5f2fd97ca0ee002c317b10ed6f052591f4c",
   "offline-worker.js": "e9bf2e2725c942f484c01f1822c5dbf1b5fa50fa09eeadf4eac9970097efd880",
-  "test-config.js": "ad6f4db2ae4dec2ee39e6c3fdc62f02dd073862f8c1355008b9913dc6291521c"
+  "test-config.js": "ad6f4db2ae4dec2ee39e6c3fdc62f02dd073862f8c1355008b9913dc6291521c",
+  "../shared/app-mini-paper-k67-browser-cloud-v1.js": "7786fb5eb190f3914e815aeef35f5c18c68fe3ba594dd72aef1ae82a0d40c21e",
+  "offline-k67-paper-browser-cloud-v1.mjs": "a21fc710e725ea9a25c6fe8ac0efd645e884b8ee08da3a7328f2b32638ae86e6"
 };
-export const ASSET_BUILD_ID="8a9ad183d66e997d3c214f5f064984fe2796764dd7d85df31b02285f3fe5bbbf";
+export const ASSET_BUILD_ID = "ec9c65c73b2953c5ea4b21ed6fc1074dda4150614df88395aceee8dc854e727d";
