@@ -1,4 +1,19 @@
 /* Listening on one page. The rest of the CBT keeps its own scrolling regions. */
+body.design67.cbt-mode[data-k67-design="term-test-2"]:has(#listeningView.cbt-listening-form:not([hidden])) #app {
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+body.design67.cbt-mode[data-k67-design="term-test-2"]:has(#listeningView.cbt-listening-form:not([hidden])) .page-shell {
+  flex: 1 0 auto;
+}
+
+body.design67.cbt-mode[data-k67-design="term-test-2"] #listeningView.cbt-listening-form:not([hidden]) {
+  flex: 0 0 auto;
+  grid-template-rows: auto auto;
+}
+
 body[data-k67-design="term-test-2"] #listeningView.cbt-listening-form:not([hidden]),
 body[data-k67-design="term-test-2"] #listeningView:not([hidden]) .cbt-semantic-stage,
 body[data-k67-design="term-test-2"] #listeningView:not([hidden]) .cbt-semantic-pane,
