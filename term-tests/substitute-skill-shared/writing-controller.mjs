@@ -1,6 +1,7 @@
+import {bindIdentitySelection} from './identity-selection.mjs';
 // Dùng adapter ghi chú thuần; không khởi tạo pane hoặc controller Reading.
 import {nativeAnnotations} from './native-reading.mjs';
-import {nativeVisibility,updateNativeShell,audioProgress} from './native-shell.mjs';
+import {nativeVisibility,updateNativeShell,audioProgress} from './native-shell.mjs?v=20261117-start-scroll-v1';
 import {portalStatus} from './portal-status.mjs';
 import {mountNativeWriting} from './native-writing.mjs';
 import {renderCompleteWritingResult} from './writing-result.mjs';
@@ -104,12 +105,10 @@ async function prepare(){if(busy)return;busy=true;try{
  content=await api('content',state.identity);if(content.skill!=='writing'||content.testId!==testId||content.contentHash!==state.identity.contentHash)throw Error('CONTENT_MISMATCH');emitSubmission('content_verified');state.content=content;state.native??={drafts:{writing:{}},writingLayout:{activeTask:null,splits:{}},writingRevision:0};await persist();anchor(v);if(v.status==='submitted'){resultView(v);return;}if(v.status==='draft'){displayExam();tick();return;}text('prepare-status','Đang lưu đề và giao diện để phục hồi khi mất mạng…');const offline=await prepareWritingOffline();state.offlineBuild=offline.build;await persist();if(offline.updated){location.reload();return;}text('prepare-status','Đã sẵn sàng · '+content.durationMinutes+' phút · '+content.writing.tasks.map(t=>t.label).join(', '));$('start').disabled=false;show('identity-form',false);show('ready');
  }catch(e){fail(e);}finally{busy=false;updateNativeShell(state,content,undefined,()=>persist());}}
 async function start(){if(busy)return;busy=true;try{await own();emitSubmission('start_requested');const v=await api('start',state.identity);emitSubmission('start_confirmed',{startedAt:v.startedAt,deadlineAt:v.deadlineAt});anchor(v);state.phase=v.status;state.deadlineAt=v.deadlineAt;state.lastServer=v;state.startedAt=v.startedAt;await persist();displayExam();tick();}catch(e){fail(e);}finally{busy=false;}}
-$('prepare').onclick=()=>{$('confirm-name').textContent=roster.find(r=>r.studentRef===$('student').value)?.name||'';$('confirm-identity').showModal();};
-$('confirm-yes').onclick=()=>{$('confirm-identity').close();void prepare();};$('confirm-no').onclick=()=>$('confirm-identity').close();$('start').onclick=start;
+bindIdentitySelection({loadRoster:async code=>(await api('roster?class='+encodeURIComponent(code),null,'GET')).students,onRoster:rows=>{roster=rows;},onConfirm:prepare,onError:fail,isBusy:()=>busy});
+$('start').onclick=start;
 $('submit').onclick=()=>$('confirm-submit').showModal();$('cancel-submit').onclick=()=>$('confirm-submit').close();$('accept-submit').onclick=()=>{$('confirm-submit').close();void seal(false);};
 // Kiểm trạng thái/biên nhận bằng các vòng đọc nền; không yêu cầu học viên bấm.
-$('class').onchange=async()=>{const code=$('class').value;$('prepare').disabled=true;$('student').replaceChildren(new Option(code?'Chọn họ tên':'Chọn lớp trước',''));if(!code)return;try{const r=await api('roster?class='+encodeURIComponent(code),null,'GET');if($('class').value!==code)return;roster=r.students;for(const s of roster)$('student').add(new Option(s.name,s.studentRef));if(!roster.length)text('notice','Không còn học viên đủ điều kiện trong lớp này.');}catch(e){fail(e);}};
-$('student').onchange=()=>$('prepare').disabled=!$('student').value;
 async function loadClasses(){const r=await api('classes',null,'GET');$('class').replaceChildren(new Option('Chọn lớp',''));$('student').replaceChildren(new Option('Chọn họ tên',''));for(const c of r.classes)$('class').add(new Option(c.code,c.code));if(r.demo?.available)$('class').add(new Option('DEMO · Chỉ kiểm tra, không gửi Portal','DEMO'));text('prepare-status','Chọn lớp, họ tên và xác nhận đúng người trước khi làm bài.');const hinted=new URL(location.href).searchParams.get('class');if(hinted&&[...$('class').options].some(o=>o.value===hinted)){$('class').value=hinted;$('class').dispatchEvent(new Event('change'));}}
 async function archiveCurrent(){await leaveCurrent({abandon:true});}
 $('replace-attempt').onclick=async()=>{if(!ownerHeld||busy)return;busy=true;try{if(state.identity)await api('status',state.identity);else await api('prepare',{classCode:state.classCode,studentRef:state.studentRef,operationId:state.prepareOperation});text('notice','Chưa xác nhận lượt đã được cấp lại.');}catch(e){if(e.code==='SKILL_GENERATION_STALE'){try{await archiveCurrent();}catch(error){fail(error);}}else fail(e);}finally{busy=false;}};

@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-1-k56-writing-makeup",
-  "build": "issue611-a202688869cb2eee",
+  "build": "issue611-7b7dbfe32c6c7f54",
   "assets": [
     {
       "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
@@ -31,6 +31,14 @@
       "sha256": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460"
     },
     {
+      "path": "../shared/exam-journal/outbox.mjs",
+      "sha256": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f"
+    },
+    {
+      "path": "../shared/exam-journal/recorder.mjs?v=20261109-term1-writing-v1",
+      "sha256": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76"
+    },
+    {
       "path": "../substitute-k56-shared/styles.css",
       "sha256": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e"
     },
@@ -59,6 +67,10 @@
       "sha256": "e832f8b3e8a08da40ed01399d5184634c9f4d78dff6e1a637c3cfd2656236a5c"
     },
     {
+      "path": "../substitute-skill-shared/identity-selection.mjs",
+      "sha256": "28cbe583dbb66f2a66042e1565b2f221146c891f041b2cf83f1279dbfd71de57"
+    },
+    {
       "path": "../substitute-skill-shared/native-reading.mjs",
       "sha256": "3d5e3c93e8a4884ce531a812f1deed06cdb3bb775785eb43dc49069006ade6ee"
     },
@@ -68,7 +80,11 @@
     },
     {
       "path": "../substitute-skill-shared/native-shell.mjs",
-      "sha256": "d84aa63c1a5541d88bc7839c4aeac5fc623dfc93e448fc86fe474039d17f1455"
+      "sha256": "9585f8c6bed3d7e56372ad72b938b0d3872405023f31deb9520852470c1823bb"
+    },
+    {
+      "path": "../substitute-skill-shared/native-shell.mjs?v=20261117-start-scroll-v1",
+      "sha256": "9585f8c6bed3d7e56372ad72b938b0d3872405023f31deb9520852470c1823bb"
     },
     {
       "path": "../substitute-skill-shared/native-writing.mjs",
@@ -91,8 +107,16 @@
       "sha256": "2ea5c91610cc40ea39c95608c26a6bea1f85360f547b265010552ebba4fcf9e3"
     },
     {
+      "path": "../substitute-skill-shared/submission-journal-v1.mjs",
+      "sha256": "d047605cd8a0c988885f7818aac8e03141e2ce76eb66054913fe8512f021fa2b"
+    },
+    {
       "path": "../substitute-skill-shared/writing-controller.mjs",
-      "sha256": "65514be931379fa4dc85b6f49027a12c5a447dfad54c7fb8a9e53fa566c604f4"
+      "sha256": "85c9f8cab34a91e10487bc36f1773b22968d1d1536ff73703de19bda2443b36a"
+    },
+    {
+      "path": "../substitute-skill-shared/writing-controller.mjs?v=20261117-start-scroll-v1",
+      "sha256": "85c9f8cab34a91e10487bc36f1773b22968d1d1536ff73703de19bda2443b36a"
     },
     {
       "path": "../substitute-skill-shared/writing-feedback.mjs",
@@ -112,7 +136,11 @@
     },
     {
       "path": "../substitute-skill-shared/writing.mjs",
-      "sha256": "ffc3378db1ddf037770ec480712cf15d5a035a9bd9f7dcbf6b4b7f55bf941bd6"
+      "sha256": "4bc18054a84431a2999804deef299e40cf8f4e18149de5a42b35240f225a03d2"
+    },
+    {
+      "path": "../substitute-skill-shared/writing.mjs?v=20261117-start-scroll-v1",
+      "sha256": "4bc18054a84431a2999804deef299e40cf8f4e18149de5a42b35240f225a03d2"
     },
     {
       "path": "../substitute-test-1-k56-computer-based/annotations.js",
@@ -144,23 +172,11 @@
     },
     {
       "path": "index.html",
-      "sha256": "93063729f37d3c0ae0e332ec6b5190f9d5fd5c62b6bece043e1e382e3cf604b7"
+      "sha256": "2737f767afb8c0cbb869219da56f74c1797b8f57994a3e9e5ee694192a0d5b7d"
     },
     {
       "path": "sw.js",
       "sha256": "e68ca9c30de8ddf77715fcf0a86025f2400ef0b37d1d28f82d6ba3f35dabe3cb"
-    },
-    {
-      "path": "../substitute-skill-shared/submission-journal-v1.mjs",
-      "sha256": "d047605cd8a0c988885f7818aac8e03141e2ce76eb66054913fe8512f021fa2b"
-    },
-    {
-      "path": "../shared/exam-journal/recorder.mjs?v=20261109-term1-writing-v1",
-      "sha256": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76"
-    },
-    {
-      "path": "../shared/exam-journal/outbox.mjs",
-      "sha256": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f"
     }
   ]
 }
