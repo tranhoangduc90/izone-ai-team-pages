@@ -61,6 +61,9 @@ async function exercise(t, options, verify) {
     };
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
     const send = (json, status = 200) => route.fulfill({ json, status, headers });
+    if (options.transfer && url.pathname === '/teacher-session-api/v1/restore/handout67') {
+      return send({ ok: true });
+    }
     if(options.transfer&&url.pathname.startsWith('/api/handout67/v1')){
       const path=url.pathname.slice('/api/handout67/v1'.length);
       const students=[{studentRef,displayName:person.label}];
