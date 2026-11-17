@@ -4474,11 +4474,11 @@
       allowExamNavigation = true;
       location.reload();
     },canReport:()=>elements.listeningView.dataset.listeningSubmitting!=='true'&&!state.listeningInterrupted,
-    onReport:async(reportDraft)=>{
+    onReport:async(report)=>{
       setAnswerControlsLocked('listening',true);
       elements.submitListening.disabled=true;
       stopSectionDraftFlow('listening');
-      Object.assign(state,await miniJourney.interrupt('learner_report',reportDraft));
+      Object.assign(state,await miniJourney.interrupt('learner_report',report));
       saveSession();
       await showJourneyInterruption();
     },onReview:deadline=>{

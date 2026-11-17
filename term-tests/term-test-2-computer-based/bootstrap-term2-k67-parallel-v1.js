@@ -24,7 +24,9 @@
   const {beginAudioDownloadStatus} = await import('../shared/cbt-audio-download-status.mjs?v=20261111-audio-status-v1');
   if(!window.IZONE_AUDIO_SOURCE_CHOICE)await loadScript('../shared/audio-source-choice.js?v=20261027-v1&audio=20261028-part-rescue-v1&status=20261111-audio-status-v1');
   const {verifyListeningPreparation}=await import('./listening-preparation-v1.mjs');
-  const {attachListeningReport,createListeningReportOutbox,sendListeningReport}=await import('./listening-report-v1.mjs');
+  const {createListeningReportOutbox,sendListeningReport}=await import('./listening-report-v1.mjs');
+  const {term2ListeningReportMap}=await import('./listening-report-map-v1.mjs');
+  const {attachListeningReportChoices}=await import('../k67-shared/listening-report-choices-v2.mjs');
   if(!window.IZONE_EXAM_CLOCK)await loadScript('../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1');
   document.body.classList.add('cbt-mode');
 
@@ -1539,7 +1541,7 @@
     const observe = observeTerm2Start();
     observe('start_requested', {cache: audioFromCache ? 'cache' : 'network'});
     try {
-      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller-term2-report-v1.js?rev=20261016-reading-recovery-v1&termEof=20261108-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':'&termsEof=20261107-v1'));
+      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller-term1-report-v1.js?rev=20261016-reading-recovery-v1&termEof=20261108-v1&termsEof=20261107-v1');
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;
@@ -1585,8 +1587,8 @@
       const outbox=createListeningReportOutbox({mode:'online',sessionId:startToken,generation:startGeneration,observe:observeReport,
         send:input=>sendListeningReport({apiBase:appConfig.API_BASE_URL,
           body:{...input,...(window.K67_AUDIO_OWNER?.fields()||{})}})});
-      window.K67_ACTIVE_LISTENING?.configureReports({outbox,
-        attach:options=>attachListeningReport({...options,assetHash:audioHash,observe:observeReport})});
+      window.K67_ACTIVE_LISTENING?.configureReports({outbox,observe:observeReport,
+        attach:options=>attachListeningReportChoices({...options,profile:term2ListeningReportMap,assetHash:audioHash,observe:observeReport})});
       if(!window.K67_ACTIVE_LISTENING)outbox.close();
       officialObjectUrl = URL.createObjectURL(new Blob([decrypted], { type: 'audio/mpeg' }));
       officialAudio.src = officialObjectUrl;
