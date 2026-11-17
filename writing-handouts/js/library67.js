@@ -97,7 +97,7 @@ function renderHandout(item, classRef) {
       }
     },enabled));
   }
-  actions.append(button('Xem dashboard','button-quiet',()=>location.assign(handoutUrl(item,classRef,true)),enabled));
+  actions.append(button('Xem dashboard','button-quiet',()=>window.open(handoutUrl(item,classRef,true),'_blank','noopener'),enabled));
   body.append(actions);
   card.append(count,body);
   return card;

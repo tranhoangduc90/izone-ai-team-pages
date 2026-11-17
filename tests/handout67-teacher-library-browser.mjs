@@ -19,7 +19,7 @@ async function fixture(t, mode) {
   await page.addInitScript(()=>{
     Object.defineProperty(navigator.clipboard,'writeText',{value:async value=>{window.testCopiedLink=value;}});
   });
-  await page.route('**/*', async route=>{
+  await page.context().route('**/*', async route=>{
     const request=route.request(), url=new URL(request.url());
     if (url.origin===site.origin) return route.continue();
     const headers={'access-control-allow-origin':site.origin,'access-control-allow-credentials':'true'};
@@ -57,13 +57,28 @@ test('K67 library keeps the reference layout and routes by lesson-specific teach
   assert.equal((await page.locator('.library-shell').boundingBox()).width,1080);
   await lesson5.getByRole('button',{name:'Sao chép link học viên'}).click();
   assert.equal(await page.evaluate(()=>window.testCopiedLink),site.origin+'/writing-handouts/lesson5/?class=IC2363');
+  const libraryUrl=page.url();
+  const [handout]=await Promise.all([
+    page.context().waitForEvent('page',{timeout:8000}),
+    lesson5.getByRole('button',{name:'Xem handout'}).click(),
+  ]);
+  await handout.waitForURL('**/lesson5/?class=IC2363');
+  assert.equal(page.url(),libraryUrl);
+  await handout.close();
   await page.setViewportSize({width:390,height:844});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth===innerWidth),true);
-  await lesson4.getByRole('button',{name:'Xem dashboard'}).click();
-  await page.waitForURL('**/lesson4/dashboard.html?class=IC2363');
-  await page.locator('#dashboard').waitFor();
+  const [dashboard]=await Promise.all([
+    page.context().waitForEvent('page',{timeout:8000}),
+    lesson4.getByRole('button',{name:'Xem dashboard'}).click(),
+  ]);
+  await dashboard.waitForURL('**/lesson4/dashboard.html?class=IC2363');
+  await dashboard.locator('#dashboard').waitFor();
+  assert.equal(await dashboard.locator('#class-select').inputValue(),'IC2363');
+  assert.equal(await dashboard.locator('body').getAttribute('data-handout-read-only'),'true');
+  assert.equal(page.url(),libraryUrl);
   assert.equal(await page.locator('#class-select').inputValue(),'IC2363');
-  assert.equal(await page.locator('body').getAttribute('data-handout-read-only'),'true');
+  assert.equal(await page.evaluate(()=>window.opener===null),true);
+  assert.equal(await dashboard.evaluate(()=>window.opener===null),true);
 });
 
 test('K67 library does not request class data or show sign-in for a forbidden teacher',async t=>{
