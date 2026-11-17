@@ -1,0 +1,3 @@
+import {ASSETS,ASSET_HASHES,ASSET_BUILD_ID} from './offline-assets-listening-report-v3.mjs';
+import {registerExamShell} from './worker-listening-report-v3.mjs';
+registerExamShell({build:'term2-offline-20261106-v1',assets:ASSETS,hashes:ASSET_HASHES,assetBuildId:ASSET_BUILD_ID});

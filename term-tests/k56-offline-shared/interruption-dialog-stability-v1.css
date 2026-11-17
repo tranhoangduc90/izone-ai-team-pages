@@ -1,0 +1,5 @@
+/* A stationary cursor at the lower edge must not toggle the continue button
+   between hovered and unhovered positions after the audio-device dialog closes. */
+#offlineListeningInterrupted .button:hover:not(:disabled) {
+  transform: none;
+}
