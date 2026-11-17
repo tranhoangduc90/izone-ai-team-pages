@@ -62,9 +62,13 @@ function configureReadingJournal(context){
  if(readingJournalScope?.bindingId!==context.bindingId)clearReadingJournal();
  readingJournalScope={bindingId:context.bindingId,studentRef:identity.studentRef,classCode:identity.classCode,attemptId:a.id,attemptNo:a.no};
  const epoch=readingJournalEpoch;
- readingJournalReady=import('../shared/reading-practice-journal.mjs?v=20261105-reading-r2').then(({startReadingPracticeJournal})=>{
+ readingJournalReady=import('./journal-route.mjs?v=20261117-rp-cloud-r1').then(({startReadingPracticeJournalRoute})=>{
   if(epoch!==readingJournalEpoch)return null;
-  readingJournalBridge??=startReadingPracticeJournal(API+'/journal-events');return readingJournalBridge.bind(context);
+  readingJournalBridge??=startReadingPracticeJournalRoute(API+'/journal-events',{contextHeaders:()=>({
+   ...(sessionToken?{Authorization:'Bearer '+sessionToken}:{}),
+   ...(personalEntry&&entryValidated?{'X-Izone-Document':docId,'X-Izone-Assignment':entryInfo.assignmentCode}:{}),
+  })});
+  return readingJournalBridge.bind(context);
  }).catch(()=>null);
 }
 function emitReadingJournal(method,fields,traceId,requestId){
