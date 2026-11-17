@@ -105,7 +105,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   const status=el('p','Chọn lớp để soạn phiếu.',{role:'status'}),saveState=el('small','',{className:'thuy-editor-save-state'}),classSelect=el('select'),session=el('input',undefined,{type:'number',min:'1',max:'100',value:'1'}),
     sourceSelect=el('select'),draftList=el('div'),editor=el('div'),actions=el('div',undefined,{className:'editor-actions'});
   const assignmentDialog=createAssignmentDialog({request,getClasses:()=>assignmentClasses,getPreferredClass:()=>classSelect.value,
-    getClassStatus:()=>assignmentClassStatus,onAssigned:value=>{onPublished(value);library?.setUsed(assignments);}});
+    getClassStatus:()=>assignmentClassStatus,onAssigned:value=>{onPublished(value);library?.setUsed(assignments);},
+    onSourceUnavailable:()=>library?.refresh()});
   const notice=message=>{status.textContent=message;status.hidden=libraryEnabled&&!saveFailed&&/^(Đã lưu nháp · bản|Có thay đổi chưa lưu|Chọn lớp để soạn)/u.test(message);if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}if(libraryEnabled)paintSaveState();};
   function paintSaveState(){saveState.textContent=!draft?'':busy?(backgroundBusy?'Đang lưu…':'Đang xử lý…'):saveFailed?'Lưu lỗi':draft.status==='published'?'Đã xuất bản':dirty||!draft.id?'Chưa lưu':'Đã lưu nháp';}
   function field(parent,label,value,onChange,{kind='text',options=null,min,max,disabled=false}={}) {
@@ -554,7 +555,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     field(meta,shared?'Khóa':'Trình độ',course||'',value=>{
       if(value)draft.definition.courseCode=value;else delete draft.definition.courseCode;
       if(shared){editorTitle.textContent=(draft.id?'Sửa bài tập':'Tạo bài tập')+' · Kho chung'+(value?' · Khóa '+value:'');}
-    },{disabled:readonly||shared&&allowed.length===1,options:[['','Chọn '+(shared?'khóa':'trình độ')],...courses.filter(([code])=>allowed.includes(code))]});
+    },{disabled:readonly||shared&&(draft.sharedLibraryEdit||allowed.length===1),options:[['','Chọn '+(shared?'khóa':'trình độ')],...courses.filter(([code])=>allowed.includes(code))]});
     if(shared&&!reviewMode&&draft.status==='pending_review'&&library.sharedAccess().configuredReviewCourses?.includes(course)===false
       &&draft.definition.blocks.some(block=>block.items.some(item=>item.maxScore>0||item.graderType!=='none')))
       info.append(el('p','Khóa này chưa có người được cấp quyền duyệt bài có điểm.'));
@@ -806,6 +807,23 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     if(shared&&courses.length===1)value.definition.courseCode=courses[0];
     generation++;pendingCreate=null;
     adopt({...value,id:null,...(shared?{scope:'izone',classId:null,sessionNumber:null}:{classId:classSelect.value,sessionNumber:Number(session.value)}),status:'draft',revision:0});markDirty();paint();
+  },onEditShared:async entry=>{
+    if(!canDiscard())return false;
+    const key=JSON.stringify(['shared-edit',entry.id,entry.sourceRevision,entry.contentHash]);
+    if(!copies.has(key))copies.set(key,uuid());
+    let opened=false,editError;
+    await run(async current=>{
+      try{
+        const {draft:result}=await request('/teacher/form-library/'+entry.id+'/edit',{method:'POST',body:{
+          expectedRevision:entry.sourceRevision,expectedHash:entry.contentHash,operationId:copies.get(key)}});
+        if(current!==generation)return;
+        if(result.scope!=='izone'||result.sharedLibraryEdit!==true)throw Error('Bản nháp trả về chưa khớp Kho chung.');
+        copies.delete(key);adopt(result);opened=true;
+        notice('Bản đang xuất bản vẫn dùng để giao trong lúc bạn sửa nháp.');
+      }catch(error){editError=error;}
+    });
+    if(editError)throw editError;
+    return opened;
   },onOpenDraft:async entry=>{
     if(!canDiscard())return false;let opened=false;await run(async current=>{const review=Boolean(entry.draft?.reviewMode);let result=await request('/teacher/form-drafts/'+entry.id+(review?'/review':''));
       if(!review&&result.draft.scope!=='izone'){

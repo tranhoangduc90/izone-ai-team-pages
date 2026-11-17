@@ -10,7 +10,7 @@ const refreshErrors=new Set(['ERP_SESSION_NOT_CONFIRMED','ERP_SCHEDULE_UNAVAILAB
   'CLASS_STATUS_UNAVAILABLE','CLASS_NOT_ONGOING']);
 const displayDate=date=>date?' · '+date.split('-').reverse().join('/'):'';
 const icClassNumber=name=>Number(String(name??'').trim().match(/^IC\s*(\d+)\b/i)?.[1]??-1);
-export function createAssignmentDialog({request,getClasses,getPreferredClass,getClassStatus=()=> 'ready',onAssigned=()=>{}}){
+export function createAssignmentDialog({request,getClasses,getPreferredClass,getClassStatus=()=> 'ready',onAssigned=()=>{},onSourceUnavailable=()=>{}}){
   const pending=new Map();let lifecycle=0;
   return {open(entry){
     if(!entry.publication?.id&&!entry.draft?.id)throw Error('Chưa xác định được phiếu cần giao.');
@@ -29,11 +29,11 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
       const ownDraft=entry.source==='personal'&&entry.draft?.id&&!entry.draft.reviewMode&&!entry.publication;
       body.append(summary,classNotice,targets,add);
       footer.append(status,receipts,back,submit);dialog.append(head,body,footer);bindDialogDismiss(dialog);
-      const rows=[],reads=new Map(),operationId=crypto.randomUUID();let busy=false,opener=null;
+      const rows=[],reads=new Map(),operationId=crypto.randomUUID();let busy=false,opener=null,sourceUnavailable=false;
       const canSend=row=>Boolean(row.classes.value&&row.sessions.value&&!row.loading&&!row.sessions.selectedOptions[0]?.disabled);
       function syncSubmit(){
         const active=rows.filter(row=>!row.done);
-        submit.disabled=busy||!active.length||active.some(row=>!canSend(row));
+        submit.disabled=sourceUnavailable||busy||!active.length||active.some(row=>!canSend(row));
         submit.textContent=busy?'Đang giao…':!active.length?'Đã giao':'Giao bài';
       }
       function getAvailability(classId){
@@ -173,11 +173,15 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
             if(result.ok){row.done=true;row.retry.hidden=true;row.message.textContent='Đã giao · '+result.delivery.rosterCount+' học viên';addReceipt(row,result.delivery);onAssigned({...result.delivery,title:entry.title});}
             else {
               row.message.textContent=result.message||'Chưa giao được. Thử lại đích này.';
+              if(['LIBRARY_SOURCE_STALE','CATALOG_ARCHIVED'].includes(result.error))sourceUnavailable=true;
               if(refreshErrors.has(result.error))void row.refresh(row.sessions.value);
             }
           }
-          status.textContent=rows.every(row=>row.done)?'Đã giao và đối chiếu tất cả các lớp.':'Một số đích chưa giao được. Các lớp đã giao được giữ nguyên; bấm Giao bài để thử lại đích còn lại.';
+          status.textContent=rows.every(row=>row.done)?'Đã giao và đối chiếu tất cả các lớp.':sourceUnavailable
+            ?'Hãy quay lại Kho chung và mở bài hiện hành cho các đích còn lại. Biên nhận của các đích đã giao vẫn ở bên dưới.'
+            :'Một số đích chưa giao được. Các lớp đã giao được giữ nguyên. Bấm Giao bài để thử lại đích còn lại.';
           status.classList.add(rows.every(row=>row.done)?'success':'error');
+          if(sourceUnavailable)void onSourceUnavailable();
         }catch(error){status.classList.add('error');status.textContent='Chưa xác nhận đủ kết quả: '+error.message;}
         finally{
           busy=false;dialog.setAttribute('aria-busy','false');add.disabled=close.disabled=back.disabled=false;

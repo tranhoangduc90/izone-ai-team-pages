@@ -11,7 +11,7 @@ export function currentLibraryRows(entries,drafts,used){
   for(const entry of [...drafts,...used])values.set(key(entry),entry);
   return [...values.values()];
 }
-export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDraft=()=>{},onCopyUsed=()=>{},onAssign=()=>{},onRefresh=()=>{},getClassContext=()=>({}),onManagementChanged=()=>{}}){
+export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDraft=()=>{},onEditShared=()=>{},onCopyUsed=()=>{},onAssign=()=>{},onRefresh=()=>{},getClassContext=()=>({}),onManagementChanged=()=>{}}){
   let scope='izone',canManageShared=false,generation=0,lifecycle=0,entries=[],used=[],drafts=[],publicationRows=[],publications=new Map(),listSignature='';
   let shared={createCourses:[],reviewCourses:[],selfApproveCourses:[]},sharedDrafts=[];
   function clearShared(){shared={createCourses:[],reviewCourses:[],selfApproveCourses:[]};sharedDrafts=[];canManageShared=false;}
@@ -36,7 +36,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     status.textContent=selected.length+' bài tập';
     create.hidden=scope==='used'||scope==='izone'&&!shared.createCourses.length;
     create.title=scope==='izone'?'Tạo bài trong Kho chung':'Tạo bài trong Kho cá nhân';
-    const signature=JSON.stringify([scope,canManageShared,search.value,selected.map(e=>[e.id,e.source,e.title,e.meta,e.itemCount,e.sourceRevision,e.contentHash,e.publication])]);
+    const signature=JSON.stringify([scope,canManageShared,search.value,selected.map(e=>[e.id,e.source,e.title,e.meta,e.itemCount,e.sourceRevision,e.contentHash,e.canEditShared,e.publication])]);
     if(signature===listSignature)return;listSignature=signature;list.replaceChildren();
     if(!selected.length){list.append(node('p',scope==='izone'?'Chưa có bài chuẩn trong Kho chung.':scope==='personal'?'Chưa có bài trong Kho cá nhân.':'Chưa có phiếu đã giao phù hợp.','thuy-library-empty'));return;}
     const wrap=node('div','','thuy-library-scroll'),table=node('table'),head=node('tr'),thead=node('thead'),body=node('tbody');
@@ -106,7 +106,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     if((entry.source==='used'?detail.assignmentId:detail.id)!==entry.id)throw Error('Nội dung trả về chưa khớp phiếu.');
     const full={...entry,detail,definition:detail.definition};full.publication=matchedPublication(full);return full;
   }
-  async function assignEntry(entry){if(!assignable(entry))return;const run=lifecycle;try{
+  async function assignEntry(entry,showError=error=>{status.textContent=error.message;}){if(!assignable(entry))return;const run=lifecycle;try{
     const full=await readEntry(entry);
     if(run!==lifecycle)return;
     if(!full.publication&&!entry.draft){
@@ -121,18 +121,35 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
       if(pending.length)throw Error('Chưa thể giao: câu '+pending.join(', ')+' còn cảnh báo key chưa xử lý. Mở phiếu, bấm Sửa bài để bổ sung đáp án hoặc xác nhận chế độ không chấm.');
     }
     if(!full.publication&&!entry.draft)throw Error('Chưa chuẩn bị được phiên bản để giao; hãy thử lại.');await onAssign(full);
-  }catch(error){if(run===lifecycle)status.textContent=error.message;}}
+  }catch(error){if(run===lifecycle)showError(error);}}
   async function preview(entry){
     if(entry.source==='izone'&&entry.draft){try{await onOpenDraft(entry);}catch(error){status.textContent=error.message;}return;}
     const run=lifecycle;
     const opener=document.activeElement,dialog=node('dialog','','thuy-management-dialog thuy-library-detail'),head=node('header','','thuy-management-head'),body=node('div','','thuy-management-body'),notice=node('p','Đang đọc phiếu…');notice.setAttribute('role','status');
     const close=button('×',()=>dialog.close());close.setAttribute('aria-label','Đóng');
-    const edit=button('Sửa bài',async()=>{try{const result=entry.draft?await onOpenDraft(entry):entry.source==='used'?await onCopyUsed(entry):await onCopy(entry);if(result!==false)dialog.close();}catch(error){notice.textContent=error.message;}});
+    const actionNotice=node('p','','notice'),reload=button('Tải lại Kho chung',async()=>{dialog.close();await load();});
+    actionNotice.setAttribute('role','status');actionNotice.hidden=true;reload.hidden=true;
+    function showError(error){
+      actionNotice.hidden=false;actionNotice.textContent=error.message;
+      reload.hidden=entry.source!=='izone'||![403,409].includes(error.status);
+    }
+    let editing=false;
+    const edit=button('Sửa bài',async()=>{
+      editing=true;edit.disabled=close.disabled=true;actionNotice.hidden=true;reload.hidden=true;
+      try{
+        const result=entry.source==='izone'?await onEditShared(entry):entry.draft?await onOpenDraft(entry):entry.source==='used'?await onCopyUsed(entry):await onCopy(entry);
+        if(result!==false)dialog.close();
+      }catch(error){showError(error);}
+      finally{editing=false;edit.disabled=close.disabled=false;}
+    });
     head.append(node('h2',entry.title));
     if(canCopyToPersonal(entry))head.append(button('Nhân bản vào Kho cá nhân',()=>copyToPersonal(entry,dialog)));
-    else if(entry.assignment?.can_manage!==false)head.append(edit);
-    if(assignable(entry)){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');head.append(assign);}
-    head.append(close);body.append(notice);dialog.append(head,body);document.body.append(dialog);dialogs.add(dialog);bindDialogDismiss(dialog);dialog.showModal();
+    if(entry.source==='izone'?entry.canEditShared===true:entry.assignment?.can_manage!==false)head.append(edit);
+    if(assignable(entry)){const assign=button('Giao bài',()=>void assignEntry(entry,showError));assign.classList.add('primary');head.append(assign);}
+    head.append(close);body.append(actionNotice,reload,notice);dialog.append(head,body);document.body.append(dialog);dialogs.add(dialog);
+    dialog.addEventListener('cancel',event=>{if(editing)event.preventDefault();});
+    dialog.addEventListener('click',event=>{if(editing&&event.target===dialog)event.stopImmediatePropagation();});
+    bindDialogDismiss(dialog);dialog.showModal();
     dialog.addEventListener('close',()=>{dialogs.delete(dialog);dialog.remove();if(opener?.isConnected)opener.focus({preventScroll:true});},{once:true});
     try{
       const full=await readEntry(entry);if(run!==lifecycle||!dialog.open)return;
