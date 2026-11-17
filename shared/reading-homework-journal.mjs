@@ -37,13 +37,16 @@ export function startReadingHomeworkJournal(endpoint) {
   return startHomeworkJournal(endpoint, 'reading-homework');
 }
 
-export function startHomeworkJournal(endpoint, product, {fetcher = globalThis.fetch} = {}) {
+export function startHomeworkJournal(endpoint, product, {
+  fetcher = globalThis.fetch, Outbox = IndexedOutbox, recorderFactory = createRecorder, durableBatches = false,
+} = {}) {
   if (!['reading-homework', 'listening-homework'].includes(product)) throw Error('JOURNAL_PRODUCT_DENIED');
-  const outbox = new IndexedOutbox({ name: 'izone-' + product + '-journal-v1', maxBytes: 2 * 1024 * 1024 });
+  const outbox = new Outbox({ name: 'izone-' + product + '-journal-v1', maxBytes: 2 * 1024 * 1024 });
   const send = fetchTransport(endpoint, fetcher);
   let active = null, stopped = false;
-  const recorder = createRecorder({
-    outbox, context: () => active, build: product + '-journal-20261105',
+  const recorder = recorderFactory({
+    outbox, durableBatches, context: () => active,
+    build: product + (durableBatches ? '-journal-20261117' : '-journal-20261105'),
     transport: (body, options) => send({ ...body, events: body.events.map(packet) }, options),
   });
   const flush = options => { void recorder.flush(options).catch(() => {}); };
