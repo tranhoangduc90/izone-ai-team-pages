@@ -31,16 +31,17 @@ export function setupHandoutPreview(root,{assignment,person,initialMode='handout
   copyEditor=setupHandoutEditor(handout,{person,assignment,save:saveHandout,isCurrent,onChange:onHandoutChange});
   const positions={feedback:0,handout:0};
   const current = id => id === request && mode === 'handout' && isCurrent() && handout.isConnected;
-  async function reload() {
+  async function reload({refresh=false}={}) {
     const id=++request, status=handout.querySelector('#handout-status'), content=handout.querySelector('#handout-content');
     status.textContent='Đang mở kết quả handout…'; handout.setAttribute('aria-busy','true'); if(!copyEditor.isDirty())content.innerHTML='';
     try {
-      const result=await loadHandout();
+      const result=await loadHandout({refresh});
       if(!current(id))return;
       if(result.assignmentId !== assignment.id || !Array.isArray(result.tables))throw Error('Kết quả handout không khớp bài đang mở.');
       const snapshot=result.readMode==='snapshot';
-      handout.querySelector('#reload-handout').textContent=snapshot?'Xem lại bản đã lấy':'Tải lại handout';
-      status.textContent=result.readAt ? (snapshot?'Bản đọc K67 lúc ':'Đã đọc bản mới nhất · ')+new Date(result.readAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+      const retained=result.readMode==='confirmed-outline';
+      handout.querySelector('#reload-handout').textContent=retained?'Thử lại kết nối':snapshot?'Xem lại bản đã lấy':'Tải lại handout';
+      status.textContent=retained?'Đang xem dàn ý đã xác nhận':result.readAt ? (snapshot?'Bản đọc K67 lúc ':'Đã đọc bản mới nhất · ')+new Date(result.readAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
       await copyEditor.receive(result);
     } catch(e) { if(current(id)){ status.textContent='Chưa tải được handout';if(!copyEditor.isDirty())handout.querySelector('.handout-person .badge').textContent='Chưa xác định nguồn';content.innerHTML=`<p class="error-panel">${esc(e.message)}</p><p>Em vẫn có thể viết và lưu bài. Bấm Tải lại handout để thử lại.</p>`; } }
     finally {if(current(id))handout.removeAttribute('aria-busy');}
@@ -52,7 +53,7 @@ export function setupHandoutPreview(root,{assignment,person,initialMode='handout
 
       const close=handout.querySelector('#close-handout');
       if(close)close.onclick=()=>{void copyEditor.backup();select(feedback?'feedback':'closed',true);};
-      handout.querySelector('#reload-handout').onclick=reload;
+      handout.querySelector('#reload-handout').onclick=()=>void reload({refresh:true});
     }
     handout.hidden=mode !== 'handout';
     if(feedback) feedback.hidden=mode !== 'feedback';
