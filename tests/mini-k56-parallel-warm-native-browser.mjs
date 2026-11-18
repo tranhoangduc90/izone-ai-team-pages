@@ -12,6 +12,7 @@ assert.ok(process.env.MINI_NATIVE_FIXTURE?.includes('mini-k56-cbt-parallel-entry
 const {fixture:nativeFixture}=await import(pathToFileURL(process.env.MINI_NATIVE_FIXTURE));
 const {fixture,wait}=await import('./term2-offline-browser.mjs');
 const output=process.env.TERM2_EVIDENCE;assert.ok(output);assert.ok(process.env.MINI_OLD_BYTES);
+const currentShell = process.env.MINI_BROWSER_CLOUD_CANDIDATE === '1' ? 'mini-browser-cloud-v1' : 'mini-parallel-entry-v1';
 const seed={window:{}};
 for(const name of ['passages.js','content.js'])vm.runInNewContext(await readFile(new URL('../term-tests/mini-test-k56-computer-based/'+name,import.meta.url),'utf8'),seed);
 test('Mini live v3 native Reading upgrades in place, restores offline after F5/reopen, and submits Task2 once after ACK loss',{timeout:120000},async()=>{
@@ -29,7 +30,7 @@ test('Mini live v3 native Reading upgrades in place, restores offline after F5/r
   f=await fixture('read_first',{product:'mini',native,profile:'mini-warm-'+randomUUID()});let p=f.page;
   const entry='/term-tests/mini-test-k56-computer-based/';
   const old=await readFile(new URL('../term-tests/mini-test-k56-computer-based/index-shell-v3.html',import.meta.url),'utf8');
-  const current=await readFile(new URL('../term-tests/mini-test-k56-computer-based/index-mini-parallel-entry-v1.html',import.meta.url),'utf8');
+  const current=await readFile(new URL(`../term-tests/mini-test-k56-computer-based/index-${currentShell}.html`,import.meta.url),'utf8');
   const historical=JSON.parse(await readFile(process.env.MINI_OLD_BYTES,'utf8'));
   for(const item of historical){
    const bytes=await readFile(item.fixtureFile);assert.equal(createHash('sha256').update(bytes).digest('hex'),item.sha256);
@@ -50,7 +51,7 @@ test('Mini live v3 native Reading upgrades in place, restores offline after F5/r
   f.controls.assetOverrides.set(entry,current);f.controls.assetOverrides.set(entry+'index.html',current);
   assert.equal(await p.locator('#readingQuestions input[data-number]').first().inputValue(),'Mini Reading kept through the version change');
   await p.reload();await wait(p,()=>window.K56_MINI_APP_READY&&window.K56_MINI_OFFLINE?.record?.prepared?.miniCbtParallelEntry===true,'Existing native Mini scope adopts the capability');
-  await wait(p,()=>navigator.serviceWorker.controller?.scriptURL.includes('offline-worker-mini-parallel-entry-v1.js'),'Restored Mini verifies the new immutable shell',15000);
+  await p.waitForFunction(shell=>navigator.serviceWorker.controller?.scriptURL.includes(`offline-worker-${shell}.js`),currentShell,{timeout:15000});
   assert.equal((await native.db.query('SELECT mini_cbt_parallel_entry FROM assessment.term_test_attempt WHERE id=$1',[before.scope.attemptToken])).rows[0].mini_cbt_parallel_entry,true);
   await checkpoint('after capability upgrade');
   const same=async()=>{
@@ -84,7 +85,7 @@ test('Mini live v3 native Reading upgrades in place, restores offline after F5/r
   assert.equal((await native.db.query('SELECT count(*)::int AS n FROM assessment.term_test_writing_grading_job')).rows[0].n,1);
   const receipts=(await native.db.query("SELECT receipt FROM assessment.mini_k56_offline_operation WHERE kind='seal' AND section='writing'")).rows;
   assert.equal(receipts.length,1);assert.equal(f.controls.ackLost,true);assert.deepEqual(f.errors,[]);
-  await writeFile(resolve(output,'MINI_WARM_NATIVE_PROOF.json'),JSON.stringify({at:new Date().toISOString(),oldShell:'v3',newShell:'mini-parallel-v1',oldAssetsReconstructed:historical,
+  await writeFile(resolve(output,'MINI_WARM_NATIVE_PROOF.json'),JSON.stringify({at:new Date().toISOString(),oldShell:'v3',newShell:currentShell,oldAssetsReconstructed:historical,
    sameNativeScope:true,sameReadingDraftAndClock:true,legacyCapabilityAdopted:true,f5Offline:true,reopenOffline:true,twoRealDownloads:true,oneTask2ReceiptAndJob:true,lostAck:true,
    boundary:'Real isolated browser/cache/download and native HTTP/PGlite; isolated roster/keys, selected historical bytes, short manual Listening branch, no full audio/device/AI/Portal/production claim'},null,2));
  }catch(error){
