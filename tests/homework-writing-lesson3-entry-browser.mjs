@@ -254,12 +254,18 @@ test('A Docs link for a different owner must be confirmed again, and a wrong Doc
 
 test('An already submitted introduction still opens in Writing without starting Handout',async t=>exercise(t,async({page,state,writing,calls})=>{
   state.returned=true;
+  await page.setViewportSize({width:1280,height:900});
   await page.goto(writing);
   await page.locator('#hw-entry-student').selectOption('0');
   await page.locator('#online-login').click();
   await page.locator('#essay').waitFor();
   assert.equal(await page.locator('#essay').inputValue(),'Mở bài đã nộp.');
   assert.equal(await page.locator('#essay').isEditable(),false);
+  const confirmation=page.locator('.editor-card .notice-panel');
+  assert.equal(await confirmation.innerText(),'✓ Bài đã được nhận trên hệ thống');
+  assert.equal(await confirmation.locator('strong').innerText(),'✓ Bài đã được nhận trên hệ thống');
+  assert.ok((await confirmation.boundingBox()).width<(await page.locator('.editor-card').boundingBox()).width);
+  assert.doesNotMatch(await page.locator('#app').innerText(),/biên nhận|fixture-submission/i);
   assert.equal(calls.some(p=>p.startsWith(editor)),false);
 }));
 

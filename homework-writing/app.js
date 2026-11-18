@@ -1,10 +1,10 @@
 import runtime from './runtime-config.js?v=20261111-student-entry-r2';
 import {frontendConfiguration,createOnlineAccess} from './online-access.js?v=20261118-lesson5-draft-entry';
 import {setupRichReview} from './rich-review.js';
-import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261113-confirmed-keep';
+import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261118-submission-confirmation';
 import {basicSubmissionError} from './submission-check.js';
 import {vietnameseWritingError} from './submission-language.js';
-import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261118-lesson5';
+import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261118-submission-confirmation';
 import { setupLoginForm } from './login-form.js';
 import { draftKey, loadBackup, saveBackup, flushBackups, listBackups } from './drafts.js';
 import { setupFeedbackCards } from './feedback-cards.js';
@@ -409,8 +409,8 @@ async function recoverReceipt() {
   try {
     const receipt = await api('/student/receipts/' + encodeURIComponent(m.pendingSubmit.idempotencyKey));
     if (gen !== generation) return;
-    m.pendingSubmit = null; await persist(); notice('Đã tìm lại biên nhận nộp bài.'); await openStudent(receipt.assignmentId);
-  } catch (e) { if (gen === generation) setSaveStatus(e.status === 404 ? 'Chưa tìm thấy biên nhận. Em có thể bấm Nộp để thử lại đúng yêu cầu.' : 'Chưa xác nhận được kết quả nộp. Hãy kết nối lại rồi kiểm tra trạng thái.', true); }
+    m.pendingSubmit = null; await persist(); await openStudent(receipt.assignmentId);
+  } catch (e) { if (gen === generation) setSaveStatus(e.status === 404 ? 'Chưa xác nhận được bài đã nộp. Em có thể bấm Nộp để thử lại.' : 'Chưa xác nhận được kết quả nộp. Hãy kết nối lại rồi kiểm tra trạng thái.', true); }
 }
 async function submitDraft() {
   if (working) return; working = true;
@@ -446,7 +446,7 @@ async function submitDraft() {
       location.assign(linkedHandoutUrl(model.id,new URLSearchParams(location.search).get('documentId')));
       return;
     }
-    if (e.network) e.message = 'Chưa xác nhận được kết quả nộp. Em giữ nguyên nội dung và dùng Cập nhật trạng thái để tra lại biên nhận.';
+    if (e.network) e.message = 'Chưa xác nhận được kết quả nộp. Em giữ nguyên nội dung và dùng Cập nhật trạng thái để kiểm tra.';
     throw e;
   } finally { working = false; if (document.contains(button)) button.disabled = false; }
 }
