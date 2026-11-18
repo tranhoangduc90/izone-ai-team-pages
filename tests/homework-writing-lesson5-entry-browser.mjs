@@ -123,3 +123,30 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
   assert.equal(checks,1);
   assert.deepEqual(errors,[]);
 });
+
+test('Lesson 5 gives unverified learners a way back to their class and the existing outline',async t=>{
+  const local=await serveDirectory(resolve(import.meta.dirname,'..'));
+  const browser=await chromium.launch({channel:'chrome',headless:true});
+  t.after(async()=>{await browser.close();await local.close();});
+  const page=await browser.newPage({viewport:{width:390,height:850},hasTouch:true});
+  await page.addInitScript(selection=>sessionStorage.setItem('izone:lesson5-entry-selection',JSON.stringify(selection)),{studentRef,classRef});
+  const headers={'access-control-allow-origin':local.origin,'access-control-allow-credentials':'true',
+    'access-control-allow-headers':'content-type,authorization,x-hw-access,x-hw-csrf,if-none-match',
+    'access-control-allow-methods':'GET,POST,OPTIONS'};
+  await page.route('**/*',async route=>{
+    const request=route.request(),url=new URL(request.url());
+    if(url.origin===local.origin)return route.continue();
+    if(request.method()==='OPTIONS')return route.fulfill({status:204,headers});
+    if(url.pathname.endsWith('/access/config'))return route.fulfill({headers,json:{mode:'online',version:1,product:'homework-writing-5667-local'}});
+    if(url.pathname.endsWith('/access/student/restore'))return route.fulfill({status:401,headers,json:{code:'STUDENT_LOGIN_REQUIRED'}});
+    return route.abort();
+  });
+  await page.goto(local.origin+'/homework-writing/?mode=student&workspace=k67&lesson5=entry');
+  const link=page.getByRole('link',{name:'Làm dàn ý trước',exact:true});
+  await link.waitFor();
+  const destination=new URL(await link.getAttribute('href'));
+  assert.equal(destination.origin,local.origin);
+  assert.equal(destination.pathname,'/writing-handouts/lesson5/');
+  assert.deepEqual([...destination.searchParams],[['class',classRef],['outline','local']]);
+  assert.equal(await page.locator('#essay').count(),0);
+});

@@ -29,6 +29,12 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
   const storageKey='homework-writing:session:v1:'+config.apiBase,memory=createStudentIdentityMemory();
   const course=createCourseStudentIdentity({product:'homework-writing',entry:'workspace',memory,requestIdentity:input=>raw('/access/identity/resolve',input)});
   const teacherIntent=()=>intent!=='student';
+  function lesson5DraftLink(){
+    if(teacherIntent()||!/^IC[0-9]+$/.test(lesson5Selection?.classRef||''))return '';
+    const url=new URL('../writing-handouts/lesson5/',location.href);
+    url.search=new URLSearchParams({class:lesson5Selection.classRef,outline:'local'});
+    return '<p class="fine-print"><a href="'+esc(url.href)+'">Làm dàn ý trước</a> · Em có thể xác minh Google khi cần chuyển sang màn viết.</p>';
+  }
   const entryPicker=()=>config.studentEntry||Boolean(context&&publicConfig?.selfMatchAssignment===context.assignmentId);
   // The DEV class label is not an ERP class code. Keep its verified selection
   // within the DEV origin/API scope; a local value never authenticates a user.
@@ -120,7 +126,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
   const roleField=()=>'<label class="field"><span>Vai trò</span><select id="online-role"><option value="student">Học viên</option><option value="teacher">Giảng viên</option><option value="operator">Vận hành</option></select></label>';
   function roleListener(root,reject){const input=root.querySelector('#online-role');input.value=intent;input.onchange=()=>{intent=input.value;invalidate();const u=routeUrl(context?{assignment:context.assignmentId}:{});history.replaceState(history.state,'',u);reject(changed());void open(root).then(session=>onReady(session,epoch)).catch(e=>{if(!e.stale)showError(root,e);});};}
   function studentGoogle(root,stamp,initial={}){
-    root.innerHTML='<div class="login-layout compact-login"><section class="card login-card"><h1>Đăng nhập</h1>'+roleField()+'<p>Dùng tài khoản Google là chủ Docs được giao. Homework sẽ ghi nhớ sau khi xác nhận.</p><div id="google-login"></div><div id="owned-profiles"></div><div id="online-error" role="alert"></div></section></div>';
+    root.innerHTML='<div class="login-layout compact-login"><section class="card login-card"><h1>Đăng nhập</h1>'+roleField()+'<p>Dùng tài khoản Google là chủ Docs được giao. Homework sẽ ghi nhớ sau khi xác nhận.</p><div id="google-login"></div><div id="owned-profiles"></div><div id="online-error" role="alert"></div>'+lesson5DraftLink()+'</section></div>';
     return new Promise((resolve,reject)=>{
       pendingReject=reject;roleListener(root,reject);const error=root.querySelector('#online-error'),profiles=root.querySelector('#owned-profiles');let busy=false,credential='',restore=!!initial.restore;
       async function accept(value){if(stamp!==epoch)throw changed();if(value.choiceRequired){showProfiles(value.choices);return;}const session=await completeStudent(value,stamp,{remember:true});credential='';pendingReject=null;resolve(session);}
@@ -230,7 +236,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
       void (async()=>{if(!window.google?.accounts?.id)await script('https://accounts.google.com/gsi/client');if(stamp!==epoch)return;window.google.accounts.id.initialize({client_id:publicConfig.googleClientId,callback:async value=>{if(stamp!==epoch)return;try{await sso.login('homeworkwriting',value.credential,true);const session=await teacherSession(stamp);pendingReject=null;resolve(session);}catch(e){if(stamp===epoch)error.textContent=e.message;}}});window.google.accounts.id.renderButton(root.querySelector('#google-login'),{theme:'outline',size:'large',text:'signin_with'});})().catch(e=>{if(stamp===epoch)error.textContent=e.message;});
     });
   }
-  function showError(root,error){if(error.stale)return;root.innerHTML='<div class="login-layout compact-login"><section class="card login-card"><h1>Chưa mở được Homework</h1>'+roleField()+'<p role="alert">'+esc(error.message)+'</p><button id="access-retry" class="primary">Thử lại</button></section></div>';roleListener(root,()=>{});root.querySelector('#access-retry').onclick=()=>void open(root).then(session=>onReady(session,epoch)).catch(e=>showError(root,e));}
+  function showError(root,error){if(error.stale)return;root.innerHTML='<div class="login-layout compact-login"><section class="card login-card"><h1>Chưa mở được Homework</h1>'+roleField()+'<p role="alert">'+esc(error.message)+'</p><button id="access-retry" class="primary">Thử lại</button>'+lesson5DraftLink()+'</section></div>';roleListener(root,()=>{});root.querySelector('#access-retry').onclick=()=>void open(root).then(session=>onReady(session,epoch)).catch(e=>showError(root,e));}
   async function afterLogout(){const before=active;if(before?.person.role==='student'){const current=memory.read();if(current.identity?.id===before.identity?.erpId){const forgotten=await course.forget();if(forgotten.status!=='empty')onWarning('Đã đăng xuất Homework; chưa xóa được mã đã nhớ trên thiết bị.');}try{sessionStorage.removeItem(storageKey);}catch{}if(scopedIdentity(before.identity)){try{localStorage.removeItem(scopedMemoryKey);}catch{}}}else try{localStorage.setItem('izone:teacher-sso-logout',String(Date.now()));}catch{}invalidate();const u=routeUrl(context?{assignment:context.assignmentId}:{});u.searchParams.set('fresh','1');history.replaceState(history.state,'',u);}
   memory.subscribe(record=>{if(active?.person.role==='student'&&record.identity?.id!==active.identity?.erpId)onWarning('Mã người học đã nhớ ở tab khác vừa đổi. Tab này vẫn giữ đúng người đang làm bài.');});
   addEventListener('storage',event=>{if(active&&teacherIntent()&&['izone:teacher-sso-login','izone:teacher-sso-logout'].includes(event.key))void onTeacherChanged();});
