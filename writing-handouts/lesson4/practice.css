@@ -20,3 +20,43 @@ body[data-activity="lesson4"] .reading-practice-gate { display: flow-root; }
 #lesson-access h1 { font-size: clamp(1.45rem, 4.5vw, 1.85rem); text-align: start; }
 #lesson-access-body .field { margin-block: 12px; }
 #lesson-access-body .hw-entry-link { margin-top: 12px; }
+
+.lesson5-bridge:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-block: 20px;
+  padding: 20px 22px;
+  border: 1px solid #cbd5e4;
+  border-inline-start: 4px solid #152b4e;
+  border-radius: 9px;
+  background: white;
+}
+.lesson5-bridge strong { color: #153957; font-size: 20px; }
+.lesson5-bridge p { margin: 5px 0 0; }
+.lesson5-bridge .primary, .lesson5-bridge-dock .primary {
+  min-height: 50px;
+  min-width: 240px;
+  background: #152b4e;
+  color: white;
+  border-color: #152b4e;
+  font-weight: 700;
+}
+.lesson5-bridge-dock { display: none; }
+@media (max-width: 700px) {
+  .lesson5-bridge:not([hidden]) { align-items: stretch; flex-direction: column; gap: 12px; }
+  .lesson5-bridge .primary, .lesson5-bridge-dock .primary { width: 100%; min-width: 0; }
+  .lesson5-bridge-dock:not([hidden]) {
+    display: block;
+    position: fixed;
+    z-index: 20;
+    inset: auto 0 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid #dce1e7;
+    background: #fff;
+    box-shadow: 0 -4px 20px #152b4e0d;
+  }
+  .lesson5-bridge-dock-open #workspace { padding-block-end: calc(84px + env(safe-area-inset-bottom)); }
+  .lesson5-bridge-dock-open .lesson5-bridge > .primary { visibility: hidden; }
+}

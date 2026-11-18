@@ -1,5 +1,5 @@
 import runtime from '../../homework-writing/runtime-config.js?v=20261111-ic2363';
-import { frontendConfiguration, createOnlineAccess } from '../../homework-writing/online-access.js?v=20261116-single-confirmation';
+import { frontendConfiguration, createOnlineAccess } from '../../homework-writing/online-access.js?v=20261118-lesson5';
 
 const card = document.getElementById('lesson-access');
 const root = document.getElementById('lesson-access-body');
@@ -60,13 +60,14 @@ async function start() {
     }
     globalThis.handout67WritingHandoff = Object.freeze({
       apiBase, request, verifiedDocsStudent: studentRef, showOpeningError,
+      lesson5Entry:selection=>access.lesson5Entry(selection),
       openingHost: root,
       finishOpening() {
         card.hidden = true;
         document.getElementById('lesson-access-style')?.remove();
       },
     });
-    await import('../shared/loader.mjs?v=20261117-lesson5-ideas');
+    await import('../shared/loader.mjs?v=20261118-lesson5-writing');
   }
   await enter(await access.open(root));
 }

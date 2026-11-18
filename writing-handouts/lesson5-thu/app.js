@@ -41,7 +41,7 @@ const sharePractice=lesson.activity==='lesson4';
 const lesson5=lesson.activity==='lesson5';
 const homeworkTransferKey='izone-handout67:lesson5-homework-transfer';
 const homeworkResumeKey='izone-handout67:lesson5-homework-resume';
-const homeworkHelp='Mở Homework Lesson 4 từ Docs cá nhân và chọn “Dùng idea ở Lesson 5”.';
+const homeworkHelp='Mở Homework Lesson 4 từ Docs cá nhân và chọn “Đưa idea sang lesson 5”.';
 function readTab(key){
  try{return JSON.parse(sessionStorage.getItem(key));}catch{return null;}
 }
@@ -134,6 +134,8 @@ function render(){
   $('journey-nav').innerHTML=[['prompt','Đề bài','Đọc đề','?',false,true],['topic','Ý tưởng & Topic','Chốt cả hai idea','1',topicDone,true],['idea1','Lập luận ý 1',isWhole(lesson)?'Check cả chuỗi':'B → A → X','2',oneDone,topicDone],['idea2','Lập luận ý 2',isWhole(lesson)?'Check cả chuỗi':'B → A → X','3',twoDone,state.idea2Open]].map(([id,title,sub,num,done,enabled])=>`<button class="nav-item ${done?'done':''} ${id==='topic'&&!topicDone||id==='idea1'&&topicDone&&!oneDone||id==='idea2'&&state.idea2Open?'active':''}" data-target="${id}" ${enabled?'':'disabled'}><span>${done?'✓':num}</span><span>${title}<small>${sub}</small></span></button>`).join('');
   $('completion').hidden=!twoDone;
   if(twoDone)$('completion').innerHTML=renderRecap({...state,body:lesson.body||2});
+  if(twoDone&&lesson5&&writingHandoff?.writingUrl)$('completion').insertAdjacentHTML('afterbegin',
+   '<section class="next-idea"><div><strong>Dàn ý Thân bài 2 đã đạt.</strong><p>Em hãy viết đoạn văn dựa trên các ý đã chốt.</p><p id="lesson5-writing-error" role="status"></p></div><button type="button" id="lesson5-continue-writing" class="primary">Tiếp tục viết Thân bài 2 →</button></section>');
   if(isWhole(lesson))$('journey-nav').insertAdjacentHTML('beforeend',`<button class="nav-item ${twoDone?'done':''}" data-target="completion" ${twoDone?'':'disabled'}><span>${twoDone?'✓':'4'}</span><span>Bảng cuối<small>Nội dung & từ vựng chung</small></span></button>`);
   }
   for(const f of document.querySelectorAll('[data-thread-reply]'))if(replyDrafts.has(f.dataset.threadReply)){
@@ -144,6 +146,7 @@ function render(){
   for(const item of document.querySelectorAll('details.comment.history[data-history]'))if(historyStates.has(item.dataset.history))item.open=historyStates.get(item.dataset.history);
   checkFeedback.sync(state.responses,state.ref);
   syncWritingPrompt();
+  syncLesson5Writing();
   renderLesson4Progress();
   renderHomeworkIdeas();
 }
@@ -153,7 +156,8 @@ function renderHomeworkIdeas(){
  if(!region){
   region=document.createElement('div');
   region.id='homework-ideas-transfer';
-  $('save-state').after(region);
+  if(sharePractice)$('prompt').after(region);
+  else $('save-state').after(region);
  }
  if(lesson5){
   const source=state.lesson5IdeaSource;
@@ -165,16 +169,52 @@ function renderHomeworkIdeas(){
  const eligible=writingHandoff?.verifiedDocsStudent&&state.lesson5IdeaAvailable;
  region.hidden=!eligible;
  if(region.firstChild||!eligible)return;
+ region.className='lesson5-bridge';
  const button=document.createElement('button');
+ const dock=document.createElement('div');
+ const dockButton=document.createElement('button');
+ const lead=document.createElement('div');
+ const title=document.createElement('strong');
+ const help=document.createElement('p');
  const status=document.createElement('span');
- button.type='button';button.className='secondary';button.textContent='Dùng idea ở Lesson 5';
+ title.textContent='Tiếp tục với Lesson 5';
+ help.textContent='Dùng hai idea của Thân bài 2 để luyện A–X–B.';
+ lead.append(title,help,status);
+ for(const item of [button,dockButton]){item.type='button';item.className='primary';item.textContent='Đưa idea sang lesson 5 →';}
  status.setAttribute('role','status');
- region.append(button,status);
- button.addEventListener('click',async()=>{
+ region.append(lead,button);
+ dock.className='lesson5-bridge-dock';dock.hidden=true;dock.append(dockButton);document.body.append(dock);
+ const mobile=matchMedia('(max-width: 700px)');
+ let inView=true;
+ const updateDock=()=>{
+  const editing=document.activeElement?.matches('input,textarea,select,[contenteditable=true]');
+  const keyboard=window.visualViewport&&window.innerHeight-window.visualViewport.height>130;
+  dock.hidden=!mobile.matches||inView||region.hidden||!!editing||!!keyboard||!!document.querySelector('dialog[open]');
+  document.body.classList.toggle('lesson5-bridge-dock-open',!dock.hidden);
+ };
+ const observer=new IntersectionObserver(([entry])=>{inView=entry.isIntersecting;updateDock();});
+ observer.observe(region);
+ mobile.addEventListener('change',updateDock);
+ window.visualViewport?.addEventListener('resize',updateDock);
+ document.addEventListener('focusin',updateDock);
+ document.addEventListener('focusout',()=>queueMicrotask(updateDock));
+ const transferIdeas=async()=>{
+  if(button.disabled)return;
   const ref=state.ref,epoch=generation;
-  button.disabled=true;
+  button.disabled=dockButton.disabled=true;
+  status.textContent='Đang đưa idea sang Lesson 5…';
   try{
    if(!await flush()||epoch!==generation||ref!==state.ref)throw Error('DRAFT_UNSAVED');
+   if(writingHandoff.lesson5Entry){
+    const next=await writingHandoff.lesson5Entry({studentRef:state.studentRef,classRef:state.classRef})
+     .catch(error=>error.status===404?{status:'not_registered'}:Promise.reject(error));
+    if(epoch!==generation||ref!==state.ref)return;
+    if(['ready','pending_docs'].includes(next.status)){
+     const url=new URL(next.url);
+     if(url.origin!==location.origin||!url.pathname.endsWith('/homework-writing/'))throw Error('HANDOFF_TARGET_CHANGED');
+     location.assign(url.href);return;
+    }
+   }
    const result=await api.read(ref);
    if(epoch!==generation||ref!==state.ref||result.session?.ref!==ref)return;
    if(!result.lesson5IdeaTicket){
@@ -186,8 +226,10 @@ function renderHomeworkIdeas(){
    }));
    location.assign(new URL('../lesson5/',location.href));
   }catch{status.textContent=' Chưa chuyển được ý. Bài Lesson 4 vẫn được giữ; hãy thử lại.';}
-  finally{button.disabled=false;}
- });
+  finally{button.disabled=dockButton.disabled=false;}
+ };
+ button.addEventListener('click',transferIdeas);
+ dockButton.addEventListener('click',transferIdeas);
 }
 function renderLesson4Progress() {
  if(!sharePractice||!state.ref)return;
@@ -235,6 +277,31 @@ async function readLesson4Docs(ref,epoch) {
  }
 }
 let writingPrompt,acknowledgedWriting,writingHandoffInFlight=false;
+let triedLesson5Writing='';
+function syncLesson5Writing(){
+ const button=$('lesson5-continue-writing');
+ if(!button||!lesson5||!writingHandoff?.writingUrl)return;
+ button.onclick=()=>void continueLesson5Writing();
+ const key=state.ref+':'+state.version;
+ if(writingHandoff.reviewOutline||triedLesson5Writing===key||conflict||Object.keys(dirty).length)return;
+ triedLesson5Writing=key;
+ queueMicrotask(()=>void continueLesson5Writing());
+}
+async function continueLesson5Writing(){
+ if(writingHandoffInFlight||!ideaPassed(state,2))return;
+ const epoch=generation,ref=state.ref;
+ writingHandoffInFlight=true;
+ try{
+  if(!await flush()||epoch!==generation||ref!==state.ref||!ideaPassed(state,2))return;
+  const result=await api.handoff(ref,{baseVersion:state.version});
+  if(epoch!==generation||ref!==state.ref)return;
+  if(result.url!==writingHandoff.writingUrl)throw Error('HANDOFF_TARGET_CHANGED');
+  location.assign(result.url);
+ }catch{
+  const error=$('lesson5-writing-error');
+  if(epoch===generation&&error)error.textContent='Chưa mở được màn viết. Em hãy bấm Tiếp tục viết để thử lại.';
+ }finally{writingHandoffInFlight=false;}
+}
 function syncWritingPrompt(force=false){
  if(!outline||!writingHandoff||sharePractice)return;
  const ready=state.ref&&outlineRelation(state)==='passed'&&!Object.keys(dirty).length&&!conflict;
@@ -408,6 +475,19 @@ async function openHandout(classRef,selectedStudent,isCurrent,ticket){
   throw Object.assign(Error('SESSION_OWNER_MISMATCH'),{status:403});
  return result;
 }
+async function startLesson5Verified(classRef,studentRef,isCurrent){
+ if(new URLSearchParams(location.search).get('outline')==='local')return false;
+ const query=new URLSearchParams({lesson5Class:classRef});
+ const supported=await fetch('https://ducizone.ddns.net/homework-writing67-api/api/access/config?'+query,
+  {cache:'no-store',signal:AbortSignal.timeout(2500)}).then(response=>response.ok?response.json():null).catch(()=>null);
+ if(!isCurrent()||supported?.lesson5Writing!==true)return false;
+ const url=new URL('../../homework-writing/',location.href);
+ url.search=new URLSearchParams({mode:'student',workspace:'k67',lesson5:'entry'});
+ try{sessionStorage.setItem('izone:lesson5-entry-selection',JSON.stringify({studentRef,classRef}));}
+ catch{message('Trình duyệt chưa giữ được lựa chọn. Hãy mở bài từ Homework Docs của bạn.');return false;}
+ location.assign(url.href);
+ return true;
+}
 function displayHandout(result){
  api.setToken(result.token);pollEtag=undefined;docsProgress=null;docsRead=null;dirty={};conflict=false;busy=false;saveInFlight=false;editingLocked=false;serial=Promise.resolve();state=result.session;
  $('learner-label').textContent=names[student];show('workspace');render();note('');$('read-latest').hidden=true;
@@ -431,11 +511,14 @@ function displayHandout(result){
 async function enter({selection=null,pinned=false,transfer=null}={}){
  const epoch=++generation;const button=$('confirm-button');button.disabled=true;
  const selectedStudent=student,classRef=$('class-select').value;
+ const isCurrent=()=>epoch===generation&&student===selectedStudent&&$('class-select').value===classRef;
  const context=selection?courseIdentity.automaticContext(selection):courseIdentity.prepare(selectedStudent,'');
  try {
   const saved=lesson5?readTab(homeworkResumeKey):null;
+  if(lesson5&&!pinned&&!transfer&&(!saved||saved.classRef!==classRef||saved.studentRef!==selectedStudent)&&await startLesson5Verified(classRef,selectedStudent,isCurrent))return;
+  if(!isCurrent())return;
   if(lesson5)api.setToken(saved?.classRef===classRef&&saved.studentRef===selectedStudent?saved.token:'');
-  const result=await openHandout(classRef,selectedStudent,()=>epoch===generation&&student===selectedStudent&&$('class-select').value===classRef,transfer?.ticket);
+  const result=await openHandout(classRef,selectedStudent,isCurrent,transfer?.ticket);
   if(!result)return;
   if(selection&&!courseIdentity.isCurrent(selection))throw new Error('IDENTITY_CHANGED');
   if(!pinned)await courseIdentity.commit(context,{automatic:Boolean(selection),remember:$('remember').checked}).then(value=>{
@@ -451,7 +534,9 @@ async function enter({selection=null,pinned=false,transfer=null}={}){
  }catch(error){
   if(epoch!==generation)return;
   if(transfer)clearTab(homeworkTransferKey);
-  if(lesson5&&(transfer||error.message==='LESSON5_HOMEWORK_AUTH_REQUIRED')){
+  if(lesson5&&([401,403,409].includes(error.status)||transfer)){
+   clearTab(homeworkResumeKey);
+   if(await startLesson5Verified(classRef,selectedStudent,isCurrent)||!isCurrent())return;
    message('Chưa xác minh được bài Lesson 4. '+homeworkHelp);
   }else message('Chưa mở được bài. Hãy thử lại; bài đã lưu vẫn được giữ.');
  }

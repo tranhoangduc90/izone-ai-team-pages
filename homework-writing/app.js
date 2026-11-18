@@ -1,10 +1,10 @@
 import runtime from './runtime-config.js?v=20261111-student-entry-r2';
-import {frontendConfiguration,createOnlineAccess} from './online-access.js?v=20261111-doc-entry';
+import {frontendConfiguration,createOnlineAccess} from './online-access.js?v=20261118-lesson5';
 import {setupRichReview} from './rich-review.js';
 import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261113-confirmed-keep';
 import {basicSubmissionError} from './submission-check.js';
 import {vietnameseWritingError} from './submission-language.js';
-import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261112-clean-language';
+import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261118-lesson5';
 import { setupLoginForm } from './login-form.js';
 import { draftKey, loadBackup, saveBackup, flushBackups, listBackups } from './drafts.js';
 import { setupFeedbackCards } from './feedback-cards.js';
@@ -15,19 +15,20 @@ import { setupTeacherComments } from './teacher-comments.js';
 import { setupTeacherFilters } from './teacher-filters.js';
 import {lesson3Status} from './assignment-status.js';
 import { setupStudentFilters } from './student-filters.js';
-import { setupHandoutPreview } from './handout-preview.js';
+import { setupHandoutPreview } from './handout-preview.js?v=20261118-lesson5';
 import {handoutReadOnlyHtml,setupReadOnlyHandout} from './handout-view.js';
 import {setupStudentAlignment,alignmentTeacherQueueHtml,alignmentTeacherViewHtml} from './handout-alignment.js';
 import {setWriting67Scope} from './master170-writing67.js';
 import {setupSplitPanes} from './split-panes.js';
-import {approvedOutlineVersion,devHandoutUrl,isDevWritingEntry,linkedHandoutUrl} from './fast-food-dev-entry.js?v=20261111-ic2363';
+import {approvedOutlineVersion,devHandoutUrl,isDevWritingEntry,linkedHandoutUrl} from './fast-food-dev-entry.js?v=20261118-lesson5';
 import {languageCards} from './language-cards.js';
 import {setupReviewHighlights} from './review-highlights.js';
 import {initialRevisionText,shouldRestoreRevisionBackup} from './revision-draft.js';
 import {highlightHtml} from './text-highlights.js';
 
 const $ = selector => document.querySelector(selector);
-const lesson3Experience = assignment => assignment?.experience==='fast-food-introduction-v1';
+const lesson5Experience = assignment => assignment?.experience==='lesson5-consumerism-body-v1';
+const lesson3Experience = assignment => assignment?.experience==='fast-food-introduction-v1'||lesson5Experience(assignment);
 function setLesson3Chrome(enabled){
   document.body.classList.toggle('fast-food-demo',enabled);
   if(!onlineAccess)return;
@@ -111,8 +112,18 @@ async function home() {
   try {
     if(new URLSearchParams(location.search).get('view')==='handout'){const q=new URLSearchParams(location.search);q.delete('view');setRoute(Object.fromEntries(q));}
     if (me.role === 'student') {
-      assignments = await api('/assignments');
       const query = new URLSearchParams(location.search);
+      if(query.get('lesson5')==='entry'&&onlineAccess){
+        const selection=JSON.parse(sessionStorage.getItem('izone:lesson5-entry-selection')||'null');
+        if(!selection?.studentRef||!selection?.classRef)throw Error('Hãy chọn lại lớp và tên trong Handout Lesson 5.');
+        const next=await onlineAccess.lesson5Entry(selection);
+        const url=new URL(next.url||'../writing-handouts/lesson5/?outline=local',location.href);
+        if(url.origin!==location.origin||!['ready','pending_docs','not_registered'].includes(next.status))throw Error('Chưa xác minh được đích bài Lesson 5.');
+        sessionStorage.removeItem('izone:lesson5-entry-selection');
+        location.replace(url.href);
+        return;
+      }
+      assignments = await api('/assignments');
       if (!runtime.richReviewDemo && query.get('view') === 'docs-debug') return docsView();
       if (query.get('submission')) {
         const submission = query.get('submission');
@@ -124,7 +135,7 @@ async function home() {
         return id ? await openStudent(id) : showDocsEntry();
       }
       const requested=assignments.find(a=>a.id===query.get('assignment'));
-      if(lesson3Experience(requested)&&onlineAccess?.personal)return await openStudent(requested.id,{fromDocs:true});
+      if((lesson3Experience(requested)&&onlineAccess?.personal)||lesson5Experience(requested))return await openStudent(requested.id,{fromDocs:true});
       return query.get('assignment')&&query.get('view')!=='assignments' ? openStudent(query.get('assignment')) : studentHome();
     }
     if (me.role === 'teacher') {
@@ -185,11 +196,16 @@ async function openStudent(id, { resultSubmissionId = null, fromDocs = false } =
   const documentId=new URLSearchParams(location.search).get('documentId');
   let confirmedOutline;
   const linked=state.assignment.approvedOutlineRequired===true;
-  if(onlineAccess?.personal&&!state.submission&&(linked||isDevWritingEntry(me,id,documentId))){
-    const version=approvedOutlineVersion(documentId);
+  const lesson5=lesson5Experience(state.assignment);
+  if(onlineAccess&&(onlineAccess.personal||lesson5)&&!state.submission&&(linked||isDevWritingEntry(me,id,documentId))){
+    const version=lesson5?(state.outlineConfirmation?.version??null):approvedOutlineVersion(documentId);
     if(version!==null)confirmedOutline=await api('/student/assignments/'+encodeURIComponent(id)+'/handout');
     if(gen!==generation)return;
-    if(confirmedOutline?.status!=='ready'||confirmedOutline.assignmentId!==id||confirmedOutline.sourceVersion!==version||
+    if(lesson5&&state.outlineConfirmation&&confirmedOutline?.status==='source_unavailable'){
+      // A confirmed writer can keep drafting through a temporary read outage.
+      confirmedOutline={sourceVersion:version,sourceSessionRef:state.outlineConfirmation.sessionRef};
+    }else if(confirmedOutline?.status!=='ready'||confirmedOutline.assignmentId!==id||confirmedOutline.sourceVersion!==version||
+        (lesson5&&confirmedOutline.sourceSessionRef!==state.outlineConfirmation?.sessionRef)||
         (linked&&confirmedOutline.outlineApproved!==true)){
       location.replace(linked?linkedHandoutUrl(id,documentId):devHandoutUrl(documentId));
       return;
@@ -264,6 +280,14 @@ function renderStudent() {
   if(state.assignment.handoutRequired&&!locked())studentAlignment.draw(model.kind==='revision'?state.revisionHandoutCheck:state.handoutCheck);
   const handoutModel=model, handoutPerson=me.id;
   handoutEditor=setupHandoutPreview($('#app'),{assignment:a,person:me,initialMode:handoutModel.handoutMode,
+    revisitOutline:onlineAccess&&lesson5Experience(a)&&!state.submission?async()=>{
+      await persist();
+      await saveDraft();
+      if(model!==handoutModel||me?.id!==handoutPerson)return;
+      const url=linkedHandoutUrl(a.id,new URLSearchParams(location.search).get('documentId'));
+      url.searchParams.set('outline','review');
+      location.assign(url);
+    }:null,
     onModeChange:mode=>{handoutModel.handoutMode=mode;},
     loadHandout:()=>handoutModel.confirmedOutline||api('/student/assignments/'+encodeURIComponent(a.id)+'/handout'),
     saveHandout:body=>api('/student/assignments/'+encodeURIComponent(a.id)+'/handout',body,'PUT'),
@@ -392,7 +416,10 @@ async function submitDraft() {
     }
     if (!m.pendingSubmit || m.pendingSubmit.draftRevision !== m.baseRevision) m.pendingSubmit = { draftRevision: m.baseRevision,revisionRound:m.revisionRound, idempotencyKey: uid() };
     if(handoutCheckId)m.pendingSubmit.handoutCheckId=handoutCheckId;
-    if(m.kind==='original'&&m.state.assignment.approvedOutlineRequired)m.pendingSubmit.outlineVersion=m.confirmedOutline?.sourceVersion;
+    if(m.kind==='original'&&m.state.assignment.approvedOutlineRequired){
+      m.pendingSubmit.outlineVersion=m.confirmedOutline?.sourceVersion;
+      if(lesson5Experience(m.state.assignment))m.pendingSubmit.outlineSessionRef=m.confirmedOutline?.sourceSessionRef;
+    }
     await persist();
     await api('/student/assignments/' + encodeURIComponent(m.id) + (m.kind === 'revision' ? '/revision' : '/submit'), m.pendingSubmit);
     if (gen !== generation || model !== m) return;
@@ -401,7 +428,7 @@ async function submitDraft() {
     if (!compact) notice(m.kind === 'revision' ? 'Đã nhận bản sửa của em.' : 'Đã nhận bài hợp lệ và xếp hàng chấm.');
     await openStudent(m.id);
   } catch (e) {
-    if(['SUBMISSION_INVALID','HANDOUT_CHECK_REQUIRED','HANDOUT_CHECK_STALE','LESSON3_OUTLINE_NOT_CONFIRMED'].includes(e.code)&&gen===generation&&model){model.pendingSubmit=null;await persist();}
+    if(['SUBMISSION_INVALID','HANDOUT_CHECK_REQUIRED','HANDOUT_CHECK_STALE','LESSON3_OUTLINE_NOT_CONFIRMED','LESSON5_OUTLINE_NOT_CONFIRMED'].includes(e.code)&&gen===generation&&model){model.pendingSubmit=null;await persist();}
     if(e.code==='LESSON3_OUTLINE_NOT_CONFIRMED'&&gen===generation&&model&&onlineAccess?.personal){
       location.assign(linkedHandoutUrl(model.id,new URLSearchParams(location.search).get('documentId')));
       return;

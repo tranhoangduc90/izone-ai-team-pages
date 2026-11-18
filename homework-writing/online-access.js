@@ -19,6 +19,10 @@ export function frontendConfiguration(config,location=globalThis.location){
 }
 export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=>{},onReady=()=>{},showOpening,compactStudentEntry=false}={}){
   const query=new URLSearchParams(location.search);let context=query.has('documentId')?{documentId:query.get('documentId'),assignmentId:query.get('assignment')}:null;
+  const lesson5Selection=(()=>{
+    if(context||query.get('lesson5')!=='entry')return null;
+    try{return JSON.parse(sessionStorage.getItem('izone:lesson5-entry-selection')||'null');}catch{return null;}
+  })();
   if(context&&(!/^[A-Za-z0-9_-]{20,200}$/.test(context.documentId||'')||!context.assignmentId))throw Error('Link Docs chưa chỉ rõ bài Homework.');
   let intent=['teacher','operator'].includes(query.get('mode'))?query.get('mode'):query.get('teacher')==='1'?'teacher':'student';
   let epoch=0,token='',entry=null,active=null,pendingReject,publicConfig;
@@ -100,7 +104,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
     }
     if(!fresh&&!rejected){
       try{
-        const value=await raw('/access/student/restore',{});
+        const value=await raw('/access/student/restore',lesson5Selection?{lesson5Selection}:{});
         if(stamp!==epoch)throw changed();
         if(entryPicker()){
           if(value.choiceRequired||!matchesRemembered(value.identity))
@@ -120,7 +124,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
     return new Promise((resolve,reject)=>{
       pendingReject=reject;roleListener(root,reject);const error=root.querySelector('#online-error'),profiles=root.querySelector('#owned-profiles');let busy=false,credential='',restore=!!initial.restore;
       async function accept(value){if(stamp!==epoch)throw changed();if(value.choiceRequired){showProfiles(value.choices);return;}const session=await completeStudent(value,stamp,{remember:true});credential='';pendingReject=null;resolve(session);}
-      async function submit(selection={}){if(busy||stamp!==epoch)return;busy=true;error.textContent='';try{const value=await raw(restore?'/access/student/restore':'/access/student/login',{...selection,...(!restore?{credential}:{})});await accept(value);}catch(e){if(stamp===epoch)error.textContent=e.message;}finally{busy=false;}}
+      async function submit(selection={}){if(busy||stamp!==epoch)return;busy=true;error.textContent='';try{const value=await raw(restore?'/access/student/restore':'/access/student/login',{...selection,...(lesson5Selection?{lesson5Selection}:{}),...(!restore?{credential}:{})});await accept(value);}catch(e){if(stamp===epoch)error.textContent=e.message;}finally{busy=false;}}
       function showProfiles(choices){
         if(!Array.isArray(choices)||!choices.length)throw Error('Chưa có hồ sơ thuộc Google này.');
         profiles.innerHTML='<label class="field"><span>Hồ sơ đã xác minh</span><select id="online-profile">'+choices.map((p,i)=>'<option value="'+i+'">'+esc(p.classCode+' - '+p.name)+'</option>').join('')+'</select></label><button id="online-login" class="primary">Mở bài</button>';
@@ -235,5 +239,8 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
       entry?.documentId===context.documentId&&entry.studentRef===active.identity?.ownerId
       ? entry.studentRef : null;
   }
-  return {open,headers,routeUrl,invalidate,afterLogout,showError,workspace,verifiedDocsOwner,stamp:()=>epoch,isCurrent:stamp=>stamp===epoch,get personal(){return !!context;},get intent(){return intent;}};
+  return {open,headers,routeUrl,invalidate,afterLogout,showError,workspace,verifiedDocsOwner,
+    verifiedStudent:()=>active?.person?.role==='student'?active.identity?.ownerId:null,
+    lesson5Entry:selection=>raw('/access/student/lesson5-entry',selection),
+    stamp:()=>epoch,isCurrent:stamp=>stamp===epoch,get personal(){return !!context;},get intent(){return intent;}};
 }
