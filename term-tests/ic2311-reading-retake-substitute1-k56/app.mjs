@@ -1,9 +1,10 @@
+import {connectLegacyPresentation} from '../substitute-skill-shared/legacy-presentation.mjs';
 import {API,BUILD,PRODUCT,SLUG,CONTENT_VERSION,CONTENT_HASH,DURATION_MS} from './config.mjs';
 import {DurableStore} from './storage.mjs';
 import {Telemetry} from './telemetry.mjs';
 import {prepareOffline} from './offline.mjs';
 import {mountNativeReading,nativeLayout,nativeAnnotations} from './native-ui.mjs';
-const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value,show=(id,v=true)=>$(id).hidden=!v;
+const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value,show=(id,v=true)=>{const result=$(id).hidden=!v;queueMicrotask(()=>legacyUi?.refresh());return result;};
 const storage=await new DurableStore().open();let state=await storage.get('current'),preparation=await storage.get('preparation'),roster,content,layoutReady=false,ready=false,busy=false,syncing=false,retryAt=0,failures=0,releaseOwner,ownerHeld=false,baseElapsed=0,baseMono=performance.now(),sealing=false;
 let ownerEpoch=0,lastSaved=state?._savedSeq||0,pageLeaving=false;
 const tabId=crypto.randomUUID(),ownerId=state?.identity?.ownerId||preparation?.ownerId||crypto.randomUUID();
@@ -153,6 +154,7 @@ async function seal(reason){
  try{await persist();journal.emit('submission_sealed',{operationId:state.sealed.operationId,revisionSent:state.sealed.revision,elapsedExamMs:state.elapsedMs,submitReason:reason});renderFinished();void synchronize(true);}catch{state.storageFailed=true;note('Không xác nhận được lưu bền trên thiết bị. Giữ nguyên trang và liên hệ giảng viên.');renderFinished();text('finish-message','Bài chưa gửi thành công; bộ nhớ thiết bị đang lỗi. Hãy giữ nguyên trang, không tải lại và liên hệ giảng viên.');}finally{sealing=false;}
 }
 async function prepare(){
+ if(!state?.permit&&await legacyUi.restoreSelected())return;
  if(busy||!layoutReady||(!$('student').value&&!state?.permit))return;busy=true;$('prepare').disabled=true;show('retry',false);
  try{
   if(!state?.permit){
@@ -238,6 +240,8 @@ async function restoreClock(){
 }
 setInterval(()=>{if(ownerHeld&&state?.phase==='playing'){drawClock();if(clock()>=DURATION_MS)void seal('deadline');else{checkpoint();captureUi();void persist().catch(saveFailure);}}void synchronize();},1000);
 setInterval(()=>{if(state?.phase==='playing')void queueDraft();},10000);
+const legacyUi=connectLegacyPresentation({skill:'reading',sourceSlug:'substitute-test-1-k56',getState:()=>state,storage,persist,isBusy:()=>busy||syncing,onPrepare:()=>prepare(),beforeLeave:async()=>{if(ownerHeld&&state?.phase==='playing'){checkpoint();captureUi();await persist();}},release:()=>{relinquishOwner();},readReview:async receiptId=>(await journal.request('/review',{receiptId},{permit:state.permit})).value});
+
 try{
  content=await fetch('content.json').then(r=>{if(!r.ok)throw Error();return r.json();});const sha=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(content))))].map(n=>n.toString(16).padStart(2,'0')).join('');if(content.contentVersion!==CONTENT_VERSION||sha!==CONTENT_HASH)throw Error('CONTENT_MISMATCH');
  const classPicker=$('class'),studentPicker=$('student');

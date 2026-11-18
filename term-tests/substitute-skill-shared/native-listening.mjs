@@ -2,6 +2,7 @@
 // Pinned pure presentation functions from Substitute K56 enhance.js at Pages 3b0bdc5b.
 // No legacy audio, timer, identity, draft or API controller is loaded.
 export function mountNativeListening({content,answers={},grid,form,heading,uiState,onUiState}){
+ document.body.classList.add('cbt-semantic-mode');
  const saveUiState=()=>onUiState(uiState);
   function makeButton(className, label) {
     const button = document.createElement('button');

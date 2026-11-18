@@ -1,5 +1,6 @@
-const BUILD = 'reading-retake-20261114-retake-log-v1';
-const PREVIOUS_CACHE = 'reading-retake:reading-retake-20261112-reconciliation';
+importScripts('../substitute-skill-shared/legacy-demo-worker.js');
+const BUILD = 'reading-retake-20261118-substitute-parity12';
+const PREVIOUS_CACHE = 'reading-retake:reading-retake-20261114-retake-log-v1';
 const COHORT_CACHE = 'reading-retake:reading-retake-20261111-cohort';
 const LEGACY_CACHE = 'reading-retake:reading-retake-20261106-v1';
 const CACHE = 'reading-retake:' + BUILD;
@@ -35,13 +36,14 @@ function isExamPage(url) {
 }
 
 function canOpen(url) {
-  return isExamPage(url) && url.searchParams.get('result') !== '0' && self.navigator.onLine !== false;
+  return isExamPage(url) && url.searchParams.get('class')!=='DEMO' && url.searchParams.get('result') !== '0' && self.navigator.onLine !== false;
 }
 
 function isConfirmed(state) {
   return state?.phase === 'submitted' && state.serverConfirmed === true && !state.pending &&
     typeof state.receipt === 'string' && state.permit && /^IC\d{4,6}$/.test(state.identity?.classCode ?? '');
 }
+function usesInlineResult(state){return state?.presentationVersion==='substitute-parity12';}
 
 async function withReviewBridge(page) {
   if (!page.ok || !page.headers.get('Content-Type')?.includes('text/html')) return page;
@@ -66,7 +68,7 @@ self.addEventListener('install', event => event.waitUntil((async () => {
 
 self.addEventListener('activate', event => event.waitUntil((async () => {
   await self.clients.claim();
-  if (!isConfirmed(await savedAttempt())) return;
+  const state=await savedAttempt();if (!isConfirmed(state)||usesInlineResult(state)) return;
   const clients = await self.clients.matchAll({ type: 'window' });
   await Promise.allSettled(clients.filter(client => canOpen(new URL(client.url))).map(client => client.navigate(REVIEW)));
 })()));
@@ -81,17 +83,18 @@ self.addEventListener('message', event => {
   if (event.data?.type === 'ACTIVATE_WHEN_IDLE') self.skipWaiting();
 });
 
-self.addEventListener('fetch', event => {
+function legacyFetch(event){
   const { request } = event;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || !url.href.startsWith(BASE) || url.pathname.includes('/teacher')) return;
+  const sharedStatic=url.origin===new URL(BASE).origin&&url.href.startsWith(new URL('../../',BASE).href)&&/\.(?:m?js|css|png|svg|woff2?|ttf|webp)$/.test(url.pathname);
+  if (request.method !== 'GET' || (!url.href.startsWith(BASE)&&!sharedStatic) || url.pathname.includes('/teacher')) return;
   event.respondWith((async () => {
     if (url.href === BRIDGE) {
       const cache = await caches.open(BRIDGE_CACHE);
       return await cache.match(BRIDGE) || fetch(request);
     }
     const navigation = request.mode === 'navigate';
-    if (navigation && canOpen(url) && isConfirmed(await savedAttempt())) return Response.redirect(REVIEW, 302);
+    if (navigation && canOpen(url)){const state=await savedAttempt();if(isConfirmed(state)&&!usesInlineResult(state))return Response.redirect(REVIEW,302);}
     if (self.navigator.onLine !== false) {
       try {
         const page = await fetch(request);
@@ -110,4 +113,6 @@ self.addEventListener('fetch', event => {
     if (!page) return Response.error();
     return navigation && isExamPage(url) ? withReviewBridge(page) : page;
   })());
-});
+}
+
+self.addEventListener('fetch',event=>self.routeSubstituteDemoFetch(event,legacyFetch));

@@ -449,12 +449,12 @@ export function mountNativeReading({content,grid,form,heading,uiState,onUiState}
  const count=()=>{document.getElementById('answer-count').textContent=[...fields.values()].filter(f=>f.value.trim()).length+'/26 đã nhập';};form.addEventListener('input',count);count();
  return source;
 }
-export async function nativeLayout(controls){window.TERM_TEST_CONFIG={slug:'substitute-test-1-k56',reading:{controls}};await import('./vendor/term-tests/substitute-shared/exam-controls.js');}
+export async function nativeLayout(controls){window.TERM_TEST_CONFIG={slug:'substitute-test-1-k56',reading:{controls}};await import('../substitute-shared/exam-controls.js');}
 export async function nativeAnnotations({content,identity,storage,onError,onChange}){
  if(document.getElementById('cbtNotesPanel'))return;
  const recordKey='annotations:'+identity.attemptId;let saved=await storage.get(recordKey),cache=saved?.raw||null;
  const session=JSON.stringify({annotationRunId:identity.attemptId});
  const adapter={getItem:key=>key.includes('annotations:')?cache:session,setItem:(key,value)=>{if(!key.includes('annotations:'))return;cache=value;void storage.put(recordKey,{raw:value}).catch(onError);onChange?.(value);}};
  window.TERM_TEST_CONTENT=content;window.SUBSTITUTE_STATE={storages:()=>[adapter],accept:()=>true,stamp:value=>value,key:prefix=>prefix+identity.attemptId,resolveClass:()=>identity.classCode};
- await import('./vendor/term-tests/substitute-test-1-k56-computer-based/annotations.js');
+ await import('../substitute-test-1-k56-computer-based/annotations.js');
 }

@@ -1,5 +1,6 @@
+import {loadClassDirectory} from './class-directory.mjs';
 import {bindIdentitySelection} from './identity-selection.mjs';
-import {nativeVisibility,updateNativeShell,audioProgress} from './native-shell.mjs?v=20261117-start-scroll-v1';
+import {nativeVisibility,updateNativeShell,audioProgress} from './native-shell.mjs?v=20261118-parity12-v1';
 import {portalStatus} from './portal-status.mjs';
 import {DurableStore,PREFIX} from './storage.mjs';
 import {prepareWritingOffline as prepareOffline} from './offline.mjs';
@@ -51,7 +52,7 @@ function audioEvidence(event, data={}){
 }
 function setWaitingForAudio(waiting){
  $('listening-clock').closest('[role=timer]').hidden=!state.audioEndedAt;const viewport=$('questions');$('objective-form').inert=waiting&&!viewport;if(viewport)viewport.inert=waiting;$(skill+'View').classList.toggle('awaiting-audio',waiting);
- $('submit').disabled=waiting||!state.audioEndedAt;if(state.audioEndedAt)text('official-audio-status','Đã kết thúc audio · đang rà soát bài.');
+ $('submit').disabled=!ownerHeld||state?.phase!=='draft'||!!state.sealed;if(state.audioEndedAt)text('official-audio-status','Đã kết thúc audio · đang rà soát bài.');
 }
 function displayPlaybackRetry(){
  $('start-audio').hidden=false;
@@ -63,7 +64,7 @@ async function playOfficial(){
  start.disabled=true;
  try{
   await player.start();
-  if(!ownerHeld||state.phase!=='draft'){
+  if(!ownerHeld||state.phase!=='draft'||state.sealed){
    player.finish('technical_stop','start_superseded',{stopAudio:true});
    return;
   }
@@ -111,7 +112,7 @@ async function saveAudioEnd(){
  tick();
  void confirmAudioEnd();
 }
-function fail(e){text('notice',({OWNER_BUSY:'Bài đang mở ở tab khác. Hãy quay lại tab đó.',SKILL_GENERATION_STALE:'Giảng viên đã cấp lại lượt. Bản cũ được giữ để đối soát.',ALREADY_SUBMITTED:'Bạn đã nộp bài này. Hãy liên hệ giảng viên nếu cần hỗ trợ.',ATTEMPT_ALREADY_ACTIVE:'Bạn đang có một lượt thi. Hãy dùng trình duyệt đang làm hoặc nhờ giảng viên cấp lại.',SKILL_TEST_UNAVAILABLE:'Bài chưa mở hoặc đang tạm đóng.',SKILL_INTAKE_CLOSED:'Bài đang tạm đóng nhận lượt mới. Hãy liên hệ giảng viên.',LOCAL_PERSIST_FAILED:'Không lưu được trên thiết bị. Giữ nguyên trang và liên hệ giảng viên.'}[e.code]||'Chưa hoàn tất kết nối. Bài trên thiết bị vẫn được giữ; hãy thử lại khi có mạng.'));if(e.code==='SKILL_GENERATION_STALE'){freeze();show('replace-attempt');}}
+function fail(e){text('notice',({CLASS_NOT_ELIGIBLE:'Lớp này chưa được cấp quyền dự thi bài này. Hãy liên hệ giảng viên.',CLASS_DIRECTORY_UNAVAILABLE:'Chưa tải được toàn bộ danh sách lớp. Hãy thử lại khi có mạng.',OWNER_BUSY:'Bài đang mở ở tab khác. Hãy quay lại tab đó.',SKILL_GENERATION_STALE:'Giảng viên đã cấp lại lượt. Bản cũ được giữ để đối soát.',ALREADY_SUBMITTED:'Bạn đã nộp bài này. Hãy liên hệ giảng viên nếu cần hỗ trợ.',ATTEMPT_ALREADY_ACTIVE:'Bạn đang có một lượt thi. Hãy dùng trình duyệt đang làm hoặc nhờ giảng viên cấp lại.',SKILL_TEST_UNAVAILABLE:'Bài chưa mở hoặc đang tạm đóng.',SKILL_INTAKE_CLOSED:'Bài đang tạm đóng nhận lượt mới. Hãy liên hệ giảng viên.',LOCAL_PERSIST_FAILED:'Không lưu được trên thiết bị. Giữ nguyên trang và liên hệ giảng viên.'}[e.code]||'Chưa hoàn tất kết nối. Bài trên thiết bị vẫn được giữ; hãy thử lại khi có mạng.'));if(e.code==='SKILL_GENERATION_STALE'){freeze();show('replace-attempt');}}
 async function api(action,body,method='POST',keepalive=false){const r=await fetch(((state?.identity?.classCode||state?.classCode||$('class').value)==='DEMO'?REAL_API.replace('/v1/tests/','/v1/demo/tests/'):REAL_API)+'/'+action,{method,cache:'no-store',credentials:'omit',headers:method==='POST'?{'content-type':'application/json'}:{},...(method==='POST'?{body:JSON.stringify(body)}:{}),keepalive,signal:AbortSignal.timeout(12000)}),v=await r.json();if(!r.ok)throw Object.assign(Error(),{code:v.code,status:r.status});return v;}
 async function own(){if(ownerHeld)return;if(!navigator.locks)throw Object.assign(Error(),{code:'OWNER_BUSY'});await new Promise((resolve,reject)=>navigator.locks.request('substitute-skill:'+testId,{ifAvailable:true},async lock=>{if(!lock)return reject(Object.assign(Error(),{code:'OWNER_BUSY'}));ownerHeld=true;resolve();await new Promise(r=>releaseOwner=r);}).catch(reject));}
 
@@ -144,6 +145,7 @@ async function sync(){if(!ownerHeld||busy||syncing||!state?.identity)return;sync
    try{await persist();}catch(error){observation.emit('seal_save_failed',{operationId:state.sealed?.operationId,code:error.code});throw error;}
    if(!current(e,id))return;
    sealedNeedsSave=false;
+   if(isListening){player?.finish('submitted',state.sealed.automatic?'deadline':'manual',{stopAudio:true});playbackStarted=false;}
    observation.emit('seal_saved',{operationId:state.sealed?.operationId,persisted:true,revision:state.sealed?.revision});
    text('notice','');
    finish({...state.lastServer,receipt:null});
@@ -201,7 +203,7 @@ function tick(){
  if(!left)void seal(true);
 }
 async function ended(){
- if(state.phase!=='draft'||state.audioEndedAt)return;
+ if(state.phase!=='draft'||state.audioEndedAt||state.sealed)return;
  eofNeedsSave=true;
  state.audioEndedAt=Math.max(now(),state.startedAt+content.audio.seconds*1000);
  state.deadlineAt=state.audioEndedAt+content.reviewMs;
@@ -212,9 +214,9 @@ async function ended(){
 }
 async function stop(reason,cause=reason){if(!ownerHeld||state?.phase!=='draft'||state.audioEndedAt||state.sealed)return;audioEvidence('technical_stop',{cause,nativeReason:reason});state.phase='technical_stop';state.stopPending=reason;clearTimeout(saveTimer);player?.finish('technical_stop',reason,{stopAudio:true});freeze();try{await persist();finish();void sync();}catch(e){fail(e);}}
 async function seal(automatic=false){
- if(busy||!ownerHeld||state.phase!=='draft'||state.sealed||isListening&&(!state.audioEndedAt||eofNeedsSave))return;
+ if(busy||!ownerHeld||state.phase!=='draft'||state.sealed||isListening&&automatic&&(!state.audioEndedAt||eofNeedsSave))return;
  state.revision++;
- state.sealed={...payload(),operationId:crypto.randomUUID(),automatic,confirmedEarlySubmit:!automatic,...isListening?{audioEndedAt:state.audioEndedAt}:{}};
+ state.sealed={...payload(),operationId:crypto.randomUUID(),automatic,confirmedEarlySubmit:!automatic,...isListening&&state.audioEndedAt?{audioEndedAt:state.audioEndedAt}:{}};
  observation.emit('seal_created',{operationId:state.sealed.operationId,revision:state.revision,automatic,
   deadlineAtMs:state.deadlineAt,deadlineAt:state.deadlineAt,
   ...!isListening&&{answeredCount:Object.values(state.answers).filter(Boolean).length}});
@@ -246,11 +248,11 @@ async function start(){
  }catch(error){observation.emit('start_failed',{code:error.code,http:error.status});fail(error);}
  finally{busy=false;if(state?.stopPending)void sync();}
 }
-let roster=[];
-async function classes(){const v=await api('classes',null,'GET');for(const c of v.classes)$('class').add(new Option(c.code,c.code));if(v.demo?.available)$('class').add(new Option('DEMO · Chỉ kiểm tra, không gửi Portal','DEMO'));text('prepare-status','Chọn lớp, họ tên và xác nhận đúng người trước khi làm bài.');const hinted=new URL(location.href).searchParams.get('class');if(hinted&&[...$('class').options].some(o=>o.value===hinted)){$('class').value=hinted;$('class').dispatchEvent(new Event('change'));}}
-bindIdentitySelection({loadRoster:async code=>(await api('roster?class='+encodeURIComponent(code),null,'GET')).students,onRoster:rows=>{roster=rows;},onConfirm:prepare,onError:fail,isBusy:()=>busy});
+let roster=[],classDirectory;
+async function classes(){classDirectory=await loadClassDirectory(testId,$('class'));text('prepare-status','Chọn lớp, họ tên và xác nhận đúng người trước khi làm bài.');const hinted=new URL(location.href).searchParams.get('class');if(hinted&&[...$('class').options].some(o=>o.value===hinted)){$('class').value=hinted;$('class').dispatchEvent(new Event('change'));}}
+bindIdentitySelection({loadRoster:async code=>{classDirectory?.requireEligible(code);return (await api('roster?class='+encodeURIComponent(code),null,'GET')).students;},onRoster:rows=>{roster=rows;},onConfirm:prepare,onError:fail,isBusy:()=>busy});
 $('start').onclick=start;
-$('submit').onclick=()=>$('confirm-submit').showModal();$('accept-submit').onclick=()=>{$('confirm-submit').close();void seal();};$('cancel-submit').onclick=()=>$('confirm-submit').close();$('check-result').onclick=()=>void check();$('retry-send').onclick=()=>void sync();
+$('submit').onclick=()=>{if(!ownerHeld||state?.phase!=='draft'||state.sealed)return;const empty=content.controls.length-Object.values(state.answers||{}).filter(v=>String(v).trim()).length;$('confirm-submit').querySelector('p').textContent='Bạn còn '+empty+' câu chưa trả lời.'+(isListening&&!state.audioEndedAt?' Xác nhận nộp sẽ kết thúc audio.':'')+' Bài sẽ được khóa sau khi nộp.';$('confirm-submit').showModal();};$('accept-submit').onclick=()=>{$('confirm-submit').close();void seal();};$('cancel-submit').onclick=()=>$('confirm-submit').close();$('check-result').onclick=()=>void check();$('retry-send').onclick=()=>void sync();
 $('retry-audio').onclick=()=>void prepare();
 if(isListening){$('preview').onclick=async()=>{if(busy||!player)return;busy=true;trialPassed=false;$('heard').checked=false;$('start').disabled=true;$('preview').disabled=true;window.IZONE_CBT_AUDIO_START_LABEL?.($('start'),false);try{await player.preview(p=>{text('bootstrapPreviewStatus','Đang nghe thử '+Math.floor(p*100)+'%');window.IZONE_CBT_AUDIO_START_WAIT?.($('start'),10*(1-p));});trialPassed=true;$('heard').checked=true;text('bootstrapPreviewStatus','Đã nghe thử đủ 10 giây.');$('start').disabled=false;$('preview').disabled=false;$('preview').textContent='Nghe lại 10 giây đầu';window.IZONE_CBT_AUDIO_START_WAIT?.($('start'));window.IZONE_CBT_AUDIO_START_LABEL?.($('start'),true);}catch(e){window.IZONE_CBT_AUDIO_START_WAIT?.($('start'));fail(e);$('preview').disabled=false;}finally{busy=false;updateNativeShell(state,content,undefined,()=>persist());}};$('heard').onchange=()=>$('start').disabled=!(trialPassed&&$('heard').checked);$('cannot-hear').onclick=()=>$('confirm-stop').showModal();$('accept-stop').onclick=()=>{$('confirm-stop').close();void stop('learner_report');};$('cancel-stop').onclick=()=>$('confirm-stop').close();$('volume').oninput=()=>{if(!ownerHeld||!state?.identity)return;state.audioVolume=Number($('volume').value);player?.setVolume(state.audioVolume);$('official-volume').value=$('volume').value;void persist().catch(fail);};}
 async function archive(){await leaveCurrent({abandon:true});}

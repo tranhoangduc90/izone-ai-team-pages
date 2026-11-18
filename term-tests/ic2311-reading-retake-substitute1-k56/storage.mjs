@@ -20,4 +20,15 @@ export class DurableStore{
    if(!localOk&&!dbOk)throw Object.assign(Error('Không lưu được bài trên thiết bị. Hãy giữ nguyên trang và liên hệ giảng viên.'),{code:'LOCAL_PERSIST_FAILED'});return copy;};
   const p=this.queue.catch(()=>{}).then(save);this.queue=p;return p;
  }
+
+ async clear(key,expected){
+  await this.queue.catch(()=>{});
+  
+  const matches=value=>!value||!expected||Object.entries(expected).every(([name,wanted])=>(name==='attemptId'||name==='generation'?value.identity?.[name]:value[name])===wanted);
+  const conflict=()=>Object.assign(Error(),{code:'LOCAL_PERSON_CHANGED'});
+  if(this.local&&!matches(JSON.parse(localStorage.getItem(PREFIX+key)||'null')))throw conflict();
+  if(this.db)await new Promise((resolve,reject)=>{const tx=this.db.transaction('records','readwrite'),store=tx.objectStore('records'),read=store.get(key);let mismatch=false;read.onsuccess=()=>{if(!matches(read.result)){mismatch=true;tx.abort();}else store.delete(key);};tx.oncomplete=resolve;tx.onabort=()=>reject(mismatch?conflict():Object.assign(Error(),{code:'LOCAL_PERSIST_FAILED'}));tx.onerror=reject;});
+  if(this.local){if(!matches(JSON.parse(localStorage.getItem(PREFIX+key)||'null')))throw conflict();localStorage.removeItem(PREFIX+key);if(localStorage.getItem(PREFIX+key)!==null)throw Object.assign(Error(),{code:'LOCAL_PERSIST_FAILED'});}
+ }
+
 }
