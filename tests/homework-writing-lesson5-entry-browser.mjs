@@ -36,6 +36,7 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
     b1:'Nợ tăng',a1:'Mua quá mức',x1:'Vay tiền',b2:'Ô nhiễm',a2:'Bỏ đồ còn dùng được'});
   for(const step of ['topic','b1','a1','x1','b2','a2'])state.steps[step].status='passed';
   let confirmed=null,opens=0,checks=0,nativeOpens=0;
+  let draft={text:'',revision:0},submission=null;
   let outlineReads=0,outlineOffline=true,hasRetainedOutline=false,outlineVersionOverride;
   const writeUrl=site+'/homework-writing/?'+new URLSearchParams({mode:'student',assignment:assignmentId,documentId,workspace:'k67'});
   const headers={'access-control-allow-origin':site,'access-control-allow-credentials':'true',
@@ -63,7 +64,17 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
     if(path==='/access/entry')return send({entry:{assignmentId,documentId,studentRef,classId:identity.courseId}});
     if(path==='/assignments')return send([assignment]);
     const assignmentPath='/student/assignments/'+assignmentId;
-    if(path===assignmentPath)return send({assignment,submission:null,draft:{text:'',revision:0},outlineConfirmation:confirmed});
+    if(path===assignmentPath)return send({assignment,submission,draft,outlineConfirmation:confirmed});
+    if(path===assignmentPath+'/draft'&&request.method()==='PUT'){
+      draft={text:request.postDataJSON().text,revision:draft.revision+1};
+      return send(draft);
+    }
+    if(path===assignmentPath+'/submit'&&request.method()==='POST'){
+      assert.equal(request.postDataJSON().draftRevision,draft.revision);
+      assert.ok(request.postDataJSON().idempotencyKey);
+      submission={id:'fixture-lesson5-submission',text:draft.text,status:'queued'};
+      return send(submission,201);
+    }
     if(path===assignmentPath+'/handout'){
       outlineReads++;
       if(outlineOffline&&!hasRetainedOutline)return send({assignmentId,status:'source_unavailable',tables:[],outlinePreview:true,message:'Chưa đọc được dàn ý từ Handout.'});
@@ -146,6 +157,15 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
   await page.getByRole('button',{name:'Tiếp tục viết Thân bài 2 →',exact:true}).waitFor();
   assert.equal(new URL(page.url()).searchParams.get('outline'),'review');
   assert.equal(checks,1);
+  await page.getByRole('button',{name:'Tiếp tục viết Thân bài 2 →',exact:true}).click();
+  await page.locator('#essay').fill('Buying unnecessary products can create more waste and put pressure on household budgets.');
+  await page.getByRole('button',{name:'Nộp thân bài',exact:true}).click();
+  const confirmation=page.locator('.editor-card .notice-panel');
+  await confirmation.waitFor();
+  assert.equal(await confirmation.innerText(),'✓ Bài đã được nhận trên hệ thống');
+  assert.equal(await confirmation.locator('strong').innerText(),'✓ Bài đã được nhận trên hệ thống');
+  assert.doesNotMatch(await page.locator('#app').innerText(),/biên nhận|fixture-lesson5-submission/i);
+  assert.ok((await confirmation.boundingBox()).width<390);
   assert.deepEqual(errors,[]);
 });
 

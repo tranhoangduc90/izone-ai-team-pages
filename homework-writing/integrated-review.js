@@ -175,7 +175,7 @@ export function mountIntegratedReview(root,{result,editable=false,storageKey,gui
         index++;change();renderCard(true);
       };
       sentences.querySelector('[data-delete-card]').onclick=()=>dialog('Xoá thẻ nhận xét này?',
-        '<p>Thẻ sẽ được gỡ khỏi bản đang duyệt. Bài mở đầu đã nộp vẫn được lưu trong biên nhận.</p>',()=>()=>{
+        '<p>Thẻ sẽ được gỡ khỏi bản đang duyệt. Bài học viên đã nộp vẫn được lưu.</p>',()=>()=>{
           overlay.cards??=structuredClone(defaults);overlay.cards.splice(index,1);change();renderCard(true);
         },'Xoá thẻ');
     }
