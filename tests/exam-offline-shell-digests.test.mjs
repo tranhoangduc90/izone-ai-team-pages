@@ -25,9 +25,7 @@ for (const entry of await readdir(root, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue;
   const route = new URL(`${entry.name}/`, root);
   const manifest = new URL('offline-assets.mjs', route);
-  if (!existsSync(manifest)) continue;
-
-  test(`${entry.name} offline shell matches its published files`, async () => {
+  if (existsSync(manifest)) test(`${entry.name} offline shell matches its published files`, async () => {
     const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(manifest.href);
     assert.deepEqual(ASSETS, Object.keys(ASSET_HASHES));
     const sorted = Object.fromEntries(Object.keys(ASSET_HASHES).sort().map(name => [name, ASSET_HASHES[name]]));
@@ -41,6 +39,9 @@ for (const entry of await readdir(root, { withFileTypes: true })) {
   }
   if (entry.name === 'term-test-2-computer-based') versionedManifests.push('offline-assets-browser-cloud-v1.mjs');
   if (entry.name === 'term-test-2-k56-computer-based') versionedManifests.push('offline-assets-listening-report-v2.mjs');
+  if (['mini-test-lesson-5-computer-based', 'pretest-lesson-16-computer-based'].includes(entry.name)) {
+    versionedManifests.push('offline-assets-audio-report-v1.mjs');
+  }
   for (const name of versionedManifests) {
     test(`${entry.name} ${name} matches its published files`, async () => {
       const worker = await readFile(new URL(name.replace('assets-', 'worker-').replace('.mjs', '.js'), route), 'utf8');
