@@ -36,7 +36,7 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
     b1:'Nợ tăng',a1:'Mua quá mức',x1:'Vay tiền',b2:'Ô nhiễm',a2:'Bỏ đồ còn dùng được'});
   for(const step of ['topic','b1','a1','x1','b2','a2'])state.steps[step].status='passed';
   let confirmed=null,opens=0,checks=0,nativeOpens=0;
-  let outlineReads=0,outlineOffline=true,outlineVersionOverride;
+  let outlineReads=0,outlineOffline=true,hasRetainedOutline=false,outlineVersionOverride;
   const writeUrl=site+'/homework-writing/?'+new URLSearchParams({mode:'student',assignment:assignmentId,documentId,workspace:'k67'});
   const headers={'access-control-allow-origin':site,'access-control-allow-credentials':'true',
     'access-control-allow-headers':'content-type,authorization,x-hw-access,x-hw-csrf,x-hw-student,x-hw-document,x-hw-assignment,x-hw-handout,x-hw-person,if-none-match',
@@ -66,9 +66,9 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
     if(path===assignmentPath)return send({assignment,submission:null,draft:{text:'',revision:0},outlineConfirmation:confirmed});
     if(path===assignmentPath+'/handout'){
       outlineReads++;
-      if(outlineOffline)return send({assignmentId,status:'source_unavailable',tables:[],outlinePreview:true,message:'Chưa đọc được dàn ý từ Handout.'});
+      if(outlineOffline&&!hasRetainedOutline)return send({assignmentId,status:'source_unavailable',tables:[],outlinePreview:true,message:'Chưa đọc được dàn ý từ Handout.'});
       return send({assignmentId,status:'ready',sourceSessionRef:ref,sourceVersion:outlineVersionOverride??state.version,
-        readMode:'api',outlineApproved:true,outlinePreview:true,tables:[{id:'body-2',title:'Thân bài 2',topicSentence:state.responses.topicSentence,outlineIdeas:[state.responses.idea1,state.responses.idea2],rows:[]}]});
+        readMode:outlineOffline?'confirmed-outline':'api',outlineApproved:true,outlinePreview:true,tables:[{id:'body-2',title:'Thân bài 2',topicSentence:state.responses.topicSentence,outlineIdeas:[state.responses.idea1,state.responses.idea2],rows:[]}]});
     }
     const editor=assignmentPath+'/handout-editor';
     if(path===editor+'/lessons/lesson5')return send({ok:true,lesson});
@@ -118,6 +118,13 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
   if(await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();
   assert.match(await panel.locator('h2').innerText(),/Dàn ý từ Handout Lesson 5/);
   await panel.getByText('Chưa đọc được dàn ý từ Handout.',{exact:true}).waitFor({timeout:3000});
+  hasRetainedOutline=true;
+  await page.reload();
+  await page.getByRole('button',{name:'Nộp thân bài',exact:true}).waitFor();
+  if(await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();
+  await panel.getByText('Thân bài 2',{exact:true}).waitFor();
+  await panel.getByRole('button',{name:'Thử lại kết nối',exact:true}).waitFor();
+  assert.equal(await panel.locator('#handout-status').textContent(),'Đang xem dàn ý đã xác nhận');
   const retry=panel.locator('#reload-handout');
   const readsBeforeRetry=outlineReads;
   outlineOffline=false;

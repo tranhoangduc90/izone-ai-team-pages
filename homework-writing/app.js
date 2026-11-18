@@ -15,7 +15,7 @@ import { setupTeacherComments } from './teacher-comments.js';
 import { setupTeacherFilters } from './teacher-filters.js';
 import {lesson3Status} from './assignment-status.js';
 import { setupStudentFilters } from './student-filters.js';
-import { setupHandoutPreview } from './handout-preview.js?v=20261118-lesson5';
+import { setupHandoutPreview } from './handout-preview.js?v=20261118-lesson5-retained-outline';
 import {handoutReadOnlyHtml,setupReadOnlyHandout} from './handout-view.js';
 import {setupStudentAlignment,alignmentTeacherQueueHtml,alignmentTeacherViewHtml} from './handout-alignment.js';
 import {setWriting67Scope} from './master170-writing67.js';
@@ -289,9 +289,10 @@ function renderStudent() {
       location.assign(url);
     }:null,
     onModeChange:mode=>{handoutModel.handoutMode=mode;},
-    loadHandout:async()=>{
+    loadHandout:async({refresh=false}={})=>{
       const confirmed=handoutModel.confirmedOutline;
-      if(confirmed&&(!lesson5Experience(a)||confirmed.status==='ready'))return confirmed;
+      const retryingSource=lesson5Experience(a)&&refresh&&confirmed?.readMode==='confirmed-outline';
+      if(confirmed&&(!lesson5Experience(a)||confirmed.status==='ready'&&!retryingSource))return confirmed;
       const result=await api('/student/assignments/'+encodeURIComponent(a.id)+'/handout');
       if(confirmed&&result.status==='ready'){
         if(result.assignmentId!==a.id||result.sourceVersion!==confirmed.sourceVersion||
