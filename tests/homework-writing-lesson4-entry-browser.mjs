@@ -59,7 +59,7 @@ async function exercise(t, options, verify) {
   const extraClass='IC9998';
   const targetLesson={activity:'lesson5',number:5,body:2,title:'Luyện thử Lesson 5',topic:'Synthetic topic.',classes:[classRef,extraClass],defaultClass:classRef,ideaHint:'Chọn tác hại.'};
   const target={...createState(0,targetLesson),ref:'lesson5-fixture-session',activity:'lesson5',classRef,studentRef,vocabulary:{},teacherComments:[]};
-  const teacherData={extraRows:[],sent:[],initialActivity:null};
+  const teacherData={extraRows:[],sent:[],initialActivity:null,writingStatus:'awaiting_teacher'};
   let lastSaved=null;
   await page.context().route('**/*', async route => {
     const request = route.request();
@@ -128,6 +128,10 @@ async function exercise(t, options, verify) {
     if (!url.pathname.startsWith(prefix)) return route.abort();
     const path = url.pathname.slice(prefix.length);
     calls.push(path);
+    if(path==='/teacher/lesson5-progress'){
+      assert.equal(url.searchParams.get('class'),classRef);
+      return send({classRef,students:[{studentRef,status:teacherData.writingStatus,submissionId:'fixture-body2'}]});
+    }
     if (options.slow) await new Promise(resolve => setTimeout(resolve, 160));
     if (path === '/access/config') return send({ version: 1, product: 'homework-writing-5667-local', mode: 'online',
       teacherConsumer: 'homeworkwriting', privateDocsEntry: true });
@@ -213,7 +217,7 @@ test('Lesson 5 keeps the reading position, teacher comments and verified Homewor
     await classLink.locator('#class-select option[value="IC9998"]').waitFor({state:'attached'});
     assert.deepEqual(await classLink.locator('#class-select option').evaluateAll(options=>options.map(option=>option.value)),['IC9998']);
     await classLink.close();
-    await page.getByRole('button',{name:'Dùng idea ở Lesson 5'}).click();
+    await page.getByRole('button',{name:'Đưa idea sang lesson 5 →',exact:true}).click();
     await page.waitForURL('**/writing-handouts/lesson5/');
     await page.locator('#field-idea1').waitFor();
     assert.equal(await page.locator('#field-idea1').inputValue(),'Tiền sinh hoạt thiếu hụt');
@@ -226,10 +230,13 @@ test('Lesson 5 keeps the reading position, teacher comments and verified Homewor
     assert.equal(target.responses.idea1,'Nháp mới của học viên');
     assert.equal(target.steps.topic.status,'draft');
     const teacher=await page.context().newPage();
+    await teacher.addInitScript(()=>{globalThis.IzoneTeacherSso={};});
     teacherData.extraRows=Array.from({length:12},(_,index)=>({studentRef:'student-'+index,displayName:'Học viên '+index}));
     await teacher.goto(site+'/writing-handouts/lesson5/teacher.html');
     const studentCard=teacher.locator('[data-student="'+studentRef+'"]');
     await studentCard.waitFor();
+    const writingStatus=studentCard.locator('[data-writing-progress]');
+    await writingStatus.getByText('Chờ GV duyệt',{exact:false}).waitFor();
     const refresh=teacher.getByRole('button',{name:'Cập nhật',exact:true});
     for(const width of [390,1440]){
       await teacher.setViewportSize({width,height:560});
@@ -251,8 +258,10 @@ test('Lesson 5 keeps the reading position, teacher comments and verified Homewor
     await studentCard.evaluate(card=>scrollBy({top:card.getBoundingClientRect().top-100,behavior:'instant'}));
     const beforeChange=(await studentCard.boundingBox()).y;
     teacherData.extraRows.unshift({studentRef:'new-priority',displayName:'Vừa cần hỗ trợ',sessionRef:'another-session',dashboard:{priority:0,state:'support',activity:{},stepStates:{}}});
+    teacherData.writingStatus='returned';
     await refresh.tap();
     await teacher.locator('[data-student=new-priority]').waitFor({state:'attached'});
+    await writingStatus.getByText('GV đã trả bài',{exact:false}).waitFor();
     assert.ok(Math.abs((await studentCard.boundingBox()).y-beforeChange)<=2);
     const dialog=teacher.locator('#detail');
     const initialLog=Promise.withResolvers();
@@ -272,6 +281,9 @@ test('Lesson 5 keeps the reading position, teacher comments and verified Homewor
     assert.match(await teacher.locator('#lesson5-outline-source').innerText(),/Homework Lesson 4.*Cập nhật/);
     assert.match(await teacher.locator('[data-field-read=idea1]').innerText(),/Nháp mới của học viên/);
     assert.equal(await teacher.locator('#comment-form').isVisible(),true);
+    const reviewLink=teacher.getByRole('link',{name:'Xem bài viết ↗',exact:true});
+    assert.equal(await reviewLink.getAttribute('target'),'_blank');
+    assert.equal(new URL(await reviewLink.getAttribute('href')).searchParams.get('submission'),'fixture-body2');
     const notes=teacher.locator('#comment-text');
     const note='Em giải thích thêm hậu quả của ý thứ nhất nhé.';
     await notes.fill(note);

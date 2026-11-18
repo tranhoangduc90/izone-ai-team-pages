@@ -9,7 +9,7 @@ const apiBase=handoff?.apiBase||(localPreview?location.origin+'/api/handout67/v1
 if(localPreview)globalThis.handout67ApiBase=apiBase;
 async function boot(){
  const activity=document.body.dataset.activity,view=document.body.dataset.view;
- const fromVerifiedDocs=['lesson3','lesson4'].includes(activity)&&view==='student'&&!!handoff?.verifiedDocsStudent;
+ const fromVerifiedDocs=['lesson3','lesson4','lesson5'].includes(activity)&&view==='student'&&!!handoff?.verifiedDocsStudent;
  try{
   if(!/^lesson[1-9]\d*$/.test(activity)||!['student','teacher'].includes(view))throw new Error('ROUTE_INVALID');
   const [response,template]=await Promise.all([(handoff?.request||fetch)(apiBase+'/lessons/'+encodeURIComponent(activity),{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)}),fetch(new URL('./'+view+'.html?v=20261026-startup2',import.meta.url),{redirect:'error',signal:AbortSignal.timeout(15000)})]);
@@ -43,7 +43,7 @@ async function boot(){
    document.querySelector('.topbar>.text-button').remove();
   }
   if(view==='student'&&activity==='lesson15')document.querySelector('[data-lesson-text="classLesson"]')?.remove();
-  if(view==='student'&&activity!=='lesson4')installTeacherEntry({product:'handout67',teacherPath:handoff?'../lesson3/teacher.html':'./teacher.html',context:{class:entryClass},hosts:[document.querySelector('.topbar')]});
+  if(view==='student'&&activity!=='lesson4')installTeacherEntry({product:'handout67',teacherPath:handoff&&activity==='lesson3'?'../lesson3/teacher.html':'./teacher.html',context:{class:entryClass},hosts:[document.querySelector('.topbar')]});
   if(lesson.workflowMode==='whole-chain-v1'&&view==='student'){
    document.querySelector('.login-description').textContent='Giải thích vì sao người ta theo thời trang. Nhập cả A–X–B và Check chung từng ý.';
    document.querySelector('.journey h2').textContent='Thân bài 1 · WHY';document.querySelector('.lesson-tag').textContent='Thân bài 1';
@@ -84,9 +84,9 @@ async function boot(){
   for(const el of document.querySelectorAll('[data-lesson-text]'))el.textContent=texts[el.dataset.lessonText];
   document.querySelector('[data-lesson-brand]')?.setAttribute('aria-label','IZONE Writing Lesson '+lesson.number);
   document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':activity==='lesson4'?lesson.title:'Lesson '+lesson.number+' · Writing · IZONE';
-  const editorVersion=activity==='lesson5'?'20261117-lesson5-ideas':lesson.outlineOnly||['opinion-v1','discussion-v1'].includes(lesson.preparationKind)
-   ?(activity==='lesson4'?'20261117-lesson5-ideas':'20261113-save-log-v1'):'20261109-l3-v1&check=20261101-v1&poll=20261104-v1';
-  const teacherVersion=activity==='lesson5'?'20261117-teacher-first-read':activity==='lesson4'?'20261117-teacher-library67':'20261109-l3-v1';
+  const editorVersion=['lesson4','lesson5'].includes(activity)?'20261118-lesson5-writing':lesson.outlineOnly||['opinion-v1','discussion-v1'].includes(lesson.preparationKind)
+   ?'20261113-save-log-v1':'20261109-l3-v1&check=20261101-v1&poll=20261104-v1';
+  const teacherVersion=activity==='lesson5'?'20261118-lesson5-writing':activity==='lesson4'?'20261117-teacher-library67':'20261109-l3-v1';
   await import(view==='teacher'?'../lesson5/teacher.js?v='+teacherVersion+'&startup=20261026-v2':'../lesson5-thu/app.js?v='+editorVersion);
  }catch(error){
   if(fromVerifiedDocs){
