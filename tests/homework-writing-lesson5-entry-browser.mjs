@@ -36,6 +36,7 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
     b1:'Nợ tăng',a1:'Mua quá mức',x1:'Vay tiền',b2:'Ô nhiễm',a2:'Bỏ đồ còn dùng được'});
   for(const step of ['topic','b1','a1','x1','b2','a2'])state.steps[step].status='passed';
   let confirmed=null,opens=0,checks=0,nativeOpens=0;
+  let outlineReads=0,outlineOffline=true,outlineVersionOverride;
   const writeUrl=site+'/homework-writing/?'+new URLSearchParams({mode:'student',assignment:assignmentId,documentId,workspace:'k67'});
   const headers={'access-control-allow-origin':site,'access-control-allow-credentials':'true',
     'access-control-allow-headers':'content-type,authorization,x-hw-access,x-hw-csrf,x-hw-student,x-hw-document,x-hw-assignment,x-hw-handout,x-hw-person,if-none-match',
@@ -63,8 +64,12 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
     if(path==='/assignments')return send([assignment]);
     const assignmentPath='/student/assignments/'+assignmentId;
     if(path===assignmentPath)return send({assignment,submission:null,draft:{text:'',revision:0},outlineConfirmation:confirmed});
-    if(path===assignmentPath+'/handout')return send({assignmentId,status:'ready',sourceSessionRef:ref,sourceVersion:state.version,
-      readMode:'api',outlineApproved:true,tables:[{id:'body-2',title:'Thân bài 2',topicSentence:state.responses.topicSentence,outlineIdeas:[state.responses.idea1,state.responses.idea2],rows:[]}]});
+    if(path===assignmentPath+'/handout'){
+      outlineReads++;
+      if(outlineOffline)return send({assignmentId,status:'source_unavailable',tables:[],outlinePreview:true,message:'Chưa đọc được dàn ý từ Handout.'});
+      return send({assignmentId,status:'ready',sourceSessionRef:ref,sourceVersion:outlineVersionOverride??state.version,
+        readMode:'api',outlineApproved:true,outlinePreview:true,tables:[{id:'body-2',title:'Thân bài 2',topicSentence:state.responses.topicSentence,outlineIdeas:[state.responses.idea1,state.responses.idea2],rows:[]}]});
+    }
     const editor=assignmentPath+'/handout-editor';
     if(path===editor+'/lessons/lesson5')return send({ok:true,lesson});
     if(path===editor+'/roster')return send({ok:true,classes});
@@ -112,6 +117,19 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
   const toggle=page.locator('#toggle-handout');
   if(await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();
   assert.match(await panel.locator('h2').innerText(),/Dàn ý từ Handout Lesson 5/);
+  await panel.getByText('Chưa đọc được dàn ý từ Handout.',{exact:true}).waitFor({timeout:3000});
+  const retry=panel.locator('#reload-handout');
+  const readsBeforeRetry=outlineReads;
+  outlineOffline=false;
+  outlineVersionOverride=state.version+1;
+  await retry.click();
+  await panel.getByText(/Dàn ý đã đổi/).first().waitFor();
+  assert.equal(outlineReads,readsBeforeRetry+1);
+  assert.equal(await panel.getByText('Thân bài 2',{exact:true}).count(),0);
+  outlineVersionOverride=undefined;
+  await retry.click();
+  await panel.getByText('Thân bài 2',{exact:true}).waitFor();
+  assert.equal(outlineReads,readsBeforeRetry+2);
   assert.equal(await panel.locator('#close-handout').count(),0);
   assert.equal(await toggle.innerText(),'Đóng dàn ý');
   await toggle.click();

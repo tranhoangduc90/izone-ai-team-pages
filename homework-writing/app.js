@@ -289,7 +289,19 @@ function renderStudent() {
       location.assign(url);
     }:null,
     onModeChange:mode=>{handoutModel.handoutMode=mode;},
-    loadHandout:()=>handoutModel.confirmedOutline||api('/student/assignments/'+encodeURIComponent(a.id)+'/handout'),
+    loadHandout:async()=>{
+      const confirmed=handoutModel.confirmedOutline;
+      if(confirmed&&(!lesson5Experience(a)||confirmed.status==='ready'))return confirmed;
+      const result=await api('/student/assignments/'+encodeURIComponent(a.id)+'/handout');
+      if(confirmed&&result.status==='ready'){
+        if(result.assignmentId!==a.id||result.sourceVersion!==confirmed.sourceVersion||
+          result.sourceSessionRef!==confirmed.sourceSessionRef||result.outlineApproved!==true){
+          throw Error('Dàn ý đã đổi. Em có thể lưu nháp rồi về Handout để xác nhận lại dàn ý.');
+        }
+        if(model===handoutModel&&me?.id===handoutPerson)handoutModel.confirmedOutline=result;
+      }
+      return result;
+    },
     saveHandout:body=>api('/student/assignments/'+encodeURIComponent(a.id)+'/handout',body,'PUT'),
     onHandoutChange:()=>{handoutModel.pendingSubmit=null;studentAlignment.draw(null);void persist();},
     isCurrent:()=>model===handoutModel && me?.id===handoutPerson});
