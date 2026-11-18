@@ -23,7 +23,9 @@ const continuity=process.env.K67_JOURNEY_CONTINUITY||'';
 assert.ok(!continuity||['eof','manual','interrupt','reload','upgrade'].includes(continuity));
 const interrupted=['interrupt','reload'].includes(continuity);
 const upgrade=continuity==='upgrade';
+const studentShellRepair=process.env.K67_JOURNEY_MINI_STUDENT_SHELL==='1';
 assert.ok(!(term1&&term2),'Select only one Term profile.');
+assert.ok(!studentShellRepair||(upgrade&&!term),'The student shell upgrade targets Mini K67 CBT.');
 assert.ok(!writingOnly||(term2&&!full),'Writing-only fixture targets Term 2 without real audio.');
 const slug=term1?'term-test-1':term2?'term-test-2':'mini-test-lesson-5';
 const reopenTab=process.env.K67_JOURNEY_REOPEN_TAB==='1';
@@ -304,21 +306,30 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           assert.ok(original?.operationId);
           assert.equal(original.outcome,undefined);
           const cacheFamily=term1?'term1-k67-cbt-shell-v1-':term2?'term2-k67-cbt-shell-v1-':'mini-k67-cbt-shell-v1-';
-          const cachedShells=()=>page.evaluate(async family=>{
+          const cachedShells=()=>page.evaluate(async ({family,studentShellRepair})=>{
             const keys=(await caches.keys()).filter(key=>key.startsWith(family));
             return Promise.all(keys.map(async key=>{
-              const response=await (await caches.open(key)).match(new URL('index.html',location.href));
+              const cache=await caches.open(key);
+              const entry=studentShellRepair
+                ? (await cache.keys()).find(request=>/\/index-(?:listening-first-frame-v1|student-shell-v2)\.html$/.test(new URL(request.url).pathname))
+                : new URL('index.html',location.href);
+              const response=entry&&await cache.match(entry);
               return [key,await response?.text()];
             }));
-          },cacheFamily);
+          },{family:cacheFamily,studentShellRepair});
           const originalShells=await cachedShells();
           assert.equal(originalShells.length,1);
           assert.ok(originalShells[0][1]);
           assert.ok((await fetch(base+'/preview/switch-pages',{method:'POST'})).ok);
           await context.setOffline(false);
-          process.env.K56_FIXTURE_IMPORT_ONLY='1';
-          const {activateWorkerUpdate}=await import('./term2-offline-browser.mjs');
-          await activateWorkerUpdate(page);
+          if(studentShellRepair){
+            await page.reload({waitUntil:'domcontentloaded'});
+            await page.waitForFunction(()=>navigator.serviceWorker.controller?.scriptURL.includes('/offline-worker-student-shell-v2.js?'));
+          }else{
+            process.env.K56_FIXTURE_IMPORT_ONLY='1';
+            const {activateWorkerUpdate}=await import('./term2-offline-browser.mjs');
+            await activateWorkerUpdate(page);
+          }
           const upgradedShells=await cachedShells();
           assert.equal(upgradedShells.length,2);
           assert.deepEqual(upgradedShells.find(([key])=>key===originalShells[0][0]),originalShells[0]);
@@ -327,6 +338,21 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           await page.waitForFunction(()=>window.TERM_TEST_BOOTSTRAP?.miniJourney?.continuity?.());
           assert.deepEqual(await savedSeal(),original);
           assert.equal(await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.miniJourney.view().needsListeningAcknowledgment),false);
+          if(studentShellRepair){
+            await page.close();
+            page=await openPage();
+            await page.goto(url,{waitUntil:'domcontentloaded'});
+            const name=page.getByLabel('Họ và tên dùng khi vào thi');
+            const recover=page.getByRole('button',{name:'Mở bài đã lưu',exact:true});
+            await name.fill('Tên đối chứng khác');
+            await recover.click();
+            await page.getByText('Chưa xác định được bài đúng họ tên và lớp.',{exact:false}).waitFor();
+            await name.fill(studentName);
+            await recover.click();
+            await page.waitForFunction(()=>window.TERM_TEST_BOOTSTRAP?.miniJourney?.continuity?.());
+            assert.deepEqual(await savedSeal(),original);
+            log('student_shell_upgrade_verified',{oldCache:originalShells[0][0],newCache:upgradedShells.find(([key])=>key!==originalShells[0][0])[0]});
+          }
         }
         continue;
       }
