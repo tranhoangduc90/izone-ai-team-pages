@@ -1,4 +1,5 @@
 export async function prepareWritingOffline(){
+ if(document.body.dataset.legacyDemo==='true'){const {prepareLegacyDemoOffline}=await import('./legacy-demo-offline.mjs');return prepareLegacyDemoOffline();}
  if(!('serviceWorker'in navigator)||!('caches'in window))throw Object.assign(Error(),{code:'CACHE_UNAVAILABLE'});
  const r=await fetch('asset-manifest.json',{cache:'no-store',signal:AbortSignal.timeout(12000)});if(!r.ok)throw Error('CACHE_UNAVAILABLE');const manifest=await r.json();
  if(manifest.testId!==document.body.dataset.test||!/^issue611-[a-f0-9]{16}$/.test(manifest.build)||!Array.isArray(manifest.assets))throw Error('CACHE_UNAVAILABLE');

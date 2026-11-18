@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-2-k67-writing-makeup",
-  "build": "issue611-662ddc1327fce0a0",
+  "build": "issue611-6b7e5df25291945e",
   "assets": [
     {
       "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
@@ -15,8 +15,12 @@
       "sha256": "dccacd0f15fb7b10cb6a95f1ef91484bc6bca1fb9b0863a3382e0ac2e91f0df1"
     },
     {
-      "path": "../../shared/master170/assessment-v1.1.css",
+      "path": "../../shared/master170/assessment-v1.1.css?v=20261029-approved-r3",
       "sha256": "9a5eaebb5960eb283bfa1bd20249ea45f18c9751cfa27e99db2cebf25e87241d"
+    },
+    {
+      "path": "../../shared/master170/assessment-v1.1.mjs?v=20261029-approved-r3",
+      "sha256": "123ba2486940da3496d2dfa7a5f0ee40205eb383b19d6641a770f655519f2f3a"
     },
     {
       "path": "../../shared/master170/assets/izone-logo-color.png",
@@ -31,6 +35,10 @@
       "sha256": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8"
     },
     {
+      "path": "../../shared/master170/icons.svg?v=20261028-master11",
+      "sha256": "12de5287dfd02ddc44618a26272e385579e8a87de28b8be1fac6dc49530e0b2a"
+    },
+    {
       "path": "../../shared/master170/icons/close.svg",
       "sha256": "cb408adaa8402c80e51c58067c6ad291c6f2f3705864be9d7e8ba0cba2ca2943"
     },
@@ -39,27 +47,39 @@
       "sha256": "77aa08a191202b3f3e28246c253547a0cd41a1378b05c9e8122e23f50c5dde61"
     },
     {
-      "path": "../../shared/master170/question-layout-v1.1.css",
+      "path": "../../shared/master170/question-layout-v1.1.css?v=20261029-approved-r3",
       "sha256": "41c799966c2fb1b06a0d4b8a1d12c01e8c84263aba3a9bab2c51fed90108b393"
     },
     {
-      "path": "../../shared/master170/substitute-v1.1.css",
+      "path": "../../shared/master170/question-layout-v1.1.mjs?v=20261029-approved-r3",
+      "sha256": "9fdac358d2aba37b919f520dd81b0cd384310f0278216b6d122fc2a1660e02d5"
+    },
+    {
+      "path": "../../shared/master170/substitute-v1.1.css?v=20261028-master11",
       "sha256": "558c12f2a23d814d0ba650523839e07b303a60e356a87a00b4f3862252a01a79"
+    },
+    {
+      "path": "../../shared/master170/substitute-v1.1.mjs?v=20261028-master11",
+      "sha256": "88e4a4290f521cbc9f3f8d9f9dd767e3e41ccc29449e7e8276f0855a983be586"
     },
     {
       "path": "../../shared/master170/theme.css",
       "sha256": "e494624c7588c11d0c6fb9fbf7de691893ae0c7039a13908f7c6e24bcc83f9ca"
     },
     {
-      "path": "../../shared/master170/tokens-v1.1.css",
+      "path": "../../shared/master170/tokens-v1.1.css?v=20261028-master11",
       "sha256": "efa215844ed0588344d4e031460bbeaca16d40d0a8c52904632b89c437e5f540"
     },
     {
-      "path": "../shared/cbt-audio-download-status.css",
+      "path": "../../shared/master170/tokens-v1.1.css?v=20261029-option-bank",
+      "sha256": "efa215844ed0588344d4e031460bbeaca16d40d0a8c52904632b89c437e5f540"
+    },
+    {
+      "path": "../shared/cbt-audio-download-status.css?v=20261111-audio-status-v1",
       "sha256": "4d62a08d3c3f93439ce977312feedecc3cfdaf5315fd9212bae7a6ca90a4a493"
     },
     {
-      "path": "../shared/desktop-exam-guard.css",
+      "path": "../shared/desktop-exam-guard.css?v=20261027-v1&resilience=20261027-v1",
       "sha256": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4"
     },
     {
@@ -75,27 +95,23 @@
       "sha256": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76"
     },
     {
-      "path": "../substitute-k56-shared/styles.css",
-      "sha256": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e"
-    },
-    {
-      "path": "../substitute-k67-shared/semantic-layout.css",
+      "path": "../substitute-k67-shared/semantic-layout.css?v=20260922-reset-layout",
       "sha256": "588ef64059cd30c77c3da4c0965ee9864a4f18ce874137203fc300890337c4db"
     },
     {
-      "path": "../substitute-k67-shared/styles.css",
+      "path": "../substitute-k67-shared/styles.css?rev=20261003-writing-save-cas-v1",
       "sha256": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e"
     },
     {
-      "path": "../substitute-shared/backup-export-submission-recovery-v1.mjs",
+      "path": "../substitute-shared/backup-export-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1",
       "sha256": "9921c9a5bc6f653b7bcf9a644d4359b4c57cead4066460973adf0d232c2387d1"
     },
     {
-      "path": "../substitute-shared/brand.css",
+      "path": "../substitute-shared/brand.css?v=20261014-exam-source-v1&uiRestore=20261108-v2",
       "sha256": "dbff918f7e31b60bc524fc656ed5c060ac3409c8ede58e1651f5274b8dde755f"
     },
     {
-      "path": "../substitute-shared/exam-controls.css",
+      "path": "../substitute-shared/exam-controls.css?v=20261031-reading-workspace-v1",
       "sha256": "c3104b8a4bcefdc52dbe72652151e3df9220af89f9829de4ef966eb9116fba97"
     },
     {
@@ -111,12 +127,20 @@
       "sha256": "e832f8b3e8a08da40ed01399d5184634c9f4d78dff6e1a637c3cfd2656236a5c"
     },
     {
+      "path": "../substitute-skill-shared/class-directory.mjs",
+      "sha256": "b2dbf79704b9aa4945097104e024443312be6ead613bcae73f57bcd1da910cdf"
+    },
+    {
       "path": "../substitute-skill-shared/identity-selection.mjs",
       "sha256": "28cbe583dbb66f2a66042e1565b2f221146c891f041b2cf83f1279dbfd71de57"
     },
     {
+      "path": "../substitute-skill-shared/legacy-demo-offline.mjs",
+      "sha256": "68c39999d4c7a48f42ec109c6adb00eb428e3b04111822aa0d4f2113fb6a68af"
+    },
+    {
       "path": "../substitute-skill-shared/native-reading.mjs",
-      "sha256": "3d5e3c93e8a4884ce531a812f1deed06cdb3bb775785eb43dc49069006ade6ee"
+      "sha256": "efe46b766a5b0ede7e509d6960c800edc78b9f456d341db5e0217a0409317b16"
     },
     {
       "path": "../substitute-skill-shared/native-shell.css",
@@ -124,11 +148,11 @@
     },
     {
       "path": "../substitute-skill-shared/native-shell.mjs",
-      "sha256": "9585f8c6bed3d7e56372ad72b938b0d3872405023f31deb9520852470c1823bb"
+      "sha256": "cd79a1720b290f7818edb4a640854f9b96e8e60dbef7fefd9ce29d87824985af"
     },
     {
-      "path": "../substitute-skill-shared/native-shell.mjs?v=20261117-start-scroll-v1",
-      "sha256": "9585f8c6bed3d7e56372ad72b938b0d3872405023f31deb9520852470c1823bb"
+      "path": "../substitute-skill-shared/native-shell.mjs?v=20261118-parity12-v1",
+      "sha256": "cd79a1720b290f7818edb4a640854f9b96e8e60dbef7fefd9ce29d87824985af"
     },
     {
       "path": "../substitute-skill-shared/native-writing.mjs",
@@ -140,7 +164,7 @@
     },
     {
       "path": "../substitute-skill-shared/offline.mjs",
-      "sha256": "1aa9bbbbbb34d29edab98e01473f2a74042e354aa4797fc30ee23d26dc2abd54"
+      "sha256": "70b507be6e25120ee66cf16525788a7e34b8958a44b84bf558a70199192ee9a7"
     },
     {
       "path": "../substitute-skill-shared/portal-status.mjs",
@@ -155,12 +179,8 @@
       "sha256": "d047605cd8a0c988885f7818aac8e03141e2ce76eb66054913fe8512f021fa2b"
     },
     {
-      "path": "../substitute-skill-shared/writing-controller.mjs",
-      "sha256": "85c9f8cab34a91e10487bc36f1773b22968d1d1536ff73703de19bda2443b36a"
-    },
-    {
-      "path": "../substitute-skill-shared/writing-controller.mjs?v=20261117-start-scroll-v1",
-      "sha256": "85c9f8cab34a91e10487bc36f1773b22968d1d1536ff73703de19bda2443b36a"
+      "path": "../substitute-skill-shared/writing-controller.mjs?v=20261118-parity12-v1",
+      "sha256": "5757ed8de683f93ab73e09566223810717bd2cb3a9c1e6b664fb50a9adb5240d"
     },
     {
       "path": "../substitute-skill-shared/writing-feedback.mjs",
@@ -172,27 +192,15 @@
     },
     {
       "path": "../substitute-skill-shared/writing-result.mjs",
-      "sha256": "f81be43cf1a8675db9d4b0f26643f07886480ea8c9175fd97c040b870e2b35db"
+      "sha256": "1ba81e2f584378234b7e84a91df0bf07bc5a72cf8d57ad3070592218c7687e89"
     },
     {
-      "path": "../substitute-skill-shared/writing.css",
-      "sha256": "7f385efa099e446163e7cc5563441651d83ce23141b803aed7a3267b0eee974e"
-    },
-    {
-      "path": "../substitute-skill-shared/writing.mjs",
-      "sha256": "4bc18054a84431a2999804deef299e40cf8f4e18149de5a42b35240f225a03d2"
-    },
-    {
-      "path": "../substitute-skill-shared/writing.mjs?v=20261117-start-scroll-v1",
-      "sha256": "4bc18054a84431a2999804deef299e40cf8f4e18149de5a42b35240f225a03d2"
+      "path": "../substitute-skill-shared/writing.mjs?v=20261118-parity12-v1",
+      "sha256": "9fb69d36ba86693a8d06706ff31bdfcf275efa721ff782d4d84c6a2b7abd10bd"
     },
     {
       "path": "../substitute-test-1-k56-computer-based/annotations.js",
       "sha256": "424ed9e489e424a3d75a7a127c23167565e92ca28eefcaa6ecd10329fef78262"
-    },
-    {
-      "path": "../substitute-test-1-k56-computer-based/styles.css",
-      "sha256": "0111d675e284bc779e0940a129a6f392cca66b352ce598b5b5ed92c5ac2134ef"
     },
     {
       "path": "../substitute-test-1-k67-computer-based/annotations.js",
@@ -211,6 +219,10 @@
       "sha256": "39cda26eb6a1fa504c5e61eff56966a349e0f662d1f274438502e8efcd060004"
     },
     {
+      "path": "../substitute-test-2-k67-computer-based/content.js",
+      "sha256": "46a25dd57cce8fc58576b7f1ca2dcd1854056f3746dc835e0f79635ec72310e2"
+    },
+    {
       "path": "../substitute-test-2-k67-computer-based/demo-reset.css",
       "sha256": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035"
     },
@@ -219,12 +231,12 @@
       "sha256": "201953304dccc36833a3331b91c593006fbaa77d38bab7887686d2c37151ccaa"
     },
     {
-      "path": "../substitute-test-2-k67-computer-based/styles.css",
+      "path": "../substitute-test-2-k67-computer-based/styles.css?v=20261030-reading-heading-scroll",
       "sha256": "2a40a8fdf9b84ee7a5c436919f846926a97dcda7ad1a49a1a22f6f4103e284d6"
     },
     {
       "path": "index.html",
-      "sha256": "cb7e2e9672ebf21a61ba45fbeb7dcc885b4789786b6ed42d3e0f73adfb1d4a7e"
+      "sha256": "a4882dc434fae4a16ac4e2ea74dc71969f9e5e8602d6eefe3bacd27d639b9bf3"
     },
     {
       "path": "sw.js",

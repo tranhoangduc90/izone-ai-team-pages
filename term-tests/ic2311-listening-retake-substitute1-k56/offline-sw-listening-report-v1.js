@@ -1,5 +1,6 @@
-const CACHE='ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1-20261112-submission-reconciliation-20261114-retake-log-v1-20261116-listening-report-v1';
-const PREVIOUS_CACHES=['ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1-20261112-submission-reconciliation-20261114-retake-log-v1','ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1-20261112-submission-reconciliation','ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1','ic2311-listening-retake-shell-20261110-k56-picker-v1'];
+importScripts('../substitute-skill-shared/legacy-demo-worker.js');
+const CACHE='ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1-20261112-submission-reconciliation-20261114-retake-log-v1-20261116-listening-report-v1-20261118-parity12';
+const PREVIOUS_CACHES=['ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1-20261112-submission-reconciliation-20261114-retake-log-v1-20261116-listening-report-v1','ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1-20261112-submission-reconciliation-20261114-retake-log-v1','ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1-20261112-submission-reconciliation','ic2311-listening-retake-shell-20261110-k56-picker-v1-20261111-audio-status-v1','ic2311-listening-retake-shell-20261110-k56-picker-v1'];
 const shell=new URL('./',self.location.href);
 const project=new URL('../../',shell);
 const preparedMarker=new URL('offline-sw-audio-status-v1.js?shell-prepared=1',shell);
@@ -21,7 +22,7 @@ self.addEventListener('message',event=>{
   event.ports[0].postMessage({ok});
  }).catch(()=>event.ports[0].postMessage({ok:false})));
 });
-self.addEventListener('fetch',event=>{
+function legacyFetch(event){
  const request=event.request,url=new URL(request.url);
  if(request.method!=='GET'||url.origin!==shell.origin)return;
  const entry=request.mode==='navigate'&&(url.pathname===shell.pathname||url.pathname===shell.pathname+'index.html');
@@ -46,4 +47,6 @@ self.addEventListener('fetch',event=>{
   }
   throw error;
  }));
-});
+}
+
+self.addEventListener('fetch',event=>self.routeSubstituteDemoFetch(event,legacyFetch));

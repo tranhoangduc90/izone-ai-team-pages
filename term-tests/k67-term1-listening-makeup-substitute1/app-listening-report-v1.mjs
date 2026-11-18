@@ -1,3 +1,4 @@
+import {connectLegacyPresentation} from '../substitute-skill-shared/legacy-presentation.mjs';
 import {bindStandaloneListeningReport,requireStandaloneListeningVisible,
  verifyStandaloneListeningPackage,sendStandaloneListeningReport} from '../substitute-shared/standalone-listening-report-v1.mjs';
 import {observeRetakeMedia} from '../shared/retake-media-observation-v1.mjs';
@@ -9,7 +10,7 @@ import {beginAudioDownloadStatus} from '../shared/cbt-audio-download-status.mjs?
 import {LocalPlayer,downloadAudio} from './audio-status-v1.mjs?v=20261111-audio-status-v1';
 import {mountNativeListening,nativeLayout,nativeAnnotations} from '../ic2311-listening-retake-substitute1-k56/native-ui.mjs?v=20261111-k67-source-v1';
 const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value;
-function show(id,value=true){$(id).hidden=!value;if(id==='exam'){$('listeningView').hidden=!value;$('identityView').hidden=!value;$('page-shell').classList.toggle('cbt-bootstrap-shell',!value);if(value)$('lobby').hidden=true;}if(id==='finished'&&value)$('lobby').hidden=true;}
+function show(id,value=true){queueMicrotask(()=>legacyUi?.refresh());$(id).hidden=!value;if(id==='exam'){$('listeningView').hidden=!value;$('identityView').hidden=!value;$('page-shell').classList.toggle('cbt-bootstrap-shell',!value);if(value)$('lobby').hidden=true;}if(id==='finished'&&value)$('lobby').hidden=true;}
 const storage=await new DurableStore('k67-makeup:').open().catch(e=>{text('identity-status',e.message);throw e;});
 let reportProfile,takeReport,reportSending=false,retryReportAt=0;
 let state=await storage.get('current'),preparation=await storage.get('preparation'),busy=false,syncing=false,syncFailures=0,retryAt=0,content,roster,prepared=false,reviewMono=null,presentationReady=false,trialPassed=false;
@@ -161,7 +162,8 @@ function renderFinished(){
  const link = $('view-review');
  const confirmed = state.phase === 'submitted' && state.serverConfirmed && !state.pending && state.receipt?.receiptId;
  if (link) link.hidden = !confirmed;
- if (link && confirmed && navigator.onLine && !state.localPersistFailed && new URLSearchParams(location.search).get('result') !== '0') {
+ legacyUi?.refresh();
+ if (!document.body.dataset.substituteInlineResult && link && confirmed && navigator.onLine && !state.localPersistFailed && new URLSearchParams(location.search).get('result') !== '0') {
    location.replace(link.href);
  }
 }
@@ -256,6 +258,7 @@ async function prepareOfflineShell(){
  }catch{return false;}finally{clearTimeout(timer);}
 }
 async function prepare(retry=false){
+ if(!state?.permit&&await legacyUi.restoreSelected())return;
  if(busy||!presentationReady||(!$('student').value&&!state?.permit))return;busy=true;$('prepare').disabled=true;$('class').disabled=true;show('preparation');show('retry-preparation',false);
  const audioStatus=beginAudioDownloadStatus($('prepare-status'),$('download'),{retry,preparing:true,keepTrack:true});
  try{
@@ -384,6 +387,8 @@ addEventListener('pageshow',event=>{
  }).catch(()=>note('Lượt thi đang mở ở tab khác. Hãy quay lại đúng tab.'));
 });
 setInterval(()=>{sampleMedia();if(ownerHeld&&state?.phase==='review'&&reviewMono!==null){const left=Math.max(0,REVIEW_MS-(performance.now()-reviewMono));text('phase-label','Rà đáp án · '+Math.ceil(left/60000)+' phút');if(left<=0)void seal('review_deadline');}if(state?.pending)void synchronize();if(state?.listeningReport)void flushListeningReport();},1000);
+const legacyUi=connectLegacyPresentation({skill:'listening',sourceSlug:'substitute-test-1-k67',getState:()=>state,storage,persist,isBusy:()=>busy||syncing,onPrepare:()=>prepare(),beforeLeave:async()=>{if(ownerHeld&&state?.phase==='playing'){await technicalStop('PAGE_RELOADED_DURING_EXAM');player.finish('technical_stop','page_exit',{stopAudio:true});}},release:()=>{ownerEpoch++;ownerHeld=false;releaseOwner?.();},readReview:async receiptId=>(await journal.request('/review',{receiptId},{permit:state.permit})).value});
+
 try{
  if(state?.permit){if(state.pending||state.listeningReport||!['submitted','technical_stop'].includes(state.phase))await acquireOwner();journal.bind(state.identity,state.permit);if(state.phase==='technical_stop'&&state.interruptionConfirmed===false)await presentInterruption();
  else if(['submitted','technical_stop'].includes(state.phase)){renderFinished();void synchronize(true,!!pendingReview(state));}

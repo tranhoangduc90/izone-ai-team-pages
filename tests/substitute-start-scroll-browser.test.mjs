@@ -45,7 +45,7 @@ async function fixture(t,{roster,serviceWorkers='block'}={}){
   const action=url.pathname.split('/').at(-1);calls.push({action,method:q.method(),classCode:url.searchParams.get('class')});
   if(q.method()!=='GET')return route.abort(); // Không tạo lượt thi, không AI/Portal.
   let data;
-  if(action==='classes')data={classes:[{code:'IC99001'},{code:'IC99002'}],demo:{available:true}};
+  if(action==='classes'||action==='class-directory')data={version:1,testId:url.searchParams.get('testId'),classes:[{code:'IC99001',eligible:true},{code:'IC99002',eligible:true}],demo:{available:true}};
   else if(action==='roster')data=await (roster?.(url.searchParams.get('class'))??{students:[{studentRef:'fixture-1',name:'Học viên giả'}]});
   else return route.abort();
   return route.fulfill({status:200,headers:{'access-control-allow-origin':'*'},contentType:'application/json',body:JSON.stringify(data)});

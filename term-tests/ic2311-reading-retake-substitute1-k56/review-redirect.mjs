@@ -1,6 +1,7 @@
 import { API } from './config.mjs';
 import { DurableStore } from './storage.mjs';
 
+if(new URL(location.href).searchParams.get('class')!=='DEMO'){
 const finished = document.getElementById('finished');
 const receipt = document.getElementById('receipt');
 const result = new URL('../ic2311-retake-review/?skill=reading', location.href);
@@ -8,6 +9,7 @@ const automatic = new URLSearchParams(location.search).get('result') !== '0';
 let checking = false;
 
 async function showResult() {
+  if (document.body.dataset.substituteInlineResult==='true')return;
   if (!finished || finished.hidden || !receipt?.textContent || checking) return;
   checking = true;
   try {
@@ -58,3 +60,5 @@ if (preparationStatus) {
 
 void import('../ic2311-retake-review/student-review-entry.mjs?v=1')
   .then(({attachStudentReview})=>attachStudentReview({api:API,skill:'reading'})).catch(()=>{});
+
+}
