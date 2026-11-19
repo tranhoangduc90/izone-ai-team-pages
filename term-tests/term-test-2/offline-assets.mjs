@@ -112,7 +112,7 @@ export const ASSET_HASHES={
   "../../shared/teacher-auth-state.js": "940c025ca99faee0225cde8270cce0a7a4ceda2062e0fd8a31271c7dbae1f5c2",
   "../../shared/teacher-login-preference.js": "b6640ff8815415ba121acff2b7af6ac567b38f5c41633c2b8c715eeb3f031e4c",
   "../../shared/teacher-session-client.js": "1fb8644f90878bea2be5d282b96ccf07eaa6e904e98885a1afee2ac43853065a",
-  "../../shared/teacher-single-sign-on.js": "4ada5fa5ee979c1e5b2b6bd496da52957e82e9c4142ad546698b937657c2ce9e",
+  "../../shared/teacher-single-sign-on.js": "55c19346665b9bcd9d432261bf354a1d3c0e641aac303621044a80ea4e73902d",
   "../../shared/test-state-observer.mjs": "124cc8fce78afa5cac7cef1b142493a6a7aafc648f50c5c22c90ff0da48d73ce",
   "../../shared/test-student-class.js": "5c868b604fc02faf7b3c60be981b1c87db6c9c8eab8a79364130acbbde87aa0f",
   "../../shared/test-student-identity.js": "4f6e4723b70c7fa57414beb28f4f87cd1f6d087da2806a8bb0ff5f9f1d81389f",
@@ -157,8 +157,8 @@ export const ASSET_HASHES={
   "../shared/teacher-state-tracking.mjs": "a325aa65afd7fb91f42972f91c1a6ae16f733d2d304b589e17987ff9be4deb28",
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../substitute-test-1-k67-computer-based/assets/figures/home-improvement-store.png": "feab5540ce3cac2115201f167f1a05cf5b916021e4ec2c4f67912728290aa150",
-  "../teacher/app.js": "9292035d24e0bebc11f9a3017af3c18236cac1c056f403797e9ad5e48f7891d0",
-  "../teacher/index.html": "2175ab34e2741d0f5a8f7fc4c1fde74a35fea859b3ceace20a352ba7c74885ef",
+  "../teacher/app.js": "7d306cbcb1fc09fd5421e8cf03f096808635fd6bae22fb1b414587240e7619fa",
+  "../teacher/index.html": "e5d6c7a86eb0fb510d4da569e50823762f6e9165b935f35dca77f9b6e491db9a",
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
@@ -167,4 +167,4 @@ export const ASSET_HASHES={
   "offline-worker.js": "58b1a2ff93d85c6a89703296bda096f03e3eafbcc2f5459a9758d322c7e56d39",
   "test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8"
 };
-export const ASSET_BUILD_ID="09335c8d513d6b58804d891ceb2880993efa6953da9307c8cb2aaa505548d7f6";
+export const ASSET_BUILD_ID="9e49adde16e955b72038934c64a28b2a5957995085dac351e3a6087a44f7d5bd";
