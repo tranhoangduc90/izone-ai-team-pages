@@ -1,3 +1,4 @@
+// Offline assets for the Term Test 1 paper journey.
 export const ASSETS=[
   "../../shared/audio/catalog.mjs",
   "../../shared/audio/chunks.mjs",
@@ -82,7 +83,21 @@ export const ASSETS=[
   "offline-worker.js",
   "test-config.js",
   "../shared/app-term1-k67-paper-parallel-v1.js",
-  "../term-paper-shared/journey-term1-parallel-v1.mjs"
+  "../term-paper-shared/journey-term1-parallel-v1.mjs",
+  "../shared/app-term1-k67-paper-browser-cloud-v1.js",
+  "test-config-paper-cloud-v1.js",
+  "../shared/exam-journal/bridge.mjs",
+  "../shared/exam-journal/bridge-k67-paper-v1.mjs",
+  "../shared/exam-journal/bridge-term1-k67-paper-browser-cloud-v1.mjs",
+  "../shared/exam-journal/recorder.mjs",
+  "../shared/exam-journal/outbox.mjs",
+  "../shared/exam-journal/audio-delivery.mjs",
+  "../shared/exam-journal/pilot-mini-k67-paper-browser-dispatch-v1.mjs",
+  "../shared/exam-journal/k67-paper-pilot-browser-transport-v1.mjs",
+  "../shared/exam-journal/k67-pilot-browser-policy.mjs",
+  "../shared/exam-journal/k67-pilot-legacy-drain.mjs",
+  "../shared/exam-journal/k67-pilot-browser-transport.mjs",
+  "../shared/exam-journal/sealed-batch.mjs"
 ];
 export const ASSET_HASHES={
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -164,10 +179,24 @@ export const ASSET_HASHES={
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-paper-shared/journey-submission-recovery-v1.mjs": "0df16a7b8a632fd2de7ae73912534a40abe1e80c13ab3e57b2f98b2b23695195",
-  "index.html": "df1eb75bf8482d2f8d61f0cefa8b84b5e6eeb6df90371d536f7065818ddc9c11",
+  "index.html": "0678ca508dbb8382fcf8147d672698e0b7235579cc0b9828581fd6872f37170c",
   "offline-worker.js": "8eabbc43b56c4b5b404fa102134f88d19c1bfce3cd32b8b4bbbf74754fd1b4fa",
   "test-config.js": "82de9c261e20fc107ed0c0b76c4e8b48d6b9e4d64f03d86bf2060a51e411cc4b",
   "../shared/app-term1-k67-paper-parallel-v1.js": "9a01954717eb63f78fe5e8c4b57f13c0d35d1bdf6a00c499e79fe5af110438fb",
-  "../term-paper-shared/journey-term1-parallel-v1.mjs": "d5146cc1bcfe530ad9f175a43fe3533361853c1ed2e526ae61d559c3a4f9a53e"
+  "../term-paper-shared/journey-term1-parallel-v1.mjs": "d5146cc1bcfe530ad9f175a43fe3533361853c1ed2e526ae61d559c3a4f9a53e",
+  "../shared/app-term1-k67-paper-browser-cloud-v1.js": "345cbdedd75316e502ff29827f7dfa713dfe5a4cbeb699c74109500d36f361d9",
+  "test-config-paper-cloud-v1.js": "21d973d70000f79aedda9535cfe765e0290b005df4ee8cd1b9e3f2c7525be50f",
+  "../shared/exam-journal/bridge.mjs": "4066a35e17ab053d14723608d03e55e967d54fdd7e2edbe971c444f4d700da73",
+  "../shared/exam-journal/bridge-k67-paper-v1.mjs": "46b5d6ad18f385d5d548d8fd0a4993b66be476ebd7d152fa4babe8550cf14968",
+  "../shared/exam-journal/bridge-term1-k67-paper-browser-cloud-v1.mjs": "771a7f71452108763ef7dc15a79eb6b556e8a468195c979ae2ddc13dccfe4ac3",
+  "../shared/exam-journal/recorder.mjs": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76",
+  "../shared/exam-journal/outbox.mjs": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f",
+  "../shared/exam-journal/audio-delivery.mjs": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4",
+  "../shared/exam-journal/pilot-mini-k67-paper-browser-dispatch-v1.mjs": "9ff47961c4a3edf3ed26fff0eebd5df1ba05bfaae45862df3dbb0abde4e846ba",
+  "../shared/exam-journal/k67-paper-pilot-browser-transport-v1.mjs": "3f6bd4f862119ca18a3ed113fb579cab9ba13a6e10cfd5f647b23830756503c6",
+  "../shared/exam-journal/k67-pilot-browser-policy.mjs": "d4afd6aa20e02bdc3daaa668e2a7f71eb0d76c3936a42df750daa87d822b9e6d",
+  "../shared/exam-journal/k67-pilot-legacy-drain.mjs": "f72cc09561248980cb7276f61df5287f6225483ce7b92918b8e71637308f4727",
+  "../shared/exam-journal/k67-pilot-browser-transport.mjs": "a38d467efe78cc77dc5bc889d1d13fdf42f32f39057d40c0ea5da1ffae73a59c",
+  "../shared/exam-journal/sealed-batch.mjs": "9507dbf9f26e78a3f0df7d18e78f697588a02571ac88bb90d8cec7340a7661f2"
 };
-export const ASSET_BUILD_ID="c383e325130ac6ce97c0c8f1ce79bd5094ca298d47865bfe6f703820c81ea941";
+export const ASSET_BUILD_ID="eb651e93cccf72261178c4e84a21b0841b13270ed93d476dee34639bd10a4ced";
