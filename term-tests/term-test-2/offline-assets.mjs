@@ -1,4 +1,4 @@
-// Tạo từ byte public Git/Pages (text LF); không chứa đáp án hoặc quyền.
+// Offline assets for the Term Test 2 paper journey.
 export const ASSETS=[
   "../../shared/audio/catalog.mjs",
   "../../shared/audio/chunks.mjs",
@@ -88,7 +88,16 @@ export const ASSETS=[
   "../term-paper-shared/journey-term2-parallel-v1.mjs",
   "index.html",
   "offline-worker.js",
-  "test-config.js"
+  "test-config.js",
+  "../shared/app-term2-k67-paper-browser-cloud-v1.js",
+  "test-config-paper-cloud-v1.js",
+  "../shared/exam-journal/bridge-term2-k67-paper-browser-cloud-v1.mjs",
+  "../shared/exam-journal/pilot-mini-k67-paper-browser-dispatch-v1.mjs",
+  "../shared/exam-journal/k67-paper-pilot-browser-transport-v1.mjs",
+  "../shared/exam-journal/k67-pilot-browser-policy.mjs",
+  "../shared/exam-journal/k67-pilot-legacy-drain.mjs",
+  "../shared/exam-journal/k67-pilot-browser-transport.mjs",
+  "../shared/exam-journal/sealed-batch.mjs"
 ];
 export const ASSET_HASHES={
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -177,8 +186,17 @@ export const ASSET_HASHES={
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-paper-shared/journey-submission-recovery-v1.mjs": "0df16a7b8a632fd2de7ae73912534a40abe1e80c13ab3e57b2f98b2b23695195",
   "../term-paper-shared/journey-term2-parallel-v1.mjs": "9c2340f6e060d12e91b8730c3a9df5b03b1bd8eb89f65e9d8cf49a6fead19638",
-  "index.html": "2e31c8917661dbedd59f66c30a276e0f34190547c5686edaf52fd7e03725439f",
+  "index.html": "f17b131668dc47c695e7d5b1470cd27f0ee19cc6e3a199bfb78744717cfcfdda",
   "offline-worker.js": "461e88670af92ff4f0b2ced0d60d19f148c1960b2cdf22672df54166a6a9d9de",
-  "test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8"
+  "test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8",
+  "../shared/app-term2-k67-paper-browser-cloud-v1.js": "0bc2abc8f2893d3a2245281da61ad7450f973214ef4ece6f900d9c6e947d8698",
+  "test-config-paper-cloud-v1.js": "809ab8944a5cbbf31ef1be6d04585094cbea07d0e18b38ed570f009d96004e94",
+  "../shared/exam-journal/bridge-term2-k67-paper-browser-cloud-v1.mjs": "8f18007bfae3f4ab419dbdfc9f2e0541d3dd851eb964f11c63fc723dde590866",
+  "../shared/exam-journal/pilot-mini-k67-paper-browser-dispatch-v1.mjs": "9ff47961c4a3edf3ed26fff0eebd5df1ba05bfaae45862df3dbb0abde4e846ba",
+  "../shared/exam-journal/k67-paper-pilot-browser-transport-v1.mjs": "3f6bd4f862119ca18a3ed113fb579cab9ba13a6e10cfd5f647b23830756503c6",
+  "../shared/exam-journal/k67-pilot-browser-policy.mjs": "d4afd6aa20e02bdc3daaa668e2a7f71eb0d76c3936a42df750daa87d822b9e6d",
+  "../shared/exam-journal/k67-pilot-legacy-drain.mjs": "f72cc09561248980cb7276f61df5287f6225483ce7b92918b8e71637308f4727",
+  "../shared/exam-journal/k67-pilot-browser-transport.mjs": "a38d467efe78cc77dc5bc889d1d13fdf42f32f39057d40c0ea5da1ffae73a59c",
+  "../shared/exam-journal/sealed-batch.mjs": "9507dbf9f26e78a3f0df7d18e78f697588a02571ac88bb90d8cec7340a7661f2"
 };
-export const ASSET_BUILD_ID="cd103980d5909c5ac1b043199fca351d15dc4c543271f151ae896fc16584d8b1";
+export const ASSET_BUILD_ID="d328a332f6d8041adf7d4d485463e40c2f7b62f29a8dbf794aebc229ce853b2b";
