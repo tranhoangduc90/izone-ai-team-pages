@@ -43,6 +43,17 @@ test('Listening Homework restores its own source without changing discovery on o
  const other=setup(()=>response(200));await assert.rejects(other.box.IzoneTeacherSso.restore('listeninghomework'));
 });
 
+test('CTA restores the shared session only on its own operator page and never replays a submit',async()=>{
+ const page='https://tranhoangduc90.github.io/izone-ai-team-pages/cta-link-67/';
+ const {box,calls}=setup(url=>response(url.endsWith('/submit')?401:200),'k67-cta',page);
+ assert.equal(await box.IzoneTeacherSso.restore('k67-cta'),true);
+ const url=origin+'/operator/cta/submit';
+ assert.equal((await box.fetch(url,{method:'POST',credentials:'include'})).status,401);
+ assert.deepEqual(calls.map(c=>c.url),[origin+'/teacher-session-api/v1/restore/k67-cta',url]);
+ const other=setup(()=>response(200));await assert.rejects(other.box.IzoneTeacherSso.restore('k67-cta'));
+ assert.equal(other.calls.length,0);
+});
+
 test('Shops native session shares the common startup result and retains its own adapter',async()=>{
  const {box,calls}=setup(()=>response(200),'shops');
  assert.equal(await box.IzoneTeacherSso.restore('shops'),true);
