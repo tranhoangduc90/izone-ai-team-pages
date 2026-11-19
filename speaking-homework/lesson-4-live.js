@@ -7,6 +7,7 @@ import { createSpeakingIdentity } from './speaking-identity.js?v=20261104-self-m
 import { createSpeakingLivePoller as createPendingPoller } from './live-tracking.js?v=20261102-speaking1';
 import { createAutoSubmit } from './auto-submit.js?v=20261019-auto-submit-v1';
 import { parseShareUrl } from './logic.mjs';
+import { resolveSpeakingCta } from './speaking-cta-code.js';
 import { freestyleInstructions } from './assignment-instructions.js';
 import { lesson5Code, lesson5Parts } from './lesson-5-parts.js';
 import { lesson6Code, lesson6Parts } from './lesson-6-parts.js';
@@ -45,8 +46,10 @@ const expectedAssignmentCode = lessonNumber === 15 ? lesson15Code
   : lessonNumber === 7 ? lesson7Code
   : lessonNumber === 6 ? lesson6Code
   : lessonNumber === 5 ? lesson5Code : '67-speaking-diem_giua';
-document.body.dataset.teacherCode = expectedAssignmentCode;
 const assignmentCode = query.get('assignmentCode') || expectedAssignmentCode;
+const selectedCta = resolveSpeakingCta(location.search, lessonNumber);
+const validPageCode = selectedCta.status === 'valid' && selectedCta.lesson === lessonNumber;
+document.body.dataset.teacherCode = validPageCode ? assignmentCode : expectedAssignmentCode;
 const classHint = query.get('class') || '';
 const $ = id => document.getElementById(id);
 const parts = lessonNumber === 15 ? lesson15Parts : lessonNumber === 14 ? lesson14Parts : lessonNumber === 13 ? lesson13Parts : lessonNumber === 12 ? lesson12Parts : lessonNumber === 11 ? lesson11Parts : lessonNumber === 10 ? lesson10Parts : lessonNumber === 9 ? lesson9Parts : lessonNumber === 8 ? lesson8Parts : lessonNumber === 7 ? lesson7Parts : lessonNumber === 6 ? lesson6Parts : lessonNumber === 5 ? lesson5Parts : [
@@ -100,7 +103,10 @@ async function post(path, body, timeout = 20_000) {
   }
 }
 function identity() { return { accessToken: state.accessToken, studentRef: state.studentRef }; }
-function draftKey() { return `speaking-homework:lesson-${lessonNumber}:${independent ? workUnitId : documentId}:${state.studentRef}`; }
+function draftKey() {
+  const scope = validPageCode && assignmentCode !== expectedAssignmentCode ? assignmentCode : `lesson-${lessonNumber}`;
+  return `speaking-homework:${scope}:${independent ? workUnitId : documentId}:${state.studentRef}`;
+}
 // Chỉ giữ ô rỗng khi người dùng đã sửa ô; nháp rỗng tự sinh vẫn nạp link máy chủ.
 // Sau nộp, hiện lại link của biên nhận và khóa sửa như trước.
 function hydrateField(input, savedValue) {
@@ -575,7 +581,7 @@ const poller = createPendingPoller({
 const identityController = createSpeakingIdentity({
   sharedIdentityEnabled: true,
   apiBase: identityApi, identityBase, assignmentCode, lessonNumber, originalDocumentId, classHint, allowWebReceipt: independentRequested,
-  validateAssignment: assignment => assignmentCode === expectedAssignmentCode
+  validateAssignment: assignment => (assignmentCode === expectedAssignmentCode || validPageCode)
     && assignment.parts?.length === parts.length && parts.every((part,index) => assignment.parts[index]?.part_key === part.key)
     && (lessonNumber !== 5 || (Number(assignment.parts[0].min_questions) === 3 && Number(assignment.parts[1].min_questions) === 1))
     && (lessonNumber !== 6 || assignment.parts.every((part, index) => Number(part.min_questions) === [0, 2, 1][index]))

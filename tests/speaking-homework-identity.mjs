@@ -56,15 +56,17 @@ async function setup(lesson, options = {}) {
   let submitted = false;
   let rosterError = options.rosterError || false;
   page.on('pageerror', error => errors.push(error.message));
-  await page.addInitScript(({ key, remembered, unavailable, writeBlocked, legacyDraft }) => {
+  await page.addInitScript(({ key, remembered, unavailable, writeBlocked, legacyDraft, seedDraft }) => {
     if (remembered) localStorage.setItem(key, JSON.stringify({ version: 1, studentRef: remembered }));
     if (legacyDraft) localStorage.setItem('speaking-homework:lesson-2:11111111-1111-4111-8111-111111111111', JSON.stringify({ paraphrase: 'legacy-link' }));
+    if (seedDraft) localStorage.setItem(seedDraft.key, seedDraft.data);
     if (unavailable) Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('Disabled', 'SecurityError'); } });
     if (writeBlocked) {
       Storage.prototype.setItem = function () { throw new DOMException('Quota', 'QuotaExceededError'); };
       Storage.prototype.removeItem = function () { throw new DOMException('Quota', 'QuotaExceededError'); };
     }
-  }, { key, remembered: options.remembered, unavailable: options.unavailable, writeBlocked: options.writeBlocked, legacyDraft: options.legacyDraft });
+  }, { key, remembered: options.remembered, unavailable: options.unavailable, writeBlocked: options.writeBlocked,
+    legacyDraft: options.legacyDraft, seedDraft: options.seedDraft });
   await page.route('https://ducizone.ddns.net/mapping-api/api/speaking-homework*/**', async route => {
     const path = new URL(route.request().url()).pathname.split(/\/api\/speaking-homework(?:-independent)?/)[1];
     const body = route.request().postDataJSON();
@@ -84,7 +86,9 @@ async function setup(lesson, options = {}) {
         students: options.unmatched ? [{student_ref:refA,name:'Tên ERP chưa ghép'},{student_ref:refOther,name:'Học viên ERP khác'}] : options.empty ? [] : options.duplicate ? [{ student_ref: refA, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }]
           : code === 'IC2304' ? [{ student_ref: refOther, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }] : [{ student_ref: refB, name: 'Học viên lớp B' }],
         parts: lesson.parts.map((part_key, index) => ({ part_key, min_questions: lesson.number === 6 ? [0, 2, 1][index] : part_key === 'freestyle' && (lesson.number === 5 || lesson.number === 4 && code === 'IC2304') ? 1 : 3 })), requiredPracticeCount: lesson.number >= 4 ? 2 : 0, assignmentStatus: 'open', doctorEnabled: lesson.number !== 3 } };
-    } else if (path === '/session/start-selected') data = { session: { intakeMode: lesson.number < 6 ? 'legacy' : 'independent', accessToken: `${code}-${body.studentRef}`, classCode: options.badSession ? 'IC9999' : code, studentRef: body.studentRef, documentId: body.documentId || `own-${code}-${body.studentRef}` } };
+    } else if (path === '/session/start-selected') data = { session: { intakeMode: options.workUnitId || lesson.number >= 6 ? 'independent' : 'legacy',
+      ...(options.workUnitId ? { workUnitId: options.workUnitId } : {}), accessToken: `${code}-${body.studentRef}`,
+      classCode: options.badSession ? 'IC9999' : code, studentRef: body.studentRef, documentId: body.documentId || `own-${code}-${body.studentRef}` } };
     else if (path === '/open') {
       opens += 1;
       if (options.failPoll && opens === 3) { status = 429; data = { ok: false, message: 'Đợi rồi thử lại' }; }
@@ -98,7 +102,11 @@ async function setup(lesson, options = {}) {
     try { await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ ok: true, ...data }) }); }
     catch (error) { if (!options.delayA) throw error; }
   });
-  await page.goto(`${origin}/speaking-homework/${lesson.file}${options.query || ''}`);
+  const entry = new URL(`${origin}/speaking-homework/${lesson.file}${options.query || ''}`);
+  if (entry.searchParams.has('documentId') && !entry.searchParams.has('assignmentCode')) {
+    entry.searchParams.set('assignmentCode', lesson.code);
+  }
+  await page.goto(entry.href);
   await page.waitForFunction(() => !document.getElementById('class-select').disabled || !document.getElementById('student-select').disabled || !document.getElementById('reload-roster').hidden);
   return { page, context, requests, errors, clearError() { rosterError = false; } };
 }
@@ -180,6 +188,35 @@ try {
       await context.close();
     });
   }
+  await scenario('Lesson 5 kỳ 2 định tuyến bằng mã và chỉ khôi phục nháp của chính mã clone', async () => {
+    const lesson = lessons.find(item => item.number === 5);
+    const clone = `${lesson.code}-clone`;
+    const workUnitId = 'fixture-clone-unit';
+    const originalDraftKey = `speaking-homework:lesson-5:${workUnitId}:${refA}`;
+    const oldDraft = '{"freestyle":"https://chatgpt.com/share/old-1234567890"}';
+    const test = await setup({ ...lesson, file: 'lesson-9.html', code: clone }, {
+      query: `?assignmentCode=${clone}&documentId=fixture-second-term&class=IC2304`, workUnitId,
+      seedDraft: { key: originalDraftKey, data: oldDraft }
+    });
+    try {
+      assert.equal(new URL(test.page.url()).pathname.split('/').at(-1), 'lesson-5.html');
+      await choose(test.page, 'IC2304', refA);
+      await open(test.page);
+      assert.equal(test.requests.findLast(r => r.path === '/session/start-selected').body.assignmentCode, clone);
+      const input = test.page.locator('#freestyle-link');
+      assert.equal(await input.inputValue(), '');
+      const newDraft = 'https://chatgpt.com/share/new-1234567890';
+      await input.fill(newDraft);
+      await test.page.reload();
+      await test.page.waitForFunction(() => document.getElementById('class-select')?.value === 'IC2304');
+      await choose(test.page, 'IC2304', refA);
+      await open(test.page);
+      assert.equal(await input.inputValue(), newDraft);
+      assert.equal(await test.page.evaluate(key => localStorage.getItem(key), originalDraftKey), oldDraft);
+    } finally {
+      await test.context.close();
+    }
+  });
   await scenario('Lesson 2 preserves old direct draft only in original class, never CTA or other class', async () => {
     for (const [code, ref, query, expected] of [['IC2304', refA, '', 'legacy-link'], ['IC2305', refB, '', ''], ['IC2304', refA, '?documentId=other-doc&class=IC2304', '']]) {
       const test = await setup(lessons[0], { legacyDraft: true, query });
