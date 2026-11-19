@@ -81,7 +81,10 @@ async function exercise(t,run){
       if(p==='/access/identity/resolve')return send({ok:true,status:'unique',identity:{authority:'erp-contact',id:'201'},aliases:[{studentRef,classId,classCode:classRef,studentName:person.label}]});
       if(p==='/assignments')return send([assigned]);
       if(p===base)return send({assignment:assigned,submission:state.returned?{id:'fixture-submission',text:'Mở bài đã nộp.'}:null,draft:{text:'',revision:0}});
-      if(p===base+'/handout')return send({assignmentId:assignment,sourceVersion:8,status:'ready',outlineApproved:true,outlinePreview:true,tables:[]});
+      if(p===base+'/handout')return send({assignmentId:assignment,sourceVersion:8,status:'ready',outlineApproved:true,outlinePreview:true,tables:[
+        {id:'body-1',title:'Thân bài 1',outlinePosition:'Nghiêng về phản đối',topicSentence:'Topic sentence one.',outlineIdeas:['Idea one.','Idea two.']},
+        {id:'body-2',title:'Thân bài 2',topicSentence:'Topic sentence two.',outlineIdeas:['Idea three.','Idea four.']},
+      ]});
       if(p===editor+'/lessons/lesson3')return send({ok:true,lesson});
       if(p===editor+'/roster'){
         if(state.rosterError)return send({ok:false,error:'ROSTER_UNAVAILABLE'},state.rosterError);
@@ -137,6 +140,9 @@ test('Docs → Handout → Writing uses one identity confirmation even when Mapp
   assert.match(await page.locator('#workspace').textContent(),/Dàn ý đã lưu của đúng học viên/);
   await page.getByRole('button',{name:'Xác nhận',exact:true}).click();
   await page.locator('#essay').waitFor();
+  await page.locator('#handout-preview .lesson3-outline-body').first().waitFor();
+  assert.equal(await page.locator('#handout-preview .lesson3-outline-body').count(),2);
+  assert.equal(await page.locator('#handout-preview .handout-summary-table').count(),0);
   assert.equal(calls.filter(p=>p===editor+'/sessions').length,1);
   assert.equal(calls.filter(p=>p==='/access/student/link').length,1);
   assert.equal(calls.includes('mapping'),false);

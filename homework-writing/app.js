@@ -15,7 +15,7 @@ import { setupTeacherComments } from './teacher-comments.js';
 import { setupTeacherFilters } from './teacher-filters.js';
 import {lesson3Status} from './assignment-status.js';
 import { setupStudentFilters } from './student-filters.js';
-import { setupHandoutPreview } from './handout-preview.js?v=20261118-lesson5-retained-outline';
+import { setupHandoutPreview } from './handout-preview.js?v=20261119-lesson5-full-outline';
 import {handoutReadOnlyHtml,setupReadOnlyHandout} from './handout-view.js';
 import {setupStudentAlignment,alignmentTeacherQueueHtml,alignmentTeacherViewHtml} from './handout-alignment.js';
 import {setWriting67Scope} from './master170-writing67.js';
@@ -289,9 +289,9 @@ function renderStudent() {
       location.assign(url);
     }:null,
     onModeChange:mode=>{handoutModel.handoutMode=mode;},
-    loadHandout:async({refresh=false}={})=>{
+    loadHandout:async({refresh=false,isCurrent=()=>true}={})=>{
       const confirmed=handoutModel.confirmedOutline;
-      const retryingSource=lesson5Experience(a)&&refresh&&confirmed?.readMode==='confirmed-outline';
+      const retryingSource=lesson5Experience(a)&&refresh;
       if(confirmed&&(!lesson5Experience(a)||confirmed.status==='ready'&&!retryingSource))return confirmed;
       const result=await api('/student/assignments/'+encodeURIComponent(a.id)+'/handout');
       if(confirmed&&result.status==='ready'){
@@ -299,7 +299,7 @@ function renderStudent() {
           result.sourceSessionRef!==confirmed.sourceSessionRef||result.outlineApproved!==true){
           throw Error('Dàn ý đã đổi. Em có thể lưu nháp rồi về Handout để xác nhận lại dàn ý.');
         }
-        if(model===handoutModel&&me?.id===handoutPerson)handoutModel.confirmedOutline=result;
+        if(isCurrent())handoutModel.confirmedOutline=result;
       }
       return result;
     },
