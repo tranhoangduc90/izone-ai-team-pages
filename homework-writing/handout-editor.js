@@ -1,9 +1,11 @@
 import {draftKey,loadBackup,saveBackup} from './drafts.js';
-import {handoutTablesHtml} from './handout-tables.js';
+import {handoutTablesHtml} from './handout-tables.js?v=20261119-lesson5-full-outline';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function setupHandoutEditor(root,{person,assignment,save,isCurrent,onChange=()=>{}}){
  const storage=draftKey(person.id,assignment.id,'handout');let data,local,editing=false,dirty=false,pending=null,conflict=null,loaded=false,saving=null,mutation=0;
  const content=()=>root.querySelector('#handout-content'),status=()=>root.querySelector('#handout-status');
+ const lesson5=assignment.experience==='lesson5-consumerism-body-v1';
+ let renderedOutline;
  const active=()=>root.isConnected&&isCurrent();
  function collect(){if(!local)return;root.querySelectorAll('[data-handout-path]').forEach(el=>{const p=JSON.parse(el.dataset.handoutPath);let dest=local;for(const k of p.slice(0,-1))dest=dest[k];dest[p.at(-1)]=el.value;});}
  async function backup(){collect();if(!data)return;try{await saveBackup(storage,{tables:local,baseRevision:data.revision,fingerprint:data.fingerprint,dirty,editing,pending});}catch{if(active())status().textContent='Chưa lưu dự phòng được; em giữ một bản sao trước khi rời trang.';}}
@@ -13,9 +15,14 @@ export function setupHandoutEditor(root,{person,assignment,save,isCurrent,onChan
   const sourceBadge=root.querySelector('.handout-person .badge');
   if(data.sourceKind==='homework-created-trial')sourceBadge.textContent='Handout thử · Homework';
   else if(data.readMode==='homework-copy')sourceBadge.textContent='Bản sao Homework';
+  else if(lesson5&&data.status==='ready')sourceBadge.textContent=data.readMode==='submission-snapshot'?'Dàn ý lúc nộp':'Dàn ý đã chốt';
   else sourceBadge.textContent=data.tables.length?'Nguồn K67 · bản sao':'Chưa có handout';
   if(data.outlinePreview){
-    content().innerHTML='<p class="section-note">'+esc(data.message||'')+'</p>'+handoutTablesHtml(data.tables,esc);
+    const markup='<p class="section-note">'+esc(data.message||'')+'</p>'+handoutTablesHtml(data.tables,esc,{lesson5});
+    if(!lesson5||markup!==renderedOutline){
+      content().innerHTML=markup;
+      renderedOutline=markup;
+    }
     return;
   }
   content().innerHTML=`<p class="section-note">${esc(data.message||'')}</p><div class="handout-copy-tools">${data.canEdit?`<button type="button" data-edit-handout ${editing?'hidden':''}>Chỉnh handout</button><button type="button" data-save-handout ${editing?'':'hidden'}>Lưu handout</button><button type="button" data-cancel-handout ${editing?'':'hidden'}>Hủy</button>`:'<span class="badge neutral">Chỉ đọc · lượt bài đã được nhận hoặc chưa đủ nguồn</span>'}<span data-handout-save-status role="status">${dirty?'Có chỉnh sửa chưa lưu':data.revision?'Đã lưu bản '+data.revision:'Bản sao nguồn chưa chỉnh'}</span></div><div data-handout-conflict></div>`+

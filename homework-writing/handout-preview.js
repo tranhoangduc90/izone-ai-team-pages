@@ -1,5 +1,5 @@
-import {setupHandoutEditor} from './handout-editor.js';
-import { handoutTablesHtml } from './handout-tables.js';
+import {setupHandoutEditor} from './handout-editor.js?v=20261119-lesson5-full-outline';
+import { handoutTablesHtml } from './handout-tables.js?v=20261119-lesson5-full-outline';
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function handoutPreviewHtml(assignment, person, result = {tables:[]}) {
   const lesson5=assignment.experience==='lesson5-consumerism-body-v1';
@@ -15,8 +15,9 @@ export function setupHandoutPreview(root,{assignment,person,initialMode='handout
   const handout=root.querySelector('#handout-preview'), feedback=root.querySelector('#approved-feedback');
   const toggle=root.querySelector('#toggle-handout'), showFeedback=root.querySelector('#show-feedback');
   const lesson5=assignment.experience==='lesson5-consumerism-body-v1';
-  let mode=feedback ? 'feedback' : 'closed', request=0,copyEditor;
+  let mode=feedback ? 'feedback' : 'closed', request=0,copyEditor,shownOutline=false;
   handout.innerHTML=handoutPreviewHtml(assignment,person);
+  handout.classList.toggle('handout-lesson5',lesson5);
   if(revisitOutline){
     const button=document.createElement('button');
     button.type='button';button.textContent='Về Handout Lesson 5';
@@ -33,17 +34,33 @@ export function setupHandoutPreview(root,{assignment,person,initialMode='handout
   const current = id => id === request && mode === 'handout' && isCurrent() && handout.isConnected;
   async function reload({refresh=false}={}) {
     const id=++request, status=handout.querySelector('#handout-status'), content=handout.querySelector('#handout-content');
-    status.textContent='Đang mở kết quả handout…'; handout.setAttribute('aria-busy','true'); if(!copyEditor.isDirty())content.innerHTML='';
+    status.textContent='Đang mở kết quả handout…'; handout.setAttribute('aria-busy','true');
+    if(!lesson5&&!copyEditor.isDirty())content.innerHTML='';
     try {
-      const result=await loadHandout({refresh});
+      const result=await loadHandout({refresh,isCurrent:()=>current(id)});
       if(!current(id))return;
       if(result.assignmentId !== assignment.id || !Array.isArray(result.tables))throw Error('Kết quả handout không khớp bài đang mở.');
+      if(lesson5&&shownOutline&&result.status!=='ready')throw Error(result.message||'Chưa tải được dàn ý mới.');
       const snapshot=result.readMode==='snapshot';
       const retained=result.readMode==='confirmed-outline';
       handout.querySelector('#reload-handout').textContent=retained?'Thử lại kết nối':snapshot?'Xem lại bản đã lấy':'Tải lại handout';
       status.textContent=retained?'Đang xem dàn ý đã xác nhận':result.readAt ? (snapshot?'Bản đọc K67 lúc ':'Đã đọc bản mới nhất · ')+new Date(result.readAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+      const scroll=side.scrollTop;
       await copyEditor.receive(result);
-    } catch(e) { if(current(id)){ status.textContent='Chưa tải được handout';if(!copyEditor.isDirty())handout.querySelector('.handout-person .badge').textContent='Chưa xác định nguồn';content.innerHTML=`<p class="error-panel">${esc(e.message)}</p><p>Em vẫn có thể viết và lưu bài. Bấm Tải lại handout để thử lại.</p>`; } }
+      if(lesson5&&current(id)){
+        shownOutline=result.status==='ready'&&result.tables.length>0;
+        side.scrollTop=scroll;
+      }
+    } catch(e) {
+      if(!current(id))return;
+      if(lesson5&&shownOutline){
+        status.textContent='Đang giữ dàn ý đang xem. '+e.message;
+        return;
+      }
+      status.textContent='Chưa tải được handout';
+      if(!copyEditor.isDirty())handout.querySelector('.handout-person .badge').textContent='Chưa xác định nguồn';
+      content.innerHTML=`<p class="error-panel">${esc(e.message)}</p><p>Em vẫn có thể viết và lưu bài. Bấm Tải lại handout để thử lại.</p>`;
+    }
     finally {if(current(id))handout.removeAttribute('aria-busy');}
   }
   const select=(next,focus=false)=>{
@@ -71,6 +88,14 @@ export function setupHandoutPreview(root,{assignment,person,initialMode='handout
   if(showFeedback) showFeedback.onclick=()=>select('feedback');
   root.querySelectorAll('a[href="#approved-feedback"]').forEach(link=>link.addEventListener('click',()=>select('feedback')));
   handout.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();select(feedback?'feedback':'closed',true);}});
+  if(lesson5)handout.addEventListener('click',event=>{
+    const link=event.target.closest('.handout-outline-nav a,[data-handout-go-to-essay]');
+    const target=link&&document.getElementById(link.hash.slice(1));
+    if(!target||!root.contains(target))return;
+    event.preventDefault();
+    target.scrollIntoView({block:target.id==='essay'?'center':'start'});
+    target.focus({preventScroll:true});
+  });
   const editor=root.querySelector('.editor-card'); editor.tabIndex=0;editor.setAttribute('aria-label','Đề bài và bài làm của em');
   // Vào bài mới/reload luôn mở handout; cập nhật trạng thái trong cùng lượt
   // xem giữ lựa chọn đóng/đọc phản hồi của HV, không tự bật lại khi đang viết.

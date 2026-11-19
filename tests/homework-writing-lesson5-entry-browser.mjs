@@ -37,7 +37,10 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
   for(const step of ['topic','b1','a1','x1','b2','a2'])state.steps[step].status='passed';
   let confirmed=null,opens=0,checks=0,nativeOpens=0;
   let draft={text:'',revision:0},submission=null;
-  let outlineReads=0,outlineOffline=true,hasRetainedOutline=false,outlineVersionOverride;
+  let outlineReads=0,outlineOffline=true,hasRetainedOutline=false,outlineVersionOverride,transportFails=false,legacySnapshot=false;
+  const rows=[1,2].map(n=>({id:'idea-'+n,label:'Ý '+n,...Object.fromEntries(['A','X','B'].map(point=>[
+    point,{content:'Nội dung '+point+n,keywords:point==='B'&&n===2?[]:[{en:'Vocabulary '+point+n,vi:'Nghĩa '+point+n}],keywordStatus:point==='B'&&n===2?'failed':'ready'}
+  ]))}));
   const writeUrl=site+'/homework-writing/?'+new URLSearchParams({mode:'student',assignment:assignmentId,documentId,workspace:'k67'});
   const headers={'access-control-allow-origin':site,'access-control-allow-credentials':'true',
     'access-control-allow-headers':'content-type,authorization,x-hw-access,x-hw-csrf,x-hw-student,x-hw-document,x-hw-assignment,x-hw-handout,x-hw-person,if-none-match',
@@ -77,9 +80,10 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
     }
     if(path===assignmentPath+'/handout'){
       outlineReads++;
+      if(transportFails)return send({message:'Kết nối tạm gián đoạn.'},503);
       if(outlineOffline&&!hasRetainedOutline)return send({assignmentId,status:'source_unavailable',tables:[],outlinePreview:true,message:'Chưa đọc được dàn ý từ Handout.'});
       return send({assignmentId,status:'ready',sourceSessionRef:ref,sourceVersion:outlineVersionOverride??state.version,
-        readMode:outlineOffline?'confirmed-outline':'api',outlineApproved:true,outlinePreview:true,tables:[{id:'body-2',title:'Thân bài 2',topicSentence:state.responses.topicSentence,outlineIdeas:[state.responses.idea1,state.responses.idea2],rows:[]}]});
+        readMode:submission?'submission-snapshot':outlineOffline?'confirmed-outline':'api',outlineApproved:true,outlinePreview:true,tables:[{id:'body-2',title:'Thân bài 2',topicSentence:state.responses.topicSentence,outlineIdeas:[state.responses.idea1,state.responses.idea2],...(legacySnapshot?{}:{rows})}]});
     }
     const editor=assignmentPath+'/handout-editor';
     if(path===editor+'/lessons/lesson5')return send({ok:true,lesson});
@@ -134,6 +138,32 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
   await page.getByRole('button',{name:'Nộp thân bài',exact:true}).waitFor();
   if(await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();
   await panel.getByText('Thân bài 2',{exact:true}).waitFor();
+  const table=panel.locator('.handout-summary-table');
+  assert.equal(await table.locator('tbody td').count(),6);
+  assert.equal(await table.locator('.handout-keyword').count(),5);
+  assert.equal(await table.getByText('Nguồn chưa lấy được từ vựng.').count(),1);
+  assert.match(await table.locator('tbody th').first().innerText(),/Thâm hụt tài chính/);
+  await panel.getByRole('link',{name:'Ý 2',exact:true}).click();
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'handout-idea-2');
+  await panel.locator('.handout-outline-end').click();
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'essay');
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  for(const width of [1536,1280]){
+    await page.setViewportSize({width,height:625});
+    const divider=page.getByRole('separator');
+    const ratio=Number(await divider.getAttribute('aria-valuenow'));
+    await divider.press('ArrowRight');
+    assert.ok(Number(await divider.getAttribute('aria-valuenow'))>ratio);
+    await divider.press('Enter');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    const side=panel.locator('..');
+    const scroll=await side.evaluate(el=>{el.scrollTop=150;return el.scrollTop;});
+    assert.ok(scroll>0);
+    await toggle.click();
+    await toggle.click();
+    assert.equal(await side.evaluate(el=>el.scrollTop),scroll);
+  }
+  await page.setViewportSize({width:390,height:850});
   await panel.getByRole('button',{name:'Thử lại kết nối',exact:true}).waitFor();
   assert.equal(await panel.locator('#handout-status').textContent(),'Đang xem dàn ý đã xác nhận');
   const retry=panel.locator('#reload-handout');
@@ -143,14 +173,24 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
   await retry.click();
   await panel.getByText(/Dàn ý đã đổi/).first().waitFor();
   assert.equal(outlineReads,readsBeforeRetry+1);
-  assert.equal(await panel.getByText('Thân bài 2',{exact:true}).count(),0);
+  assert.equal(await table.locator('tbody td').count(),6);
   outlineVersionOverride=undefined;
   await retry.click();
-  await panel.getByText('Thân bài 2',{exact:true}).waitFor();
+  await panel.getByRole('button',{name:'Tải lại handout',exact:true}).waitFor();
   assert.equal(outlineReads,readsBeforeRetry+2);
+  transportFails=true;
+  await retry.click();
+  await panel.locator('#handout-status').getByText(/Đang giữ dàn ý/).waitFor();
+  assert.equal(await table.locator('tbody td').count(),6);
+  transportFails=false;
+  const essay=page.locator('#essay');
+  await essay.fill('This draft stays in the editor.');
+  await essay.evaluate(el=>el.setSelectionRange(5,9));
   assert.equal(await panel.locator('#close-handout').count(),0);
   assert.equal(await toggle.innerText(),'Đóng dàn ý');
   await toggle.click();
+  assert.equal(await essay.inputValue(),'This draft stays in the editor.');
+  assert.deepEqual(await essay.evaluate(el=>[el.selectionStart,el.selectionEnd]),[5,9]);
   assert.equal(await panel.isVisible(),false);
   await toggle.click();
   await panel.getByRole('button',{name:'Về Handout Lesson 5',exact:true}).click();
@@ -166,6 +206,13 @@ test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự 
   assert.equal(await confirmation.locator('strong').innerText(),'✓ Bài đã được nhận trên hệ thống');
   assert.doesNotMatch(await page.locator('#app').innerText(),/biên nhận|fixture-lesson5-submission/i);
   assert.ok((await confirmation.boundingBox()).width<390);
+  await panel.getByText('Dàn ý lúc nộp',{exact:true}).waitFor();
+  assert.equal(await table.locator('tbody td').count(),6);
+  legacySnapshot=true;
+  await page.reload();
+  await panel.getByText('Bản này chưa có đủ nội dung A, X, B đã lưu.').waitFor();
+  assert.equal(await table.count(),0);
+  assert.equal(await panel.getByText(state.responses.topicSentence,{exact:true}).count(),1);
   assert.deepEqual(errors,[]);
 });
 

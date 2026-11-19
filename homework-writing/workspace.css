@@ -229,3 +229,38 @@ mark.teacher-highlight{background:#ffeb97;color:inherit;box-decoration-break:clo
 }
 @media(max-width:800px){.student-layout.handout-open{grid-template-columns:minmax(0,1fr)}.student-layout.handout-open>.study-context{max-height:65dvh;overflow-y:auto;overscroll-behavior-y:contain;padding:0}.handout-heading{padding:16px}.handout-sheet{padding:16px}}
 @media(max-width:600px){#account{min-width:0}.account-name{max-width:calc(100vw - 220px)}}
+
+/* Màn viết Lesson 5 đọc cùng A/X/B ở cả khung rộng và khung hẹp. */
+.handout-lesson5 .handout-sheet{container-type:inline-size}
+.lesson5-outline-table{margin:12px 0 16px}
+.lesson5-outline-table .handout-entry{background:#F4F7FC;border-left:3px solid var(--navy)}
+.lesson5-outline-table .handout-entry .handout-cell-content{color:var(--structure)}
+.handout-outline-nav{display:flex;align-items:center;flex-wrap:wrap;gap:4px 16px;margin:4px 0 8px}
+.handout-outline-nav a,.handout-outline-end{display:inline-flex;align-items:center;min-height:44px;color:var(--structure);font-size:14px;font-weight:650}
+.handout-outline-nav a[data-handout-go-to-essay]{margin-inline-start:auto}
+.lesson5-outline-table .handout-table-scroll{overflow:visible}
+.lesson5-outline-table .handout-summary-table{min-width:0;font-size:15px}
+.lesson5-outline-table .handout-idea-col{width:82px}
+.lesson5-outline-table .handout-summary-table :is(th,td){padding:9px;line-height:1.44}
+.lesson5-outline-table .handout-summary-table thead th:first-child{padding:9px}
+.lesson5-outline-table .handout-summary-table tr[id]{scroll-margin-top:84px}
+.lesson5-outline-table .handout-key{width:24px;height:24px;margin-right:5px}
+.lesson5-outline-table .handout-cell-label{margin:12px 0 6px;color:#375874}
+.lesson5-outline-table .handout-keyword{padding:7px 8px}
+.lesson5-outline-table .handout-keyword strong{font-size:14px}
+.lesson5-outline-table .handout-keyword small{font-size:13px}
+.lesson5-outline-table .handout-idea-name{display:block;margin-top:4px;color:#3E5771;font-size:12px;font-weight:500}
+.handout-point-heading{display:none}
+@container (max-width:520px){
+ .lesson5-outline-table .handout-summary-table,.lesson5-outline-table .handout-summary-table :is(tbody,tr,td){display:block}
+ .lesson5-outline-table .handout-summary-table :is(colgroup,caption,thead){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ .lesson5-outline-table .handout-summary-table tbody th{display:block;background:var(--navy);color:#fff}
+ .lesson5-outline-table .handout-idea-name{display:inline;margin-inline-start:7px;color:#EFF5FF;font-size:14px}
+ .lesson5-outline-table .handout-point-heading{display:flex;align-items:center;margin-bottom:7px;font-weight:700}
+ .lesson5-outline-table .handout-point-heading .handout-key{background:var(--navy);color:#fff}
+}
+@media(max-width:800px){
+ .student-layout.handout-open>.study-context:has(.handout-lesson5),
+ .student-layout.handout-open:has(.handout-lesson5)>.editor-card{height:auto;max-height:none;overflow:visible}
+ .handout-lesson5 .handout-sheet{padding-inline:12px}
+}
