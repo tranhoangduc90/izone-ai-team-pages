@@ -257,8 +257,8 @@ export const ASSET_HASHES = {
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index-audio-status-v2.html": "ff86e10589c3abd1e9e62d915dc533959ae9635c632a4feff34007ce03a92b1d",
-  "index.html": "ff86e10589c3abd1e9e62d915dc533959ae9635c632a4feff34007ce03a92b1d",
+  "index-audio-status-v2.html": "5f06d190b8b70a1e08293a171efad569052db3522589459ed421a16c7c88bc63",
+  "index.html": "5f06d190b8b70a1e08293a171efad569052db3522589459ed421a16c7c88bc63",
   "offline-worker-audio-status-v2.js": "efbcb6196e8495c86ddd4929d496f4b009776ada856ad0996e0598841ff942d1"
 };
-export const ASSET_BUILD_ID = "311d69933575590100655760b81eba8d922385a40f4251a96d98f5266fde7a19";
+export const ASSET_BUILD_ID = "bfaf80e5e7f207bb97d7d7e49edbe4659e3a8142b711edea47640a75fcb86edf";
