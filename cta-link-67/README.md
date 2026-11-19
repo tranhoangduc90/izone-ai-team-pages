@@ -1,14 +1,16 @@
 # Trang gắn link CTA khóa 67
 
-Mở trang, dán tối đa 20 link Google Docs rồi bấm **Gắn link CTA**. Trang gửi Doc ID đến workflow n8n. Workflow tìm bài nộp gốc trong Lark và chuyển file sang luồng gắn link Reading/Listening khóa 67 đang có. Bấm **Kiểm tra kết quả** để xem mã CTA đã được ghi trong Lark.
+Mở trang, dán tối đa 20 link Google Docs rồi bấm **Gắn link CTA**. Backend tìm bản nộp Classroom đã xác minh và phát việc cho lớp đang do backend xử lý. Bấm **Kiểm tra kết quả** để đọc trạng thái và các mã CTA đã xác minh.
 
-Trang không yêu cầu mã truy cập. Bất kỳ ai có link trang và link Docs thuộc nguồn khóa 67 đều có thể gửi yêu cầu; hãy chia sẻ link sử dụng trong nhóm vận hành phù hợp. Trang không chứa token Google, nội dung Docs hay dữ liệu định danh học viên. Mất phản hồi được hiển thị là **Cần đối soát**; kiểm tra trạng thái trước khi gửi lại.
+Hai thao tác dùng phiên giảng viên IZONE và quyền vận hành CTA do máy chủ xác minh. Khi thiếu phiên, mở trang đăng nhập giảng viên từ đường dẫn cạnh thông báo. Mất phản hồi được hiển thị là **Cần đối soát**. Bấm kiểm tra trạng thái trước khi gửi lại.
 
-Các trường hợp chưa có bài nộp trong bảng Lark nguồn, bài nộp trùng, link sai hoặc chưa thấy đăng ký đều có trạng thái riêng. **Lark đã ghi nhận CTA** nghĩa là đã thấy ít nhất một mã Reading/Listening cùng Doc ID và URL đích hợp lệ trong registry. Nếu một Docs chứa hai CTA, xem danh sách mã hiện ra để biết mã nào đã ghi nhận; trạng thái này không thay cho việc mở Docs kiểm tra trực quan khi nghiệm thu.
+Trang hiển thị riêng các trạng thái chưa tìm thấy bản nộp, nhiều bản nộp khớp, lớp đang ở tuyến cũ và CTA cần đối soát. Nếu một Docs chứa hai bài, đọc danh sách mã rồi kiểm link và quyền vào từng bài khi nghiệm thu.
 
-Backend có hai webhook **POST /cta-link-batch/submit** và **POST /cta-link-batch/status** nhận **text/plain** chứa `{"docs":[{"docId":"..."}]}`. Cách gửi này không cần yêu cầu OPTIONS; máy chủ từng trả HTTP 500 cho OPTIONS. Workflow chỉ gửi queue khóa 67 sau khi tìm đúng một bản ghi nguồn khớp URL Docs đầy đủ.
+Backend nhận JSON `{"docs":[{"docId":"..."}]}` tại `POST /operator/cta/submit` và `POST /operator/cta/status`. Gateway chuyển cả OPTIONS và POST cho hai path. Trình duyệt gửi kèm cookie phiên và `X-Izone-Csrf: 1`.
 
-Kiểm tra cục bộ: chạy **node tests/cta-link-67.test.mjs** từ gốc repo Pages; sau phát hành mở URL thật và kiểm yêu cầu trong trình duyệt.
+Chỉ phát hành trang sau khi gateway, phiên SSO, quyền người vận hành và trạng thái từng Docs đã được kiểm trên hai path ở HTTPS thật. Giữ SHA của phiên bản Pages đang chạy và hai webhook n8n trước khi chuyển. Nếu quay lui CTA, trả quyền xử lý lớp về n8n trước khi đưa trang quay lại hai webhook cũ.
+
+Chạy `node tests/cta-link-67.test.mjs` từ gốc repo Pages. Sau phát hành kiểm bằng trình duyệt ở URL thật.
 
 Lỗi mạng fetch và phản hồi JSON không đọc được có thông báo tiếng Việt; lỗi
 HTTP, đối chiếu Doc ID và thời gian chờ giữ nguyên. Khi gửi chưa xác nhận,

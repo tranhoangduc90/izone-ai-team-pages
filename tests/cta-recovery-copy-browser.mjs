@@ -17,6 +17,8 @@ for(const path of assets){
  if(revision)overrides.set('/'+path,execFileSync('git',['-C',root,'show',revision+':'+path]));
  if(publicBase){const response=await fetch(publicBase.replace(/\/$/,'')+'/'+path,{headers:{'Cache-Control':'no-cache'}});assert.equal(response.status,200);overrides.set('/'+path,Buffer.from(await response.arrayBuffer()));}
 }
+const current=String(overrides.get('/cta-link-67/index.html')||await fs.readFile(resolve(root,'cta-link-67/index.html'))).includes('20261119-cta');
+const endpoint=current?'/operator/cta/':'/webhook/cta-link-batch/';
 const server=createServer(async(req,res)=>{
  const u=new URL(req.url,'http://localhost'),relative=decodeURIComponent(u.pathname)+(u.pathname.endsWith('/')?'index.html':''),path=resolve(root,'.'+relative);
  if(!path.startsWith(root+sep))return res.writeHead(403).end();
@@ -25,23 +27,27 @@ const server=createServer(async(req,res)=>{
 });
 await new Promise((ok,no)=>{server.once('error',no);server.listen(35684,'127.0.0.1',ok);});
 const origin='http://127.0.0.1:35684',records=[],browser=await chromium.launch({channel:'chrome',headless:true});
+const cors=current?{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'}:{};
 const docs=Array.from({length:8},(_,i)=>({docId:String.fromCharCode(65+i).repeat(28)}));
 const input=docs.map(d=>'https://docs.google.com/document/d/'+d.docId+'/edit').join('\n');
 const states=['queued','registered','pending','source_missing','source_ambiguous','invalid_url','duplicate','unknown'];
 const payload={ok:true,results:docs.map((d,i)=>({...d,status:states[i],...(i===1?{codes:['67-reading-01','67-listening-01']}:{})}))};
 try{
- for(const [width,height]of[[1440,1000],[390,844],[320,568]])for(const action of['submit','status'])for(const mode of['network','json','http503']){
+ const modes=current?['network','json','http503','http401','http403']:['network','json','http503'];
+ for(const [width,height]of[[1440,1000],[390,844],[320,568]])for(const action of['submit','status'])for(const mode of modes){
   const context=await browser.newContext({viewport:{width,height},reducedMotion:'reduce'}),page=await context.newPage();
+  if(current)await page.addInitScript(()=>{window.IzoneTeacherSso={restore:async product=>product==='k67-cta'};});
   page.setDefaultTimeout(8000);const calls=[],errors=[],unexpected=[];let held;
   page.on('pageerror',e=>errors.push(e.message));
   await context.route('**/*',async route=>{
    const q=route.request(),u=new URL(q.url());
    if(u.origin===origin){if(overrides.has(u.pathname))return route.fulfill({body:overrides.get(u.pathname),contentType:u.pathname.endsWith('.css')?'text/css':u.pathname.endsWith('.html')?'text/html; charset=utf-8':'text/javascript'});return route.continue();}
-   if(u.hostname==='ducizone.ddns.net'&&u.pathname.startsWith('/webhook/cta-link-batch/')){
+   if(u.hostname==='ducizone.ddns.net'&&u.pathname.startsWith(endpoint)){
+    if(current&&q.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true','access-control-allow-methods':'POST','access-control-allow-headers':'Content-Type, X-Izone-Csrf'}});
     assert.equal(q.method(),'POST');const op=u.pathname.split('/').at(-1);
-    calls.push({path:u.pathname,method:q.method(),contentType:q.headers()['content-type'],body:q.postDataJSON()});
+    calls.push({path:u.pathname,method:q.method(),contentType:q.headers()['content-type'],csrf:q.headers()['x-izone-csrf'],body:q.postDataJSON()});
     if(op===action){held=route;return;}
-    return route.fulfill({json:payload});
+    return route.fulfill({headers:cors,json:payload});
    }
    unexpected.push({origin:u.origin,path:u.pathname,method:q.method()});return route.abort();
   });
@@ -57,20 +63,22 @@ try{
    const busy=await snapshot();assert.equal(busy.submitDisabled,true);assert.equal(busy.checkDisabled,true);assert.equal(busy.input,input);
    assert.ok(held);
    if(mode==='network')await held.abort('connectionfailed');
-   else if(mode==='json')await held.fulfill({contentType:'application/json',body:'broken-json-fixture'});
-   else await held.fulfill({status:503,json:{ok:false}});
+   else if(mode==='json')await held.fulfill({headers:cors,contentType:'application/json',body:'broken-json-fixture'});
+   else await held.fulfill({status:Number(mode.slice(4)),headers:cors,json:{ok:false}});
    held=null;
    await page.waitForFunction(()=>document.querySelector('#notice').dataset.state==='attention');await page.evaluate(()=>document.fonts.ready);
    const ui=await snapshot();
-   const baseMessage=mode==='network'?'Chưa kết nối được với hệ thống.':mode==='json'?'Chưa đọc được phản hồi của hệ thống.':'Hệ thống xử lý trả lỗi 503.';
+   const baseMessage={network:'Chưa kết nối được với hệ thống.',json:'Chưa đọc được phản hồi của hệ thống.',
+    http503:'Hệ thống xử lý trả lỗi 503.',http401:'Cần đăng nhập giảng viên IZONE.',http403:'Tài khoản này chưa có quyền vận hành CTA.'}[mode];
    const expectedMessage=baseMessage+(action==='submit'?' Kiểm tra kết quả trước khi gửi lại.':' Trạng thái đang hiển thị chưa được cập nhật.');
    const checks={copy:ui.message===expectedMessage,role:ui.kind==='attention'&&ui.bg==='rgba(0, 0, 0, 0)'&&ui.fg==='rgb(138, 83, 0)',font:ui.font.includes('Source Sans 3')};
    assert.equal(ui.input,input);assert.equal(ui.submitDisabled,false);assert.equal(ui.checkDisabled,false);
    assert.equal(ui.rows.length,8);
+   if(current)assert.equal(await page.locator('#sign-in a').isVisible(),mode==='http401');
    if(action==='submit')assert.deepEqual(ui.rows.map(x=>x.status),Array(8).fill('unknown'));
    else assert.deepEqual(ui.rows,previous);
    assert.equal(calls.length,action==='submit'?1:2);
-   for(const call of calls){assert.equal(call.contentType,'text/plain');assert.deepEqual(call.body,{docs});}
+   for(const call of calls){assert.equal(call.contentType,current?'application/json':'text/plain');assert.equal(call.csrf,current?'1':undefined);assert.deepEqual(call.body,{docs});}
    assert.deepEqual(calls.map(c=>c.path.split('/').at(-1)),action==='submit'?['submit']:['submit','status']);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);

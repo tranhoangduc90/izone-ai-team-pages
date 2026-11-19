@@ -22,6 +22,7 @@
  // consumers keep their existing discovery set during this independent rollout.
  if(new URL(window.location.href).pathname.startsWith('/izone-ai-team-pages/listening-homework/'))products.push({id:'listeninghomework',prefix:'/listening-homework67/api/listening-homework67',source:'/listening-homework67/api/listening-homework67/teacher/shared-session'});
  if(new URL(window.location.href).pathname.startsWith('/izone-ai-team-pages/homework-writing/'))products.push({id:'homeworkwriting',prefix:'/homework-writing-api/api',identity:true});
+ if(new URL(window.location.href).pathname.startsWith('/izone-ai-team-pages/cta-link-67/'))products.push({id:'k67-cta',prefix:'/operator/cta',identity:true});
  if(new URL(window.location.href).pathname==='/izone-ai-team-pages/writing-handouts/lesson5/teacher.html')
   products.push({id:'homeworkwriting',prefix:'/homework-writing67-api/api',identity:true});
  const original=window.fetch.bind(window),pending=new Map(),initialized=new Set();

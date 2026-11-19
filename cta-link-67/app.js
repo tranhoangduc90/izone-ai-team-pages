@@ -1,12 +1,15 @@
 import { parseDocLinks, checkedResults, requestBody } from './model.mjs';
 
-const BASE = 'https://ducizone.ddns.net/webhook/cta-link-batch';
+const BASE = 'https://ducizone.ddns.net/operator/cta';
 const labels = {
   queued: 'Đã gửi, đang xử lý',
-  registered: 'Lark đã ghi nhận CTA',
+  registered: 'Đã xác minh CTA',
   pending: 'Chưa thấy đăng ký CTA',
-  source_missing: 'Chưa có bài nộp trong Lark',
+  source_not_found: 'Chưa tìm thấy bản nộp Classroom',
   source_ambiguous: 'Có nhiều bài nộp khớp',
+  not_registered: 'Chưa thấy CTA đã xác minh',
+  review: 'Cần đối soát CTA',
+  legacy_owner: 'Lớp đang xử lý qua hệ thống cũ',
   invalid_url: 'Link không hợp lệ',
   duplicate: 'Link trùng',
   unknown: 'Cần đối soát'
@@ -23,6 +26,9 @@ function setBusy(value) {
 }
 function notice(message, state = 'neutral') { $('notice').textContent = message; $('notice').dataset.state = state; }
 function responseErrorMessage(error) {
+  $('sign-in').hidden = error.status !== 401;
+  if (error.status === 401) return 'Cần đăng nhập giảng viên IZONE.';
+  if (error.status === 403) return 'Tài khoản này chưa có quyền vận hành CTA.';
   if (error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message || '')) return 'Chưa kết nối được với hệ thống.';
   if (error instanceof SyntaxError) return 'Chưa đọc được phản hồi của hệ thống.';
   return error.message;
@@ -50,18 +56,23 @@ function render() {
   if (!rows.length) box.textContent = 'Chưa có file nào được gửi.';
 }
 async function request(action, batch) {
+  $('sign-in').hidden = true;
+  if (!(await window.IzoneTeacherSso.restore('k67-cta'))) {
+    throw Object.assign(new Error('Cần đăng nhập giảng viên IZONE.'), { status: 401 });
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120000);
   try {
     const response = await fetch(BASE + '/' + action, {
       method: 'POST',
       mode: 'cors',
+      credentials: 'include',
       cache: 'no-store',
-      headers: { 'Content-Type': 'text/plain' },
+      headers: { 'Content-Type': 'application/json', 'X-Izone-Csrf': '1' },
       body: requestBody(batch),
       signal: controller.signal
     });
-    if (!response.ok) throw new Error('Hệ thống xử lý trả lỗi ' + response.status + '.');
+    if (!response.ok) throw Object.assign(new Error('Hệ thống xử lý trả lỗi ' + response.status + '.'), { status: response.status });
     return checkedResults(await response.json(), batch);
   } finally { clearTimeout(timer); }
 }
@@ -87,11 +98,11 @@ $('submit').addEventListener('click', async () => {
 $('check').addEventListener('click', async () => {
   if (busy || !docs.length) return;
   setBusy(true);
-  notice('Đang đọc lại các đăng ký CTA trong Lark…', 'pending');
+  notice('Đang đọc lại các CTA đã xác minh…', 'pending');
   try {
     const latest = await request('status', docs);
     const byId = new Map(latest.map((row) => [row.docId, row]));
-    rows = rows.map((row) => byId.get(row.docId) || row);
+    rows = rows.map((row) => row.status === 'duplicate' ? row : (byId.get(row.docId) || row));
     notice('Đã cập nhật trạng thái.');
     render();
   } catch (error) { notice((error.name === 'AbortError' ? 'Hết thời gian chờ; thử kiểm tra lại.' : responseErrorMessage(error)) + ' Trạng thái đang hiển thị chưa được cập nhật.', 'attention'); }

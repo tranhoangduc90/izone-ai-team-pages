@@ -18,7 +18,7 @@
       <img class="m170-logo" src="../shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48">
       <p class="eyebrow">IZONE · Khóa 67</p>
       <h1>Gắn link chấm bài vào Google Docs</h1>
-      <p>Dán các link Docs của bài Reading hoặc Listening. Hệ thống tìm bài nộp trong Lark rồi gắn link vào nút chấm của từng file.</p>
+      <p>Dán link Docs của bài tập khóa 67. Hệ thống tìm bản nộp đã xác minh trong Classroom rồi gắn link vào phần bài tương ứng.</p>
     </header>
     <section class="card">
       <label for="links">Link Google Docs</label>
@@ -29,12 +29,14 @@
         <button id="check" class="secondary" type="button" disabled>Kiểm tra kết quả</button>
       </div>
       <p id="notice" role="status" aria-live="polite"></p>
+      <p id="sign-in" class="hint" hidden><a href="../progress-log/teacher.html" target="_blank" rel="noopener">Mở trang đăng nhập giảng viên IZONE</a> rồi quay lại trang này.</p>
     </section>
     <section class="card results" aria-labelledby="resultsTitle">
       <h2 id="resultsTitle">Kết quả từng file</h2>
       <div id="results" aria-live="polite"><p class="hint">Chưa có file nào được gửi.</p></div>
     </section>
   </main>
-  <script type="module" src="./app.js?v=20261024-master170-recovery"></script>
+  <script src="../shared/teacher-single-sign-on.js?v=20261119-cta" data-izone-teacher-product="k67-cta"></script>
+  <script type="module" src="./app.js?v=20261119-cta"></script>
 </body>
 </html>
