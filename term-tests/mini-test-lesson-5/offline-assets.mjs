@@ -77,7 +77,9 @@ export const ASSETS = [
   "offline-worker.js",
   "test-config.js",
   "../shared/app-mini-paper-k67-browser-cloud-v1.js",
-  "offline-k67-paper-browser-cloud-v1.mjs"
+  "offline-k67-paper-browser-cloud-v1.mjs",
+  "../shared/app-mini-paper-k67-parallel-v1.js",
+  "offline-k67-paper-parallel-v1.mjs"
 ];
 export const ASSET_HASHES = {
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -153,11 +155,13 @@ export const ASSET_HASHES = {
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
-  "index.html": "a68acf304c2d1ee2a891af3ba2045a6e6f9c25d9029fe2927d578e612da64081",
+  "index.html": "7f96aa087aa7d9f3129711b0022223bc6052b63290d52e2d8c477c56f75b9440",
   "offline-submission-recovery-v1.mjs": "bf127629d9ded297e528d4f7264de5f2fd97ca0ee002c317b10ed6f052591f4c",
-  "offline-worker.js": "84e970727ed765057b9f67beb32181123d911339ec35c02f8c43e785ec21360c",
+  "offline-worker.js": "267d22a7b17b4d9b580506aad8b63dafa049ae2147090d2377e39db4a187624a",
   "test-config.js": "ad6f4db2ae4dec2ee39e6c3fdc62f02dd073862f8c1355008b9913dc6291521c",
   "../shared/app-mini-paper-k67-browser-cloud-v1.js": "7786fb5eb190f3914e815aeef35f5c18c68fe3ba594dd72aef1ae82a0d40c21e",
-  "offline-k67-paper-browser-cloud-v1.mjs": "a21fc710e725ea9a25c6fe8ac0efd645e884b8ee08da3a7328f2b32638ae86e6"
+  "offline-k67-paper-browser-cloud-v1.mjs": "a21fc710e725ea9a25c6fe8ac0efd645e884b8ee08da3a7328f2b32638ae86e6",
+  "../shared/app-mini-paper-k67-parallel-v1.js": "c20c2057138e6f7af4ec7d3ecbdce527d4f575d48cc58e867caed7a19d6d49ef",
+  "offline-k67-paper-parallel-v1.mjs": "33215f731ad8510a177c8d3168343f2fa75af3b1321472ff6314291f6fabd8e8"
 };
-export const ASSET_BUILD_ID = "a8cf2effb374d7cb695e8d89e07597fec6d7c460732b7969891ae5396f6a2fb3";
+export const ASSET_BUILD_ID = "adc379972da7d8c1435113aa4b16e33426419d4848d74183c0ca0c265b1adceb";
