@@ -106,7 +106,7 @@ export const ASSET_HASHES = {
   "../../shared/teacher-auth-state.js": "940c025ca99faee0225cde8270cce0a7a4ceda2062e0fd8a31271c7dbae1f5c2",
   "../../shared/teacher-login-preference.js": "b6640ff8815415ba121acff2b7af6ac567b38f5c41633c2b8c715eeb3f031e4c",
   "../../shared/teacher-session-client.js": "1fb8644f90878bea2be5d282b96ccf07eaa6e904e98885a1afee2ac43853065a",
-  "../../shared/teacher-single-sign-on.js": "4ada5fa5ee979c1e5b2b6bd496da52957e82e9c4142ad546698b937657c2ce9e",
+  "../../shared/teacher-single-sign-on.js": "55c19346665b9bcd9d432261bf354a1d3c0e641aac303621044a80ea4e73902d",
   "../../shared/test-state-observer.mjs": "124cc8fce78afa5cac7cef1b142493a6a7aafc648f50c5c22c90ff0da48d73ce",
   "../../shared/test-student-class.js": "5c868b604fc02faf7b3c60be981b1c87db6c9c8eab8a79364130acbbde87aa0f",
   "../../shared/test-student-identity.js": "4f6e4723b70c7fa57414beb28f4f87cd1f6d087da2806a8bb0ff5f9f1d81389f",
@@ -155,9 +155,9 @@ export const ASSET_HASHES = {
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "index.html": "a68acf304c2d1ee2a891af3ba2045a6e6f9c25d9029fe2927d578e612da64081",
   "offline-submission-recovery-v1.mjs": "bf127629d9ded297e528d4f7264de5f2fd97ca0ee002c317b10ed6f052591f4c",
-  "offline-worker.js": "e9bf2e2725c942f484c01f1822c5dbf1b5fa50fa09eeadf4eac9970097efd880",
+  "offline-worker.js": "84e970727ed765057b9f67beb32181123d911339ec35c02f8c43e785ec21360c",
   "test-config.js": "ad6f4db2ae4dec2ee39e6c3fdc62f02dd073862f8c1355008b9913dc6291521c",
   "../shared/app-mini-paper-k67-browser-cloud-v1.js": "7786fb5eb190f3914e815aeef35f5c18c68fe3ba594dd72aef1ae82a0d40c21e",
   "offline-k67-paper-browser-cloud-v1.mjs": "a21fc710e725ea9a25c6fe8ac0efd645e884b8ee08da3a7328f2b32638ae86e6"
 };
-export const ASSET_BUILD_ID = "ec9c65c73b2953c5ea4b21ed6fc1074dda4150614df88395aceee8dc854e727d";
+export const ASSET_BUILD_ID = "a8cf2effb374d7cb695e8d89e07597fec6d7c460732b7969891ae5396f6a2fb3";
