@@ -5,16 +5,18 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
 const source=await readFile(new URL('../progress-log/demo/boot.js',import.meta.url),'utf8');
-async function run({hash='#grant=fixture',stored=false,fail=false}={}) {
+async function run({hash='#grant=fixture',stored=false,fail=false,sourceChanged=false}={}) {
  const calls=[],nodes=new Map(),storage=new Map(stored?[['progress-log-demo:teacher:run-1','teacher-1']]:[]);
- const node=id=>nodes.get(id)||nodes.set(id,{hidden:true,textContent:'',classList:{add(){}},addEventListener(type,fn){this[type]=fn;}}).get(id);
+ const node=id=>nodes.get(id)||nodes.set(id,{hidden:true,textContent:'',classList:{add(){},remove(){}},append(...args){this.appended=args;},addEventListener(type,fn){this[type]=fn;}}).get(id);
  const window={PROGRESS_LOG_CONFIG:{API_BASE_URL:'https://fixture.test/demo'},
-  location:{hash,href:'https://fixture.test/progress-log/demo/'+hash,reload(){calls.push('reload');}},
+  location:{hash,search:sourceChanged?'?view=worksheet':'',href:'https://fixture.test/progress-log/demo/'+hash,reload(){calls.push('reload');}},
   sessionStorage:{setItem:(k,v)=>storage.set(k,v),getItem:k=>storage.get(k)},history:{replaceState(){}}};
- const context={window,document:{getElementById:node},URL,URLSearchParams,
+ window.parent=sourceChanged?{}:window;
+ const context={window,location:window.location,document:{getElementById:node,body:{dataset:{},classList:{remove(){}}},createElement:node},URL,URLSearchParams,
   fetch:async(url,request)=>{const path=new URL(url).pathname;calls.push(path);
    assert.equal(request.headers['x-progress-log-demo'],'1');
    if(path.endsWith('open-blocks')||path.endsWith('reset'))assert.equal(request.headers['x-demo-teacher-token'],'teacher-1');
+   if(sourceChanged)return {ok:false,status:409,json:async()=>({ok:false,error:'SOURCE_CHANGED',message:'Mở lại từ Kho bài tập.',traceId:'10000000-0000-4000-8000-000000000001'})};
    return {ok:!(fail&&path.endsWith('open-blocks')),json:async()=>fail&&path.endsWith('open-blocks')
     ?{ok:false,message:'Không mở được phần thử'}:{ok:true,run:{publicToken:'run-1',teacherToken:hash.includes('grant')?'teacher-1':undefined}}};},
   loadStudentApp:async()=>calls.push('app-loaded')};
@@ -37,4 +39,12 @@ test('Open-blocks failure remains visible and prevents loading a misleading lock
 });
 test('A student-only demo link does not gain teacher permission',async()=>{
  const r=await run({hash:'#assignment=run-1'});assert.deepEqual(r.calls,['/demo/api/demo/runs','app-loaded']);assert.equal(r.nodes.get('resetDemoButton').hidden,true);
+});
+
+test('Nguồn đã đổi hiện mã theo dõi và hướng dẫn mở lại từ Kho',async()=>{
+ const r=await run({sourceChanged:true});
+ assert.deepEqual(r.calls,['/demo/api/demo/runs']);
+ const notice=r.nodes.get('notice');
+ assert.match(notice.textContent,/Mở lại từ Kho bài tập.*Mã theo dõi 10000000/);
+ assert.equal(notice.appended,undefined);
 });
