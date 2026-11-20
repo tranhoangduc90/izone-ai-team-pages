@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src https://ducizone.ddns.net; media-src blob:; base-uri 'none'; form-action 'none'">
+    <link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg">
+    <link rel="stylesheet" href="./pilot.css">
+    <title>Substitute 1 K56 Listening · DEMO</title>
+</head>
+<body class="pilot">
+<main>
+    <header><div><h1>Substitute 1 K56 Listening</h1><p>Lớp DEMO · Bài và kết quả thử</p></div><button id="leave" type="button">Quay lại chọn lớp</button></header>
+    <p id="status" role="status" aria-live="polite">Đang kết nối lớp DEMO…</p>
+    <form id="identity" hidden>
+        <label>Họ và tên <select id="name" required><option value="">Chọn họ tên</option></select></label>
+        <label>Mã DEMO <input id="code" type="password" required maxlength="80" autocomplete="off"></label>
+        <button id="confirm" class="primary" type="submit">Xác nhận đúng tên</button>
+    </form>
+    <section id="ready" hidden aria-label="Trước khi bắt đầu">
+        <button id="preview" type="button" disabled>Nghe thử 10 giây</button>
+        <button id="start" class="primary" type="button" disabled>Bắt đầu</button>
+    </section>
+    <section id="exam" hidden>
+        <h2>Làm bài Listening</h2>
+        <p>Thời gian còn lại <strong id="clock"></strong></p>
+        <p id="audio-status" role="status"></p>
+        <button id="play" type="button">Phát audio bài thi</button>
+        <p>Nghe audio thử. Nhập đáp án vào ô tương ứng.</p>
+        <nav id="navigation" aria-label="Các phần Listening"></nav>
+        <div id="question-list"></div>
+        <button id="submit" class="primary" type="button">Nộp bài</button>
+    </section>
+    <section id="result" hidden><h2>Đã nhận và chấm bài DEMO</h2><p id="result-name"></p><p id="score"></p><p id="receipt"></p></section>
+    <audio id="audio" preload="auto"></audio>
+    <dialog id="submit-dialog" aria-labelledby="submit-title">
+        <h2 id="submit-title">Xác nhận nộp bài Listening?</h2>
+        <p>Bài làm sẽ được khóa sau khi hệ thống nhận bài.</p>
+        <button id="cancel-submit" type="button">Tiếp tục làm bài</button>
+        <button id="confirm-submit" class="primary" type="button">Xác nhận nộp</button>
+    </dialog>
+</main>
+<script type="module" src="./student.mjs"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+@font-face{font-family:"Source Sans 3";src:url("./source-sans.woff2") format("woff2");font-display:swap}
+#listening-pilot-frame{width:100%;min-height:calc(100vh - 84px);border:0;display:block;color-scheme:light}
+#app[hidden]{display:none!important}
+#listening-assignment[open]{max-width:min(710px,calc(100vw - 32px));width:100%;border:1px solid #d3dfed;border-radius:12px;padding:24px;color:#173053}
+#listening-assignment::backdrop{background:#10264677}
+#listening-assignment-list{list-style:none;padding:0}
+#listening-assignment-list li{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-block-start:1px solid #d8e1ec}
+#listening-assignment-list li small{flex-basis:100%}
+#listening-assignment-list li span{color:#365b7c}
+.pilot{box-sizing:border-box;background:#f4f6fa;color:#173053;font:17px/1.55 "Source Sans 3","Source Sans Pro",system-ui,sans-serif;margin:0;padding:24px}
+.pilot *, .pilot *::before, .pilot *::after{box-sizing:inherit}
+.pilot main{max-width:980px;margin:auto;border:1px solid #d3dfed;border-radius:12px;padding:24px;background:#fff}
+.pilot [hidden]{display:none!important}
+.pilot h1,.pilot h2,.pilot p{margin:0 0 12px}
+.pilot label{display:grid;gap:4px;margin-bottom:14px;max-width:450px}
+.pilot input,.pilot select,.pilot button{font:inherit;padding:8px 12px;border:1px solid #a7bad2;border-radius:7px;color:#173053;background:#fff}
+.pilot button{cursor:pointer;min-height:42px;margin:4px 8px 4px 0}
+.pilot button.primary{background:#142d51;color:#fff;border-color:#142d51;font-weight:650}
+.pilot button:disabled{opacity:.45;cursor:default}
+.pilot header{display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap}
+.pilot #status{padding:10px 12px;background:#edf3fb;border-radius:7px;min-height:46px}
+.pilot #navigation{display:flex;gap:6px;flex-wrap:wrap}
+.pilot #navigation [aria-pressed="true"]{background:#142d51;color:#fff}
+.pilot #question-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0 14px}
+.pilot #question-list label{min-width:0}
+.pilot dialog{max-width:480px;padding:24px;border:1px solid #a7bad2;border-radius:12px;color:#173053}
+.pilot dialog::backdrop{background:#10264677}
