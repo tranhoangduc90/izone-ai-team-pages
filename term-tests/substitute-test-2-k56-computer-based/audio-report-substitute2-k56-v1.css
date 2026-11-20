@@ -1,0 +1,5 @@
+#k67ListeningReportChoices { width: min(420px, calc(100% - 32px)); max-height: calc(100% - 32px); }
+#k67ListeningReportChoices .cbt-identity-confirmation-card { display: grid; gap: 12px; }
+#k67ListeningReportChoices :is(h2, p) { margin: 0; }
+#k67ListeningReportChoices .k67-listening-report-choices { display: grid; gap: 8px; }
+#k67ListeningReportChoices button { min-height: 38px; }
