@@ -37,7 +37,14 @@ async function exercise(t, options, verify) {
   const assignmentId=options.lesson6?'hw-k67-writing-lesson6-101':assignment;
   const editorPath='/student/assignments/'+assignmentId+'/handout-editor';
   const fixtureLesson=options.lesson6?{...lesson,activity,number:6,title:'Chuẩn bị ý tưởng · Truy cập và trao đổi thông tin',
-    description:'Chốt ý về thông tin',helpTitle:'Chọn idea như thế nào?',helpItems:['Đọc ngược từ cuối lên.']} : lesson;
+    topic:'Modern technology now allows rapid and uncontrolled access to and exchange of information. Far from being beneficial, this is a danger to our societies. To what extent do you agree or disagree?',
+    description:'Hoàn thành Writing Lesson 6, chọn quan điểm và chốt ý cho hai thân bài.',
+    helpTitle:'Chọn idea như thế nào?',
+    helpItems:[
+      'Đọc ngược từ câu hỏi cuối lên. Tìm cụm đứng ngay trước từ “this” để xác định đề đang đánh giá việc gì.',
+      'Hỏi thông tin gì dễ lấy hoặc dễ lan truyền, ai chịu tác động và tác động ra sao. Nhắc tên Internet, TV hoặc nền tảng học trực tuyến để nói rõ nguồn thông tin.',
+      'Hai thân cần nhất quán với quan điểm và bao quát việc truy cập, trao đổi, tốc độ và tình trạng thiếu kiểm soát.',
+    ]} : lesson;
   const server = process.env.LESSON4_ENTRY_SITE ? null : await serveDirectory(resolve(import.meta.dirname, '..'));
   const site = process.env.LESSON4_ENTRY_SITE || server.origin;
   const origin = new URL(site).origin;
