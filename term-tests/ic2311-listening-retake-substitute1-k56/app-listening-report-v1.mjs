@@ -4,7 +4,7 @@ import {bindStandaloneListeningReport,requireStandaloneListeningVisible,
 import {observeRetakeMedia} from '../shared/retake-media-observation-v1.mjs';
 import {API,BUILD,AUDIO,CONTENT_VERSION,REVIEW_MS,PRODUCT,SLUG} from './config.mjs?v=20261112-submission-reconciliation';
 import {DurableStore} from './storage.mjs';
-import {Telemetry} from './telemetry.mjs?v=20261112-submission-reconciliation';
+import {Telemetry} from './telemetry.mjs?v=registration-live-20261120-r4';
 import {heldMetadata,pendingReview,submissionReview,downloadListeningSeal,activateListeningShell} from './submission-reconciliation.mjs?v=20261112-submission-reconciliation';
 import {beginAudioDownloadStatus} from '../shared/cbt-audio-download-status.mjs?v=20261111-audio-status-v1';
 import {LocalPlayer,downloadAudio} from './audio-status-v1.mjs?v=20261111-audio-status-v1';
@@ -267,16 +267,53 @@ async function prepareOfflineShell(){
   })()]);
  }catch{return false;}finally{clearTimeout(timer);}
 }
+const managedAssignmentClasses=({known:new Map(),has(code){return this.known.get(code)===true;},async check(code){
+    if(!/^IC\d{3,8}$/.test(String(code)))return false;
+    if(this.known.has(code))return this.has(code);
+    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4');
+    const result=await assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/')('student/entry',{query:{testId:"substitute-test-1-k56-listening-makeup",classCode:code}});
+    if(typeof result.managed!=='boolean')throw Error('ASSIGNMENT_SCOPE_UNAVAILABLE');
+    this.known.set(code,result.managed);return result.managed;
+  }});
+let assignmentEntry;
+async function assignmentWait(classCode,studentRef){
+ if(!(managedAssignmentClasses.check?await managedAssignmentClasses.check(classCode):managedAssignmentClasses.has(classCode)))return false;
+ if(!assignmentEntry){
+  const [{createStudentEntry},{assignmentClient}]=await Promise.all([
+    import('../substitute-assignment-full/assignment-student-entry.mjs?v=registration-live-20261120-r4'),import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4')]);
+  const target=document.createElement('div');target.className='assignment-entry';$('student').parentElement.after(target);
+  assignmentEntry=createStudentEntry({api:assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/'),testId:"substitute-test-1-k56-listening-makeup",target,
+    enabledForClass:code=>managedAssignmentClasses.has(code)});
+ }
+ if(assignmentEntry.session({classCode,studentRef}))return false;
+ return assignmentEntry.select({classCode,studentRef,onReady:async()=>{
+   if(($('student').value||state?.identity?.studentRef)!==studentRef)throw Error('ASSIGNMENT_SELECTION_CHANGED');
+   await prepare();
+ }});
+}
+const lookupAssignmentSession=(classCode,studentRef)=>assignmentEntry?.session({classCode,studentRef})?.token;
+async function confirmAssignmentStart(){
+ const {classCode,studentRef,attemptId}=state.identity;
+ if(!managedAssignmentClasses.has(classCode))return null;
+ if(navigator.onLine===false)throw Error('ASSIGNMENT_ONLINE_REQUIRED');
+ const assignmentSession=lookupAssignmentSession(classCode,studentRef);
+ if(!assignmentSession || !assignmentEntry.canStart({classCode,studentRef}))throw Error('WAITING_SESSION_REQUIRED');
+ const {value}=await journal.request('/assignment/start',{attemptId},{assignmentSession});
+ if(value.attemptId!==attemptId||!Number.isFinite(Date.parse(value.startedAt)))throw Error('NATIVE_ATTEMPT_CONFLICT');
+ return value.startedAt;
+}
 async function prepare(retry=false){
  if(!state?.permit&&await legacyUi.restoreSelected())return;
+ if(state?.permit&&state.phase==='prepared'&&await assignmentWait(state.identity.classCode,state.identity.studentRef))return;
  if(busy||!presentationReady||(!$('student').value&&!state?.permit))return;busy=true;$('prepare').disabled=true;$('class').disabled=true;show('preparation');show('retry-preparation',false);
  const audioStatus=beginAudioDownloadStatus($('prepare-status'),$('download'),{retry,preparing:true});
  try{
   done('check-content');done('check-storage');
   if(!state?.permit){const studentRef=$('student').value,student=roster.students.find(item=>item.studentRef===studentRef),classCode=cohort?$('class').value:'IC2311';
    if(!student||!classCode||cohort&&roster.classCode!==classCode)throw Error('ROSTER_SELECTION_MISMATCH');
+   if(await assignmentWait(classCode,studentRef))return;
    if(preparation?.studentRef!==studentRef)preparation={studentRef,audioOwnerId,operationId:crypto.randomUUID()};await storage.put('preparation',preparation);const operationId=preparation.operationId;
-   const r=await journal.request(cohort?'/self-enrollment/prepare':'/prepare',{classCode,studentRef,audioOwnerId,tabId,operationId},{permit:null,operationId});
+   const r=await journal.request(cohort?'/self-enrollment/prepare':'/prepare',{classCode,studentRef,audioOwnerId,tabId,operationId},{permit:null,operationId,assignmentSession:lookupAssignmentSession(classCode,studentRef)});
    if(r.value.identity.contentVersion!==CONTENT_VERSION||r.value.identity.audioHash!==AUDIO.hash||r.value.identity.studentRef!==studentRef||r.value.identity.classCode!==classCode)throw Error('PREPARE_CONTRACT_MISMATCH');
    state={permit:r.value.permit,identity:r.value.identity,learnerName:student.name,revision:r.value.revision,answers:Object.fromEntries(Array.from({length:40},(_,i)=>[i+1,''])),phase:'prepared',pending:null,serverConfirmed:false};await persist();
   }
@@ -326,10 +363,11 @@ for(const id of ['volume','exam-volume'])$(id).oninput=()=>{const v=Number($(id)
 $('start').onclick=async()=>{
  if(busy||!prepared||!trialPassed)return;busy=true;$('start').disabled=true;
  try{
+ const officialStart=await confirmAssignmentStart();
  show('preparation',false);show('exam');
  requireStandaloneListeningVisible($('listeningView'));
  journal.emit('listening_question_view_opened',{sampleCount:40});
- state.phase='playing';state.startedAt=new Date().toISOString();state.startedMono=performance.now();
+ state.phase='playing';state.startedAt=officialStart??new Date().toISOString();state.startedMono=performance.now();
  state.learnerName=roster.students.find(s=>s.studentRef===state.identity.studentRef)?.name??state.learnerName;text('classLabel',state.identity.classCode);await persist();
  await player.start();text('learner',state.learnerName);text('phase-label','Đang nghe');
  journal.emit('official_player_started',{phase:'playing',elapsedMs:performance.now()-state.startedMono,audioAfter:player.snapshot()});await queueDraft();}

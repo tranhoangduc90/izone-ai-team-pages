@@ -76,12 +76,11 @@ export function mountAssignmentDashboard(target, { api, onScope = () => {} }) {
     .replace(/[\u0300-\u036f]/g,'').replaceAll('đ','d').trim();
   const filtered=()=>data.filter(row=>normalized([row.name,row.classCode].join(' ')).includes(normalized(search.value)));
   const visible=()=>filtered().filter(row=>tab==='all' || row.state===tab || tab==='running' && row.state==='starting');
-  const canAssign=()=>loaded && scope?.canAssign===true && scope.openForStudents!==false;
+  const canAssign=()=>loaded && scope?.canAssign===true && scope.acceptsAssignments===true;
   const canRevoke=()=>loaded && scope?.canAssign===true;
-  const canSelect=row=>canAssign() && row.active && row.state==='pending' &&
-    row.activeWaiting?.count===1 && Boolean(row.activeWaiting.sessionId);
+  const canSelect=row=>canAssign() && row.active && row.state==='pending';
   const actionable=()=>visible().filter(canSelect);
-  const itemFor=row=>({id:row.id,version:row.version,sessionId:row.activeWaiting.sessionId});
+  const itemFor=row=>({id:row.id,version:row.version});
   const clearHiddenSelection=()=>{const visibleIds=new Set(visible().map(row=>row.id));for(const id of chosen)if(!visibleIds.has(id))chosen.delete(id);};
 
   function syncSelection() {
@@ -131,8 +130,6 @@ export function mountAssignmentDashboard(target, { api, onScope = () => {} }) {
         individual.onclick=()=>perform('assign',[itemFor(row)]);
         action.append(individual);
         check.disabled=individual.disabled=busy || !canSelect(row);
-        if (!row.activeWaiting?.count) status.append(element('small','Học viên chưa vào phòng chờ.'));
-        else if (row.activeWaiting.count>1) status.append(element('small','Yêu cầu học viên chỉ giữ một cửa sổ chờ, rồi bấm Cập nhật.'));
       }
       if (canRevoke() && row.active && row.state==='assigned') {
         const revoke=makeButton('Thu hồi');
@@ -147,9 +144,7 @@ export function mountAssignmentDashboard(target, { api, onScope = () => {} }) {
     syncSelection();
   }
   function actionError(code) {
-    return ({SITTING_NOT_ACCEPTING:'Ca chưa mở hoặc đã dừng', WAITING_SESSION_MISMATCH:'Phiên chờ đã đổi',
-      NO_ACTIVE_WAITING_SESSION:'Học viên chưa vào phòng chờ.',
-      MULTIPLE_ACTIVE_WAITING_SESSIONS:'Học viên có nhiều cửa sổ chờ.',
+    return ({SITTING_NOT_ACCEPTING:'Ca đã dừng nhận giao bài',
       ASSIGNMENT_SCOPE_DENIED:'Tài khoản chưa có quyền', REGISTRATION_CHANGED:'Đăng ký đã đổi',
       ATTEMPT_ALREADY_STARTED:'Học viên đã bắt đầu', RETAKE_ALREADY_USED:'Đã sử dụng lượt thi lại'})[code]??'Cần đối chiếu lại dòng này';
   }
@@ -161,14 +156,14 @@ export function mountAssignmentDashboard(target, { api, onScope = () => {} }) {
     if (options.some(item=>scopeKey(item)===previous)) filter.value=previous;
     filter.disabled=busy||!options.length;
   }
-  async function update(refreshCatalog=false) {
+  async function update(refreshCatalog=false,refreshSource=refreshCatalog) {
     const request=++revision;
     loaded=false; data=[]; blocked=[]; chosen.clear();
     feedback.textContent='Đang tải danh sách…';
     render();
     try {
       if (refreshCatalog) {
-        const {scopes:result}=await api('teacher/scopes');
+        const {scopes:result}=await api('teacher/scopes',{query:refreshSource?{refresh:'1'}:undefined});
         if (request!==revision) return false;
         scopes=result.map(item=>{
           const test=findAssignmentTest(item.testId);
@@ -180,14 +175,13 @@ export function mountAssignmentDashboard(target, { api, onScope = () => {} }) {
       onScope(scope);
       if (!scope) {feedback.textContent='Chưa có ca thi trong phạm vi của tài khoản này.';return true;}
       const {sittingId,testId,classCode}=scope;
-      const result=await api('teacher/list',{query:{sittingId,testId,classCode}});
+      const result=await api('teacher/list',{query:{sittingId,testId,classCode,...refreshSource?{refresh:'1'}:{}}});
       if (request!==revision) return false;
       data=result.rows;blocked=result.blocked;
       loaded=true;
       render();
       feedback.textContent=!data.length?'Chưa có đăng ký đủ điều kiện.':
-        canAssign()?'':scope.canAssign===undefined?'Ca này đang ở chế độ chỉ xem.':
-          scope.canAssign?'Ca này chưa nhận lượt mới.':'Tài khoản chỉ có quyền xem ca này.';
+        canAssign()?'':scope.canAssign===true?'Ca này đã dừng nhận giao bài.':'Ca này chỉ xem được danh sách.';
       return true;
     } catch {
       if(request===revision)feedback.textContent='Không tải được danh sách. Bấm Cập nhật để thử lại.';
@@ -208,9 +202,9 @@ export function mountAssignmentDashboard(target, { api, onScope = () => {} }) {
         throw new Error('ACTION_RECEIPT_MISMATCH');
       }
       for(const item of response.results)if(item.code)failures.set(item.id,item.code);
-      if(await update(true))feedback.textContent='Đã cập nhật '+(items.length-failures.size)+'/'+items.length+' hồ sơ.';
+      if(await update(true,false))feedback.textContent='Đã cập nhật '+(items.length-failures.size)+'/'+items.length+' hồ sơ.';
     }catch{
-      const read=await update(true);
+      const read=await update(true,false);
       if(read)feedback.textContent='Chưa xác nhận được thao tác. Kiểm tra trạng thái từng dòng trước khi thử lại.';
     }finally{
       busy=false;reload.disabled=course.disabled=search.disabled=false;optionList();render();
@@ -285,9 +279,8 @@ export async function mountAssignmentWaiting(target, { api, scope, start, storag
   label='Bắt đầu',onState=()=>{},keepMonitoring=false }) {
   const key = 'substitute-assignment:'+[scope.sittingId,scope.testId,scope.classCode,scope.studentRef].join(':');
   const message = element('p','Đang mở phiên chờ…'); message.setAttribute('aria-live','polite');
-  const reference = element('p','');
   const button = element('button',label,{type:'button',disabled:true});
-  target.replaceChildren(message,reference,button);
+  target.replaceChildren(message,button);
   let token=storage.getItem(key),timer,closed=false,failures=0,busy=false,ready=false,lastState;
   const stop = () => { closed = true; clearTimeout(timer); };
   async function refresh() {
@@ -298,10 +291,10 @@ export async function mountAssignmentWaiting(target, { api, scope, start, storag
       if (closed) return;
       failures = 0;
       lastState=status.state;
-      onState(lastState);
+      onState(status.canStart===true?lastState:undefined);
       message.textContent = statusText[status.state] ?? 'Chờ giao';
-      reference.textContent = 'Phiên đang chờ ' + status.reference;
-      button.disabled = ready || !['assigned','starting','running'].includes(status.state);
+      if (status.state==='assigned' && !status.canStart) message.textContent='Đã giao · Chờ đến giờ bắt đầu';
+      button.disabled = ready || status.canStart!==true;
       button.textContent = status.state === 'running' ? 'Tiếp tục' : label;
       if (status.state === 'submitted') { stop(); return; }
     } catch (error) {

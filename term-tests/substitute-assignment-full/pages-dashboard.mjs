@@ -1,4 +1,4 @@
-import { assignmentClient, mountAssignmentDashboard } from './assignment-browser.mjs?v=20261120-v2-direct1';
+import { assignmentClient, mountAssignmentDashboard } from './assignment-browser.mjs?v=registration-live-20261120-r4';
 
 const endpoint = 'https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/';
 const api = assignmentClient(endpoint);
