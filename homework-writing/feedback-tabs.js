@@ -1,5 +1,5 @@
-import { feedbackCardsHtml } from './feedback-cards.js';
-import {feedbackBlockHtml,feedbackTextHtml,overallFeedback} from './feedback-format.js';
+import { feedbackCardsHtml } from './feedback-cards.js?v=20261120-feedback-symbols';
+import {feedbackBlockHtml,feedbackTextHtml,overallFeedback} from './feedback-format.js?v=20261120-feedback-symbols';
 import {languageCards} from './language-cards.js';
 
 function editableText(id,title,text,esc,ranges=[]){

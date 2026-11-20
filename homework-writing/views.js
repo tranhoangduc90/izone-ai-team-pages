@@ -1,5 +1,5 @@
 import { assignmentStatus, lesson3Status, lesson3StatusNames, statusNames, statusLabel, statusColor, statusDetail } from './assignment-status.js';
-import {feedbackBlockHtml,overallFeedback} from './feedback-format.js';
+import {feedbackBlockHtml,overallFeedback} from './feedback-format.js?v=20261120-feedback-symbols';
 import {alignmentPanelHtml} from './handout-alignment.js';
 import {handoutLinkHtml,handoutReadOnlyHtml} from './handout-view.js';
 // Lớp trình bày thuần HTML. Quyền, phiên bản và thao tác ghi vẫn do app.js/API quản lý.

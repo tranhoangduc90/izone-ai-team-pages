@@ -1,6 +1,6 @@
 // Cách đọc kế thừa thẻ LMS: mỗi thẻ giữ trọn câu gốc, gợi ý và nhận xét.
 // Module chỉ hiển thị dữ liệu đã công bố do caller cung cấp; không gọi API chấm.
-import {feedbackBlockHtml} from './feedback-format.js';
+import {feedbackBlockHtml} from './feedback-format.js?v=20261120-feedback-symbols';
 import {languageCards} from './language-cards.js';
 import {highlightHtml} from './text-highlights.js';
 export function feedbackCardsHtml(sourceItems, { esc, marked, editable = false, result = {items:sourceItems} }) {
