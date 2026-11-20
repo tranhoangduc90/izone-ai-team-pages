@@ -22,7 +22,8 @@ test('Chrome + API: lead xử lý đáp án và sửa lại bài Kho chung đã 
     await initializeLearningDemoDatabase(db);
     for(const migration of ['202609160002_learning_api_mapping_schema_usage.sql','202609160005_publisher_account_lookup.sql',
       '202610010001_progress_log_form_drafts.sql','202610220002_form_library.sql','202610280001_form_publications.sql',
-      '202610300001_worksheet_revisions.sql','202611090002_shared_course_drafts.sql','202611170001_shared_library_revisions.sql'])
+      '202610300001_worksheet_revisions.sql','202611090002_shared_course_drafts.sql','202611170001_shared_library_revisions.sql',
+      '202611200002_progress_log_shared_draft_actions.sql'])
       await db.exec(await readFile(resolve(backend,'ops','learning-migrations',migration),'utf8'));
     await db.exec(`INSERT INTO mapping.reviewer_account VALUES('lead@example.test','active'),('plain@example.test','active');
       INSERT INTO learning.course_content_authority(reviewer_email,course_code,can_self_approve_scored_forms,grant_reference)
