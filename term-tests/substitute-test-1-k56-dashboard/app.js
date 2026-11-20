@@ -86,6 +86,7 @@ $('catalog-close').addEventListener('click',()=>$('catalog').close());
 
 function renderAuth(){
  $('auth-panel').hidden=authenticated;$('auth-status').textContent=authMessage;$('google').hidden=authState!=='signed-out';$('retry-auth').hidden=!['error','forbidden'].includes(authState);$('logout').hidden=!authenticated;$('session-status').textContent=authenticated?'Đã xác minh giảng viên.':'';
+ window.dispatchEvent(new CustomEvent('izone:substitute-teacher-state',{detail:{state:authState,epoch:authEpoch}}));
 }
 function clearSession(message='Đăng nhập giảng viên để lấy link kỹ năng.',kind='signed-out'){
  authEpoch++;authenticated=false;catalog=null;authState=kind;authMessage=message;googleEpoch=-1;$('google').replaceChildren();render();
