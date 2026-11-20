@@ -10,7 +10,7 @@
   <title>Substitute Test · Khóa 56 và 67</title>
   <link rel="stylesheet" href="./styles.css?v=20261113-unified">
   <script type="module" src="./app.js?v=20261114-teacher-journal"></script>
-<link rel="stylesheet" href="../listening-assignment-demo/pilot.css">
+  <link rel="stylesheet" href="./assignment-dialog.css?v=20261120-r3">
 </head>
 <body>
   <header class="bar">
@@ -103,13 +103,22 @@
   <dialog id="catalog" aria-labelledby="catalog-title"><div class="dialog-head"><div><h2 id="catalog-title">Link của 12 bài kỹ năng</h2><p class="description">Chỉ sao chép bài đã mở và tài khoản được cấp quyền.</p></div><button id="catalog-close" class="button secondary close" type="button" aria-label="Đóng danh sách">×</button></div><section id="catalog-auth-slot"></section><div class="catalog-scroll"><table><thead><tr><th>Khóa / Đề</th><th>Kỹ năng</th><th>Trạng thái</th><th>Link học viên</th></tr></thead><tbody id="catalog-body"></tbody></table></div><p id="catalog-status" class="copy-status" role="status" aria-live="polite"></p></dialog>
 
 
-<dialog id="listening-assignment" aria-labelledby="listening-assignment-title">
-    <h2 id="listening-assignment-title">Giao bài · Substitute K56/K67</h2>
-    <p id="assignment-stage-note">Ca IC2322 đang ở chế độ xem danh sách. Quyền bắt đầu sẽ được mở sau khi nối trang thi.</p>
-    <div id="assignment-dashboard-mount"></div>
-    <a id="listening-assignment-link" class="button secondary" href="../substitute-test-1-k56-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer">Mở link chung</a>
-    <button id="listening-assignment-close" class="button secondary" type="button">Đóng</button>
-</dialog>
-<script type="module" src="../substitute-assignment-full/pages-dashboard.mjs?v=20261120-r2"></script>
+  <dialog id="listening-assignment" aria-labelledby="listening-assignment-title">
+    <header class="dialog-head assignment-header">
+      <div>
+        <h2 id="listening-assignment-title" tabindex="-1" autofocus>Giao bài</h2>
+        <p class="assignment-subtitle">Substitute K56/K67</p>
+      </div>
+      <button id="listening-assignment-close" class="button secondary close" type="button" aria-label="Đóng hộp thoại">×</button>
+    </header>
+    <div class="assignment-content">
+      <p id="assignment-stage-note" class="assignment-notice"><strong>Chế độ chỉ xem.</strong> Chức năng giao bài chưa được mở cho ca này.</p>
+      <div id="assignment-dashboard-mount"></div>
+    </div>
+    <footer class="assignment-footer">
+      <a id="listening-assignment-link" class="button secondary" href="../substitute-test-1-k56-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer">Mở link chung <span aria-hidden="true">↗</span><span class="sr-only"> trong tab mới</span></a>
+    </footer>
+  </dialog>
+  <script type="module" src="../substitute-assignment-full/pages-dashboard.mjs?v=20261120-r3"></script>
 </body>
 </html>

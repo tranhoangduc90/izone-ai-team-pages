@@ -36,12 +36,37 @@ export function assignmentClient(baseUrl) {
 }
 
 export function mountAssignmentDashboard(target, { api }) {
-  const filter = element('select',undefined, { ariaLabel:'Bài, lớp và ca thi' });
-  const notify = element('p',''); notify.setAttribute('aria-live','polite');
-  const rows = element('div');
-  const action = element('button','Giao bài đã chọn',{type:'button',disabled:true});
-  const reload = element('button','Cập nhật',{type:'button'});
-  target.replaceChildren(filter,reload,action,notify,rows);
+  const toolbar = element('div',undefined,{className:'assignment-toolbar'});
+  const field = element('label','Ca thi',{className:'assignment-field'});
+  const filter = element('select',undefined,{className:'assignment-select',disabled:true});
+  filter.append(element('option','Đang tải các ca thi…',{value:''}));
+  field.append(filter);
+  const action = element('button','Giao bài đã chọn',{type:'button',className:'button primary',disabled:true});
+  const reload = element('button','Cập nhật',{type:'button',className:'button secondary'});
+  toolbar.append(field,reload,action);
+
+  const heading = element('h3','Danh sách học viên',{id:'assignment-list-heading'});
+  const count = element('p','',{className:'assignment-count'});
+  const section = element('section',undefined,{className:'assignment-list'});
+  section.setAttribute('aria-labelledby',heading.id);
+  const listHeader = element('div',undefined,{className:'assignment-list-heading'});
+  listHeader.append(heading,count);
+  const notify = element('p','',{className:'assignment-feedback'});
+  notify.setAttribute('role','status');
+  const table = element('table',undefined,{className:'assignment-table',hidden:true});
+  table.setAttribute('aria-labelledby',heading.id);
+  const headerRow = table.createTHead().insertRow();
+  for (const label of ['Họ và tên','Trạng thái']) headerRow.append(element('th',label,{scope:'col'}));
+  const rows = table.createTBody();
+  const review = element('ul',undefined,{className:'assignment-review',hidden:true,ariaLabel:'Đăng ký cần đối chiếu'});
+  section.append(listHeader,notify,table,review);
+  target.replaceChildren(toolbar,section);
+
+  function announce(text, tone = '') {
+    notify.textContent = text;
+    notify.dataset.tone = tone;
+  }
+
   const selected = new Map();
   let scopes = [];
   let busy = false, revision = 0;
@@ -52,8 +77,14 @@ export function mountAssignmentDashboard(target, { api }) {
   };
   async function update(refreshCatalog = false) {
     const request = ++revision;
-    selected.clear(); action.disabled = true; rows.replaceChildren();
-    notify.textContent = 'Đang tải danh sách…';
+    selected.clear();
+    action.disabled = true;
+    table.hidden = true;
+    review.hidden = true;
+    rows.replaceChildren();
+    review.replaceChildren();
+    count.textContent = '';
+    announce('Đang tải danh sách…');
     try {
       if (refreshCatalog) {
         const { scopes: current } = await api('teacher/scopes');
@@ -61,24 +92,34 @@ export function mountAssignmentDashboard(target, { api }) {
         const previous = filter.value;
         scopes = current;
         filter.replaceChildren(...scopes.map(scope=>element('option',scope.label,{value:keyFor(scope)})));
+        if (!scopes.length) filter.append(element('option','Chưa có ca thi',{value:''}));
+        filter.disabled = busy || !scopes.length;
         if (scopes.some(scope=>keyFor(scope) === previous)) filter.value = previous;
       }
       const scope = selection();
-      if (!scope) { notify.textContent = 'Chưa có ca thi trong phạm vi của tài khoản này.'; return; }
+      if (!scope) { announce('Chưa có ca thi trong phạm vi của tài khoản này.'); return; }
       const data = await api('teacher/list',{query:scope});
       if (request !== revision) return;
-      notify.textContent = data.rows.length ? '' : 'Chưa có đăng ký đủ điều kiện.';
+      announce(data.rows.length ? '' : 'Chưa có đăng ký đủ điều kiện.');
+      count.textContent = data.rows.length ? `${data.rows.length} học viên` : '';
       for (const row of data.rows) {
-        const entry = element('section');
-        const label = element('strong',row.name || 'Hồ sơ cần đối chiếu');
-        entry.append(label,element('span',' · ' + (statusText[row.state] || row.state)));
+        const entry = rows.insertRow();
+        const identity = entry.insertCell();
+        identity.append(element('strong',row.name || 'Hồ sơ cần đối chiếu',{className:'assignment-name'}));
+        const status = entry.insertCell();
+        const state = element('span',statusText[row.state] ?? row.state,{className:'assignment-status'});
+        state.dataset.state = row.state;
+        status.append(state);
         if (row.active && row.state === 'pending' && row.sessions.length) {
-          const session = element('select',undefined,{ariaLabel:'Mã phiên đang chờ của ' + (row.name ?? '')});
-          session.append(element('option','Chọn phiên đã đối chiếu',{value:''}));
+          const controls = element('div',undefined,{className:'assignment-session'});
+          const sessionLabel = element('label','Phiên đã đối chiếu',{className:'assignment-field'});
+          const session = element('select',undefined,{className:'assignment-select',
+            ariaLabel:'Phiên đã đối chiếu của ' + (row.name ?? '')});
+          session.append(element('option','Chọn phiên',{value:''}));
           for (const pair of row.sessions) session.append(element('option',pair.reference,{value:pair.id}));
           const check = element('input',undefined,{type:'checkbox',disabled:true});
-          const confirm = element('label');
-          confirm.append(check,document.createTextNode(' Đã xác nhận trực tiếp'));
+          const confirm = element('label',undefined,{className:'assignment-confirm'});
+          confirm.append(check,document.createTextNode('Đã xác nhận trực tiếp'));
           session.onchange = () => {
             check.checked = false; check.disabled = !session.value;
             selected.delete(row.id); action.disabled = !selected.size;
@@ -90,18 +131,24 @@ export function mountAssignmentDashboard(target, { api }) {
             else selected.delete(row.id);
             action.disabled = !selected.size;
           };
-          entry.append(session,confirm);
+          sessionLabel.append(session);
+          controls.append(sessionLabel,confirm);
+          identity.append(controls);
         }
         if (row.active && row.state === 'assigned') {
-          const undo = element('button','Thu hồi',{type:'button'});
+          const undo = element('button','Thu hồi',{type:'button',className:'button secondary assignment-revoke'});
           undo.onclick = () => perform('revoke',[{id:row.id,version:row.version}]);
-          entry.append(undo);
+          status.append(undo);
         }
-        rows.append(entry);
       }
-      for (const item of data.blocked) rows.append(element('p',`Dòng ${item.row} · ${blockedText[item.code] ?? item.code}`));
+      table.hidden = !data.rows.length;
+      for (const item of data.blocked) review.append(element('li',`Dòng ${item.row} · ${blockedText[item.code] ?? item.code}`));
+      review.hidden = !data.blocked.length;
     } catch {
-      if (request === revision) notify.textContent = 'Không tải được danh sách. Hãy kiểm tra phiên giảng viên và thử lại.';
+      if (request === revision) {
+        if (!scopes.length) filter.replaceChildren(element('option','Chưa tải được ca thi',{value:''}));
+        announce('Không tải được danh sách. Bấm Cập nhật để thử lại.','error');
+      }
     }
   }
   async function perform(kind, items) {
@@ -112,13 +159,13 @@ export function mountAssignmentDashboard(target, { api }) {
       await update();
       const failures = res.results.filter(r=>r.code);
       const failed = failures.map(r=>r.id.slice(0,8)+' · '+r.code).join(', ');
-      notify.textContent = `Đã cập nhật ${res.results.length - failures.length}/${items.length} hồ sơ.` +
-        (failed ? ' Cần kiểm tra lại ' + failed : '');
+      announce(`Đã cập nhật ${res.results.length - failures.length}/${items.length} hồ sơ.` +
+        (failed ? ' Cần kiểm tra lại ' + failed : ''),failed ? 'error' : '');
     } catch {
       await update();
-      notify.textContent = 'Chưa xác nhận được thao tác. Đã đọc lại danh sách trước khi thử tiếp.';
+      announce('Chưa xác nhận được thao tác. Kiểm tra trạng thái từng học viên trước khi thử lại.','error');
     } finally {
-      busy = false; filter.disabled = false; reload.disabled = false;
+      busy = false; filter.disabled = !scopes.length; reload.disabled = false;
     }
   }
   filter.onchange = () => update();

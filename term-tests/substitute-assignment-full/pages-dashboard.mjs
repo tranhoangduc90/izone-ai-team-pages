@@ -1,4 +1,4 @@
-import { assignmentClient, mountAssignmentDashboard } from './assignment-browser.mjs';
+import { assignmentClient, mountAssignmentDashboard } from './assignment-browser.mjs?v=20261120-r3';
 
 const endpoint = 'https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/';
 const api = assignmentClient(endpoint);
@@ -8,6 +8,14 @@ const body = document.getElementById('assignment-dashboard-mount');
 const close = document.getElementById('listening-assignment-close');
 let sessionCheck = 0;
 let mounted = false;
+let pressedBackdrop = false;
+
+function isBackdrop(event) {
+  if (event.target !== dialog) return false;
+  const {left, top, right, bottom} = dialog.getBoundingClientRect();
+  return event.clientX < left || event.clientX >= right ||
+    event.clientY < top || event.clientY >= bottom;
+}
 
 function hideDashboard() {
   button.hidden = true;
@@ -37,9 +45,21 @@ button.addEventListener('click', async ()=>{
   }
 });
 close.addEventListener('click',()=>dialog.close());
+dialog.addEventListener('pointerdown',event=>{
+  pressedBackdrop = event.button === 0 && isBackdrop(event);
+});
+dialog.addEventListener('pointerup',event=>{
+  const dismiss = pressedBackdrop && isBackdrop(event);
+  pressedBackdrop = false;
+  if (dismiss) dialog.close();
+});
+dialog.addEventListener('pointercancel',()=>{ pressedBackdrop = false; });
+dialog.addEventListener('close',()=>{
+  if (!button.hidden) button.focus();
+});
 document.getElementById('logout')?.addEventListener('click',()=>{
   ++sessionCheck;
-    hideDashboard();
+  hideDashboard();
 });
 addEventListener('storage',event=>{
   if (['izone:teacher-sso-login','izone:teacher-sso-logout'].includes(event.key)) void refreshAccess();

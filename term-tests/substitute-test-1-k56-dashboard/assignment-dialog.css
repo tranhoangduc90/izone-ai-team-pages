@@ -1,0 +1,257 @@
+#listening-assignment {
+  width: min(760px, calc(100% - 32px));
+  max-height: min(85dvh, 760px);
+  background: #fff;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 16px 48px #10213c26;
+  font-size: 16px;
+}
+
+#listening-assignment[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+#listening-assignment .assignment-header,
+#listening-assignment .assignment-content,
+#listening-assignment .assignment-footer {
+  padding-inline: 24px;
+}
+
+#listening-assignment .assignment-header {
+  padding-block: 20px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+#listening-assignment h2 { font-size: 26px; }
+#listening-assignment h2:focus { outline: none; }
+
+#listening-assignment .assignment-subtitle {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+#listening-assignment .assignment-content {
+  padding-block: 20px 24px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+#listening-assignment .assignment-notice {
+  margin-bottom: 20px;
+  border: 1px solid #d6e2ed;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f6f9fc;
+  color: #174265;
+}
+
+#listening-assignment .assignment-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+  gap: 12px;
+}
+
+#listening-assignment .assignment-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#listening-assignment .assignment-select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid #7c8798;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+#listening-assignment .assignment-select:focus-visible {
+  outline-color: var(--navy);
+}
+
+#listening-assignment .button {
+  min-height: 44px;
+  line-height: 1.35;
+  padding-block: 9px;
+}
+
+#listening-assignment .close {
+  flex: 0 0 44px;
+  padding: 0;
+  line-height: 1;
+}
+
+#listening-assignment .primary:hover:not(:disabled) { background: #10213c; }
+
+#listening-assignment :is(.button, .assignment-select):disabled {
+  border-color: #d2d9e3;
+  background: #eaedf2;
+  color: #586477;
+  cursor: default;
+}
+
+#listening-assignment .assignment-list { margin-top: 24px; }
+
+#listening-assignment .assignment-list-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+}
+
+#listening-assignment .assignment-list-heading h3 { font-size: 18px; }
+
+#listening-assignment .assignment-count {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+#listening-assignment .assignment-count:empty,
+#listening-assignment .assignment-feedback:empty { display: none; }
+
+#listening-assignment .assignment-table {
+  width: 100%;
+  table-layout: fixed;
+  border: 1px solid var(--line);
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#listening-assignment .assignment-table :is(th, td) {
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+#listening-assignment .assignment-table th {
+  padding-block: 8px;
+  background: #f5f6f8;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#listening-assignment .assignment-table th:last-child { width: 34%; }
+
+#listening-assignment .assignment-table td { border-top: 1px solid var(--line); }
+
+#listening-assignment .assignment-name {
+  color: #1f2937;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+#listening-assignment .assignment-status {
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: #eaedf2;
+  color: #586477;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+#listening-assignment .assignment-status:is([data-state="pending"], [data-state="running"]) {
+  background: #e6eef5;
+  color: #174265;
+}
+
+#listening-assignment .assignment-status:is([data-state="assigned"], [data-state="submitted"]) {
+  background: #e4f5ea;
+  color: #166534;
+}
+
+#listening-assignment .assignment-status[data-state="starting"],
+#listening-assignment .assignment-review {
+  background: #fff4e0;
+  color: #8a5300;
+}
+
+#listening-assignment .assignment-session { margin-top: 8px; }
+
+#listening-assignment .assignment-confirm {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  gap: 8px;
+}
+
+#listening-assignment .assignment-confirm input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--navy);
+}
+
+#listening-assignment .assignment-revoke {
+  display: block;
+  margin-top: 8px;
+}
+
+#listening-assignment .assignment-feedback,
+#listening-assignment .assignment-review {
+  margin: 10px 0 0;
+  border-radius: 8px;
+}
+
+#listening-assignment .assignment-feedback {
+  padding: 12px 14px;
+  background: #f5f6f8;
+  color: var(--muted);
+}
+
+#listening-assignment .assignment-feedback[data-tone="error"] {
+  background: #fde8eb;
+  color: #9b0a22;
+}
+
+#listening-assignment .assignment-review { padding: 10px 14px 10px 28px; }
+
+#listening-assignment .assignment-footer {
+  padding-block: 12px;
+  border-top: 1px solid var(--line);
+}
+
+#listening-assignment .assignment-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+@media (max-width: 600px) {
+  #listening-assignment { max-height: calc(100dvh - 24px); }
+
+  #listening-assignment :is(.assignment-header, .assignment-content, .assignment-footer) { padding-inline: 16px; }
+  #listening-assignment .assignment-header { padding-block: 16px 12px; }
+  #listening-assignment .assignment-content { padding-block: 16px; }
+  #listening-assignment .assignment-toolbar { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+  #listening-assignment .assignment-toolbar .assignment-field { grid-column: 1 / -1; }
+  #listening-assignment .assignment-table :is(th, td) { padding-inline: 10px; }
+  #listening-assignment .assignment-table th:last-child { width: 40%; }
+}
+
+@media (max-width: 380px) {
+  #listening-assignment .assignment-select {
+    padding-inline: 8px;
+    font-size: 15px;
+  }
+}
