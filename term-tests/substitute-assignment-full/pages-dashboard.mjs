@@ -1,4 +1,4 @@
-import { assignmentClient, mountAssignmentDashboard } from './assignment-browser.mjs?v=20261120-r3';
+import { assignmentClient, mountAssignmentDashboard } from './assignment-browser.mjs?v=20261120-v2-direct1';
 
 const endpoint = 'https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/';
 const api = assignmentClient(endpoint);
@@ -20,6 +20,9 @@ function isBackdrop(event) {
 function hideDashboard() {
   button.hidden = true;
   body.replaceChildren();
+  const link=document.getElementById('listening-assignment-link');
+  link.hidden=true;
+  link.removeAttribute('href');
   mounted = false;
   if (dialog.open) dialog.close();
 }
@@ -41,7 +44,12 @@ button.addEventListener('click', async ()=>{
   dialog.showModal();
   if (!mounted) {
     mounted = true;
-    await mountAssignmentDashboard(body,{api});
+    await mountAssignmentDashboard(body,{api,onScope:scope=>{
+      const link=document.getElementById('listening-assignment-link');
+      link.hidden=!scope?.studentUrl;
+      if(scope?.studentUrl)link.href=scope.studentUrl;
+      else link.removeAttribute('href');
+    }});
   }
 });
 close.addEventListener('click',()=>dialog.close());
