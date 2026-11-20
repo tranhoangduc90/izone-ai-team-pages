@@ -6,9 +6,15 @@ import test from 'node:test';
 const textAsset = /\.(?:css|html|js|json|mjs|svg)$/i;
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 
-for (const term of [1, 2]) {
-  test(`Term ${term} K56 student cache does not require teacher sign-in`, async () => {
-    const route = new URL(`../term-tests/term-test-${term}-k56-computer-based/`, import.meta.url);
+const routes = {
+  'Term 1 K56': 'term-test-1-k56-computer-based',
+  'Term 2 K56': 'term-test-2-k56-computer-based',
+  'Mini K56': 'mini-test-k56-computer-based'
+};
+
+for (const [name, slug] of Object.entries(routes)) {
+  test(`${name} student cache does not require teacher sign-in`, async () => {
+    const route = new URL(`../term-tests/${slug}/`, import.meta.url);
     const read = name => readFile(new URL(name, route), 'utf8');
     const index = await read('index.html');
     const bootstrap = index.match(/src="(bootstrap-[^"?]+\.js)\?/)[1];
@@ -20,7 +26,7 @@ for (const term of [1, 2]) {
 
     const workerSource = await read(worker);
     const manifest = workerSource.match(/from '\.\/(offline-assets-[^']+)'/)[1];
-    const shell = workerSource.match(/from '\.\/(shell-worker-[^']+)'/)[1];
+    const shell = workerSource.match(/from '\.\/((?:shell-)?worker-[^']+)'/)[1];
     const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(new URL(manifest, route).href);
     assert.ok(!ASSETS.includes('../../shared/teacher-single-sign-on.js'));
     assert.deepEqual(ASSETS, Object.keys(ASSET_HASHES));
