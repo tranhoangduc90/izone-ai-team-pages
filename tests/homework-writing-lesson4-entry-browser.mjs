@@ -33,12 +33,18 @@ test('Lesson 5 shows the course roster on its plain link and retains exact class
 });
 
 async function exercise(t, options, verify) {
+  const activity=options.lesson6?'lesson6':'lesson4';
+  const assignmentId=options.lesson6?'hw-k67-writing-lesson6-101':assignment;
+  const editorPath='/student/assignments/'+assignmentId+'/handout-editor';
+  const fixtureLesson=options.lesson6?{...lesson,activity,number:6,title:'Chuẩn bị ý tưởng · Truy cập và trao đổi thông tin',
+    description:'Chốt ý về thông tin',helpTitle:'Chọn idea như thế nào?',helpItems:['Đọc ngược từ cuối lên.']} : lesson;
   const server = process.env.LESSON4_ENTRY_SITE ? null : await serveDirectory(resolve(import.meta.dirname, '..'));
   const site = process.env.LESSON4_ENTRY_SITE || server.origin;
   const origin = new URL(site).origin;
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   t.after(async () => { await browser.close(); await server?.close(); });
-  const context=await browser.newContext({hasTouch:!!options.mobile,viewport:{width:options.mobile?390:1360,height:850}});
+  const viewport=options.lesson6?(options.mobile?{width:390,height:844}:{width:1359,height:686}):{width:options.mobile?390:1360,height:850};
+  const context=await browser.newContext({hasTouch:!!options.mobile,viewport});
   const page=await context.newPage();
   page.setDefaultTimeout(6000);
   const calls = [];
@@ -61,6 +67,8 @@ async function exercise(t, options, verify) {
   const target={...createState(0,targetLesson),ref:'lesson5-fixture-session',activity:'lesson5',classRef,studentRef,vocabulary:{},teacherComments:[]};
   const teacherData={extraRows:[],sent:[],initialActivity:null,writingStatus:'awaiting_teacher'};
   let lastSaved=null;
+  let ideasSession;
+  let practice={status:'not_started'};
   await page.context().route('**/*', async route => {
     const request = route.request();
     const url = new URL(request.url());
@@ -143,38 +151,77 @@ async function exercise(t, options, verify) {
       return send({ token, person, identity, csrf });
     }
     if (path === '/session') return send({ person, csrf });
-    if (path === '/access/entry') return send({ entry: { documentId, assignmentId: assignment, studentRef, classId: person.classId } });
+    if (path === '/access/entry') return send({ entry: { documentId, assignmentId, studentRef, classId: person.classId } });
     if (path === '/access/identity/resolve') return send({ ok: true, status: 'unique', identity: { authority: 'erp-contact', id: '201' },
       aliases: [{ studentRef, classId: person.classId, classCode: classRef, studentName: person.label }] });
     assert.equal(request.headers().authorization, 'Bearer ' + token);
-    if (path === editor + '/lessons/lesson4') return send({ ok: true, lesson });
-    if (path === editor + '/roster') {
+    if (path === editorPath + '/lessons/'+activity) return send({ ok: true, lesson:fixtureLesson });
+    if (path === editorPath + '/roster') {
       if (rosterFailures > 0) { rosterFailures--; return send({ ok: false, error: 'ROSTER_UNAVAILABLE' }, 503); }
       return send({ ok: true, classes: [{ classRef, className: classRef, students: [
         { studentRef: options.wrong ? 'another-student' : studentRef, displayName: person.label },
       ] }] });
     }
-    if (path === editor + '/sessions') {
-      assert.deepEqual(request.postDataJSON(), { activity: 'lesson4', classRef, studentRef });
+    if (path === editorPath + '/sessions') {
+      assert.deepEqual(request.postDataJSON(), { activity, classRef, studentRef });
       assert.equal(request.headers()['x-hw-csrf'], csrf);
-      const s={...createState(0,lesson),activity:'lesson4',outlineOnly:true,classRef,studentRef,ref:'fixture-session'};
+      const s={...createState(0,fixtureLesson),activity,outlineOnly:true,classRef,studentRef,ref:'fixture-session'};
       if(options.transfer){
         s.lesson5IdeaAvailable=true;
         Object.assign(s.responses,{body1_idea1:'Bị quảng cáo hấp dẫn',body2_idea1:'Tiền sinh hoạt thiếu hụt',body2_idea2:'Tăng rác điện tử'});
       }
-      return send({ok:true,token:'B'.repeat(43),session:s});
+      if(options.lesson6)ideasSession??=s;
+      return send({ok:true,token:'B'.repeat(43),session:ideasSession||s});
     }
     if(path===editor+'/sessions/fixture-session'&&options.transfer)return send({ok:true,
       lesson5IdeaTicket:'verified-lesson4-fixture-ticket',session:{ref:'fixture-session'}});
-    if (path === editor + '/sessions/fixture-session/practice') return send({ ok: true, practice: { status: options.transfer?'accepted':'not_started' } });
+    if (path === editorPath + '/sessions/fixture-session/practice') {
+      if(options.lesson6&&request.method()==='POST')practice={status:'accepted',url:request.postDataJSON().url};
+      return send({ok:true,practice:options.transfer?{status:'accepted'}:practice});
+    }
+    if(options.lesson6&&path===editorPath+'/sessions/fixture-session/responses'){
+      Object.assign(ideasSession.responses,request.postDataJSON().responses);
+      ideasSession.version++;
+      return send({ok:true,session:ideasSession});
+    }
+    if(options.lesson6&&path===editorPath+'/sessions/fixture-session/checks'){
+      assert.equal(ideasSession.responses.body1_idea2,'');
+      ideasSession.steps.body1_topic.status='pending';
+      return send({ok:true,session:ideasSession},202);
+    }
+    if(options.lesson6&&path===editorPath+'/sessions/fixture-session')return send({ok:true,session:ideasSession});
     return send({ ok: false }, 404);
   });
 
-  const query = new URLSearchParams({ mode: 'student', assignment, documentId, workspace: 'k67' });
-  await page.goto(site + '/writing-handouts/lesson4/?' + query);
+  const query = new URLSearchParams({ mode: 'student', assignment:assignmentId, documentId, workspace: 'k67' });
+  await page.goto(site + '/writing-handouts/'+activity+'/?' + query);
   await page.locator('#hw-entry-student').selectOption('0');
-  await verify({page,calls,confirmed,site,target,teacherData});
+  await verify({page,calls,confirmed,site,target,teacherData,editorPath});
 }
+
+for(const mobile of [true,false])test('Lesson 6 reuses the verified '+(mobile?'mobile':'desktop')+' CTA and submits Check with one idea', async t=>{
+  await exercise(t,{lesson6:true,mobile},async({page,editorPath,calls})=>{
+    await page.getByRole('button',{name:'Xác nhận và vào bài'}).click();
+    await page.locator('#practice-share').waitFor();
+    assert.equal(await page.locator('.practice-open').getAttribute('href'),'https://ducizone.short.gy/writing_lesson_6');
+    assert.equal(await page.locator('.reading-practice-content').evaluate(element=>element.inert),true);
+    const artifacts=process.env.LESSON6_QA_SCREENSHOTS_DIR;
+    const size=mobile?'mobile':'desktop';
+    if(artifacts)await page.screenshot({path:resolve(artifacts,'lesson6-'+size+'-locked.png')});
+    await page.locator('#practice-share').fill('https://chatgpt.com/share/00000000-0000-4000-8000-000000000006');
+    await page.locator('#practice-check').click();
+    await page.locator('#field-stance').selectOption('agree');
+    await page.locator('#field-body1_topicSentence').fill('Nguồn tin sẵn có giúp gia đình chủ động hơn.');
+    await page.locator('#field-body1_idea1').fill('Nhận kịp thông tin cảnh báo lũ.');
+    assert.match(await page.locator('label').filter({has:page.locator('#field-body1_idea2')}).innerText(),/không bắt buộc/);
+    if(artifacts)await page.screenshot({path:resolve(artifacts,'lesson6-'+size+'-outline.png'),fullPage:true});
+    await Promise.all([
+      page.waitForResponse(response=>response.url().includes(editorPath+'/sessions/fixture-session/checks')&&response.status()===202),
+      page.locator('[data-check=body1_topic]').click(),
+    ]);
+    assert.equal(calls.filter(path=>path.endsWith('/checks')).length,1);
+  });
+});
 
 test('Lesson 4 asks for name confirmation once, then restores without remounting the waiting card', async t => {
   await exercise(t, { slow: true, mobile: true }, async ({ page, calls, confirmed }) => {

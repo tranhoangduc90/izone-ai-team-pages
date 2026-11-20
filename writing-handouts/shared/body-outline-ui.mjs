@@ -1,4 +1,6 @@
-import {OUTLINE_DIRECTIONS,bodyKey,outlineRelation} from './workflow.mjs?v=20261109-l3-v1';
+import {LESSON6_STANCES,OUTLINE_DIRECTIONS,bodyKey,outlineRelation} from './workflow.mjs?v=20261120-lesson6-writing';
+
+const lesson6Dimensions={access:'truy cập thông tin',exchange:'trao đổi thông tin',rapid:'tốc độ tiếp cận hoặc lan truyền',uncontrolled:'thiếu kiểm soát'};
 
 export const relationMessages={
  waiting:'Sẽ đối chiếu khi cả hai thân bài đã đạt ở bản hiện tại.',
@@ -11,19 +13,22 @@ const heading=(title,number,description)=>`<div class="group-header"><div><span 
 
 export function outlineSections(state,{field,comments,statusLabels,canContinueWriting=false}){
  const twoQuestions=state.activity==='lesson4';
+ const lesson6=state.activity==='lesson6';
+ const directions=lesson6?LESSON6_STANCES:OUTLINE_DIRECTIONS;
+ const stanceQuestion=lesson6?'Bạn đồng ý đến mức nào với nhận định việc truy cập và trao đổi thông tin nhanh, thiếu kiểm soát là một mối nguy?':'Bạn nghĩ sao về nhận định cấm hoàn toàn fast food là giải pháp duy nhất?';
  const stance=`<section class="section-group" id="position">${heading('Quan điểm của cả bài',1,'Chọn hướng bạn muốn bảo vệ trước khi Check từng thân bài.')}
- <div class="answer-card"><label for="field-stance">Bạn nghĩ sao về nhận định cấm hoàn toàn fast food là giải pháp duy nhất?</label>
- <select id="field-stance" data-field="stance"><option value="">Chọn quan điểm…</option>${Object.entries(OUTLINE_DIRECTIONS).map(([value,label])=>`<option value="${value}" ${state.responses.stance===value?'selected':''}>${label}</option>`).join('')}</select>
+ <div class="answer-card"><label for="field-stance">${stanceQuestion}</label>
+ <select id="field-stance" data-field="stance"><option value="">Chọn quan điểm…</option>${Object.entries(directions).map(([value,label])=>`<option value="${value}" ${state.responses.stance===value?'selected':''}>${label}</option>`).join('')}</select>
  <p class="instruction">Nếu hai thân bài trái hướng, hãy để hướng bạn ủng hộ hơn ở Thân bài 2.</p></div></section>`;
  const bodies=[1,2].map(n=>{
   const key=bodyKey(n,'topic'),step=state.steps[key],locked=['passed','pending'].includes(step.status);
   return `<section class="section-group step" id="body${n}" data-status="${step.status}" data-body-index="${n}">
-   ${heading('Thân bài '+n,twoQuestions?n:n+1,twoQuestions?(n===1?'Giải thích vì sao người ta mua đồ họ không cần.':'Nêu việc mua đồ không cần thiết là tốt hay xấu.'):'Chốt thông điệp của đoạn và hai idea bạn sẽ dùng.')}
-   <div class="step-grid"><article class="answer-card"><div class="step-heading"><div><p class="kicker">Chuẩn bị nội dung</p><h3>Chốt thông điệp và hai idea</h3></div><span class="badge ${step.status}">${statusLabels[step.status]}</span></div>
-   <p class="instruction">${twoQuestions?'Viết một câu thông điệp hoàn chỉnh. Hai idea cần cùng làm rõ thông điệp của đoạn.':'Hai idea có thể cùng chiều hoặc trái chiều. Hãy cho thấy chúng cùng làm rõ một thông điệp.'}</p>
+   ${heading('Thân bài '+n,twoQuestions?n:n+1,twoQuestions?(n===1?'Giải thích vì sao người ta mua đồ họ không cần.':'Nêu việc mua đồ không cần thiết là tốt hay xấu.'):lesson6?'Chốt thông điệp của đoạn và 1–2 idea bạn sẽ dùng.':'Chốt thông điệp của đoạn và hai idea bạn sẽ dùng.')}
+   <div class="step-grid"><article class="answer-card"><div class="step-heading"><div><p class="kicker">Chuẩn bị nội dung</p><h3>${lesson6?'Chốt thông điệp và idea':'Chốt thông điệp và hai idea'}</h3></div><span class="badge ${step.status}">${statusLabels[step.status]}</span></div>
+   <p class="instruction">${lesson6?'Viết một câu thông điệp hoàn chỉnh. Chọn 1–2 idea làm rõ tác động của việc tiếp cận hoặc trao đổi thông tin.':twoQuestions?'Viết một câu thông điệp hoàn chỉnh. Hai idea cần cùng làm rõ thông điệp của đoạn.':'Hai idea có thể cùng chiều hoặc trái chiều. Hãy cho thấy chúng cùng làm rõ một thông điệp.'}</p>
    ${field(bodyKey(n,'topicSentence'),false)}<div class="field-grid">${field(bodyKey(n,'idea1'),false)}${field(bodyKey(n,'idea2'),false)}</div>
    <p class="error" id="error-${key}" role="alert" hidden></p>
-   <div class="section-actions"><span class="word-count">Check cả ba ô của thân bài này</span><button class="primary" data-check="${key}" ${locked?'disabled':''}>${locked?statusLabels[step.status]:'Check'}</button></div></article>${comments(key)}</div></section>`;
+   <div class="section-actions"><span class="word-count">${lesson6?'Check thông điệp và các idea của thân bài này':'Check cả ba ô của thân bài này'}</span><button class="primary" data-check="${key}" ${locked?'disabled':''}>${locked?statusLabels[step.status]:'Check'}</button></div></article>${comments(key)}</div></section>`;
  }).join('');
  const relation=outlineRelation(state);
  if(twoQuestions){
@@ -33,7 +38,9 @@ export function outlineSections(state,{field,comments,statusLabels,canContinueWr
  const actions=relation==='order'?'<div class="section-actions"><button class="primary" data-outline-swap>Đổi chỗ hai thân bài</button><span>Chuyển cả thông điệp, hai idea và kết quả Check của mỗi đoạn.</span></div>'
   :relation==='stance'?'<div class="field-grid section-actions"><div><button class="secondary" data-outline-focus="stance">Đổi quan điểm của cả bài</button><p class="instruction">Nếu hai thân bài đã nói đúng điều bạn muốn nói.</p></div><div><button class="secondary" data-outline-focus="body2_topicSentence">Giữ quan điểm, sửa Thân bài 2</button><p class="instruction">Nếu bạn vẫn muốn giữ lựa chọn ở đầu bài. Sửa đoạn rồi Check lại.</p></div></div>'
   :canContinueWriting&&relation==='passed'?'<div class="section-actions"><button type="button" class="primary" data-continue-writing>Viết mở bài →</button></div>':'';
- return stance+bodies+`<section class="answer-card" id="relation"><p class="kicker">KẾT QUẢ CHUNG</p><h2 id="relation-title" tabindex="-1">Đối chiếu hai thân bài</h2><p role="status">${relationMessages[relation]}</p>${actions}</section>`;
+ const missing=Object.entries(lesson6Dimensions).filter(([key])=>state.missingDimensions?.includes(key)).map(([,label])=>label);
+ const message=relation==='coverage'?'Đã Check 2 thân · Cần bổ sung dàn ý. Còn thiếu: '+missing.join(', ')+'.':relationMessages[relation];
+ return stance+bodies+`<section class="answer-card" id="relation"><p class="kicker">KẾT QUẢ CHUNG</p><h2 id="relation-title" tabindex="-1">Đối chiếu hai thân bài</h2><p role="status">${message}</p>${actions}</section>`;
 }
 
 export function outlineJourney(state){

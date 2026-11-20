@@ -11,7 +11,10 @@ export const AGREEMENT_LEVELS=['Đồng ý hoàn toàn','Phản đối hoàn to�
 export const OUTLINE_DIRECTIONS={agree:'Nghiêng về đồng ý',disagree:'Nghiêng về phản đối',balanced:'Cân bằng hai phía'};
 export const isBodyOutline=s=>s.outlineOnly===true;
 export const validOutlineDirection=value=>typeof value==='string'&&Object.hasOwn(OUTLINE_DIRECTIONS,value);
+export const LESSON6_STANCES={agree:'Đồng ý',disagree:'Không đồng ý',partly_agree:'Đồng ý một phần'};
+export const validOutlineStance=(s,value)=>s.activity==='lesson6'?typeof value==='string'&&Object.hasOwn(LESSON6_STANCES,value):validOutlineDirection(value);
 export function outlineRelation(s){
+ if(s.activity==='lesson6')return s.relation||'waiting';
  const steps=[s.steps?.body1_topic,s.steps?.body2_topic];
  const stance=s.responses?.stance;
  if(!validOutlineDirection(stance)||steps.some(step=>step?.status!=='passed'||!validOutlineDirection(step.direction)))return 'waiting';
@@ -25,7 +28,8 @@ export const solutionsFor=s=>s.solutionOptions||SOLUTIONS;
 export const preparationContext=s=>isOpinion(s)||isDiscussion(s)?{preparationKind:preparationKindOf(s),solutionOptions:[...s.solutionOptions]}:{};
 export const isOpinion=s=>isPrepared(s)&&preparationKindOf(s)===OPINION;
 export const isDiscussion=s=>isPrepared(s)&&preparationKindOf(s)===DISCUSSION;
-export function requiredFields(s,section){return workflowFor(s).fields[section].filter(k=>k!=='positionLimit'||s.responses?.agreementLevel===AGREEMENT_LEVELS[2]);}
+export function requiredFields(s,section){return workflowFor(s).fields[section].filter(k=>
+ (k!=='positionLimit'||s.responses?.agreementLevel===AGREEMENT_LEVELS[2])&&(s.activity!=='lesson6'||!k.endsWith('_idea2')));}
 export function preparationError(s){
  if(!solutionsFor(s).includes(s.responses?.chosenSolution))return 'SOLUTION_INVALID';
  if(!isOpinion(s))return null;
