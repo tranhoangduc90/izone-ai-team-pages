@@ -617,17 +617,18 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     title.append(el('small',thuyNames[type]||EDITOR_TYPES.find(([id])=>id===type)?.[1]||'Câu từ nguồn cũ'));head.append(title);
     const modes=el('div',undefined,{className:'thuy-question-mode'});modes.dataset.validationField='kind';modes.setAttribute('role','group');modes.setAttribute('aria-label','Chế độ câu '+item.position);modes.append(el('span','Chế độ câu hỏi',{className:'thuy-question-mode-label'}));
     const choices=el('div',undefined,{className:'thuy-mode-buttons'});
-    if(canChangeQuestionKind(type)){
+    if(type==='reflection'||canChangeQuestionKind(type)){
       for(const [value,label]of [['exercise','Bài tập'],['survey','Khảo sát']]){
         const choice=button(label,()=>{
           if(kind===value)return;
+          if(type==='reflection'){askQuestionTypeChange(item,type,choice);return;}
           updateQuestion(item,()=>changeQuestionKind(item,draft.gradingKey,value,type));
           if(value==='exercise'&&!draft.gradingKey.items[item.itemVersionId])notice('Hãy kiểm và nhập đáp án chấm cho câu '+item.position+'.');
         },readonly);choice.setAttribute('aria-pressed',String(kind===value));choices.append(choice);
       }
     }else{
       choices.append(el('span',type==='keyword_selection'?'Dạng cũ · đã ngừng tạo':'Khảo sát'));
-      const label=type==='reflection'?'Đổi sang Điền từ':type==='speaking_checklist'?'Đổi sang Chọn nhiều':'Chọn dạng bài tập';
+      const label=type==='speaking_checklist'?'Đổi sang Chọn nhiều':'Chọn dạng bài tập';
       const change=button(label,()=>askQuestionTypeChange(item,type,change),readonly);choices.append(change);
     }
     modes.append(choices);paintQuestionUndo(modes,item,readonly);

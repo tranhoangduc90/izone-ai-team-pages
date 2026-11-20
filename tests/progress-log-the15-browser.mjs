@@ -72,15 +72,24 @@ test('T15: mode từng câu, placeholder, popup vùng chọn, chữ gốc, đáp
   await converted.getByRole('textbox',{name:'Nội dung câu hỏi',exact:true}).fill(writingPrompt);
   await converted.getByLabel('Kỹ năng câu 3',{exact:true}).selectOption('writing');
   await converted.getByRole('textbox',{name:'Đáp án tham khảo (tùy chọn)',exact:true}).fill('Tham khảo nguyên văn / không tự chấm');
-  await converted.getByRole('button',{name:'Đổi sang Điền từ',exact:true}).click();
+  const reflectionModes=converted.getByRole('group',{name:'Chế độ câu 3',exact:true});
+  const toExercise=reflectionModes.getByRole('button',{name:'Bài tập',exact:true});
+  const survey=reflectionModes.getByRole('button',{name:'Khảo sát',exact:true});
+  assert.deepEqual(await reflectionModes.getByRole('button').allTextContents(),['Bài tập','Khảo sát']);
+  assert.equal(await toExercise.getAttribute('aria-pressed'),'false');
+  assert.equal(await survey.getAttribute('aria-pressed'),'true');
+  await toExercise.click();
   await page.getByRole('dialog').getByRole('button',{name:'Hủy',exact:true}).click();
   assert.equal(await converted.getByRole('textbox',{name:'Nội dung câu hỏi',exact:true}).inputValue(),writingPrompt);
-  await converted.getByRole('button',{name:'Đổi sang Điền từ',exact:true}).click();
+  assert.equal(await survey.getAttribute('aria-pressed'),'true');
+  assert.equal(await toExercise.evaluate(button=>button===document.activeElement),true);
+  await toExercise.click();
   const conversion=page.getByRole('dialog');
   assert.equal(await conversion.getByRole('checkbox').count(),8);
   for (const box of await conversion.getByRole('checkbox').all()) await box.check();
   await conversion.getByRole('button',{name:'Xác nhận đổi dạng',exact:true}).click();
   assert.equal(await converted.locator('.thuy-gap-chip').count(),8);
+  assert.equal(await toExercise.getAttribute('aria-pressed'),'true');
   await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();
   await page.locator('.thuy-editor-save-state').filter({hasText:'Đã lưu nháp'}).waitFor();
   const stored=await page.evaluate(()=>{
