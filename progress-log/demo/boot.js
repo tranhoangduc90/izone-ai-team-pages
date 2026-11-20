@@ -19,7 +19,10 @@ async function demoRequest(path, body, teacherToken = '') {
     body: JSON.stringify(body), cache: 'no-store'
   });
   const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'Bản thử chưa xử lý được yêu cầu.');
+  if (!response.ok || !payload?.ok) {
+    const trace=typeof payload?.traceId==='string'&&/^[a-f0-9-]{36}$/i.test(payload.traceId)?' Mã theo dõi '+payload.traceId+'.':'';
+    throw Object.assign(new Error((payload?.message||'Bản thử chưa xử lý được yêu cầu.')+trace),{retryable:payload?.error!=='DEMO_SOURCE_MISMATCH'&&(response.status>=500||response.status===429)});
+  }
   return payload;
 }
 
@@ -58,5 +61,5 @@ async function boot() {
 boot().catch(error => {
   document.body.classList.remove('progress-starting');
   notice.textContent = error.message; notice.classList.add('error');
-  if(compact){const retry=document.createElement('button');retry.type='button';retry.className='button';retry.textContent='Thử mở lại phiếu';retry.addEventListener('click',()=>location.reload());notice.append(' ',retry);}
+  if(compact&&error.retryable!==false){const retry=document.createElement('button');retry.type='button';retry.className='button';retry.textContent='Thử mở lại phiếu';retry.addEventListener('click',()=>location.reload());notice.append(' ',retry);}
 });

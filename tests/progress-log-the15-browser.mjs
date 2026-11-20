@@ -18,6 +18,8 @@ test('T15: mode từng câu, placeholder, popup vùng chọn, chữ gốc, đáp
     if(path.startsWith('/teacher/form-library?'))return {entries:[]};if(path==='/teacher/form-publications')return {publications:[]};
     if(path.startsWith('/teacher/form-drafts/review-queue'))return {drafts:[]};if(path.startsWith('/teacher/form-drafts?'))return {drafts:window.savedDraft?[{id:window.savedDraft.id,title:window.savedDraft.definition.title,sessionNumber:window.savedDraft.sessionNumber,revision:window.savedDraft.revision,status:window.savedDraft.status}]:[]};
     if(path==='/teacher/form-drafts'&&options.method==='POST'){window.savedDraft={...body,id:'draft-a',revision:1,status:'draft'};return {draft:structuredClone(window.savedDraft)};}
+    if(path==='/teacher/form-drafts/draft-a/edit')return {draft:structuredClone(window.savedDraft)};
+    if(path==='/teacher/form-drafts/draft-a/preview-grant')return {grant:'fixture-only'};
     if(path==='/teacher/form-drafts/draft-a'){if(options.method==='PUT')window.savedDraft={...window.savedDraft,...body,revision:window.savedDraft.revision+1};return {draft:structuredClone(window.savedDraft)};}
     throw Error('Ngoài fixture: '+path);
    };window.editor=createFormDraftEditor({host:document.querySelector('#formDraftEditor'),apiRequest:request,libraryEnabled:true});window.editor.setWorkspace({classes:[{class_id:'1294',class_name:'Lớp giả'}],assignments:[],classId:'1294',sessionNumber:3});
@@ -35,9 +37,13 @@ test('T15: mode từng câu, placeholder, popup vùng chọn, chữ gốc, đáp
   await select(11,17);const popup=q2.getByRole('button',{name:'Tạo chỗ trống câu 2',exact:true});await popup.waitFor({state:'visible'});const rect=await popup.boundingBox();assert.ok(rect.x>=0&&rect.x+rect.width<=1440);await popup.click();
   assert.equal(await q2.locator('.thuy-gap-text').count(),1);assert.equal(await q2.locator('.thuy-gap-chip').count(),1);const originalId=await q2.locator('.thuy-gap-chip').getAttribute('data-blank-id');
   await q2.getByRole('button',{name:'Thêm đáp án cho ô 1 câu 2',exact:true}).click();const fields=q2.locator('[data-answer-row]');await fields.nth(1).fill('  ');await content.click();assert.equal(await q2.locator('.thuy-answer-error:visible').count(),1);
-  await page.getByRole('button',{name:'Xem trước',exact:true}).click();await page.getByRole('status').filter({hasText:'hãy nhập đáp án'}).waitFor();assert.equal(await page.evaluate(()=>window.calls.some(c=>c.path.endsWith('/preview-grant'))),false);
+  await page.getByRole('button',{name:'Xem trước',exact:true}).click();
+  await page.getByRole('dialog').locator('iframe').waitFor();
+  assert.equal(await page.evaluate(()=>window.calls.some(c=>c.path.endsWith('/preview-grant'))),true);
+  await page.keyboard.press('Escape');
+  await page.getByRole('dialog').waitFor({state:'hidden'});
   await page.waitForFunction(()=>window.savedDraft?.gradingKey.authoringState&&Object.values(window.savedDraft.gradingKey.authoringState).some(s=>Object.values(s.answerRows||{}).flat().some(row=>row.value==='  ')));
-  await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();await page.getByRole('status').filter({hasText:'Đã lưu nháp'}).waitFor();assert.equal(await q2.locator('.thuy-answer-error:visible').count(),1);
+  await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();await page.locator('.thuy-editor-save-state').filter({hasText:'Đã lưu nháp'}).waitFor();assert.equal(await q2.locator('.thuy-answer-error:visible').count(),1);
   await fields.nth(0).fill('instant');await fields.nth(1).fill('moment');
   await content.evaluate(e=>e.dispatchEvent(new InputEvent('beforeinput',{inputType:'historyUndo',bubbles:true,cancelable:true})));assert.equal(await fields.nth(1).inputValue(),'  ');await content.evaluate(e=>e.dispatchEvent(new InputEvent('beforeinput',{inputType:'historyRedo',bubbles:true,cancelable:true})));assert.equal(await fields.nth(1).inputValue(),'moment');
   await select(0,6);await popup.click();assert.equal(await q2.locator('.thuy-gap-chip').count(),2);assert.equal(await q2.locator('.thuy-gap-chip').nth(1).getAttribute('data-blank-id'),originalId);assert.equal(await q2.getByLabel('Đáp án 1 ô 2 câu 2',{exact:true}).inputValue(),'instant');
@@ -50,7 +56,7 @@ test('T15: mode từng câu, placeholder, popup vùng chọn, chữ gốc, đáp
   for(let i=1;i<=3;i++){await current.fill(source+' '+i);await page.waitForFunction(value=>window.savedDraft?.definition.blocks[0].items[1].prompt===value,source+' '+i);assert.equal(await current.evaluate(e=>e===window.readingNode&&e===document.activeElement),true);}
   const output=process.env.PROGRESS_LOG_QA_DIR||'E:/Codex-Data/progress-thuy-the15-20261028/qa';await mkdir(output,{recursive:true});await page.screenshot({path:resolve(output,'editor-desktop.png'),fullPage:true});
   await page.setViewportSize({width:390,height:844});await current.scrollIntoViewIfNeeded();await current.fill('Xin chào tiếng Việt');await select(4,8);await popup.waitFor({state:'visible'});const mobile=await popup.boundingBox();assert.ok(mobile.x>=0&&mobile.x+mobile.width<=390);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:resolve(output,'editor-mobile.png'),fullPage:true});
-  await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();await page.getByRole('status').filter({hasText:'Đã lưu nháp'}).waitFor();
+  await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();await page.locator('.thuy-editor-save-state').filter({hasText:'Đã lưu nháp'}).waitFor();
   await page.evaluate(()=>{window.savedDraft.definition.blocks[0].kind='survey';delete window.savedDraft.definition.blocks[0].items[1].kind;});
   await page.getByRole('button',{name:'Quay lại Quản lý bài tập',exact:true}).click();await page.getByRole('tab',{name:/Kho cá nhân/}).click();await page.getByRole('button',{name:'Thẻ 15 · Phiếu dữ liệu giả',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Sửa bài',exact:true}).click();
   const legacy=page.locator('[data-question]').nth(1).getByRole('textbox',{name:'Nội dung câu hỏi',exact:true}),beforeLegacy=await legacy.innerText();await legacy.fill('Nội dung mới của phiếu cũ');await legacy.press('Control+z');assert.equal(await legacy.innerText(),beforeLegacy);
@@ -60,6 +66,37 @@ test('T15: mode từng câu, placeholder, popup vùng chọn, chữ gốc, đáp
    const feedback=partFeedback(block,{answerRelease:'hidden',items}),detail={definition:{blocks:[block]},responses:{e:['bài làm riêng'],s:['ý riêng']},submissionId:'fake',gradingItems:items},host=document.createElement('section');host.innerHTML=reviewItems(detail);document.body.append(feedback,host);
    return {feedback:feedback.textContent,survey:host.querySelector('[data-review-item="s"]').textContent,scripts:host.querySelectorAll('script').length};
   });assert.match(mixed.feedback,/tham khảo một \/ <tham khảo hai>/);assert.match(mixed.feedback,/bài làm riêng/);assert.doesNotMatch(mixed.feedback,/SECRET|✓ Đúng|✕ Sai|đã chấm/);assert.match(mixed.survey,/Không chấm đúng\/sai/);assert.doesNotMatch(mixed.survey,/✓ Đúng|✕ Sai/);assert.equal(mixed.scripts,0);
+  await page.getByRole('button',{name:'+ Trả lời mở',exact:true}).click();
+  const converted=page.locator('[data-question]').last();
+  const writingPrompt='Mục một ... và ...\nMục hai ... và ...\nMục ba ... và ...\nMục bốn ... và ...';
+  await converted.getByRole('textbox',{name:'Nội dung câu hỏi',exact:true}).fill(writingPrompt);
+  await converted.getByLabel('Kỹ năng câu 3',{exact:true}).selectOption('writing');
+  await converted.getByRole('textbox',{name:'Đáp án tham khảo (tùy chọn)',exact:true}).fill('Tham khảo nguyên văn / không tự chấm');
+  await converted.getByRole('button',{name:'Đổi sang Điền từ',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'Hủy',exact:true}).click();
+  assert.equal(await converted.getByRole('textbox',{name:'Nội dung câu hỏi',exact:true}).inputValue(),writingPrompt);
+  await converted.getByRole('button',{name:'Đổi sang Điền từ',exact:true}).click();
+  const conversion=page.getByRole('dialog');
+  assert.equal(await conversion.getByRole('checkbox').count(),8);
+  for (const box of await conversion.getByRole('checkbox').all()) await box.check();
+  await conversion.getByRole('button',{name:'Xác nhận đổi dạng',exact:true}).click();
+  assert.equal(await converted.locator('.thuy-gap-chip').count(),8);
+  await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();
+  await page.locator('.thuy-editor-save-state').filter({hasText:'Đã lưu nháp'}).waitFor();
+  const stored=await page.evaluate(()=>{
+   const item=window.savedDraft.definition.blocks[0].items.at(-1),key=window.savedDraft.gradingKey;
+   return {item,reference:key.referenceAnswers[item.itemVersionId],grade:key.items[item.itemVersionId]};
+  });
+  assert.equal(stored.item.prompt,writingPrompt);
+  assert.equal(stored.item.kind,'exercise');
+  assert.equal(stored.item.interactionConfig.blankIds.length,8);
+  assert.deepEqual(stored.reference,['Tham khảo nguyên văn / không tự chấm']);
+  assert.equal(stored.grade,undefined);
+  await page.getByRole('button',{name:'Quay lại Quản lý bài tập',exact:true}).click();
+  await page.getByRole('tab',{name:/Kho cá nhân/}).click();
+  await page.getByRole('button',{name:'Thẻ 15 · Phiếu dữ liệu giả',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'Sửa bài',exact:true}).click();
+  assert.equal(await page.locator('[data-question]').last().locator('.thuy-gap-chip').count(),8);
   assert.deepEqual(errors,[]);
  }finally{await browser.close();await new Promise(done=>server.close(done));}
 });

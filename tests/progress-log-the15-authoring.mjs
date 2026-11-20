@@ -12,10 +12,10 @@ test('T15: sửa phương án khi Khảo sát không phục hồi khóa Bài t�
  changeQuestionKind(item,key,'survey','mcq');item.options[0].label='Một ý khác';changeQuestionKind(item,key,'exercise','mcq');
  assert.equal(key.items[item.itemVersionId],undefined);assert.deepEqual(other,before);
 });
-test('T15: đổi chế độ qua lại rồi thêm ô không giữ tham khảo sai số ô',()=>{
+test('T15: đổi chế độ qua lại rồi thêm ô giữ tham khảo theo đúng ô cũ',()=>{
  const item=newEditorItem('short_answer'),key={items:{}};item.prompt='one and two';insertBlank(item,key,{start:0,end:3});
  changeQuestionKind(item,key,'survey','gapfill');changeQuestionKind(item,key,'exercise','gapfill');insertBlank(item,key,{partIndex:1,start:5,end:8});
- assert.equal(item.interactionConfig.responseCount,2);assert.equal(key.referenceAnswersBySlot?.[item.itemVersionId],undefined);assert.deepEqual(key.items[item.itemVersionId].acceptedBySlot,[['one'],['two']]);
+ assert.equal(item.interactionConfig.responseCount,2);assert.deepEqual(key.referenceAnswersBySlot?.[item.itemVersionId],[['one'],[]]);assert.deepEqual(key.items[item.itemVersionId].acceptedBySlot,[['one'],['two']]);
 });
 test('T15: nội dung dài và mười ô trên cùng dòng vẫn nguyên vẹn, vùng chọn quá dài không đổi dữ liệu',()=>{
  const item=newEditorItem('short_answer'),key={items:{}};item.prompt='a'.repeat(600)+' word '+'b'.repeat(600);const original=item.prompt;

@@ -30,7 +30,8 @@ export function insertBlank(item,gradingKey,{lineIndex=0,partIndex=0,start,end,k
   const slot=lines.slice(0,lineIndex).reduce((n,l)=>n+l.parts.length-1,0)+partIndex;
   const ids=config.blankIds||Array.from({length:oldCount},uuid),id=uuid(),selected=content.slice(start,end).trim();
   if(selected.length>300)throw Error('Đáp án của một ô tối đa 300 ký tự. Hãy chọn một từ hoặc cụm ngắn hơn.');
-  const primary=kind==='survey'?structuredClone(gradingKey.referenceAnswersBySlot?.[item.itemVersionId]||Array.from({length:oldCount},(_,i)=>gradingKey.referenceAnswers?.[item.itemVersionId]?.[i]?[gradingKey.referenceAnswers[item.itemVersionId][i]]:[])):null;
+  const existingSlots=gradingKey.referenceAnswersBySlot?.[item.itemVersionId];
+  const primary=kind==='survey'?structuredClone(existingSlots||Array.from({length:oldCount},(_,i)=>gradingKey.referenceAnswers?.[item.itemVersionId]?.[i]?[gradingKey.referenceAnswers[item.itemVersionId][i]]:[])):null;
   const accepted=kind==='exercise'?structuredClone(gradingKey.items[item.itemVersionId]?.acceptedBySlot||Array.from({length:oldCount},()=>[])):null;
   if(content.slice(0,start).length>2000||content.slice(end).length>2000)throw Error('Mỗi đoạn quanh ô trống tối đa 2000 ký tự. Hãy chia thành câu ngắn hơn.');
   line.parts.splice(partIndex,1,content.slice(0,start),content.slice(end));ids.splice(slot,0,id);
@@ -41,10 +42,15 @@ export function insertBlank(item,gradingKey,{lineIndex=0,partIndex=0,start,end,k
   item.layoutType='numbered_short_texts';item.interactionType='short_text';item.pedagogicalTypeCode='sentence_completion';
   if(kind==='survey'){
     item.graderType='none';item.maxScore=0;delete gradingKey.items[item.itemVersionId];
-    primary.splice(slot,0,[selected]);gradingKey.referenceAnswersBySlot??={};gradingKey.referenceAnswersBySlot[item.itemVersionId]=primary;delete gradingKey.referenceAnswers?.[item.itemVersionId];
+    primary.splice(slot,0,[selected]);gradingKey.referenceAnswersBySlot??={};gradingKey.referenceAnswersBySlot[item.itemVersionId]=primary;
+    if(oldCount&&!existingSlots)delete gradingKey.referenceAnswers?.[item.itemVersionId];
   }else{
     item.graderType='accepted_text_sequence';item.maxScore=oldCount+1;accepted.splice(slot,0,[selected]);
     gradingKey.items[item.itemVersionId]={graderType:'accepted_text_sequence',acceptedBySlot:accepted,normalization:{caseInsensitive:true,collapseWhitespace:true}};
+    if(existingSlots)existingSlots.splice(slot,0,[]);
+    else if(!oldCount&&gradingKey.referenceAnswers?.[item.itemVersionId]){
+      gradingKey.referenceAnswersBySlot??={};gradingKey.referenceAnswersBySlot[item.itemVersionId]=[[]];
+    }
   }
   return id;
 }
@@ -57,13 +63,16 @@ export function removeBlank(item,gradingKey,{lineIndex,partIndex,kind='exercise'
   const combined=line.parts[partIndex]+restored+line.parts[partIndex+1];
   if(combined.length>2000||config.responseCount===1&&config.sentenceLines.map(l=>(l.title?l.title+' ':'')+(l===line?combined:l.parts[0])).join('\n').length>2000)throw Error('Nội dung sau khi bỏ ô vượt 2000 ký tự. Hãy chia câu trước; ô và đáp án vẫn được giữ.');
   line.parts.splice(partIndex,2,combined);
-  config.blankIds?.splice(slot,1);key?.acceptedBySlot?.splice(slot,1);refs?.splice(slot,1);slots?.splice(slot,1);config.responseCount--;
+  config.blankIds?.splice(slot,1);key?.acceptedBySlot?.splice(slot,1);
+  if(!slots&&kind==='survey')refs?.splice(slot,1);
+  slots?.splice(slot,1);config.responseCount--;
   if(id){delete state?.sources?.[id];delete state?.answerRows?.[id];}
   if(!config.responseCount){
     item.prompt=config.sentenceLines.map(l=>(l.title?l.title+' ':'')+l.parts[0]).join('\n');item.layoutType='plain_prompt';
     delete config.sentenceLines;delete config.responseCount;delete config.blankIds;delete config.responseLabels;
     item.graderType=kind==='survey'?'none':'accepted_text';item.maxScore=kind==='survey'?0:1;
-    delete gradingKey.items[item.itemVersionId];delete gradingKey.referenceAnswers?.[item.itemVersionId];
+    delete gradingKey.items[item.itemVersionId];
+    if(!slots&&kind==='survey')delete gradingKey.referenceAnswers?.[item.itemVersionId];
     delete gradingKey.referenceAnswersBySlot?.[item.itemVersionId];
   }else if(kind==='exercise')item.maxScore=config.responseCount;
 }

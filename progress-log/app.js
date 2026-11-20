@@ -831,7 +831,14 @@ function buildChoice(item, option, inputType, optionIndex) {
   input.addEventListener('change', () => {
     if (inputType === 'radio') recordResponse(item.itemVersionId, input.value);
     else {
-      const selected = [...label.parentElement.querySelectorAll('input:checked')].map(node => node.value);
+      const exclusive = item.interactionConfig?.exclusiveOptionId;
+      const controls = [...label.parentElement.querySelectorAll('input:checked')];
+      if (input.checked && exclusive) {
+        for (const control of controls) {
+          if (control !== input && (input.value === exclusive || control.value === exclusive)) control.checked = false;
+        }
+      }
+      const selected = controls.filter(control => control.checked).map(control => control.value);
       const limit = item.interactionConfig?.maxSelections;
       if (input.checked && item.kind !== 'survey' && Number.isInteger(limit) && selected.length > limit) {
         input.checked = false;
