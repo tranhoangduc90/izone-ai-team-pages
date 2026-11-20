@@ -1,6 +1,6 @@
 import {mountEditor,closeMenu,closeReviewDialog,dialog} from './review-format.js';
 import {languageCards} from './language-cards.js';
-import {feedbackTextHtml} from './feedback-format.js';
+import {feedbackTextHtml,normalizeRichFeedbackSymbols} from './feedback-format.js?v=20261120-feedback-symbols';
 import {highlightHtml} from './text-highlights.js';
 
 const blue='#d8eefc';
@@ -45,7 +45,7 @@ export function mountIntegratedReview(root,{result,editable=false,storageKey,gui
     handles.push(mounts(original.querySelector('[data-rich-original]'),overlay.original,'Bài viết'));
   }
   handles.push(mounts(overall.querySelector('[data-rich-trcc]'),
-    overlay.trcc??feedbackTextHtml(result.trcc,result.teacherHighlights?.trcc?.ranges).replace('<p>Bản mô phỏng theo rubric Fast Food Lesson 3.</p>',''),
+    normalizeRichFeedbackSymbols(overlay.trcc)??feedbackTextHtml(result.trcc,result.teacherHighlights?.trcc?.ranges).replace('<p>Bản mô phỏng theo rubric Fast Food Lesson 3.</p>',''),
     'Nhận xét về mặt nội dung',editor=>{overlay.trcc=editor.getHTML();trccText=editor.getText();change();}));
   function appendNextStep(panel,label,action){
     const group=document.createElement('div');
@@ -141,7 +141,7 @@ export function mountIntegratedReview(root,{result,editable=false,storageKey,gui
         };
       }else mountPair(selector,field,label);
     }
-    cardEditors.push(mounts(sentences.querySelector('[data-rich-explanation]'),card.explanation??baseline.explanation,
+    cardEditors.push(mounts(sentences.querySelector('[data-rich-explanation]'),normalizeRichFeedbackSymbols(card.explanation)??baseline.explanation,
       editable?'Giải thích':'Nhận xét',editor=>update('explanation',editor)));
     if(teacherActions){
       const heading=sentences.querySelector('.integrated-explanation h4');

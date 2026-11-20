@@ -20,6 +20,44 @@ const assignment={id:assignmentId,classId:person.classId,title:'Lesson 5 · Mua 
 const nativeToken='writing5-fixture-token';
 const token='B'.repeat(43);
 
+test('nhận xét Writing hiển thị mũi tên trong bản AI và bản định dạng đã lưu',async t=>{
+  const local=await serveDirectory(resolve(import.meta.dirname,'..'));
+  t.after(()=>local.close());
+  const browser=await chromium.launch({channel:'chrome',headless:true});
+  t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:390,height:850}});
+  await page.goto(local.origin+'/homework-writing/feedback-format.js');
+  const results=await page.evaluate(async()=>{
+    const {mountIntegratedReview}=await import('./integrated-review.js');
+    const {feedbackTabsHtml}=await import('./feedback-tabs.js');
+    const esc=v=>String(v??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    const result={trcc:'Mua thêm $\\rightarrow$ tăng rác $\\to$ ô nhiễm.',items:[{
+      item:1,original_text:'It costs $10.',revised_text:'It costs $10.',explanation:'Quan hệ $\\Rightarrow$.'
+    }]};
+    const observations=[];
+    for(const editable of [false,true]){
+      const richReview=editable?{version:1,trcc:'<p><strong>Mua thêm</strong> $\\rightarrow$ tăng rác.</p>',
+        cards:[{id:'s0-whole',sourceId:'s0-whole',explanation:'<p>Ví dụ <code>$\\to$</code>, kết quả $\\Rightarrow$.</p>'}]}:undefined;
+      const entry={...result,richReview};
+      const app=document.createElement('main');app.id='app';
+      app.innerHTML=feedbackTabsHtml(entry,{esc,marked:esc,editable});
+      document.body.replaceChildren(app);
+      let dirty=false;
+      const editor=mountIntegratedReview(app,{result:entry,editable,onDirty:()=>{dirty=true;}});
+      const read=selector=>app.querySelector(selector).textContent;
+      observations.push({trcc:read('[data-rich-trcc]'),explanation:read('[data-rich-explanation]'),
+        original:read('[data-rich-source]'),bold:app.querySelector('[data-rich-trcc] strong')?.textContent,
+        dirty,unchanged:JSON.stringify(editor.collect().richReview)===JSON.stringify(richReview)});
+      editor.destroy();
+    }
+    return observations;
+  });
+  assert.deepEqual(results,[
+    {trcc:'Mua thêm → tăng rác → ô nhiễm.',explanation:'Quan hệ ⇒.',original:'It costs $10.',bold:undefined,dirty:false,unchanged:true},
+    {trcc:'Mua thêm → tăng rác.',explanation:'Ví dụ $\\to$, kết quả ⇒.',original:'It costs $10.',bold:'Mua thêm',dirty:false,unchanged:true}
+  ]);
+});
+
 test('Lesson 5 link chung mở đúng bài đã xác minh, đạt X2 rồi tự sang viết, panel chỉ dùng nút Đóng dàn ý',async t=>{
   const local=await serveDirectory(resolve(import.meta.dirname,'..'));
   const site=local.origin;

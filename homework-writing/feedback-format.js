@@ -1,24 +1,56 @@
 // Chỉ dựng các thẻ cố định từ văn bản nhận xét. HTML, ảnh và URL đầu vào không được thực thi.
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const symbolPattern=/(?<![\\$])(\${1,2})[ \t]*\\([a-zA-Z]+)[ \t]*\1(?!\$)/g;
+const feedbackSymbols=new Map(Object.entries({
+  to:'→',rightarrow:'→',leftarrow:'←',leftrightarrow:'↔',uparrow:'↑',downarrow:'↓',
+  Rightarrow:'⇒',Leftarrow:'⇐',Leftrightarrow:'⇔',implies:'⇒',
+  times:'×',div:'÷',pm:'±',le:'≤',leq:'≤',ge:'≥',geq:'≥',ne:'≠',neq:'≠',approx:'≈',
+}));
+
+export function normalizeRichFeedbackSymbols(html){
+  if(!html?.includes('$'))return html;
+  const template=document.createElement('template');
+  template.innerHTML=html;
+  const walker=document.createTreeWalker(template.content,NodeFilter.SHOW_TEXT);
+  let changed=false;
+  while(walker.nextNode()){
+    const node=walker.currentNode;
+    if(node.parentElement?.closest('code, pre'))continue;
+    const symbolText=node.data.replace(symbolPattern,(literal,_delimiter,command)=>feedbackSymbols.get(command)??literal);
+    if(symbolText===node.data)continue;
+    node.data=symbolText;
+    changed=true;
+  }
+  return changed?template.innerHTML:html;
+}
+
 // Chỉ bỏ nguyên đoạn hệ thống cũ; không sửa văn bản riêng do giảng viên biên tập.
 export function overallFeedback(value){
   const text=String(value??'');
   return /^AI đã đối chiếu \d+ câu: \d+ câu cần sửa và \d+ câu có gợi ý nâng cấp\. Em đọc góp ý từng câu và phần ý, mạch bài bên dưới\. AI chưa đối chiếu handout\/outline đã làm trên lớp; nhận xét chỉ dựa trên đề và bài viết được nộp\. Giảng viên cần kiểm tra trước khi trả bài\.$/.test(text.trim().replace(/\s+/g,' '))?'':text;
 }
-function inline(text,depth=0,offset=0,ranges=[]){
+function inline(text,depth=0,offset=0,ranges=[],renderSymbols=true){
   if(depth>8)return escape(text);
+  const symbols=renderSymbols&&text.includes('$')?new Map(Array.from(text.matchAll(symbolPattern),m=>[m.index,m])):null;
+  const render=(value,start,end)=>ranges.some(r=>r.start<offset+end&&r.end>offset+start)
+    ?'<mark class="teacher-highlight">'+value+'</mark>':value;
   let out='',i=0;
   while(i<text.length){
     if(text[i]==='\\'&&/[\\`*_#]/.test(text[i+1]||'')){out+=escape(text[i+1]);i+=2;continue;}
+    const match=symbols?.get(i),symbol=feedbackSymbols.get(match?.[2]);
+    if(symbol){
+      const end=i+match[0].length;
+      out+=render(symbol,i,end);i=end;continue;
+    }
     const token=text[i]==='`'?text.slice(i).match(/^`+/)[0]:text.startsWith('**',i)?'**':text.startsWith('__',i)?'__':['*','_'].includes(text[i])?text[i]:null;
     if(token){
       const end=text.indexOf(token,i+token.length),body=end<0?'':text.slice(i+token.length,end);
       if(body.trim()&&(!/^\s|\s$/.test(body)||token[0]==='`')){
         const tag=token[0]==='`'?'code':token.length===2?'strong':'em';
-        out+='<'+tag+'>'+inline(body,depth+1,offset+i+token.length,ranges)+'</'+tag+'>';i=end+token.length;continue;
+        out+='<'+tag+'>'+inline(body,depth+1,offset+i+token.length,ranges,renderSymbols&&tag!=='code')+'</'+tag+'>';i=end+token.length;continue;
       }
     }
-    const char=escape(text[i]);out+=ranges.some(r=>r.start<=offset+i&&r.end>offset+i)?'<mark class="teacher-highlight">'+char+'</mark>':char;i++;
+    out+=render(escape(text[i]),i,i+1);i++;
   }
   return out;
 }
