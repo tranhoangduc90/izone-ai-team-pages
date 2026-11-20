@@ -449,6 +449,11 @@
   }
 
   async function apiRequest(path, options = {}, timeoutMs = 30_000) {
+    if(typeof options.body==='string'&&state?.studentRef&&state?.clientRunId){
+      const payload=JSON.parse(options.body);
+      options={...options,body:JSON.stringify({...payload,clientRunId:payload.clientRunId??state.clientRunId,
+        deviceId:payload.deviceId??state.annotationRunId})};
+    }
     let initializationRequest, initializationStatus;
     try { initializationRequest = window.EXAM_JOURNAL_STARTUP?.startRequest(path, options); } catch {}
     const controller = new AbortController();
@@ -777,10 +782,45 @@
     return true;
   }
 
+  const assignmentClasses=({known:new Map(),has(code){return this.known.get(code)===true;},async check(code){
+    if(!/^IC\d{3,8}$/.test(String(code)))return false;
+    if(this.known.has(code))return this.has(code);
+    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4');
+    const result=await assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/')('student/entry',{query:{testId:"substitute-test-1-k56",classCode:code}});
+    if(typeof result.managed!=='boolean')throw Error('ASSIGNMENT_SCOPE_UNAVAILABLE');
+    this.known.set(code,result.managed);return result.managed;
+  }});
+  let intake;
+  async function openAssignmentIntake(ref, retry){
+    const current=state.classCode||classCode;
+    if(state.examSessionId||state.listeningStartedAt||state.attemptToken)return false;
+    if(!(assignmentClasses.check?await assignmentClasses.check(current):assignmentClasses.has(current)))return false;
+    if(!intake){
+      const [{createStudentEntry,bindFullAdmission},{assignmentClient}]=await Promise.all([
+        import('../substitute-assignment-full/assignment-student-entry.mjs?v=registration-live-20261120-r4'),import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4')]);
+      const assignmentApi=assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/');
+      const target=document.createElement('div');target.className='assignment-entry';
+      elements.bootstrapStudent.parentElement.after(target);
+      const entry=createStudentEntry({api:assignmentApi,testId:"substitute-test-1-k56",target,
+        enabledForClass:code=>assignmentClasses.has(code)});
+      intake={entry,bindFullAdmission,assignmentApi,target};
+    }
+    const identity={classCode:current,studentRef:ref};
+    if(intake.entry.session(identity))return false;
+    return intake.entry.select({...identity,onReady:async session=>{
+      if(elements.bootstrapStudent.value!==ref||(state.classCode||classCode)!==current)throw Error('ASSIGNMENT_SELECTION_CHANGED');
+      const deviceId=state.annotationRunId||crypto.randomUUID();
+      const {clientRunId}=await intake.bindFullAdmission({api:intake.assignmentApi,session,deviceId});
+      if(elements.bootstrapStudent.value!==ref||(state.classCode||classCode)!==current)throw Error('ASSIGNMENT_SELECTION_CHANGED');
+      saveState({clientRunId,annotationRunId:deviceId});
+      await prepareSelectedStudent(retry);
+    }});
+  }
   async function prepareSelectedStudent(retry = false) {
     const studentRef = elements.bootstrapStudent.value;
     const student = roster.find(item => item.ref === studentRef);
     if (!student || preparing || (!state.identityConfirmed && !state.listeningStartedAt && !state.attemptToken && !legacyListeningResume)) return;
+    if(await openAssignmentIntake(studentRef,retry))return;
     preparing = true;
     const preparationStatus = beginAudioDownloadStatus(elements.bootstrapDownloadStatus,
       elements.bootstrapDownloadProgress, {formatBytes, retry, preparing:true});
@@ -1026,6 +1066,12 @@
   let listeningStartEpoch=0;
   window.addEventListener('pagehide',()=>{listeningStartEpoch++;});
   elements.bootstrapStart.addEventListener('click', async () => {
+    const assignmentClass=state.classCode||classCode;
+    if(assignmentClasses.has(assignmentClass)&&!state.examSessionId&&!state.listeningStartedAt&&
+      (navigator.onLine===false||!intake?.entry.canStart({classCode:assignmentClass,studentRef:state.studentRef}))){
+      showNotice('Chưa xác nhận quyền bắt đầu. Kiểm tra trạng thái Giao bài và kết nối mạng.',true);
+      return;
+    }
     // Chỉ vị trí giao diện: bắt đầu mới khác với tiếp tục lượt đang làm.
     startAtFirstSection = !state.examSessionId && !state.listeningStartedAt && !state.readingStartedAt
       && !state.attemptToken && !legacyListeningResume;

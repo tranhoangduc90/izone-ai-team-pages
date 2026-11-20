@@ -31,8 +31,40 @@ function emitSubmission(action,fields={}) {
  }).catch(()=>{earlySubmissions.length=0;}).finally(()=>{submissionJournalLoading=false;});
 }
 const fail=e=>{transientNotice=!['ALREADY_SUBMITTED','ATTEMPT_ALREADY_ACTIVE','SKILL_GENERATION_STALE','LOCAL_PERSIST_FAILED','SKILL_TEST_UNAVAILABLE','SKILL_INTAKE_CLOSED','OWNER_BUSY'].includes(e.code);text('notice',({CLASS_NOT_ELIGIBLE:'Lớp này chưa được cấp quyền dự thi bài này. Hãy liên hệ giảng viên.',CLASS_DIRECTORY_UNAVAILABLE:'Chưa tải được toàn bộ danh sách lớp. Hãy thử lại khi có mạng.',ALREADY_SUBMITTED:'Bạn đã nộp bài này. Hãy liên hệ giảng viên nếu cần kiểm tra.',ATTEMPT_ALREADY_ACTIVE:'Bạn đang có một lượt thi. Hãy dùng trình duyệt đang làm hoặc nhờ giảng viên cấp lại.',SKILL_GENERATION_STALE:'Giảng viên đã cấp lại lượt. Bài trên thiết bị được giữ để đối soát.',LOCAL_PERSIST_FAILED:'Không lưu được trên thiết bị. Giữ nguyên trang và liên hệ giảng viên.',SKILL_TEST_UNAVAILABLE:'Bài chưa mở hoặc đang tạm đóng.',SKILL_INTAKE_CLOSED:'Bài đang tạm đóng nhận lượt mới. Hãy liên hệ giảng viên.',OWNER_BUSY:'Bài đang được mở ở tab khác. Hãy quay lại tab đó.'}[e.code]||'Chưa kết nối được hệ thống. Bài trên thiết bị vẫn được giữ. Hãy thử lại khi có mạng.'));if(e.code==='SKILL_GENERATION_STALE'){freeze();show('replace-attempt');}};
+const managedAssignmentClasses=({known:new Map(),has(code){return this.known.get(code)===true;},async check(code){
+    if(!/^IC\d{3,8}$/.test(String(code)))return false;
+    if(this.known.has(code))return this.has(code);
+    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4');
+    const result=await assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/')('student/entry',{query:{testId:testId,classCode:code}});
+    if(typeof result.managed!=='boolean')throw Error('ASSIGNMENT_SCOPE_UNAVAILABLE');
+    this.known.set(code,result.managed);return result.managed;
+  }});
+let assignmentEntry;
+let assignmentSessionHeaders=()=>({});
+async function checkAssignmentEntry(studentRef){
+ const classCode=$('class').value;
+ if(state?.startedAt||state?.sealed)return false;
+ if(!(managedAssignmentClasses.check?await managedAssignmentClasses.check(classCode):managedAssignmentClasses.has(classCode)))return false;
+ if(!assignmentEntry){
+  const [{createStudentEntry,assignmentSessionHeaders:forSession},{assignmentClient}]=await Promise.all([
+    import('../substitute-assignment-full/assignment-student-entry.mjs?v=registration-live-20261120-r4'),import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4')]);
+  assignmentSessionHeaders=forSession;
+  const target=document.createElement('div');target.className='assignment-entry';$('student').parentElement.after(target);
+  assignmentEntry=createStudentEntry({api:assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/'),testId,target,
+    enabledForClass:code=>managedAssignmentClasses.has(code)});
+ }
+ const identity={classCode,studentRef};
+ if(assignmentEntry.session(identity))return false;
+ return assignmentEntry.select({...identity,onReady:async()=>{
+  if($('class').value!==classCode||$('student').value!==studentRef)throw Error('ASSIGNMENT_SELECTION_CHANGED');
+  await prepare();
+ }});
+}
 async function api(action,payload,method='POST'){
- const r=await fetch(((state?.identity?.classCode||state?.classCode||$('class').value)==='DEMO'?REAL_API.replace('/v1/tests/','/v1/demo/tests/'):REAL_API)+'/'+action,{method,cache:'no-store',credentials:'omit',headers:method==='POST'?{'Content-Type':'application/json'}:{},body:method==='POST'?JSON.stringify(payload):undefined,signal:AbortSignal.timeout(12000)});
+ const r=await fetch(((state?.identity?.classCode||state?.classCode||$('class').value)==='DEMO'?REAL_API.replace('/v1/tests/','/v1/demo/tests/'):REAL_API)+'/'+action,{method,cache:'no-store',credentials:'omit',headers:method==='POST'?{'Content-Type':'application/json',
+      ...(['prepare','start'].includes(action)?assignmentSessionHeaders(assignmentEntry?.session({
+        classCode:payload?.classCode||state?.classCode||$('class').value,
+        studentRef:payload?.studentRef||state?.studentRef||$('student').value})):{} )}:{},body:method==='POST'?JSON.stringify(payload):undefined,signal:AbortSignal.timeout(12000)});
  const v=await r.json();if(!r.ok)throw Object.assign(Error(),{code:v.code,status:r.status});if(transientNotice){text('notice','');transientNotice=false;}return v;
 }
 
@@ -102,11 +134,15 @@ async function seal(automatic=false,confirmedIncompleteSubmit=false){
 function tick(){if(state?.phase!=='draft'||state.sealed||!ownerHeld)return;const remaining=Math.max(0,state.deadlineAt-now()),seconds=Math.ceil(remaining/1000);text('writing-clock',String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0'));if(!remaining)void seal(true);}
 async function prepare(){if(busy)return;busy=true;try{
  const learner=roster.find(r=>r.studentRef===$('student').value)||state?.prepareOperation&&{name:state.name,studentRef:state.studentRef};if(!learner)return;
- if(!state?.prepareOperation)await restorePerson($('class').value,learner.studentRef);if(state?.sealed||state?.phase==='submitted'){resultView();busy=false;await synchronize();await check();return;}state??={prepareOperation:crypto.randomUUID(),classCode:$('class').value,studentRef:learner.studentRef,name:learner.name};await persist();
+ if(!state?.prepareOperation)await restorePerson($('class').value,learner.studentRef);if(await checkAssignmentEntry(learner.studentRef))return;if(state?.sealed||state?.phase==='submitted'){resultView();busy=false;await synchronize();await check();return;}state??={prepareOperation:crypto.randomUUID(),classCode:$('class').value,studentRef:learner.studentRef,name:learner.name};await persist();
  const v=state.identity?await api('status',state.identity):await api('prepare',{classCode:state.classCode,studentRef:state.studentRef,operationId:state.prepareOperation});state.identity=v.identity;emitSubmission('owner_acquired');state.phase=v.status;state.revision=Math.max(state.revision||0,v.revision);state.lastServer=v;state.deadlineAt=v.deadlineAt;state.startedAt=v.startedAt;await persist();
  content=await api('content',state.identity);if(content.skill!=='writing'||content.testId!==testId||content.contentHash!==state.identity.contentHash)throw Error('CONTENT_MISMATCH');emitSubmission('content_verified');state.content=content;state.native??={drafts:{writing:{}},writingLayout:{activeTask:null,splits:{}},writingRevision:0};await persist();anchor(v);if(v.status==='submitted'){resultView(v);return;}if(v.status==='draft'){displayExam();tick();return;}text('prepare-status','Đang lưu đề và giao diện để phục hồi khi mất mạng…');const offline=await prepareWritingOffline();state.offlineBuild=offline.build;await persist();if(offline.updated){location.reload();return;}text('prepare-status','Đã sẵn sàng · '+content.durationMinutes+' phút · '+content.writing.tasks.map(t=>t.label).join(', '));$('start').disabled=false;show('identity-form',false);show('ready');
  }catch(e){fail(e);}finally{busy=false;updateNativeShell(state,content,undefined,()=>persist());}}
-async function start(){if(busy)return;busy=true;try{await own();emitSubmission('start_requested');const v=await api('start',state.identity);emitSubmission('start_confirmed',{startedAt:v.startedAt,deadlineAt:v.deadlineAt});anchor(v);state.phase=v.status;state.deadlineAt=v.deadlineAt;state.lastServer=v;state.startedAt=v.startedAt;await persist();displayExam();tick();}catch(e){fail(e);}finally{busy=false;}}
+async function start(){
+ if(managedAssignmentClasses.has(state?.identity?.classCode)&&!state?.startedAt&&
+   (navigator.onLine===false||!assignmentEntry?.canStart(state.identity))){
+  text('notice','Chưa xác nhận quyền bắt đầu. Kiểm tra trạng thái Giao bài và kết nối mạng.');return;
+ }if(busy)return;busy=true;try{await own();emitSubmission('start_requested');const v=await api('start',state.identity);emitSubmission('start_confirmed',{startedAt:v.startedAt,deadlineAt:v.deadlineAt});anchor(v);state.phase=v.status;state.deadlineAt=v.deadlineAt;state.lastServer=v;state.startedAt=v.startedAt;await persist();displayExam();tick();}catch(e){fail(e);}finally{busy=false;}}
 bindIdentitySelection({loadRoster:async code=>{classDirectory?.requireEligible(code);return (await api('roster?class='+encodeURIComponent(code),null,'GET')).students;},onRoster:rows=>{roster=rows;},onConfirm:prepare,onError:fail,isBusy:()=>busy});
 $('start').onclick=start;
 $('submit').onclick=()=>{if(!ownerHeld||state?.phase!=='draft'||state.sealed)return;const missing=payload().snapshot.tasks.filter(t=>!t.essay.trim()).map(t=>'Task '+t.taskNumber);$('confirm-submit').querySelector('p').textContent=missing.length?missing.join(', ')+' đang để trống và sẽ được tính 0 điểm. Bạn vẫn muốn nộp và khóa bài?':'Bài sẽ được khóa sau khi nộp. Bạn đã kiểm tra bài làm chưa?';$('confirm-submit').showModal();};$('cancel-submit').onclick=()=>$('confirm-submit').close();$('accept-submit').onclick=()=>{$('confirm-submit').close();void seal(false,true);};

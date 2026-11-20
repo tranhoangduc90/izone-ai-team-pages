@@ -113,7 +113,39 @@ async function saveAudioEnd(){
  void confirmAudioEnd();
 }
 function fail(e){text('notice',({CLASS_NOT_ELIGIBLE:'Lớp này chưa được cấp quyền dự thi bài này. Hãy liên hệ giảng viên.',CLASS_DIRECTORY_UNAVAILABLE:'Chưa tải được toàn bộ danh sách lớp. Hãy thử lại khi có mạng.',OWNER_BUSY:'Bài đang mở ở tab khác. Hãy quay lại tab đó.',SKILL_GENERATION_STALE:'Giảng viên đã cấp lại lượt. Bản cũ được giữ để đối soát.',ALREADY_SUBMITTED:'Bạn đã nộp bài này. Hãy liên hệ giảng viên nếu cần hỗ trợ.',ATTEMPT_ALREADY_ACTIVE:'Bạn đang có một lượt thi. Hãy dùng trình duyệt đang làm hoặc nhờ giảng viên cấp lại.',SKILL_TEST_UNAVAILABLE:'Bài chưa mở hoặc đang tạm đóng.',SKILL_INTAKE_CLOSED:'Bài đang tạm đóng nhận lượt mới. Hãy liên hệ giảng viên.',LOCAL_PERSIST_FAILED:'Không lưu được trên thiết bị. Giữ nguyên trang và liên hệ giảng viên.'}[e.code]||'Chưa hoàn tất kết nối. Bài trên thiết bị vẫn được giữ; hãy thử lại khi có mạng.'));if(e.code==='SKILL_GENERATION_STALE'){freeze();show('replace-attempt');}}
-async function api(action,body,method='POST',keepalive=false){const r=await fetch(((state?.identity?.classCode||state?.classCode||$('class').value)==='DEMO'?REAL_API.replace('/v1/tests/','/v1/demo/tests/'):REAL_API)+'/'+action,{method,cache:'no-store',credentials:'omit',headers:method==='POST'?{'content-type':'application/json'}:{},...(method==='POST'?{body:JSON.stringify(body)}:{}),keepalive,signal:AbortSignal.timeout(12000)}),v=await r.json();if(!r.ok)throw Object.assign(Error(),{code:v.code,status:r.status});return v;}
+const managedAssignmentClasses=({known:new Map(),has(code){return this.known.get(code)===true;},async check(code){
+    if(!/^IC\d{3,8}$/.test(String(code)))return false;
+    if(this.known.has(code))return this.has(code);
+    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4');
+    const result=await assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/')('student/entry',{query:{testId:testId,classCode:code}});
+    if(typeof result.managed!=='boolean')throw Error('ASSIGNMENT_SCOPE_UNAVAILABLE');
+    this.known.set(code,result.managed);return result.managed;
+  }});
+let assignmentEntry;
+let assignmentSessionHeaders=()=>({});
+async function checkAssignmentEntry(studentRef){
+ const classCode=$('class').value;
+ if(state?.startedAt||state?.sealed)return false;
+ if(!(managedAssignmentClasses.check?await managedAssignmentClasses.check(classCode):managedAssignmentClasses.has(classCode)))return false;
+ if(!assignmentEntry){
+  const [{createStudentEntry,assignmentSessionHeaders:forSession},{assignmentClient}]=await Promise.all([
+    import('../substitute-assignment-full/assignment-student-entry.mjs?v=registration-live-20261120-r4'),import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4')]);
+  assignmentSessionHeaders=forSession;
+  const target=document.createElement('div');target.className='assignment-entry';$('student').parentElement.after(target);
+  assignmentEntry=createStudentEntry({api:assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/'),testId,target,
+    enabledForClass:code=>managedAssignmentClasses.has(code)});
+ }
+ const identity={classCode,studentRef};
+ if(assignmentEntry.session(identity))return false;
+ return assignmentEntry.select({...identity,onReady:async()=>{
+  if($('class').value!==classCode||$('student').value!==studentRef)throw Error('ASSIGNMENT_SELECTION_CHANGED');
+  await prepare();
+ }});
+}
+async function api(action,body,method='POST',keepalive=false){const r=await fetch(((state?.identity?.classCode||state?.classCode||$('class').value)==='DEMO'?REAL_API.replace('/v1/tests/','/v1/demo/tests/'):REAL_API)+'/'+action,{method,cache:'no-store',credentials:'omit',headers:method==='POST'?{'Content-Type':'application/json',
+      ...(['prepare','start'].includes(action)?assignmentSessionHeaders(assignmentEntry?.session({
+        classCode:body?.classCode||state?.classCode||$('class').value,
+        studentRef:body?.studentRef||state?.studentRef||$('student').value})):{} )}:{},...(method==='POST'?{body:JSON.stringify(body)}:{}),keepalive,signal:AbortSignal.timeout(12000)}),v=await r.json();if(!r.ok)throw Object.assign(Error(),{code:v.code,status:r.status});return v;}
 async function own(){if(ownerHeld)return;if(!navigator.locks)throw Object.assign(Error(),{code:'OWNER_BUSY'});await new Promise((resolve,reject)=>navigator.locks.request('substitute-skill:'+testId,{ifAvailable:true},async lock=>{if(!lock)return reject(Object.assign(Error(),{code:'OWNER_BUSY'}));ownerHeld=true;resolve();await new Promise(r=>releaseOwner=r);}).catch(reject));}
 
 const personKey=(c,r)=>testId+':person:'+encodeURIComponent(c)+':'+encodeURIComponent(r);
@@ -225,11 +257,15 @@ async function seal(automatic=false){
  freeze();
  void sync();
 }
-async function prepare(){if(busy)return;busy=true;try{const selected=roster.find(r=>r.studentRef===$('student').value)||state?.prepareOperation&&{name:state.name,studentRef:state.studentRef};if(!selected)return;if(!state?.prepareOperation)await restorePerson($('class').value,selected.studentRef);listenJournal();if(state?.sealed||state?.phase==='submitted'){finish();busy=false;await sync();await check();return;}state??={prepareOperation:crypto.randomUUID(),classCode:$('class').value,studentRef:selected.studentRef,name:selected.name};await persist();const v=state.identity?await api('status',state.identity):await api('prepare',{classCode:state.classCode,studentRef:state.studentRef,operationId:state.prepareOperation});state.identity=v.identity;if(!isListening)observation.emit('owner_acquired');listenJournal();state.phase=v.status;state.revision=Math.max(state.revision||0,v.revision);state.lastServer=v;state.startedAt=v.startedAt;state.deadlineAt=v.deadlineAt;state.audioEndedAt=v.audioEndedAt;await persist();if(v.status==='technical_stop'){finish(v);return;}if(isListening&&v.status==='draft'&&!v.audioEndedAt){busy=false;await stop('reload');return;}content=await api('content',state.identity);if(content.testId!==testId||content.skill!==skill||content.contentHash!==state.identity.contentHash)throw Error('CONTENT_CONFLICT');if(!isListening)observation.emit('content_verified');state.content=content;state.answers??={};await persist();anchor(v);if(v.status==='submitted'){finish(v);return;}if(v.status==='draft'){if(!Object.keys(state.answers).length&&v.snapshot?.answers)state.answers=structuredClone(v.snapshot.answers);await display();tick();return;}text('prepare-status','Đang lưu đề và giao diện để phục hồi…');const offline=await prepareOffline();state.offlineBuild=offline.build;await persist();if(offline.updated){location.reload();return;}show('identity-form',false);show('ready');
+async function prepare(){if(busy)return;busy=true;try{const selected=roster.find(r=>r.studentRef===$('student').value)||state?.prepareOperation&&{name:state.name,studentRef:state.studentRef};if(!selected)return;if(!state?.prepareOperation)await restorePerson($('class').value,selected.studentRef);if(await checkAssignmentEntry(selected.studentRef))return;listenJournal();if(state?.sealed||state?.phase==='submitted'){finish();busy=false;await sync();await check();return;}state??={prepareOperation:crypto.randomUUID(),classCode:$('class').value,studentRef:selected.studentRef,name:selected.name};await persist();const v=state.identity?await api('status',state.identity):await api('prepare',{classCode:state.classCode,studentRef:state.studentRef,operationId:state.prepareOperation});state.identity=v.identity;if(!isListening)observation.emit('owner_acquired');listenJournal();state.phase=v.status;state.revision=Math.max(state.revision||0,v.revision);state.lastServer=v;state.startedAt=v.startedAt;state.deadlineAt=v.deadlineAt;state.audioEndedAt=v.audioEndedAt;await persist();if(v.status==='technical_stop'){finish(v);return;}if(isListening&&v.status==='draft'&&!v.audioEndedAt){busy=false;await stop('reload');return;}content=await api('content',state.identity);if(content.testId!==testId||content.skill!==skill||content.contentHash!==state.identity.contentHash)throw Error('CONTENT_CONFLICT');if(!isListening)observation.emit('content_verified');state.content=content;state.answers??={};await persist();anchor(v);if(v.status==='submitted'){finish(v);return;}if(v.status==='draft'){if(!Object.keys(state.answers).length&&v.snapshot?.answers)state.answers=structuredClone(v.snapshot.answers);await display();tick();return;}text('prepare-status','Đang lưu đề và giao diện để phục hồi…');const offline=await prepareOffline();state.offlineBuild=offline.build;await persist();if(offline.updated){location.reload();return;}show('identity-form',false);show('ready');
  if(isListening){listenJournal();text('prepare-status','Đang tải và kiểm tra đầy đủ audio…');const journal={emit:(action,data)=>observation.emit(action,data)};const {downloadAudio,LocalPlayer}=createAudioTools(content.audio),asset=await downloadAudio({journal,onProgress:audioProgress});player=new LocalPlayer($('official-audio'),journal);player.onFault=code=>void stop('learner_report',code);player.onEnded=()=>void ended();await player.attach(asset);player.setVolume(state.audioVolume??Number($('volume').value));text('prepare-status','Đã kiểm tra audio. Nghe thử 10 giây rồi xác nhận nghe rõ.');$('preview').disabled=false;$('volume').disabled=false;show('retry-audio',false);text('bootstrapPreviewStatus','Sẵn sàng nghe thử.');}
  else{text('prepare-status','Đã sẵn sàng · '+content.durationMinutes+' phút · '+content.controls.length+' câu');$('start').disabled=false;}
  }catch(e){if(isListening&&state?.phase==='prepared')show('retry-audio');fail(e);}finally{busy=false;updateNativeShell(state,content,undefined,()=>persist());}}
 async function start(){
+ if(managedAssignmentClasses.has(state?.identity?.classCode)&&!state?.startedAt&&
+   (navigator.onLine===false||!assignmentEntry?.canStart(state.identity))){
+  text('notice','Chưa xác nhận quyền bắt đầu. Kiểm tra trạng thái Giao bài và kết nối mạng.');return;
+ }
  if(busy||isListening&&(!trialPassed||!$('heard').checked))return;
  busy=true;
  try{

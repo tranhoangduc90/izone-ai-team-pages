@@ -1,7 +1,7 @@
 import {connectLegacyPresentation} from '../substitute-skill-shared/legacy-presentation.mjs';
 import {API,BUILD,PRODUCT,SLUG,CONTENT_VERSION,CONTENT_HASH,DURATION_MS} from './config.mjs';
 import {DurableStore} from './storage.mjs';
-import {Telemetry} from './telemetry.mjs';
+import {Telemetry} from './telemetry.mjs?v=registration-live-20261120-r4';
 import {prepareOffline} from './offline.mjs';
 import {mountNativeReading,nativeLayout,nativeAnnotations} from './native-ui.mjs';
 const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value,show=(id,v=true)=>{const result=$(id).hidden=!v;queueMicrotask(()=>legacyUi?.refresh());return result;};
@@ -153,18 +153,55 @@ async function seal(reason){
  if(!ownerHeld||state?.phase!=='playing'||sealing)return;sealing=true;checkpoint();captureUi();if(reason==='deadline')state.elapsedMs=DURATION_MS;state.submitReason=reason;state.phase='submitted';state.sealed=snapshot('submitted');state.pending=structuredClone(state.sealed);$('readingView').inert=true;$('confirm-submit').close();
  try{await persist();journal.emit('submission_sealed',{operationId:state.sealed.operationId,revisionSent:state.sealed.revision,elapsedExamMs:state.elapsedMs,submitReason:reason});renderFinished();void synchronize(true);}catch{state.storageFailed=true;note('Không xác nhận được lưu bền trên thiết bị. Giữ nguyên trang và liên hệ giảng viên.');renderFinished();text('finish-message','Bài chưa gửi thành công; bộ nhớ thiết bị đang lỗi. Hãy giữ nguyên trang, không tải lại và liên hệ giảng viên.');}finally{sealing=false;}
 }
+const managedAssignmentClasses=({known:new Map(),has(code){return this.known.get(code)===true;},async check(code){
+    if(!/^IC\d{3,8}$/.test(String(code)))return false;
+    if(this.known.has(code))return this.has(code);
+    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4');
+    const result=await assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/')('student/entry',{query:{testId:"substitute-test-1-k56-reading-makeup",classCode:code}});
+    if(typeof result.managed!=='boolean')throw Error('ASSIGNMENT_SCOPE_UNAVAILABLE');
+    this.known.set(code,result.managed);return result.managed;
+  }});
+let assignmentEntry;
+async function assignmentWait(classCode,studentRef){
+ if(!(managedAssignmentClasses.check?await managedAssignmentClasses.check(classCode):managedAssignmentClasses.has(classCode)))return false;
+ if(!assignmentEntry){
+  const [{createStudentEntry},{assignmentClient}]=await Promise.all([
+    import('../substitute-assignment-full/assignment-student-entry.mjs?v=registration-live-20261120-r4'),import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4')]);
+  const target=document.createElement('div');target.className='assignment-entry';$('student').parentElement.after(target);
+  assignmentEntry=createStudentEntry({api:assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/'),testId:"substitute-test-1-k56-reading-makeup",target,
+    enabledForClass:code=>managedAssignmentClasses.has(code)});
+ }
+ if(assignmentEntry.session({classCode,studentRef}))return false;
+ return assignmentEntry.select({classCode,studentRef,onReady:async()=>{
+   if(($('student').value||state?.identity?.studentRef)!==studentRef)throw Error('ASSIGNMENT_SELECTION_CHANGED');
+   await prepare();
+ }});
+}
+const lookupAssignmentSession=(classCode,studentRef)=>assignmentEntry?.session({classCode,studentRef})?.token;
+async function confirmAssignmentStart(){
+ const {classCode,studentRef,attemptId}=state.identity;
+ if(!managedAssignmentClasses.has(classCode))return null;
+ if(navigator.onLine===false)throw Error('ASSIGNMENT_ONLINE_REQUIRED');
+ const assignmentSession=lookupAssignmentSession(classCode,studentRef);
+ if(!assignmentSession || !assignmentEntry.canStart({classCode,studentRef}))throw Error('WAITING_SESSION_REQUIRED');
+ const {value}=await journal.request('/assignment/start',{attemptId},{assignmentSession});
+ if(value.attemptId!==attemptId||!Number.isFinite(Date.parse(value.startedAt)))throw Error('NATIVE_ATTEMPT_CONFLICT');
+ return value.startedAt;
+}
 async function prepare(){
  if(!state?.permit&&await legacyUi.restoreSelected())return;
+ if(state?.permit&&state.phase==='prepared'&&await assignmentWait(state.identity.classCode,state.identity.studentRef))return;
  if(busy||!layoutReady||(!$('student').value&&!state?.permit))return;busy=true;$('prepare').disabled=true;show('retry',false);
  try{
   if(!state?.permit){
    const studentRef=$('student').value,classCode=$('class').value;
    const student=roster?.students.find(item=>item.studentRef===studentRef);
    if(!student||roster.classCode!==classCode)throw Object.assign(Error(),{code:'STUDENT_NOT_ALLOWED'});
+   if(await assignmentWait(classCode,studentRef))return;
    $('class').disabled=true;$('student').disabled=true;
    if(preparation?.studentRef!==studentRef)preparation={studentRef,ownerId,operationId:crypto.randomUUID()};
    await storage.put('preparation',preparation);
-   const r=await journal.request('/prepare',{classCode,studentRef,ownerId,tabId,operationId:preparation.operationId},{permit:null});
+   const r=await journal.request('/prepare',{classCode,studentRef,ownerId,tabId,operationId:preparation.operationId},{permit:null,assignmentSession:lookupAssignmentSession(classCode,studentRef)});
    if(r.value.identity.contentVersion!==CONTENT_VERSION||r.value.identity.contentHash!==CONTENT_HASH||
       r.value.identity.studentRef!==studentRef||r.value.identity.classCode!==classCode)throw Object.assign(Error(),{code:'CONTENT_MISMATCH'});
    state={permit:r.value.permit,identity:r.value.identity,name:student.name,phase:'prepared',revision:r.value.revision,answers:Object.fromEntries(Array.from({length:26},(_,i)=>[i+1,''])),elapsedMs:0,pending:null,serverConfirmed:false,clockOffset:Date.parse(r.value.serverNow)-Date.now(),ui:{flags:{reading:{}},activeSection:{reading:0},fontSize:{reading:100}}};
@@ -191,7 +228,7 @@ async function prepare(){
  }
 }
 $('student').onchange=()=>{$('prepare').disabled=!layoutReady||!$('student').value;};$('prepare').onclick=prepare;$('retry').onclick=prepare;
-$('start').onclick=async()=>{if(!ownerHeld||!ready||busy||state?.phase!=='prepared')return;busy=true;try{state.phase='playing';state.startedAt=new Date(Date.now()+(state.clockOffset||0)).toISOString();state.elapsedMs=0;state.wallAt=Date.now();baseElapsed=0;baseMono=performance.now();state.ui??={flags:{reading:{}},activeSection:{reading:0},fontSize:{reading:100}};await persist();showExam();journal.emit('exam_started',{phase:'playing',startedAt:state.startedAt});await queueDraft();}catch{saveFailure();}finally{busy=false;}};
+$('start').onclick=async()=>{if(!ownerHeld||!ready||busy||state?.phase!=='prepared')return;busy=true;try{const officialStart=await confirmAssignmentStart();state.phase='playing';state.startedAt=officialStart??new Date(Date.now()+(state.clockOffset||0)).toISOString();state.elapsedMs=0;state.wallAt=Date.now();baseElapsed=0;baseMono=performance.now();state.ui??={flags:{reading:{}},activeSection:{reading:0},fontSize:{reading:100}};await persist();showExam();journal.emit('exam_started',{phase:'playing',startedAt:state.startedAt});await queueDraft();}catch{saveFailure();}finally{busy=false;}};
 $('submit').onclick=()=>{if(!ownerHeld||state?.phase!=='playing')return;if(clock()>=DURATION_MS)return void seal('deadline');text('confirm-text','Bạn đã nhập '+Object.values(state.answers).filter(v=>v.trim()).length+'/26 câu. Xác nhận nộp và khóa bài?');$('confirm-submit').showModal();};$('cancel-submit').onclick=()=>$('confirm-submit').close();$('accept-submit').onclick=()=>void seal('manual');$('sync-now').onclick=async()=>{
  const button=$('sync-now');button.disabled=true;
  try{await checkSealedReceipt();}finally{button.disabled=false;}
