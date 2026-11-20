@@ -1001,7 +1001,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       if(!review&&result.draft.scope!=='izone'){
         const key='published:'+entry.id+':'+classSelect.value+':'+session.value;if(!copies.has(key))copies.set(key,uuid());
         result=await request('/teacher/form-drafts/'+entry.id+'/edit',{method:'POST',body:{operationId:copies.get(key)}});copies.delete(key);
-      }if(current===generation){adopt(result.draft,{review});opened=true;}});return opened;
+      }if(current===generation){adopt(result.draft,{review});opened=true;if(entry.assignmentPrompt)notice(entry.assignmentPrompt);}});return opened;
   },onCopyUsed:async entry=>{
     if(!canDiscard())return false;let opened=false;await run(async current=>{
       const key='assigned:'+entry.id;if(!copies.has(key))copies.set(key,uuid());
@@ -1020,10 +1020,12 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       let opened=false,copyError;
       await run(async current=>{
         let reply;
-        try{reply=await request('/teacher/form-library/'+entry.id+'/copy-to-personal',{method:'POST',body:{
+        const source=entry.draft?'/teacher/form-drafts/':'/teacher/form-library/';
+        try{reply=await request(source+entry.id+'/copy-to-personal',{method:'POST',body:{
           title,expectedRevision:entry.sourceRevision,expectedHash:entry.contentHash,operationId:copies.get(key)}});}
         catch(error){copyError=error;return;}
         if(current!==generation)return;
+        if(reply.draft?.scope!=='personal'||reply.draft.id===entry.id){copyError=Error('Chưa xác nhận được đúng bản sao trong Kho cá nhân.');return;}
         copies.delete(key);adopt(reply.draft);opened=true;notice('Đã tạo bản sao trong Kho cá nhân.');
       });
       if(copyError)throw copyError;
