@@ -11,7 +11,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 test('Gia hạn giữ chữ khi lỗi/đóng; kho cả hàng, sửa ở đầu; bộ soạn đủ dạng và chữa bài theo quyền',{timeout:60000},async()=>{
  const server=createServer(async(req,res)=>{try{
   const path=new URL(req.url,'http://local').pathname;
-  if(path==='/check'){res.setHeader('content-type','text/html');return res.end('<!doctype html><main><section id="manage"></section><section id="bank"></section><section id="editor"></section><section id="feedback"></section></main>');}
+  if(path==='/check'){res.setHeader('content-type','text/html');return res.end('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/progress-log/styles.css"><link rel="stylesheet" href="/progress-log/thuy-live/styles.css"><link rel="stylesheet" href="/progress-log/thuy-live/revisions.css"><body class="thuy-live thuy-teacher"><main><section id="manage"></section><section id="bank"></section><section id="editor"></section><section id="feedback"></section></main>');}
   const file=resolve(root,'.'+path);if(!file.startsWith(resolve(root)+sep))throw Error('Denied');res.setHeader('content-type',extname(file)==='.css'?'text/css':'text/javascript');res.end(await readFile(file));
  }catch{res.writeHead(404);res.end();}});await new Promise(done=>server.listen(0,'127.0.0.1',done));
  const browser=await chromium.launch({channel:'chrome',headless:true}),page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(5000);const errors=[];
@@ -27,11 +27,29 @@ test('Gia hạn giữ chữ khi lỗi/đóng; kho cả hàng, sửa ở đầu; 
  await page.keyboard.press('Escape');await page.getByRole('button',{name:'Gia hạn',exact:true}).click();assert.equal(await page.getByLabel('Lý do',{exact:true}).inputValue(),'Lớp gặp sự cố mạng');
  await page.evaluate(()=>window.failWrite=false);await page.getByRole('button',{name:'Gia hạn cho cả lớp',exact:true}).click();await page.waitForFunction(()=>window.changed.length===1);
  const writes=await page.evaluate(()=>window.requests.filter(r=>r.method==='POST'));assert.equal(writes[0].body.operationId,writes[1].body.operationId);assert.equal(writes[1].body.closesAt,'2026-10-24T05:00:00.000Z');
- await page.evaluate(async()=>{const {createFormLibrary}=await import('/progress-log/teacher-form-library.js');window.copied=[];
+ await page.evaluate(async()=>{const {createFormLibrary}=await import('/progress-log/teacher-form-library.js');window.copied=[];window.canDeleteShared=true;
   const entry={id:'entry-a',title:'Phiếu thư viện thử',itemCount:2,skills:['reading'],createdAt:'2026-10-22T00:00:00Z',sourceRevision:1,contentHash:'a'.repeat(64)};
-  window.bank=createFormLibrary({host:document.querySelector('#bank'),request:async path=>path.includes('?')?{entries:[entry]}:{entry:{...entry,definition:{blocks:[{title:'Phần thử',items:[{prompt:'Câu nguồn',options:[]}]}]}}},onCopy:async entry=>window.copied.push(entry.id)});await window.bank.refresh();
+  window.bank=createFormLibrary({host:document.querySelector('#bank'),request:async path=>path.includes('?')?{entries:[entry],canManageShared:window.canDeleteShared}:{entry:{...entry,definition:{blocks:[{title:'Phần thử',items:[{prompt:'Câu nguồn',options:[]}]}]}}},onCopy:async entry=>window.copied.push(entry.id)});await window.bank.refresh();
  });
- await page.locator('#bank tbody tr[data-entry-id="entry-a"]').click({position:{x:4,y:4}});await page.getByRole('dialog').getByRole('button',{name:'Nhân bản vào Kho cá nhân',exact:true}).click();
+ for(const width of [320,390,768,1440]){
+  await page.setViewportSize({width,height:900});
+  const dashboardRow=page.locator('#bank tbody tr[data-entry-id="entry-a"]');
+  const boxes=await dashboardRow.locator('.thuy-library-actions .button').evaluateAll(buttons=>
+   buttons.map(button=>{const box=button.getBoundingClientRect();return {top:box.top,height:box.height};}));
+  assert.equal(boxes.length,3);
+  assert.ok(boxes.every(box=>box.height>=(width<=650?44:36)));
+  if(width===1440)assert.equal(new Set(boxes.map(box=>box.top)).size,1);
+  const dimensions=await page.locator('#bank .thuy-library-scroll').evaluate(element=>[element.scrollWidth,element.clientWidth]);
+  assert.ok(dimensions[0]<=dimensions[1]+1,`Kho chung phải vừa viewport ${width}`);
+ }
+ const addFromRow=page.locator('#bank').getByRole('button',{name:'Thêm vào kho cá nhân',exact:true});
+ await addFromRow.focus();await page.keyboard.press('Enter');await page.getByRole('dialog',{name:'Thêm vào kho cá nhân'}).waitFor();
+ await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'Thêm vào kho cá nhân'}).waitFor({state:'hidden'});
+ assert.equal(await addFromRow.evaluate(node=>node===document.activeElement),true);
+ assert.deepEqual(await page.evaluate(()=>window.copied),[]);
+ await page.evaluate(async()=>{window.canDeleteShared=false;await window.bank.refresh();});
+ assert.equal(await page.locator('#bank').getByRole('button',{name:'Xóa bài',exact:true}).count(),0);
+ await page.locator('#bank tbody tr[data-entry-id="entry-a"]').click({position:{x:4,y:4}});await page.getByRole('dialog').getByRole('button',{name:'Thêm vào kho cá nhân',exact:true}).click();
  await page.getByRole('button',{name:'Tạo bản sao và mở để sửa',exact:true}).click();assert.deepEqual(await page.evaluate(()=>window.copied),['entry-a']);
  await page.evaluate(async()=>{const m=await import('/progress-log/teacher-form-editor.js'),v=m.newEditorPayload('Bộ đủ dạng');window.editor=m.createFormDraftEditor({host:document.querySelector('#editor'),apiRequest:async()=>({drafts:[]})});
   v.definition.blocks[0].items=['mcq','multi','matching','short_answer','reflection'].map((type,index)=>m.newEditorItem(type,index+1));

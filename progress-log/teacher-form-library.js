@@ -3,6 +3,7 @@ import {bindDialogDismiss,node} from './session-comments.js';
 import {reviewContent} from './docs-import-review.js?rev=20261025-docs-import-v1';
 import {mountWorksheetFrame} from './worksheet-preview.js?rev=20261030-multi-limit-v1';
 import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261030-the22-23-v1';
+const addToPersonalLabel='Thêm vào kho cá nhân';
 const button=(label,action)=>{const b=node('button',label,'button');b.type='button';b.addEventListener('click',action);return b;};
 const fold=s=>String(s||'').normalize('NFD').replace(/\p{M}/gu,'').replace(/đ/giu,'d').toLocaleLowerCase('vi');
 export function currentLibraryRows(entries,drafts,used){
@@ -39,7 +40,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     const signature=JSON.stringify([scope,canManageShared,search.value,selected.map(e=>[e.id,e.source,e.title,e.meta,e.itemCount,e.sourceRevision,e.contentHash,e.canEditShared,e.publication])]);
     if(signature===listSignature)return;listSignature=signature;list.replaceChildren();
     if(!selected.length){list.append(node('p',scope==='izone'?'Chưa có bài chuẩn trong Kho chung.':scope==='personal'?'Chưa có bài trong Kho cá nhân.':'Chưa có phiếu đã giao phù hợp.','thuy-library-empty'));return;}
-    const wrap=node('div','','thuy-library-scroll'),table=node('table'),head=node('tr'),thead=node('thead'),body=node('tbody');
+    const wrap=node('div','','thuy-library-scroll'),table=node('table','',scope==='izone'?'thuy-library-shared':''),head=node('tr'),thead=node('thead'),body=node('tbody');
     for(const title of ['Tên bài tập','Nguồn','']){const th=node('th',title);th.scope='col';head.append(th);}thead.append(head);table.append(thead,body);
     const groups=scope==='izone'?[
       ['Nháp của tôi',selected.filter(e=>e.draft&&!e.draft.reviewMode)],
@@ -51,18 +52,17 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     for(const entry of group){
       const row=node('tr'),name=node('td'),open=button(entry.title,()=>void preview(entry));row.tabIndex=0;row.dataset.entryId=entry.id;row.classList.toggle('thuy-library-published',entry.id===highlighted);row.setAttribute('aria-label','Xem '+entry.title);open.className='thuy-library-name';
       name.append(open,node('small',entry.meta||`${entry.itemCount||0} câu`));const actions=node('td');
-      const actionGroup=node('div','','thuy-library-actions'),topActions=node('div','','thuy-library-actions-top');
+      const sharedRow=entry.source==='izone';
+      const actionGroup=node('div','',sharedRow?'thuy-library-actions thuy-library-actions-shared':'thuy-library-actions');
+      const topActions=sharedRow?actionGroup:node('div','','thuy-library-actions-top');
       if(assignable(entry)){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');topActions.append(assign);}
+      if(canCopyToPersonal(entry))actionGroup.append(button(addToPersonalLabel,()=>copyToPersonal(entry)));
       if(entry.source==='personal'&&!entry.draft?.reviewMode||entry.source==='izone'&&!entry.draft&&canManageShared){
-        const remove=button('Xóa bài',()=>void archiveEntry(entry));topActions.append(remove);
+        const remove=button('Xóa bài',()=>void archiveEntry(entry));
+        if(sharedRow)remove.classList.add('thuy-library-remove');
+        topActions.append(remove);
       }
-      if(topActions.childElementCount)actionGroup.append(topActions);
-      if(canCopyToPersonal(entry)){
-        const copy=button('',()=>copyToPersonal(entry));
-        copy.classList.add('thuy-library-copy');
-        copy.append(node('span','Nhân bản vào'),' ',node('span','Kho cá nhân'));
-        actionGroup.append(copy);
-      }
+      if(!sharedRow&&topActions.childElementCount)actionGroup.append(topActions);
       if(actionGroup.childElementCount)actions.append(actionGroup);
       row.append(name,node('td',entry.source==='used'?sourceName(entry.assignment.origin_scope)||'Chưa xác định nguồn':sourceName(entry.source)),actions);
       row.addEventListener('click',event=>{if(!event.target.closest('button,a')&&!getSelection()?.toString())void preview(entry);});
@@ -143,7 +143,8 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
       finally{editing=false;edit.disabled=close.disabled=false;}
     });
     head.append(node('h2',entry.title));
-    if(canCopyToPersonal(entry))head.append(button('Nhân bản vào Kho cá nhân',()=>copyToPersonal(entry,dialog)));
+    if(entry.source==='izone')dialog.classList.add('thuy-library-detail-shared');
+    if(canCopyToPersonal(entry))head.append(button(addToPersonalLabel,()=>copyToPersonal(entry,dialog)));
     if(entry.source==='izone'?entry.canEditShared===true:entry.assignment?.can_manage!==false)head.append(edit);
     if(assignable(entry)){const assign=button('Giao bài',()=>void assignEntry(entry,showError));assign.classList.add('primary');head.append(assign);}
     head.append(close);body.append(actionNotice,reload,notice);dialog.append(head,body);document.body.append(dialog);dialogs.add(dialog);
@@ -171,9 +172,9 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     const confirm=node('button','Tạo bản sao và mở để sửa','button primary');confirm.type='submit';
     const cancel=button('Hủy',()=>dialog.close());
     input.required=true;input.maxLength=120;input.value=entry.title.slice(0,110)+' · Bản sao';
-    label.append(input);head.append(node('h2','Nhân bản vào Kho cá nhân'));
+    label.append(input);head.append(node('h2',addToPersonalLabel));
     form.append(hint,label,message,cancel,confirm);dialog.append(head,form);document.body.append(dialog);dialogs.add(dialog);
-    dialog.setAttribute('aria-label','Nhân bản vào Kho cá nhân');
+    dialog.setAttribute('aria-label',addToPersonalLabel);
     dialog.addEventListener('close',()=>{dialogs.delete(dialog);dialog.remove();if(opener?.isConnected)opener.focus({preventScroll:true});},{once:true});
     dialog.addEventListener('cancel',event=>{if(confirm.disabled)event.preventDefault();});
     form.addEventListener('submit',async event=>{
