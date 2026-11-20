@@ -51,6 +51,54 @@ test('Gia hạn giữ chữ khi lỗi/đóng; kho cả hàng, sửa ở đầu; 
  assert.equal(await page.locator('#bank').getByRole('button',{name:'Xóa bài',exact:true}).count(),0);
  await page.locator('#bank tbody tr[data-entry-id="entry-a"]').click({position:{x:4,y:4}});await page.getByRole('dialog').getByRole('button',{name:'Thêm vào kho cá nhân',exact:true}).click();
  await page.getByRole('button',{name:'Tạo bản sao và mở để sửa',exact:true}).click();assert.deepEqual(await page.evaluate(()=>window.copied),['entry-a']);
+ await page.evaluate(async()=>{
+  const {createFormLibrary}=await import('/progress-log/teacher-form-library.js');
+  const host=document.createElement('section');host.id='draft-bank';document.body.append(host);
+  const d={id:'draft-x',scope:'izone',revision:3,status:'draft',canUseSharedDraftActions:true,contentHash:'b'.repeat(64),
+   definition:{title:'Tên trùng',courseCode:'56',blocks:[]}};
+  const existing={id:'old-entry',title:d.definition.title,sourceRevision:1,contentHash:'c'.repeat(64),courseCode:'56',canArchive:true};
+  const next={...existing,id:'new-entry',sourceDraftId:d.id,sourceRevision:d.revision,contentHash:d.contentHash,definition:d.definition};
+  window.draftLand={d,requests:[],opened:[],assigned:[],clones:[],archived:false,published:false,allowConfirm:false};
+  const qa=window.draftLand;
+  window.confirm=()=>qa.allowConfirm;
+  qa.library=createFormLibrary({host,request:async(path,options={})=>{
+   qa.requests.push({path,...options});
+   if(path==='/teacher/form-library?scope=izone')return {entries:[qa.published?next:existing],shared:{createCourses:['56'],reviewCourses:['56']}};
+   if(path==='/teacher/form-library?scope=personal')return {entries:[]};
+   if(path==='/teacher/form-drafts?scope=izone')return {drafts:qa.archived||qa.published?[]:[d]};
+   if(path.includes('review-queue'))return {drafts:[{...d,id:'other-draft',canUseSharedDraftActions:false}]};
+   if(path==='/teacher/form-drafts/'+d.id)return {draft:d};
+   if(path.endsWith('/archive')){qa.archived=true;return {archived:true,id:d.id};}
+   if(path.endsWith('/publish-library')){qa.published=true;return {publication:{id:'pub-new',libraryEntryId:next.id,contentHash:d.contentHash}};}
+   if(path==='/teacher/form-library/'+next.id)return {entry:next};
+   throw Error('Tuyến ngoài fixture: '+path);
+  },onCopy:async(entry,opts)=>qa.clones.push({entry:entry.id,...opts}),onOpenDraft:async entry=>qa.opened.push(entry.id),
+    onAssign:async entry=>qa.assigned.push({id:entry.id,publication:entry.publication.id,draft:Boolean(entry.draft)})});
+  await qa.library.refresh();
+ });
+ const draftRow=page.locator('#draft-bank tr[data-entry-id="draft-x"]');
+ const publicRow=page.locator('#draft-bank tr[data-entry-id="old-entry"]');
+ assert.deepEqual(await draftRow.locator('.thuy-library-actions button').allTextContents(),['Giao bài','Thêm vào kho cá nhân','Xóa bài']);
+ assert.equal(await publicRow.getByRole('button',{name:'Xóa bài',exact:true}).count(),1);
+ assert.equal(await page.locator('#draft-bank tr[data-entry-id="other-draft"] .thuy-library-actions button').count(),0);
+ await draftRow.getByRole('button',{name:'Giao bài',exact:true}).click();
+ await page.waitForFunction(()=>window.draftLand.opened.length===1);
+ assert.equal(await page.evaluate(()=>window.draftLand.requests.filter(r=>r.method==='POST').length),0);
+ await draftRow.getByRole('button',{name:'Thêm vào kho cá nhân'}).click();
+ await page.getByRole('button',{name:'Tạo bản sao và mở để sửa',exact:true}).click();
+ assert.equal(await page.evaluate(()=>window.draftLand.clones[0].entry),'draft-x');
+ await page.evaluate(async()=>{const x=window.draftLand;x.library.restoreNavigation({scope:'izone',search:'Tên trùng'});});
+ await draftRow.getByRole('button',{name:'Xóa bản nháp Tên trùng'}).click();
+ assert.equal(await page.evaluate(()=>window.draftLand.requests.some(r=>r.path.endsWith('/archive'))),false);
+ await page.evaluate(()=>window.draftLand.allowConfirm=true);
+ await draftRow.getByRole('button',{name:'Xóa bản nháp Tên trùng'}).click();
+ await draftRow.waitFor({state:'detached'});
+ assert.equal(await publicRow.count(),1);
+ assert.equal(await page.evaluate(()=>window.draftLand.requests.find(r=>r.path.endsWith('/archive')).path),'/teacher/form-drafts/draft-x/archive');
+ await page.evaluate(async()=>{const x=window.draftLand;x.archived=false;x.d.status='approved';await x.library.refresh();});
+ await draftRow.getByRole('button',{name:'Giao bài',exact:true}).click();
+ await page.waitForFunction(()=>window.draftLand.assigned.length===1);
+ assert.deepEqual(await page.evaluate(()=>window.draftLand.assigned),[{id:'new-entry',publication:'pub-new',draft:false}]);
  await page.evaluate(async()=>{const m=await import('/progress-log/teacher-form-editor.js'),v=m.newEditorPayload('Bộ đủ dạng');window.editor=m.createFormDraftEditor({host:document.querySelector('#editor'),apiRequest:async()=>({drafts:[]})});
   v.definition.blocks[0].items=['mcq','multi','matching','short_answer','reflection'].map((type,index)=>m.newEditorItem(type,index+1));
   v.definition.blocks[0].items[4].interactionConfig.hintText='Gợi ý có sẵn';

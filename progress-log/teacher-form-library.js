@@ -17,15 +17,18 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
   let shared={createCourses:[],reviewCourses:[],selfApproveCourses:[]},sharedDrafts=[];
   function clearShared(){shared={createCourses:[],reviewCourses:[],selfApproveCourses:[]};sharedDrafts=[];canManageShared=false;}
   const dialogs=new Set(),managers=new Set();
-  const sourceOperations=new Map();
+  const sourceOperations=new Map(),pendingActions=new Set();
   const heading=node('div','','thuy-library-heading'),create=button('+ Tạo bài tập',()=>onCreate(scope));create.classList.add('primary');heading.append(node('h1','Quản lý bài tập'),create);
   const panel=node('section','','thuy-library-panel'),nav=node('nav','','editor-library-tabs'),tools=node('div','','thuy-library-tools'),search=node('input'),status=node('span'),list=node('div');
   search.type='search';search.placeholder='Tìm tên bài tập';search.setAttribute('aria-label','Tìm bài tập');status.setAttribute('role','status');nav.setAttribute('role','tablist');nav.setAttribute('aria-label','Nguồn bài tập');
   const tabs=new Map(),sourceName=s=>({izone:'Kho chung',personal:'Kho cá nhân',used:'Phiếu đã giao'})[s];
   const matchedPublication=entry=>{const value=publications.get(entry.sourceDraftId||entry.draft?.id);return value&&value.revision===(entry.sourceRevision||entry.draft?.revision)?value:publicationRows.find(p=>p.libraryEntryId===entry.id||p.assignmentId===entry.id||entry.source==='used'&&entry.definition&&p.formVersionId===entry.definition.formVersionId)||entry.publication;};
   const all=()=>currentLibraryRows(entries,[...drafts,...sharedDrafts],used).map(entry=>({...entry,publication:matchedPublication(entry)}));
-  const assignable=entry=>entry.source!=='used'&&!entry.draft?.reviewMode&&!(entry.source==='izone'&&entry.draft);
-  const canCopyToPersonal=entry=>entry.source==='izone'&&!entry.draft&&Boolean(entry.contentHash);
+  const ownSharedDraft=entry=>entry.source==='izone'&&entry.draft?.canUseSharedDraftActions===true&&!entry.draft.reviewMode;
+  const assignable=entry=>entry.source!=='used'&&!entry.draft?.reviewMode&&(entry.source!=='izone'||!entry.draft||ownSharedDraft(entry));
+  const canCopyToPersonal=entry=>entry.source==='izone'&&(entry.draft?ownSharedDraft(entry):Boolean(entry.contentHash));
+  const canArchive=entry=>entry.source==='personal'&&!entry.draft?.reviewMode||
+    entry.source==='izone'&&(entry.draft?ownSharedDraft(entry):entry.canArchive??canManageShared);
   const historyTools=node('div','','thuy-library-history');
   const publicationNotice=node('p','','notice thuy-publication-notice');publicationNotice.setAttribute('role','status');publicationNotice.hidden=true;let highlighted=null;
   const historyManagement=mountAssignmentManagement({host:historyTools,getContext:getClassContext,request,onChanged:onManagementChanged,showHistory:false});for(const control of historyTools.children)control.hidden=true;
@@ -37,7 +40,8 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     status.textContent=selected.length+' bài tập';
     create.hidden=scope==='used'||scope==='izone'&&!shared.createCourses.length;
     create.title=scope==='izone'?'Tạo bài trong Kho chung':'Tạo bài trong Kho cá nhân';
-    const signature=JSON.stringify([scope,canManageShared,search.value,selected.map(e=>[e.id,e.source,e.title,e.meta,e.itemCount,e.sourceRevision,e.contentHash,e.canEditShared,e.publication])]);
+    const signature=JSON.stringify([scope,canManageShared,search.value,selected.map(e=>[e.id,e.source,e.title,e.meta,e.itemCount,e.sourceRevision,
+      e.contentHash,e.canEditShared,e.canArchive,e.draft?.canUseSharedDraftActions,e.draft?.sharedBaseState,e.publication])]);
     if(signature===listSignature)return;listSignature=signature;list.replaceChildren();
     if(!selected.length){list.append(node('p',scope==='izone'?'Chưa có bài chuẩn trong Kho chung.':scope==='personal'?'Chưa có bài trong Kho cá nhân.':'Chưa có phiếu đã giao phù hợp.','thuy-library-empty'));return;}
     const wrap=node('div','','thuy-library-scroll'),table=node('table','',scope==='izone'?'thuy-library-shared':''),head=node('tr'),thead=node('thead'),body=node('tbody');
@@ -56,10 +60,21 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
       const actionGroup=node('div','',sharedRow?'thuy-library-actions thuy-library-actions-shared':'thuy-library-actions');
       const topActions=sharedRow?actionGroup:node('div','','thuy-library-actions-top');
       if(assignable(entry)){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');topActions.append(assign);}
-      if(canCopyToPersonal(entry))actionGroup.append(button(addToPersonalLabel,()=>copyToPersonal(entry)));
-      if(entry.source==='personal'&&!entry.draft?.reviewMode||entry.source==='izone'&&!entry.draft&&canManageShared){
+      if(canCopyToPersonal(entry)){
+        const copy=button(addToPersonalLabel,()=>copyToPersonal(entry));
+        if(entry.draft?.sharedBaseState==='archived'){copy.disabled=true;copy.title='Bài nguồn đã bị gỡ khỏi Kho chung.';}
+        actionGroup.append(copy);
+      }
+      if(canArchive(entry)){
         const remove=button('Xóa bài',()=>void archiveEntry(entry));
         if(sharedRow)remove.classList.add('thuy-library-remove');
+        if(ownSharedDraft(entry)){
+          remove.setAttribute('aria-label','Xóa bản nháp '+entry.title);
+          if(!['draft','approved'].includes(entry.draft.status)){
+            remove.disabled=true;remove.title='Bản nháp đang chờ duyệt.';
+            actions.append(node('small',remove.title));
+          }
+        }
         topActions.append(remove);
       }
       if(!sharedRow&&topActions.childElementCount)actionGroup.append(topActions);
@@ -70,12 +85,31 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     }}wrap.append(table);list.append(wrap);
   }
   async function archiveEntry(entry){
-    if(!window.confirm('Xóa “'+entry.title+'” khỏi '+sourceName(entry.source)+'? Phiếu đã giao, nháp lưu trữ và bài học viên được giữ nguyên.'))return;
-    const key='archive:'+entry.source+':'+entry.id;if(!sourceOperations.has(key))sourceOperations.set(key,crypto.randomUUID());
-    const run=lifecycle;status.textContent='Đang xóa bài khỏi kho…';
-    try{await request('/teacher/form-catalog/'+(entry.source==='personal'?(entry.draft?.id||entry.sourceDraftId):entry.id)+'/archive',{method:'POST',body:{source:entry.source,operationId:sourceOperations.get(key)}});
-      if(run!==lifecycle)return;await onRefresh();await load();status.textContent='Đã xóa bài khỏi kho. Phiếu đã giao và bài học viên được giữ nguyên.';
+    const sharedDraft=ownSharedDraft(entry);
+    const key=JSON.stringify(['archive',entry.source,entry.id,entry.sourceRevision,entry.contentHash,entry.draft?.status]);
+    if(pendingActions.has(key))return;
+    const sourceDetail=entry.source==='izone'?' · Khóa '+(entry.courseCode||entry.draft?.definition?.courseCode)+' · Bản '+entry.sourceRevision:'';
+    const prompt=sharedDraft?'Xóa bản nháp “'+entry.title+'”'+sourceDetail+'? Bản đã xuất bản và phiếu đã giao được giữ nguyên.':
+      'Xóa “'+entry.title+'”'+sourceDetail+' khỏi '+sourceName(entry.source)+'? Phiếu đã giao và bài học viên được giữ nguyên.';
+    if(!window.confirm(prompt))return;
+    if(!sourceOperations.has(key))sourceOperations.set(key,crypto.randomUUID());
+    const run=lifecycle,operationId=sourceOperations.get(key);
+    const path=sharedDraft?'/teacher/form-drafts/'+entry.id:
+      '/teacher/form-catalog/'+(entry.source==='personal'?(entry.draft?.id||entry.sourceDraftId):entry.id);
+    const revision=entry.source==='izone'&&entry.sourceRevision&&entry.contentHash?
+      {expectedRevision:entry.sourceRevision,expectedHash:entry.contentHash}:{};
+    const body=sharedDraft?{operationId,...revision,expectedStatus:entry.draft.status}:{source:entry.source,operationId,...revision};
+    pendingActions.add(key);status.textContent='Đang xóa bài khỏi kho…';
+    try{await request(path+'/archive',{method:'POST',body});
+      if(run!==lifecycle)return;
+      await onRefresh();
+      const loaded=await load();if(run!==lifecycle)return;
+      if(!loaded)throw Error('Đã nhận yêu cầu. Hãy tải lại danh sách để đối chiếu.');
+      sourceOperations.delete(key);
+      status.textContent=sharedDraft?'Đã xóa bản nháp. Bản đã xuất bản và phiếu đã giao được giữ nguyên.':
+        'Đã xóa bài khỏi kho. Phiếu đã giao và bài học viên được giữ nguyên.';
     }catch(error){if(run===lifecycle)status.textContent='Chưa xác nhận xóa bài: '+error.message;}
+    finally{pendingActions.delete(key);}
   }
   async function load(){const run=++generation;status.textContent='Đang đọc kho…';
     try{
@@ -93,6 +127,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
       const ownRows=own?.drafts||[];
       sharedDrafts=[...ownRows,...(queue?.drafts||[]).filter(row=>!ownRows.some(d=>d.id===row.id)).map(row=>({...row,reviewMode:true}))].map(d=>({
         id:d.id,title:d.definition.title,source:'izone',draft:d,sourceDraftId:d.id,
+        courseCode:d.definition.courseCode,sourceRevision:d.revision,contentHash:d.contentHash,
         meta:'Khóa '+d.definition.courseCode+' · Bản '+d.revision+' · '+({draft:'Nháp',pending_review:'Chờ duyệt',approved:'Đã duyệt'}[d.status]||d.status)
       }));
       paint();return true;
@@ -106,7 +141,43 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     if((entry.source==='used'?detail.assignmentId:detail.id)!==entry.id)throw Error('Nội dung trả về chưa khớp phiếu.');
     const full={...entry,detail,definition:detail.definition};full.publication=matchedPublication(full);return full;
   }
+  async function assignSharedDraft(entry){
+    if(entry.draft.sharedBaseState)throw Error(entry.draft.sharedBaseState==='archived'?'Bài nguồn đã bị gỡ khỏi Kho chung.':'Bài nguồn đã có bản mới. Hãy mở lại từ Kho chung.');
+    const key=JSON.stringify(['publish-and-assign',entry.id,entry.sourceRevision,entry.contentHash]);
+    if(pendingActions.has(key))return;
+    const run=lifecycle;pendingActions.add(key);
+    try{
+      const {detail:draft}=await readEntry(entry);
+      if(run!==lifecycle)return;
+      if(draft.scope!=='izone'||draft.revision!==entry.sourceRevision||draft.contentHash!==entry.contentHash||draft.status!==entry.draft.status)
+        throw Error('Nháp đã thay đổi. Hãy tải lại trước khi giao.');
+      if(draft.status!=='approved'){
+        await onOpenDraft({...entry,assignmentPrompt:draft.status==='pending_review'?
+          'Bản nháp đang chờ duyệt.':'Hãy kiểm nội dung và duyệt bản này trước khi giao.'});
+        return;
+      }
+      if(!window.confirm('Xuất bản “'+entry.title+'” · Khóa '+entry.courseCode+' · Bản '+entry.sourceRevision+
+        ' vào Kho chung và chọn lớp? Bản này sẽ dùng để giao sau khi bạn xác nhận lớp và buổi.'))return;
+      if(!sourceOperations.has(key))sourceOperations.set(key,crypto.randomUUID());
+      const {publication}=await request('/teacher/form-drafts/'+entry.id+'/publish-library',{method:'POST',
+        body:{expectedRevision:entry.sourceRevision,operationId:sourceOperations.get(key)}});
+      if(run!==lifecycle)return;
+      status.textContent='Đã xuất bản. Hãy chọn lớp và buổi để giao bài.';
+      if(!publication?.id||!publication.libraryEntryId||publication.contentHash!==entry.contentHash)
+        throw Error('Đã nhận kết quả xuất bản. Hãy tải lại Kho chung để xác minh trước khi giao.');
+      const {entry:published}=await request('/teacher/form-library/'+publication.libraryEntryId);
+      if(run!==lifecycle)return;
+      if(published.id!==publication.libraryEntryId||published.sourceDraftId!==entry.id||published.sourceRevision!==entry.sourceRevision||
+        published.contentHash!==entry.contentHash||published.courseCode!==entry.courseCode)
+        throw Error('Đã xuất bản nhưng nguồn Kho chung đã đổi. Hãy tải lại để chọn bản giao.');
+      sourceOperations.delete(key);
+      await load();if(run!==lifecycle)return;
+      publicationNotice.hidden=false;publicationNotice.textContent='Đã xuất bản vào Kho chung. Xem kết quả giao trong hộp Giao bài.';
+      await onAssign({...published,source:'izone',detail:published,publication});
+    }finally{pendingActions.delete(key);}
+  }
   async function assignEntry(entry,showError=error=>{status.textContent=error.message;}){if(!assignable(entry))return;const run=lifecycle;try{
+    if(ownSharedDraft(entry)){await assignSharedDraft(entry);return;}
     const full=await readEntry(entry);
     if(run!==lifecycle)return;
     if(!full.publication&&!entry.draft){
