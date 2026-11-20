@@ -112,7 +112,7 @@ test('Chrome + API: lead xử lý đáp án và sửa lại bài Kho chung đã 
     const edit=modal.getByRole('button',{name:'Sửa bài',exact:true});
     await edit.waitFor({state:'visible'});
     assert.ok(await edit.evaluate(button=>button.getBoundingClientRect().right<=innerWidth));
-    assert.equal(await modal.getByRole('button',{name:'Nhân bản vào Kho cá nhân'}).isVisible(),true);
+    assert.equal(await modal.getByRole('button',{name:'Thêm vào kho cá nhân'}).isVisible(),true);
     assert.equal(await modal.getByRole('button',{name:'Giao bài',exact:true}).isVisible(),true);
     actor='plain';
     await edit.click();

@@ -64,7 +64,7 @@ test('Thẻ 26: Kho chung dùng cùng bộ soạn, admin xuất bản đúng ngu
   assert.equal(await page.evaluate(()=>window.calls26.find(c=>c.path==='/teacher/form-drafts')?.body.scope),'izone');
   assert.equal(await page.evaluate(()=>window.calls26.some(c=>c.path==='/teacher/form-library')),false);
   assert.equal(await page.evaluate(()=>window.calls26.some(c=>c.path.endsWith('/request-review'))),false);
-  await page.getByRole('button',{name:'Nhân bản vào Kho cá nhân',exact:true}).click();
+  await page.getByRole('button',{name:'Thêm vào kho cá nhân',exact:true}).click();
   await page.getByLabel('Tên bản sao').fill('Bản cá nhân kiểm');
   await page.getByRole('button',{name:'Tạo bản sao và mở để sửa',exact:true}).click();
   const title=page.getByLabel('Tên bài tập',{exact:true});await title.waitFor();assert.equal(await title.inputValue(),'Bản cá nhân kiểm');
