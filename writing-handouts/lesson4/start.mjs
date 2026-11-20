@@ -8,6 +8,7 @@ const config = frontendConfiguration(runtime);
 const query = new URLSearchParams(location.search);
 const assignment = query.get('assignment');
 const documentId = query.get('documentId');
+const activity = document.body.dataset.activity;
 
 function showOpeningError(host, error, retry) {
   if (error.stale) return;
@@ -37,7 +38,8 @@ function showOpening() {
 
 async function start() {
   if (query.get('mode') !== 'student' || query.get('workspace') !== 'k67' ||
-      !/^hw-k67-writing-lesson4-\d+$/.test(assignment || '') || !/^[\w-]{20,200}$/.test(documentId || '')) {
+      !['lesson4','lesson6'].includes(activity) || !/^hw-k67-writing-lesson[46]-\d+$/.test(assignment || '') ||
+      !assignment.startsWith('hw-k67-writing-'+activity+'-') || !/^[\w-]{20,200}$/.test(documentId || '')) {
     throw Object.assign(Error('WRITING_ENTRY_REQUIRED'), { status: 403 });
   }
   const access = createOnlineAccess(config, { onReady: enter, showOpening, compactStudentEntry: true });
@@ -67,7 +69,7 @@ async function start() {
         document.getElementById('lesson-access-style')?.remove();
       },
     });
-    await import('../shared/loader.mjs?v=20261118-lesson5-writing');
+    await import('../shared/loader.mjs?v=20261120-lesson6-writing');
   }
   await enter(await access.open(root));
 }

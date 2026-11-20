@@ -1,7 +1,7 @@
-const card = `<section class="share-practice" aria-labelledby="practice-title">
-  <div><p class="headings-kicker">TRƯỚC KHI VIẾT</p><h2 id="practice-title">Thực hiện đoạn chat “Writing Lesson 4”</h2>
+const card = (number,starter) => `<section class="share-practice" aria-labelledby="practice-title">
+  <div><p class="headings-kicker">TRƯỚC KHI VIẾT</p><h2 id="practice-title">Thực hiện đoạn chat “Writing Lesson ${number}”</h2>
     <p>Luyện đến khi chatbot kết thúc bài, rồi gửi link chia sẻ cả hội thoại.</p></div>
-  <a class="primary practice-open" href="https://ducizone.short.gy/writing_lesson_4" target="_blank" rel="noopener">Mở bài luyện ↗</a>
+  <a class="primary practice-open" href="${starter}" target="_blank" rel="noopener">Mở bài luyện ↗</a>
   <details><summary>Cách lấy link chia sẻ</summary><ol>
     <li>Mở bài luyện, nhấn tiếp tục hội thoại và trả lời câu hỏi đầu tiên.</li>
     <li>Luyện theo hướng dẫn. Khi chatbot kết thúc bài, chọn Chia sẻ → Tạo liên kết → Sao chép liên kết.</li>
@@ -13,13 +13,15 @@ const card = `<section class="share-practice" aria-labelledby="practice-title">
   <p id="practice-status" role="status" aria-live="polite">Đang đọc trạng thái luyện tập…</p>
 </section>`;
 
-export function mountLesson4Practice(workspace, client) {
+export function mountLesson4Practice(workspace, client, activity = 'lesson4') {
+  const number = activity === 'lesson6' ? 6 : 4;
+  const starter = 'https://ducizone.short.gy/writing_lesson_' + number;
   if (!workspace.querySelector('.reading-practice-gate')) {
     const layout = workspace.querySelector('.layout');
     const title = layout.querySelector('.page-title');
     title.classList.add('lesson4-page-title');
     layout.before(title);
-    layout.insertAdjacentHTML('beforebegin', card + `<div class="reading-practice-gate" data-locked="true">
+    layout.insertAdjacentHTML('beforebegin', card(number,starter) + `<div class="reading-practice-gate" data-locked="true">
       <div class="reading-practice-overlay"><section class="reading-practice-lock-notice" role="status" aria-labelledby="practice-lock-title">
         <h2 id="practice-lock-title">Hoàn thành luyện ChatGPT để mở bài viết</h2>
         <p>Gửi link chia sẻ ở trên. Bài viết sẽ mở khi hệ thống xác nhận bạn đã luyện xong.</p>
@@ -30,7 +32,7 @@ export function mountLesson4Practice(workspace, client) {
     workspace.querySelector('.reading-practice-gate').append(layout);
   }
   window.ReadingSharePractice.bind({
-    content: { practice: true, code: 'writing67-lesson4-ideas', version: 'v1' },
+    content: { practice: true, code: 'writing67-lesson'+number+'-ideas', version: 'v1' },
     client: { ...client, identity: { ownerId: client.ref, courseId: 'handout67' } },
   });
 }
