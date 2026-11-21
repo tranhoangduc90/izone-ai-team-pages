@@ -34,6 +34,24 @@ test('Pretest K67 paper installs the active student cache without teacher SSO', 
   assert.equal(ASSET_BUILD_ID, createHash('sha256').update(JSON.stringify(sorted)).digest('hex'));
 });
 
+test('Mini K67 keeps the v2 shell and installs the v3 receipt journal shell', async () => {
+  const route = new URL('mini-test-lesson-5-computer-based/', root);
+  for (const version of ['v2', 'v3']) {
+    const name = `offline-assets-mini-student-cache-${version}.mjs`;
+    const worker = await readFile(new URL(`offline-worker-mini-student-cache-${version}.js`, route), 'utf8');
+    assert.ok(worker.includes(`'./${name}'`));
+    const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(new URL(name, route).href);
+    assert.deepEqual(ASSETS, Object.keys(ASSET_HASHES));
+    assert.deepEqual(await assetMismatches(route, ASSETS, ASSET_HASHES), []);
+    assert.equal(ASSET_BUILD_ID, createHash('sha256').update(JSON.stringify(ASSET_HASHES)).digest('hex'));
+  }
+  const publicEntry = await readFile(new URL('index.html', route), 'utf8');
+  const offlineEntry = await readFile(new URL('index-mini-student-cache-v3.html', route), 'utf8');
+  for (const html of [publicEntry, offlineEntry]) {
+    assert.ok(html.includes('bootstrap-mini-k67-student-cache-v3.js'));
+  }
+});
+
 for (const entry of await readdir(root, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue;
   const route = new URL(`${entry.name}/`, root);
