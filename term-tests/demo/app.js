@@ -1,4 +1,5 @@
 import {COURSES,demoContext,loadStudents,resetStudent,resetSignal,clearStudentStorage} from './model.js?v=20261020-v2';
+import {demoJournalEntry} from './journal-entry-v1.mjs';
 
 // Tải danh sách thật của lớp giả, mở trang thi hiện hành và reset theo từng người.
 // Khi mạng lỗi, giữ thông tin lỗi tại học viên; không biến reset một phần thành hoàn tất.
@@ -9,9 +10,11 @@ let epoch=0,resetting=false;
 function storageList(){const out=[];for(const get of [()=>localStorage,()=>sessionStorage])try{out.push(get());}catch{}return out;}
 function links(context,enabled){
   const query=new URLSearchParams({class:context.code,mode:order.value});
-  for(const [id,path] of [['openExam',`${context.slug}-computer-based`],['openPaper',context.slug],['openTeacher',context.teacher]]){
+  const cbt=`${context.slug}-computer-based`;
+  const exam=`${cbt}/${demoJournalEntry(cbt,context.code)}`;
+  for(const [id,path] of [['openExam',exam],['openPaper',`${context.slug}/`],['openTeacher',`${context.teacher}/`]]){
     const target=$(id),params=new URLSearchParams(query);if(id==='openTeacher')params.set('test',context.slug);
-    if(enabled){target.href=`../${path}/?${params}`;target.removeAttribute('aria-disabled');}else{target.removeAttribute('href');target.setAttribute('aria-disabled','true');}
+    if(enabled){target.href=`../${path}?${params}`;target.removeAttribute('aria-disabled');}else{target.removeAttribute('href');target.setAttribute('aria-disabled','true');}
   }
   $('classCode').textContent=`Lớp ${context.code} · Đề và thời gian thi như bản đang dùng. Giảng viên cần đăng nhập để xem kết quả.`;
 }
