@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {demoJournalEntry} from '../term-tests/demo/journal-entry-v1.mjs';
 import test from 'node:test';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -26,7 +27,7 @@ async function fixture({query='?class=CODEXDEMO56&mode=lis_first',classes=fakeCl
  const calls=[],history=[];
  const config={API_BASE_URL:'https://example.invalid/demo',API_BASE_URLS:['https://example.invalid/demo','https://example.invalid/live'],API_FOR_CLASS:code=>code==='CODEXDEMO56'?'https://example.invalid/demo':'https://example.invalid/live',GOOGLE_CLIENT_ID:'synthetic'};
  const context=vm.createContext({
-  ...model,URLSearchParams,URL,AbortController,AbortSignal,location,
+  ...model,demoJournalEntry,URLSearchParams,URL,AbortController,AbortSignal,location,
   window:{TERM_TEST_APP_CONFIG:config,location,history:{replaceState(_state,_title,url){history.push(url);location.search=url;}},google:{accounts:{id:{disableAutoSelect(){}}}}},
   document:{getElementById:id=>elements[id],createElement:()=>element(),head:{append(){}},querySelectorAll:s=>s==='[data-test]'?tests:s==='[data-mode]'?modes:rescueChoices},
   createTeacherSessionClient:({apiBaseUrl})=>({restore:async()=>{if(restoreError&&apiBaseUrl.endsWith('/demo'))throw new Error('Synthetic restore network error');return authenticated;},login:async()=>({ok:true}),logout:async()=>({ok:true})}),

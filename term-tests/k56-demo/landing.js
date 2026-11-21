@@ -9,13 +9,9 @@ import { createTeacherSessionClient, teacherSessionRequestOptions } from '../k56
 import { buildK56LandingClasses } from './landing-model.js?rev=20261020-demo-first-v1';
 
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup2';
+import { demoJournalEntry } from '../demo/journal-entry-v1.mjs';
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const demoClassCode = 'CODEXDEMO56';
-const demoEntryByDestination = new Map([
-  ['mini-test-k56-computer-based', 'index-mini-demo-journal-v1.html'],
-  ['term-test-1-k56-computer-based', 'demo-journal-v1/'],
-  ['term-test-2-k56-computer-based', 'demo-journal-v1/'],
-]);
 const input = document.getElementById('classCode');
 const classSelect = document.getElementById('classSelect');
 const classHelp = document.getElementById('classHelp');
@@ -75,7 +71,7 @@ function updateLandingUrl() {
 function testLink(destination, classCode) {
   const params = new URLSearchParams({ class: classCode });
   if (!destination.endsWith('-audio')) params.set('mode', examMode);
-  const entry = classCode === demoClassCode ? (demoEntryByDestination.get(destination) ?? '') : '';
+  const entry = demoJournalEntry(destination, classCode);
   return `../${destination}/${entry}?${params.toString()}`;
 }
 
