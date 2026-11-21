@@ -70,7 +70,10 @@ function updateLandingUrl() {
 function testLink(destination, classCode) {
   const params = new URLSearchParams({ class: classCode });
   if (!destination.endsWith('-audio')) params.set('mode', examMode);
-  return `../${destination}/?${params.toString()}`;
+  const demoMiniEntry = destination === 'mini-test-k56-computer-based' && classCode === demoClassCode
+    ? 'index-mini-demo-journal-v1.html'
+    : '';
+  return `../${destination}/${demoMiniEntry}?${params.toString()}`;
 }
 
 function renderShareLinks(classCode) {
