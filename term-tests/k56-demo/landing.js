@@ -14,6 +14,7 @@ const demoClassCode = 'CODEXDEMO56';
 const demoEntryByDestination = new Map([
   ['mini-test-k56-computer-based', 'index-mini-demo-journal-v1.html'],
   ['term-test-1-k56-computer-based', 'demo-journal-v1/'],
+  ['term-test-2-k56-computer-based', 'demo-journal-v1/'],
 ]);
 const input = document.getElementById('classCode');
 const classSelect = document.getElementById('classSelect');

@@ -5,6 +5,11 @@ import vm from 'node:vm';
 import * as model from '../term-tests/k56-demo/landing-model.js';
 
 const source=fs.readFileSync(new URL('../term-tests/k56-demo/landing.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
+const demoEntry = {
+ 'term-test-1-k56-computer-based': '../term-test-1-k56-computer-based/demo-journal-v1/',
+ 'term-test-2-k56-computer-based': '../term-test-2-k56-computer-based/demo-journal-v1/',
+ 'mini-test-k56-computer-based': '../mini-test-k56-computer-based/index-mini-demo-journal-v1.html'
+};
 const fakeClasses=[{name:'CODEXDEMO806'},{name:'IC2305'},{name:'IC2264'}];
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function element(){return {value:'',hidden:false,dataset:{},children:[],handlers:{},classList:{toggle(){}},setAttribute(){},removeAttribute(){},focus(){},after(){},addEventListener(n,f){this.handlers[n]=f},replaceChildren(...children){this.children=children},setCustomValidity(s){this.validation=s},reportValidity(){return !this.validation}};}
@@ -59,7 +64,7 @@ test('nút demo khi đang chọn lớp thật mở CODEXDEMO56 ở cả ba bài 
  for(const mode of ['lis_first','read_first'])for(const b of f.tests){
   f.modes.find(x=>x.dataset.mode===mode).handlers.click();b.handlers.click();
   await f.elements.openExam.handlers.click();
-  assert.equal(f.location.href,`../${b.dataset.test}/?class=CODEXDEMO56&mode=${mode}`);
+  assert.equal(f.location.href,`${demoEntry[b.dataset.test]}?class=CODEXDEMO56&mode=${mode}`);
  }
  assert.equal(f.calls.filter(x=>x.url.includes('/roster?')).length,6);
  assert.ok(f.calls.filter(x=>x.url.includes('/roster?')).every(x=>x.url.startsWith('https://example.invalid/demo/')&&new URL(x.url).searchParams.get('class')==='CODEXDEMO56'));
@@ -101,7 +106,7 @@ test('chưa đăng nhập vẫn mở demo đúng API, ba bài và hai thứ tự
  for(const mode of ['lis_first','read_first'])for(const b of f.tests){
   f.modes.find(x=>x.dataset.mode===mode).handlers.click();b.handlers.click();
   await f.elements.openExam.handlers.click();
-  assert.equal(f.location.href,`../${b.dataset.test}/?class=CODEXDEMO56&mode=${mode}`);
+  assert.equal(f.location.href,`${demoEntry[b.dataset.test]}?class=CODEXDEMO56&mode=${mode}`);
  }
  const rosters=f.calls.filter(x=>x.url.includes('/roster?'));
  assert.equal(rosters.length,6);assert.ok(rosters.every(x=>x.url.startsWith('https://example.invalid/demo/')));
