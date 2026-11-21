@@ -21,6 +21,19 @@ async function assetMismatches(route, assets, hashes) {
   return mismatches;
 }
 
+test('Pretest K67 paper installs the active student cache without teacher SSO', async () => {
+  const route = new URL('pretest-lesson-16/', root);
+  const name = 'offline-assets-student-cache-v3.mjs';
+  const worker = await readFile(new URL('offline-worker-audio-status-v2.js', route), 'utf8');
+  assert.ok(worker.includes(`'./${name}'`));
+  const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(new URL(name, route).href);
+  assert.deepEqual(ASSETS, Object.keys(ASSET_HASHES));
+  assert.ok(!ASSETS.includes('../../shared/teacher-single-sign-on.js'));
+  assert.deepEqual(await assetMismatches(route, ASSETS, ASSET_HASHES), []);
+  const sorted = Object.fromEntries(ASSETS.toSorted().map(asset => [asset, ASSET_HASHES[asset]]));
+  assert.equal(ASSET_BUILD_ID, createHash('sha256').update(JSON.stringify(sorted)).digest('hex'));
+});
+
 for (const entry of await readdir(root, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue;
   const route = new URL(`${entry.name}/`, root);
