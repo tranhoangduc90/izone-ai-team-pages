@@ -1,4 +1,4 @@
-import { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } from './offline-assets-audio-status-v5.mjs';
+import { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } from './offline-assets-student-cache-v3.mjs';
 import { registerExamShell } from '../k56-offline-shared/worker-audio-status-v2.mjs';
 
 registerExamShell({
