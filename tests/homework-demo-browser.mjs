@@ -18,6 +18,14 @@ const docsLinks=process.env.DEMO_DOC_LINKS?JSON.parse(await fs.readFile(process.
 if(docsLinks){assert.equal(docsLinks.length,31);assert.deepEqual(docsLinks.map(x=>x.code),catalog.map(x=>x.code));for(const row of catalog)assert.equal(docsLinks.find(x=>x.code===row.code).url,`https://tranhoangduc90.github.io/izone-ai-team-pages/homework-demo/${row.href}`);}
 const server=process.env.DEMO_PUBLIC_BASE?null:await serveDirectory(root),base=process.env.DEMO_PUBLIC_BASE||server.origin+'/';
 const browser=await chromium.launch({headless:true,channel:'chrome'});const results=[];
+async function checkMatchingPeople(page,people){
+ const work=page.locator('.people-work');
+ assert.equal(await page.locator('.people-bank').count(),0);
+ assert.match(await page.locator('.question-instruction').innerText(),/the people in the dropdown.*You may use any letter more than once/s);
+ assert.equal(await work.evaluate(el=>Math.abs(el.getBoundingClientRect().width-el.parentElement.clientWidth)<=2),true);
+ const options=await page.locator('#question-9 select option').allTextContents();
+ assert.deepEqual(options.slice(1),people.map(({id,name})=>`${id} — ${name}`));
+}
 try{
  for(const [index,row] of selected.entries()){
   const context=await browser.newContext({viewport:{width:1440,height:1000}}),page=await context.newPage(),errors=[],missing=[],realRequests=[];
@@ -36,6 +44,7 @@ try{
     assert.deepEqual(actual,expected,'Every native homework target is rendered');controls=actual.length;
     const editable=page.locator('textarea[data-target]').first();if(await editable.count()){await editable.fill('Thao tác thử riêng của giảng viên');assert.equal(await editable.inputValue(),'Thao tác thử riêng của giảng viên');}
     if(payload.content.type==='matching_headings'){assert.equal(await page.locator('.reading-practice-overlay:visible').count(),0);assert.equal(await page.locator('.reading-practice-content[inert]').count(),0);}
+    if(payload.content.type==='matching_people')await checkMatchingPeople(page,payload.content.people);
     await page.locator('#grade-button').click();await page.locator('#modal[open]').waitFor();assert.match(await page.locator('#modal').innerText(),/không phải|không chấm|minh họa/i);await page.keyboard.press('Escape');
    }else if(row.kind==='speaking'){
     controls=await page.locator('#parts .task-card').count();assert.equal(controls,payload.parts.length);
@@ -54,6 +63,10 @@ try{
    await page.screenshot({path:path.join(out,`${String(index+1).padStart(2,'0')}-desktop.png`)});
    await page.setViewportSize({width:390,height:844});await page.waitForTimeout(80);
    assert.ok(await page.locator('main').isVisible(),'Native content remains visible on mobile');
+   if(payload.content?.type==='matching_people'){
+    await page.locator('[data-pane="questions"]').click();
+    await checkMatchingPeople(page,payload.content.people);
+   }
    const overflow=await page.evaluate(()=>({page:document.documentElement.scrollWidth,viewport:innerWidth}));assert.ok(overflow.page<=overflow.viewport+2,'No page-level horizontal overflow');
    await page.screenshot({path:path.join(out,`${String(index+1).padStart(2,'0')}-mobile.png`)});
    await page.locator('#demo-reset').click();

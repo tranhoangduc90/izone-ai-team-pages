@@ -13,7 +13,7 @@ function publicFixture(){
  const people=[['A','Người thử A',2],['B','Người thử B',1],['C','Người thử C',1],['D','Người thử D',1]].map(([id,name,count])=>({id,name,analyses:Array.from({length:count},(_,index)=>({index,targets:Object.fromEntries(['paragraph_location','compressed_statement','matching_sentence'].map(k=>[k,`p${id}.a${index}.${k}`]))}))}));
  const questions=[9,10,11,12,13].map(number=>({number,text:'Câu hỏi giả dùng để kiểm giao diện '+number,targets:{compressed_level_1:`q${number}.compressed_level_1`,answer:`q${number}.answer`}}));
  const targets=[...questions.flatMap(q=>Object.entries(q.targets).map(([kind,id])=>({id,kind,question:q.number,label:'Câu '+q.number+' '+kind}))),...people.flatMap(p=>p.analyses.flatMap(a=>Object.entries(a.targets).map(([kind,id])=>({id,kind,person:p.id,analysis:a.index,label:p.name+' '+kind}))))];
- return {code:'67-reading-fixture-matching-people',version:'fixture',type:'matching_people',lesson:8,title:'Bài Matching People thử',subtitle:'Dữ liệu giả',instruction:'Chọn người và nén lời phát biểu.',minimumRequired:20,blankValues:[],dropdownPlaceholders:[],paragraphs:[...'ABCDEFGH'].map(id=>({id,text:'Đoạn văn giả '+id+' dùng để kiểm Highlight, Note và popup.'})),people,questions,targets};
+ return {code:'67-reading-fixture-matching-people',version:'fixture',type:'matching_people',lesson:8,title:'Bài Matching People thử',subtitle:'Dữ liệu giả',instruction:'Match the statements with the list of people below. You may use any letter more than once.',minimumRequired:20,blankValues:[],dropdownPlaceholders:[],paragraphs:[...'ABCDEFGH'].map(id=>({id,text:'Đoạn văn giả '+id+' dùng để kiểm Highlight, Note và popup.'})),people,questions,targets};
 }
 const content=process.env.PEOPLE_PRIVATE_DIR?JSON.parse(await fs.readFile(resolve(process.env.PEOPLE_PRIVATE_DIR,'content.private.json'),'utf8')):publicFixture();
 function answers(){return Object.fromEntries(content.targets.map(t=>[t.id,t.kind==='answer'?'C Anna Surgenor':t.kind==='paragraph_location'?'B':t.kind==='matching_sentence'?'Câu 13':'Nội dung tự viết ban đầu']));}
@@ -78,11 +78,25 @@ for(const width of [1440,390])test(`Sửa, lưu/reload, popup, nộp lại đủ
  const browser=await chromium.launch({channel:'chrome',headless:true});try{
   const {page,state}=await fixture(browser,width);if(width<=800)await page.locator('[data-pane="questions"]').click();
   assert.equal(await page.locator('[data-target]').count(),25);
+  assert.equal(await page.locator('.people-bank').count(),0);
+  assert.match(await page.locator('.question-instruction').innerText(),/the people in the dropdown/);
+  assert.match(await page.locator('.question-instruction').innerText(),/You may use any letter more than once/);
+  assert.equal(await page.locator('.people-work-area').evaluate(wrapper=>{
+   const work=wrapper.querySelector('.people-work');
+   return Math.abs(wrapper.clientWidth-work.clientWidth)<=2&&wrapper.scrollWidth<=wrapper.clientWidth+1;
+  }),true);
+  const dropdown=page.locator('[data-target="q9.answer"]');
+  const expectedOptions=content.people.map(({id,name})=>[`${id} ${name}`,`${id} — ${name}`]);
+  assert.deepEqual(await dropdown.locator('option').evaluateAll(options=>options.slice(1).map(option=>[option.value,option.text])),expectedOptions);
+  const lastOption=expectedOptions.at(-1)[0];
+  await dropdown.selectOption(lastOption);
+  await page.waitForFunction(()=>document.querySelector('#save-state')?.dataset.saveStatus==='saved');
   await page.getByRole('button',{name:'Nộp bài',exact:true}).click();await page.getByRole('heading',{name:'Còn 1 phần cần sửa',exact:true}).waitFor();
-  await page.locator('#modal').getByRole('button',{name:'Tôi sẽ sửa',exact:true}).click();
+  await page.locator('#modal [data-action="repair-edit"]').click();
   await page.locator('[data-target="q9.compressed_level_1"]').fill('Nội dung đã được sửa');await page.getByText('Đã sửa — chờ chấm lại',{exact:true}).waitFor();
   await page.waitForFunction(()=>document.querySelector('#save-state')?.dataset.saveStatus==='saved');
   await page.reload();await page.locator('.repair-banner').waitFor();assert.equal(await page.locator('[data-target="q9.compressed_level_1"]').inputValue(),'Nội dung đã được sửa');
+  assert.equal(await dropdown.inputValue(),lastOption);
   await page.locator('.repair-field-note').getByRole('button',{name:'Xem giải thích lần chấm trước'}).click();await page.locator('#explanation-dialog').waitFor({state:'visible'});assert.equal(await page.locator('#explanation-dialog .answer-copy').textContent(),'Nội dung tự viết ban đầu');await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Nộp lại bài',exact:true}).click();await page.getByRole('heading',{name:'Chúc mừng! Bạn đã sửa đúng toàn bộ bài.',exact:true}).waitFor();assert.equal(state.attempts.length,2);assert.deepEqual(state.errors,[]);
  }finally{await browser.close();}
