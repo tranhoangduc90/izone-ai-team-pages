@@ -9,7 +9,7 @@ import { createTeacherSessionClient, teacherSessionRequestOptions } from '../k56
 import { buildK56LandingClasses } from './landing-model.js?rev=20261020-demo-first-v1';
 
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup2';
-import { demoJournalEntry } from '../demo/journal-entry-v1.mjs';
+import { demoJournalPage } from '../demo/journal-entry-v2.mjs';
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const demoClassCode = 'CODEXDEMO56';
 const input = document.getElementById('classCode');
@@ -71,8 +71,8 @@ function updateLandingUrl() {
 function testLink(destination, classCode) {
   const params = new URLSearchParams({ class: classCode });
   if (!destination.endsWith('-audio')) params.set('mode', examMode);
-  const entry = demoJournalEntry(destination, classCode);
-  return `../${destination}/${entry}?${params.toString()}`;
+  const page = demoJournalPage(destination, classCode);
+  return `../${page}?${params.toString()}`;
 }
 
 function renderShareLinks(classCode) {
