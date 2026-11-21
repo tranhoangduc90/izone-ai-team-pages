@@ -52,6 +52,21 @@ test('Mini K67 keeps the v2 shell and installs the v3 receipt journal shell', as
   }
 });
 
+test('Mini K67 paper keeps its v2 shell and pins the v3 journal dependencies', async () => {
+  const route = new URL('mini-test-lesson-5/', root);
+  const worker = await readFile(new URL('offline-worker.js', route), 'utf8');
+  assert.ok(worker.includes("'./offline-assets-student-cache-v3.mjs'"));
+  const previous = await import(new URL('offline-assets-student-cache-v2.mjs', route).href);
+  const current = await import(new URL('offline-assets-student-cache-v3.mjs', route).href);
+  assert.deepEqual(current.ASSETS, Object.keys(current.ASSET_HASHES));
+  for(const asset of previous.ASSETS) assert.equal(current.ASSET_HASHES[asset], previous.ASSET_HASHES[asset], asset);
+  assert.deepEqual(await assetMismatches(route, current.ASSETS, current.ASSET_HASHES), []);
+  assert.equal(current.ASSET_BUILD_ID, createHash('sha256').update(JSON.stringify(current.ASSET_HASHES)).digest('hex'));
+  assert.equal(await readFile(new URL('index.html', route), 'utf8'),
+    await readFile(new URL('index-student-cache-v3.html', route), 'utf8'));
+  assert.ok(current.ASSETS.includes('../shared/exam-journal/bridge-mini-k67-paper-browser-cloud-v2.mjs'));
+});
+
 for (const entry of await readdir(root, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue;
   const route = new URL(`${entry.name}/`, root);
