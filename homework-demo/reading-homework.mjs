@@ -14,7 +14,9 @@ export async function mount(data){
   }};
  const renderer=data.content.type==='tfng'?'tfng':data.content.type==='green-roofs'?'green-roofs':data.content.type==='matching_people'?'people':data.content.type==='sentence_completion'?'sentence':data.content.type==='matching_headings'?'headings':null;
  if(renderer){
-  await loadScript(new URL(`../reading-skills67/${renderer}-renderer.js`,import.meta.url).href);
+  const rendererUrl=new URL(`../reading-skills67/${renderer}-renderer.js`,import.meta.url);
+  if(renderer==='people')rendererUrl.search=new URL(import.meta.url).search;
+  await loadScript(rendererUrl.href);
   const name={'tfng':'ReadingTfngRenderer','green-roofs':'ReadingGreenRoofsRenderer','people':'ReadingPeopleRenderer','sentence':'ReadingSentenceRenderer','headings':'ReadingHeadingsRenderer'}[renderer];
   await window[name]?.ready;
  }

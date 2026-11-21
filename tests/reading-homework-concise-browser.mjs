@@ -86,7 +86,10 @@ try{
     }
     if(content.type==='sentence_completion')assert.match(await page.locator('#word-limit').innerText(),/ONE WORD ONLY/);
     if(content.type==='green-roofs')assert.equal(await page.locator('[data-authored-choice]').count(),10);
-    if(content.type==='matching_people')assert.match(await page.locator('.people-bank').innerText(),/more than once/);
+    if(content.type==='matching_people'){
+     assert.equal(await page.locator('.people-bank').count(),0);
+     assert.match(await page.locator('.question-instruction').innerText(),/more than once/);
+    }
     await page.screenshot({path:path.join(out,slug(lesson)+'-'+width+'.png')});
     assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);records.push({lesson:slug(lesson),case:'states-'+width,outcome:'passed'});
    }catch(e){records.push({lesson:slug(lesson),case:'states-'+width,outcome:'failed',error:e.stack,errors});await page.screenshot({path:path.join(out,'FAILED-'+slug(lesson)+'-'+width+'.png')});}finally{await context.close();}

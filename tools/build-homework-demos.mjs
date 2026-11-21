@@ -57,6 +57,7 @@ const readingBody=`<div class="prototype-strip" hidden><select id="scenario"><op
 const catalog=[];let speakingIndex=2;
 for(const item of inventory){
  let data,html,classes,attributes;
+ let appVersion='20261030-ready2';
  if(item.group==='Speaking'){
   const lesson=speakingIndex++;data={kind:'speaking',code:item.code,title:item.title,lesson,parts:partsByLesson.get(lesson),supplementary:lesson>=4,exercises};
   classes='speaking-design is-learning demo-speaking homework-demo';attributes='data-m170-product="speaking"';
@@ -64,7 +65,10 @@ for(const item of inventory){
  }else if(item.group==='Reading homework'){
   const content=byHomework.get(item.code);if(!content)throw Error('Homework missing '+item.code);
   data={kind:'reading-homework',code:item.code,title:content.title,content:strip(content)};
-  html=head(data.title,readingStyles)+`<body class="reading-skills homework-demo" data-izone-design="master170@1.1" data-izone-ui-profile="skill-homework" data-izone-consumer="reading-homework" data-m170-product="materials" data-demo-code="${item.code}">${readingBody}`;
+  const matchingPeople=content.type==='matching_people';
+  if(matchingPeople)appVersion='20261121-full-width1';
+  const styles=matchingPeople?readingStyles.map(file=>file==='reading-skills67/people.css'?file+'?v='+appVersion:file):readingStyles;
+  html=head(data.title,styles)+`<body class="reading-skills homework-demo" data-izone-design="master170@1.1" data-izone-ui-profile="skill-homework" data-izone-consumer="reading-homework" data-m170-product="materials" data-demo-code="${item.code}">${readingBody}`;
  }else if(item.group==='Listening Homework'){
   const content=JSON.parse(await fs.readFile(path.join(root,'listening-homework/interactive-content.json'),'utf8'));
   data={kind:'listening-homework',code:item.code,title:'Scandinavian Studies',content};
@@ -79,7 +83,7 @@ for(const item of inventory){
   data={kind:'practice',subject:kind,code:item.code,title:lesson.title,version:row.version,totalMs:row.total_ms,definition:strip(definition)};
   html=head(data.title,practiceStyles(kind))+`<body class="design67 reading cbt-mode homework-demo demo-practice" data-izone-design="master170@1.1" data-izone-ui-profile="exam-compact" data-izone-consumer="${kind}-practice" data-teacher-product="${kind}" data-m170-product="practice" data-demo-code="${item.code}"><main id="app" class="demo-shell"></main>`;
  }
- html+='<script type="module" src="./app.mjs?v=20261030-ready2"></script><noscript>Bật JavaScript để mở nội dung và thao tác thử.</noscript></body></html>\n';
+ html+=`<script type="module" src="./app.mjs?v=${appVersion}"></script><noscript>Bật JavaScript để mở nội dung và thao tác thử.</noscript></body></html>\n`;
  html=html.replace(/[\t ]+$/gm,'');
  const dataText=json(data);await fs.writeFile(path.join(out,'data',item.code+'.json'),dataText,'utf8');await fs.writeFile(path.join(out,item.code+'.html'),html,'utf8');
  const qids=data.kind==='practice'?data.definition.groups.flatMap(g=>g.questions.map(q=>q.n)):null;
