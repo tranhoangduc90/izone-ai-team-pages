@@ -30,8 +30,10 @@ test('các bài test có đủ computer-based, answer sheet và Listening audio'
   }
   assert.match(html, /id="testActions" aria-labelledby="chosenName" hidden/);
   assert.match(html, /id="paperAudio" target="_blank"/);
-  assert.match(html, /id="backupAudio" target="_blank"/);
   assert.match(html, /id="answerSheet" target="_blank"/);
+  assert.match(html, /id="paperHeading"[\s\S]*id="paperAudio"[\s\S]*id="answerSheet"[\s\S]*id="rescue"/);
+  assert.match(html, /kiểm tra biên nhận.*Substitute Test sau ca/);
+  assert.doesNotMatch(html, /Audio Backup|id="backupAudio"|Answer Sheet dự phòng/);
   assert.match(html, /accounts\.google\.com/);
   assert.match(html, /type="module" src="shared\/landing\.js/);
   assert.match(styles, /\.landing-actions \.button \{[^}]*min-height: 62px/);
@@ -178,6 +180,24 @@ test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đ
     assert.match(await page.locator('#studentLink').inputValue(), /class=IC2172&mode=lis_first$/);
     await page.locator('#classSelect').selectOption('IC3000');
     assert.match(await page.locator('#studentLink').inputValue(), /class=IC3000&mode=lis_first$/);
+    for (const [slug, audio] of [
+      ['term-test-1', 'term-test-1-audio.html'],
+      ['term-test-2', 'term-test-2-audio.html'],
+      ['mini-test-lesson-5', 'mini-test-listening-audio.html'],
+    ]) {
+      if (slug !== 'term-test-1') {
+        await page.locator('#changeTest').click();
+        await page.locator(`[data-pick="${slug}"]`).click();
+      }
+      for (const mode of ['lis_first', 'read_first']) {
+        await page.locator(`[data-exam-mode="${mode}"]`).click();
+        assert.equal(await page.locator('#answerSheet').getAttribute('href'), `http://127.0.0.1:4180/term-tests/${slug}/?class=IC3000&mode=${mode}`);
+        assert.equal(await page.locator('#paperAudio').getAttribute('href'), audio);
+      }
+    }
+    await page.locator('#rescue summary').click();
+    assert.match(await page.locator('#rescue').innerText(), /Substitute Test sau ca/);
+    assert.equal(await page.locator('#rescue a, #rescue button').count(), 0);
     await page.reload();
     await page.locator('#classSelect').waitFor({ state: 'visible' });
     await page.getByRole('button', { name: 'Đăng xuất' }).click();

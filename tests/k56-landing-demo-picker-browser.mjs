@@ -17,13 +17,14 @@ test('Chromium desktop/mobile: giữ link lớp thật, nút DEMO luôn mở COD
     const target = resolve(root, `.${path.endsWith('/') ? path + 'index.html' : path}`);
     if (!target.startsWith(root + sep)) return res.writeHead(403).end();
     // Ranh giới test là điều hướng landing, không chạy lại toàn app thi ở mỗi link.
-    if (/^\/term-tests\/(?:term-test-[12]-k56|mini-test-k56)(?:-computer-based|-audio|-(?:listening|reading|writing)-fallback)?\/$/.test(path)) {
+    if (/^\/term-tests\/(?:term-test-[12]-k56|mini-test-k56)\/$/.test(path) ||
+        /^\/term-tests\/(?:term-test-[12]-k56-computer-based\/demo-journal-v1\/|mini-test-k56-computer-based\/index-mini-demo-journal-v1\.html)$/.test(path)) {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       return res.end('<!doctype html><html><body><h1>Đích bài thi giả lập</h1></body></html>');
     }
     try {
       const content = await readFile(target);
-      res.writeHead(200, { 'Content-Type': { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' }[extname(target)] || 'application/octet-stream' });
+      res.writeHead(200, { 'Content-Type': { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css' }[extname(target)] || 'application/octet-stream' });
       res.end(content);
     } catch { res.writeHead(404).end(); }
   });
@@ -71,7 +72,11 @@ test('Chromium desktop/mobile: giữ link lớp thật, nút DEMO luôn mở COD
           assert.equal(new URL(page.url()).searchParams.get('class'), 'IC2305');
           await select.selectOption(code);
           await page.locator(`[data-slug="${slug}"]`).click();
-          const studentUrl = `${base}/term-tests/${slug}-computer-based/?class=${code}&mode=${mode}`;
+          const demoPath = slug === 'mini-test-k56'
+            ? 'mini-test-k56-computer-based/index-mini-demo-journal-v1.html'
+            : slug + '-computer-based/demo-journal-v1/';
+          const studentPath = code === 'CODEXDEMO56' ? demoPath : slug + '-computer-based/';
+          const studentUrl = `${base}/term-tests/${studentPath}?class=${code}&mode=${mode}`;
           const studentLink = page.getByRole('textbox', { name: 'Đường dẫn gửi học viên' });
           assert.equal(await studentLink.inputValue(), studentUrl);
           assert.equal(await studentLink.getAttribute('readonly'), '');
@@ -84,15 +89,17 @@ test('Chromium desktop/mobile: giữ link lớp thật, nút DEMO luôn mở COD
           assert.equal(await paper.evaluate(el => el.open), false);
           await paper.getByText('Bài thi giấy', { exact: true }).click();
           const sheet = paper.getByRole('link', { name: /^Answer Sheet/ });
-          const sheetUrl = `${base}/term-tests/${slug}/?class=${code}&mode=${mode}`;
+          const sheetPath = code === 'CODEXDEMO56' && slug === 'mini-test-k56' ? 'mini-test-k56-demo-paper-v1' : slug;
+          const sheetUrl = `${base}/term-tests/${sheetPath}/?class=${code}&mode=${mode}`;
           assert.equal(await sheet.getAttribute('href'), sheetUrl);
-          assert.match(await sheet.innerText(), new RegExp(slug + '/'));
+          assert.ok((await sheet.innerText()).includes(sheetUrl));
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
           assert.equal(await page.locator('#rescue').evaluate(el => el.open), false);
           await page.locator('#rescue summary').click();
-          assert.equal(await page.locator('[data-case=skill]').isVisible(), slug === 'term-test-1-k56');
+          assert.match(await page.locator('#rescue').innerText(), /kiểm tra biên nhận.*Substitute Test sau ca/);
+          assert.equal(await page.locator('#rescue a, #rescue button').count(), 0);
           await page.locator('#openExam').click();
-          await page.waitForURL(`${base}/term-tests/${slug}-computer-based/?class=CODEXDEMO56&mode=${mode}`);
+          await page.waitForURL(`${base}/term-tests/${demoPath}?class=CODEXDEMO56&mode=${mode}`);
         }
       }
     }
@@ -110,29 +117,6 @@ test('Chromium desktop/mobile: giữ link lớp thật, nút DEMO luôn mở COD
     await page.locator('#paperExamLink').click();
     await page.waitForURL(selectedPaperUrl);
 
-    for (const mode of ['lis_first', 'read_first']) {
-      const code = 'IC2264';
-      for (const [slug, name] of [['term-test-1-k56', 'Term Test 1'], ['term-test-2-k56', 'Term Test 2'], ['mini-test-k56', 'Mini Test']]) {
-        const targets = [
-          ['audio', 'Audio ' + name, slug + '-audio', `class=${code}`],
-          ['sheet', 'Answer Sheet ' + name, slug, `class=${code}&mode=${mode}`]
-        ];
-        if (slug === 'term-test-1-k56') {
-          for (const skill of ['Listening', 'Reading', 'Writing']) {
-            targets.push(['skill', skill, slug + '-' + skill.toLowerCase() + '-fallback', `class=${code}&mode=${mode}`]);
-          }
-        }
-        for (const [kind, label, destination, query] of targets) {
-          await page.goto(`${base}/term-tests/k56-demo/?class=${code}&mode=${mode}`);
-          await page.locator('#classSelect').waitFor({ state: 'visible' });
-          await page.getByRole('button', { name, exact: true }).click();
-          await page.locator('#rescue summary').click();
-          await page.locator(`[data-case=${kind}]`).click();
-          await page.getByRole('button', { name: label, exact: true }).click();
-          await page.waitForURL(`${base}/term-tests/${destination}/?${query}`);
-        }
-      }
-    }
     const rosters = requests.filter(item => item.path.endsWith('/roster'));
     assert.equal(rosters.length, 24);
     assert.equal(rosters.filter(item=>item.path.includes('/mapping-api-k56/')).length,0);

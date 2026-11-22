@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {demoJournalEntry} from '../term-tests/demo/journal-entry-v1.mjs';
+import {demoJournalPage} from '../term-tests/demo/journal-entry-v2.mjs';
 import test from 'node:test';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -16,20 +16,19 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function element(){return {value:'',hidden:false,dataset:{},children:[],handlers:{},classList:{toggle(){}},setAttribute(){},removeAttribute(){},focus(){},after(){},addEventListener(n,f){this.handlers[n]=f},replaceChildren(...children){this.children=children},setCustomValidity(s){this.validation=s},reportValidity(){return !this.validation}};}
 async function fixture({query='?class=CODEXDEMO56&mode=lis_first',classes=fakeClasses,demoError='http',liveError=false,restoreError=false,authenticated=true,rosterOk=true}={}) {
  const elements=Object.fromEntries(['classCode','classSelect','classHelp','loginBadge','loginStatus','googleSignInButton','logoutButton','teacherDashboard',
-  'openExam','chosenName','rescue','rescueDetail','rescueLinks','rescueHelp','testPicker','testActions','pickStep','actionStep','changeTest',
+  'openExam','chosenName','rescue','testPicker','testActions','pickStep','actionStep','changeTest',
   'studentLinkPanel','studentLink','studentLinkStatus','copyStudentLink','paperExam','paperExamLink','paperExamLabel','paperExamUrl','paperExamHelp'].map(id=>[id,element()]));
  const tests=['term-test-1-k56','term-test-2-k56','mini-test-k56'].map((slug,index)=>Object.assign(element(),{
   textContent:['Term Test 1','Term Test 2','Mini Test'][index],dataset:{test:slug+'-computer-based',slug}
  }));
  const modes=['lis_first','read_first'].map(mode=>Object.assign(element(),{dataset:{mode}}));
- const rescueChoices=['skill','audio','sheet'].map(kind=>Object.assign(element(),{dataset:{case:kind}}));
  const location={search:query,href:'https://example.invalid/term-tests/k56-demo/'+query};
  const calls=[],history=[];
  const config={API_BASE_URL:'https://example.invalid/demo',API_BASE_URLS:['https://example.invalid/demo','https://example.invalid/live'],API_FOR_CLASS:code=>code==='CODEXDEMO56'?'https://example.invalid/demo':'https://example.invalid/live',GOOGLE_CLIENT_ID:'synthetic'};
  const context=vm.createContext({
-  ...model,demoJournalEntry,URLSearchParams,URL,AbortController,AbortSignal,location,
+  ...model,demoJournalPage,URLSearchParams,URL,AbortController,AbortSignal,location,
   window:{TERM_TEST_APP_CONFIG:config,location,history:{replaceState(_state,_title,url){history.push(url);location.search=url;}},google:{accounts:{id:{disableAutoSelect(){}}}}},
-  document:{getElementById:id=>elements[id],createElement:()=>element(),head:{append(){}},querySelectorAll:s=>s==='[data-test]'?tests:s==='[data-mode]'?modes:rescueChoices},
+  document:{getElementById:id=>elements[id],createElement:()=>element(),head:{append(){}},querySelectorAll:s=>s==='[data-test]'?tests:s==='[data-mode]'?modes:[]},
   createTeacherSessionClient:({apiBaseUrl})=>({restore:async()=>{if(restoreError&&apiBaseUrl.endsWith('/demo'))throw new Error('Synthetic restore network error');return authenticated;},login:async()=>({ok:true}),logout:async()=>({ok:true})}),
   teacherSessionRequestOptions:opts=>({...opts,credentials:'include'}),
   fetch:async(url,opts)=>{
@@ -45,7 +44,7 @@ async function fixture({query='?class=CODEXDEMO56&mode=lis_first',classes=fakeCl
  });
  vm.runInContext(fs.readFileSync(new URL('../shared/teacher-auth-state.js',import.meta.url),'utf8').replace('export function','function')+'\n'+source,context);
  await tick();await tick();
- return {elements,tests,modes,rescueChoices,location,calls,history,context,names:()=>elements.classSelect.children.map(x=>x.value)};
+ return {elements,tests,modes,location,calls,history,context,names:()=>elements.classSelect.children.map(x=>x.value)};
 }
 
 // Theo yêu cầu phục hồi: demo ở đầu; lớp thật vẫn giữ quyền, thứ tự và cách mở bài.
@@ -85,16 +84,12 @@ test('roster lỗi giữ trang và cho thử lại, không mở bài',async()=>{
  f.tests[0].handlers.click();await f.elements.openExam.handlers.click();assert.equal(f.location.href,before);
  assert.match(f.elements.classHelp.textContent,/Synthetic roster missing/);assert.equal(f.elements.openExam.disabled,false);
 });
-test('Answer Sheet, audio và dashboard giữ lớp thật và thứ tự tương ứng',async()=>{
+test('Phiếu chính và dashboard giữ lớp thật, phiếu giữ đúng thứ tự',async()=>{
  const f=await fixture({query:'?class=IC2264&mode=read_first'});
  f.elements.teacherDashboard.handlers.click();assert.equal(f.location.href,'../teacher-k56/?class=IC2264');
  for(const b of f.tests) {
   b.handlers.click();
-  for (const kind of ['audio','sheet']) {
-   f.rescueChoices.find(choice=>choice.dataset.case===kind).handlers.click();
-   f.elements.rescueLinks.children[0].handlers.click();
-   assert.equal(f.location.href,`../${b.dataset.slug}${kind==='audio'?'-audio':''}/?class=IC2264${kind==='sheet'?'&mode=read_first':''}`);
-  }
+  assert.equal(f.elements.paperExamLink.href,`https://example.invalid/term-tests/${b.dataset.slug}/?class=IC2264&mode=read_first`);
  }
 });
 test('lớp thật không được API cấp không được tự bổ sung vào danh sách',async()=>{

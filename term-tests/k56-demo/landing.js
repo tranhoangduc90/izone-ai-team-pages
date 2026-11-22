@@ -32,7 +32,6 @@ const landingUrl = window.location.href;
 const landingQuery = new URLSearchParams(location.search);
 let examMode = landingQuery.get('mode') === 'read_first' ? 'read_first' : 'lis_first';
 const testChoices = [...document.querySelectorAll('[data-test]')];
-const rescueChoices = [...document.querySelectorAll('[data-case]')];
 const openExam = document.getElementById('openExam');
 const heading = document.getElementById('chosenName');
 const studentLinkPanel = document.getElementById('studentLinkPanel');
@@ -44,8 +43,6 @@ const paperExamLabel = document.getElementById('paperExamLabel');
 const paperExamUrl = document.getElementById('paperExamUrl');
 const paperExamHelp = document.getElementById('paperExamHelp');
 const rescue = document.getElementById('rescue');
-const rescueDetail = document.getElementById('rescueDetail');
-const rescueLinks = document.getElementById('rescueLinks');
 let selectedTest = testChoices.find(button => button.dataset.slug === landingQuery.get('test'));
 let opening;
 
@@ -69,8 +66,7 @@ function updateLandingUrl() {
   try{window.history.replaceState(window.history.state, '', `?${landingQuery.toString()}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
 }
 function testLink(destination, classCode) {
-  const params = new URLSearchParams({ class: classCode });
-  if (!destination.endsWith('-audio')) params.set('mode', examMode);
+  const params = new URLSearchParams({ class: classCode, mode: examMode });
   const page = demoJournalPage(destination, classCode);
   return `../${page}?${params.toString()}`;
 }
@@ -295,10 +291,6 @@ function renderTest() {
   heading.textContent = selectedTest?.textContent || '';
   paperExam.open = false;
   rescue.open = false;
-  rescueDetail.hidden = true;
-  rescueLinks.replaceChildren();
-  for (const button of rescueChoices) button.setAttribute('aria-pressed', 'false');
-  rescueChoices.find(button => button.dataset.case === 'skill').hidden = selectedTest?.dataset.slug !== 'term-test-1-k56';
 }
 
 for (const button of testChoices) button.addEventListener('click', () => {
@@ -346,39 +338,6 @@ openExam.addEventListener('click', async () => {
       openExam.disabled = false;
     }
   }
-});
-
-function rescueLink(label, destination) {
-  const button = document.createElement('button');
-  button.className = 'button button-secondary';
-  button.type = 'button';
-  button.textContent = label;
-  button.addEventListener('click', () => {
-    const classCode = requireClass();
-    if (!classCode) return;
-    cancelOpening();
-    updateLandingUrl();
-    window.location.href = testLink(destination, classCode);
-  });
-  return button;
-}
-
-for (const button of rescueChoices) button.addEventListener('click', () => {
-  const kind = button.dataset.case;
-  const slug = selectedTest?.dataset.slug;
-  if (!slug || button.hidden) return;
-  for (const choice of rescueChoices) choice.setAttribute('aria-pressed', String(choice === button));
-  const help = document.getElementById('rescueHelp');
-  if (kind === 'skill') {
-    help.textContent = 'Gửi đúng link kỹ năng mà học viên cần làm.';
-    rescueLinks.replaceChildren(...['Listening', 'Reading', 'Writing'].map(skill =>
-      rescueLink(skill, slug + '-' + skill.toLowerCase() + '-fallback')));
-  } else {
-    const audio = kind === 'audio';
-    help.textContent = audio ? 'Mở nguồn audio của bài đang chọn.' : 'Mở phiếu trả lời theo thứ tự làm bài đang chọn.';
-    rescueLinks.replaceChildren(rescueLink((audio ? 'Audio ' : 'Answer Sheet ') + selectedTest.textContent, slug + (audio ? '-audio' : '')));
-  }
-  rescueDetail.hidden = false;
 });
 
 document.getElementById('teacherDashboard')?.addEventListener('click', () => {
