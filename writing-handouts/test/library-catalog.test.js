@@ -27,7 +27,7 @@ test("danh mục chứa đủ 14 buổi Writing theo đúng thứ tự", async (
     assert.equal(item.studentPath,'../sw-task2-writing/index.html');
     assert.equal(item.dashboardPath,'../sw-task2-writing/teacher.html');
   }
-  assert.ok(library.handouts.filter(item => item.taskNumber===1).every((item) => JSON.stringify(item.classes) === JSON.stringify(["CS.070626", "CS.160826"])));
+  assert.ok(library.handouts.filter(item => item.taskNumber===1).every((item) => JSON.stringify(item.classes) === JSON.stringify(["CS.070626", "CS.160826", "CS.181026"])));
 
   const lesson3 = library.handouts.find((item) => item.writingLesson === 3);
   const lesson11 = library.handouts.find((item) => item.writingLesson === 11);
