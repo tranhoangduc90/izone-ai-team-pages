@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { sortHandoutsByWritingLesson } from "../js/library-core.js";
+import { classAvailable, sortHandoutsByWritingLesson, studentUrl } from "../js/library-core.js";
 
 const root = new URL("../", import.meta.url);
 
 test("danh mục chứa đủ 14 buổi Writing theo đúng thứ tự", async () => {
   const library = JSON.parse(await readFile(new URL("library.json", root), "utf8"));
   assert.equal(library.course.id, "speaking-writing-chuyen-sau");
-  assert.deepEqual([...library.course.classCodes].sort(), ["CS.070724", "CS.280924", "CS.171124", "CS.221224", "CS.090225", "CS.300325", "CS.100825", "CS.071225", "CS.281225", "CS.070626", "CS.160826", "CS.181026"].sort());
+  assert.deepEqual([...library.course.classCodes].sort(), ["CS.070724", "CS.280924", "CS.171124", "CS.221224", "CS.090225", "CS.300325", "CS.100825", "CS.071225", "CS.281225", "CS.070626", "CS.160826", "CS.181026", "CS2.100825"].sort());
   assert.equal(library.handouts.length, 14);
   assert.deepEqual(
     sortHandoutsByWritingLesson(library.handouts).map((item) => item.lessonId),
@@ -27,7 +27,16 @@ test("danh mục chứa đủ 14 buổi Writing theo đúng thứ tự", async (
     assert.equal(item.studentPath,'../sw-task2-writing/index.html');
     assert.equal(item.dashboardPath,'../sw-task2-writing/teacher.html');
   }
-  assert.ok(library.handouts.filter(item => item.taskNumber===1).every((item) => JSON.stringify(item.classes) === JSON.stringify(["CS.070626", "CS.160826", "CS.181026"])));
+  for (const item of library.handouts) {
+    assert.deepEqual(item.classes, library.course.classCodes, item.slug);
+    for (const classCode of library.course.classCodes) {
+      assert.equal(classAvailable(item, classCode), true);
+      const url = new URL(studentUrl(item, classCode, "https://example.test/writing-handouts/library.html"));
+      assert.equal(url.searchParams.get("task"), item.slug);
+      assert.equal(url.searchParams.get("class"), classCode);
+    }
+    assert.equal(classAvailable(item, "IC2200"), false);
+  }
 
   const lesson3 = library.handouts.find((item) => item.writingLesson === 3);
   const lesson11 = library.handouts.find((item) => item.writingLesson === 11);
