@@ -28,6 +28,7 @@ const studentLink = document.getElementById('studentLink');
 const copyStatus = document.getElementById('copyStatus');
 const openExam = document.getElementById('openExam');
 const paperAudio = document.getElementById('paperAudio');
+const backupAudio = document.getElementById('backupAudio');
 const answerSheet = document.getElementById('answerSheet');
 const audioRoutes = {
   'term-test-1': 'term-test-1-audio.html',
@@ -189,6 +190,7 @@ function refreshLinks() {
   studentLink.title = studentLink.value;
   openExam.href = testUrl(slug + '-computer-based/', 'CODEXDEMO806');
   paperAudio.href = audioRoutes[slug];
+  backupAudio.href = audioRoutes[slug];
   if (valid) answerSheet.href = testUrl(slug + '/', code);
   else answerSheet.removeAttribute('href');
   answerSheet.setAttribute('aria-disabled', String(!valid));
