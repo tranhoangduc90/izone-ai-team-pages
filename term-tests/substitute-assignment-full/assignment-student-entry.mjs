@@ -1,9 +1,29 @@
-import { mountAssignmentWaiting } from './assignment-browser.mjs?v=registration-live-20261120-r4';
+import { mountAssignmentWaiting } from './assignment-browser.mjs?v=sitting-release-20261122';
+
+// A lost start response must not turn a persisted running attempt into a new
+// admission. The server validates this token and exact identity before resume.
+export async function recoverAssignmentSession({api,testId,classCode,studentRef,storage=sessionStorage}) {
+  const suffix=':'+ [testId,classCode,studentRef].join(':');
+  for(let i=storage.length-1;i>=0;i--){
+    const key=storage.key(i);
+    if(!key?.startsWith('substitute-assignment:') || !key.endsWith(suffix))continue;
+    const sittingId=key.slice('substitute-assignment:'.length,-suffix.length);
+    const scope={sittingId,testId,classCode,studentRef},token=storage.getItem(key);
+    try{
+      const status=await api('student/status',{body:scope,token});
+      if(status.canStart===true && ['running','starting'].includes(status.state))return {scope,token};
+    }catch(error){
+      if(['WAITING_SESSION_REQUIRED','SESSION_SCOPE_MISMATCH'].includes(error.message))continue;
+      throw error;
+    }
+  }
+  return null;
+}
 
 // Native callers supply immutable testId and the roster selection they already
 // use. The server independently checks class, registration and attempt.
 export function createStudentEntry({api,testId,target,enabledForClass,onError=()=>{}}) {
-  let stop, generation=0;
+  let stop, retry, generation=0;
   const keyFor=(c,r)=>JSON.stringify([testId,c,r]);
   const admitted=new Map();
   const states=new Map();
@@ -11,15 +31,24 @@ export function createStudentEntry({api,testId,target,enabledForClass,onError=()
   async function select({classCode,studentRef,onReady,label='Chuẩn bị bài'}) {
     const current=++generation;
     stop?.();
+    clearTimeout(retry);
     admitted.clear();
     states.clear();
     target.replaceChildren();
     if (!enabledForClass(classCode)) return false;
     try{
-      const entry=await api('student/entry',{query:{testId,classCode}});
+      const recovered=await recoverAssignmentSession({api,testId,classCode,studentRef});
+      const entry=recovered?{managed:true,classes:[{sittingId:recovered.scope.sittingId,classCode,label:classCode}]}:
+        await api('student/entry',{query:{testId,classCode}});
       if (current!==generation) return true;
       if (!entry.managed) return false;
-      if (!entry.classes.length) {target.textContent='Chưa có ca phù hợp với link này.';return true;}
+      if (!entry.classes.length) {
+        target.textContent=entry.enabled && entry.state==='closed'?'Ngoài giờ thi':'Chưa có ca phù hợp với link này.';
+        if(entry.enabled)retry=setTimeout(()=>{
+          if(current===generation && target.isConnected)void select({classCode,studentRef,onReady,label});
+        },5000);
+        return true;
+      }
       async function show(sittingId) {
         const selection=++generation;
         stop?.();
@@ -57,6 +86,9 @@ export function createStudentEntry({api,testId,target,enabledForClass,onError=()
       if (current===generation) {
         target.textContent='Chưa kiểm tra được quyền thi. Vui lòng thử lại.';
         onError(error);
+        retry=setTimeout(()=>{
+          if(current===generation && target.isConnected)void select({classCode,studentRef,onReady,label});
+        },10000);
       }
       return true;
     }
@@ -65,7 +97,7 @@ export function createStudentEntry({api,testId,target,enabledForClass,onError=()
     select,
     session:({classCode,studentRef})=>admitted.get(keyFor(classCode,studentRef)),
     canStart:({classCode,studentRef})=>['assigned','starting','running'].includes(states.get(keyFor(classCode,studentRef))),
-    clear(){++generation;stop?.();admitted.clear();states.clear();target.replaceChildren();},
+    clear(){++generation;stop?.();clearTimeout(retry);admitted.clear();states.clear();target.replaceChildren();},
   };
 }
 

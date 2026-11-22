@@ -1,7 +1,7 @@
 import {connectLegacyPresentation} from '../substitute-skill-shared/legacy-presentation.mjs';
 import {API,BUILD,PRODUCT,SLUG,CONTENT_VERSION,CONTENT_HASH,DURATION_MS} from './config.mjs';
 import {DurableStore} from './storage.mjs';
-import {Telemetry} from './telemetry.mjs?v=registration-live-20261120-r4';
+import {Telemetry} from './telemetry.mjs?v=sitting-release-20261122';
 import {prepareOffline} from './offline.mjs';
 import {mountNativeReading,nativeLayout,nativeAnnotations} from './native-ui.mjs';
 const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value,show=(id,v=true)=>{const result=$(id).hidden=!v;queueMicrotask(()=>legacyUi?.refresh());return result;};
@@ -156,7 +156,7 @@ async function seal(reason){
 const managedAssignmentClasses=({known:new Map(),has(code){return this.known.get(code)===true;},async check(code){
     if(!/^IC\d{3,8}$/.test(String(code)))return false;
     if(this.known.has(code))return this.has(code);
-    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4');
+    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122');
     const result=await assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/')('student/entry',{query:{testId:"substitute-test-1-k56-reading-makeup",classCode:code}});
     if(typeof result.managed!=='boolean')throw Error('ASSIGNMENT_SCOPE_UNAVAILABLE');
     this.known.set(code,result.managed);return result.managed;
@@ -166,7 +166,7 @@ async function assignmentWait(classCode,studentRef){
  if(!(managedAssignmentClasses.check?await managedAssignmentClasses.check(classCode):managedAssignmentClasses.has(classCode)))return false;
  if(!assignmentEntry){
   const [{createStudentEntry},{assignmentClient}]=await Promise.all([
-    import('../substitute-assignment-full/assignment-student-entry.mjs?v=registration-live-20261120-r4'),import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4')]);
+    import('../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122'),import('../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122')]);
   const target=document.createElement('div');target.className='assignment-entry';$('student').parentElement.after(target);
   assignmentEntry=createStudentEntry({api:assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/'),testId:"substitute-test-1-k56-reading-makeup",target,
     enabledForClass:code=>managedAssignmentClasses.has(code)});

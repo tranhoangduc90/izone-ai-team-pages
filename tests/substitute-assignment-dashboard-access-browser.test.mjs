@@ -48,6 +48,18 @@ async function fixture({initial=false,mode='ok',canAssign=true}={}){
   let status=200,body={};
   if(path.endsWith('/teacher/config'))body={googleClientId:'fixture-only'};
   else if(path.endsWith('/teacher/skill-tests')){status=state.signedIn?200:401;body=state.signedIn?catalog:{code:'LOGIN_REQUIRED'};}
+  else if(path.endsWith('/teacher/sitting')){
+   if(!state.signedIn){status=401;body={code:'LOGIN_REQUIRED'};}
+   else if(state.mode==='sitting'){
+    if(!state.canAssign){status=403;body={code:'SITTING_CONTROL_DENIED'};}
+    else{
+     if(request.method()==='POST'){
+      const input=request.postDataJSON();state.actions++;state.open=input.action==='open';state.version=(state.version??0)+1;
+     }
+     body={enabled:true,state:state.open?'open':'closed',version:state.version??0,openedAt:1760000000000,closedAt:state.version&&!state.open?1760000001000:null};
+    }
+   }else body={enabled:false};
+  }
   else if(path.endsWith('/teacher/scopes')){
    state.scopeReads++;
    if(state.mode==='held')await new Promise(r=>{state.held=r;});
@@ -124,6 +136,26 @@ try{
    await f.page.setViewportSize({width:390,height:844});
    assert.equal(await f.page.locator('#listening-assignment-open').isVisible(),true);
    assert.deepEqual(f.state.errors,[]);assert.equal(f.state.actions,0);
+  }finally{await f.close();}
+ });
+ await test('Một nút mở 16 bài, thu hồi và đọc lại trạng thái máy chủ',async()=>{
+  const f=await fixture({initial:true,mode:'sitting'});try{
+   await f.page.locator('#listening-assignment-open').click();
+   await f.page.getByRole('button',{name:'Mở ca thi',exact:true}).click();
+   await f.page.getByText(/Đang mở cả 16 bài/).waitFor();
+   assert.equal(f.state.actions,1);assert.equal(f.state.open,true);
+   await f.page.getByRole('button',{name:'Thu hồi',exact:true}).click();
+   await f.page.getByText(/Đã đóng nhận lượt mới/).waitFor();
+   assert.equal(f.state.actions,2);assert.equal(f.state.open,false);
+   assert.deepEqual(f.state.errors,[]);
+  }finally{await f.close();}
+ });
+ await test('Chỉ có quyền xem không được mở ca',async()=>{
+  const f=await fixture({initial:true,mode:'sitting',canAssign:false});try{
+   await f.page.locator('#listening-assignment-open').click();
+   await f.page.locator('#assignment-access-status').getByText(/chưa có quyền mở ca/).waitFor();
+   assert.equal(await f.page.getByRole('button',{name:'Mở ca thi',exact:true}).count(),0);
+   assert.equal(f.state.actions,0);assert.deepEqual(f.state.errors,[]);
   }finally{await f.close();}
  });
 }finally{await browser.close();}

@@ -230,18 +230,37 @@ export async function mountAssignmentSelector(target, { api, testId, start }) {
   nameLabel.append(names);
   target.replaceChildren(classLabel,nameLabel,state);
   const choose = (label,disabled = false) => element('option',label,{value:'',disabled});
-  let choices, halt, generation = 0;
+  let choices = new Map(), halt, generation = 0, publicState, timer, handedOff = false;
   names.replaceChildren(choose('Chọn lớp trước'));
-  try {
-    const data = await api('student/classes',{query:{testId}});
-    choices = new Map(data.classes.map(scope=>[scope.sittingId,scope]));
-    classes.replaceChildren(choose(choices.size?'Chọn lớp':'Chưa có ca đang mở'),
-      ...data.classes.map(scope=>element('option',scope.label,{value:scope.sittingId})));
-    classes.disabled = !choices.size;
-  } catch {
-    classes.replaceChildren(choose('Chưa tải được danh sách lớp'));
-    return;
+  async function loadClasses() {
+    clearTimeout(timer);
+    if(handedOff || !target.isConnected)return;
+    try {
+      const control = await api('student/sitting',{query:{testId}});
+      if(handedOff || !target.isConnected)return;
+      const nextState=JSON.stringify([control.enabled,control.state,control.sittingId]);
+      if(publicState!==nextState){
+        const data = await api('student/classes',{query:{testId}});
+        if(handedOff || !target.isConnected)return;
+        if(data.enabled && (data.sittingId!==control.sittingId || data.state!==control.state))return;
+        publicState=nextState;
+        choices = new Map(data.classes.map(scope=>[JSON.stringify([scope.sittingId,scope.classCode]),scope]));
+        classes.replaceChildren(choose(choices.size?'Chọn lớp':control.enabled?'Ngoài giờ thi':'Chưa có ca đang mở'),
+          ...[...choices].map(([value,scope])=>element('option',scope.label,{value})));
+        classes.disabled = !choices.size;
+        if(control.state!=='open' && data.enabled) {
+          names.disabled = true;
+          if(!halt) names.replaceChildren(choose('Chọn lớp trước'));
+        }
+      }
+      if(!control.enabled)return;
+    } catch {
+      if(!choices.size) classes.replaceChildren(choose('Chưa tải được danh sách lớp'));
+    } finally {
+      if(!handedOff && target.isConnected && publicState?.startsWith('[false,')!==true) timer=setTimeout(loadClasses,5000);
+    }
   }
+  await loadClasses();
   classes.onchange = async () => {
     const current = ++generation;
     halt?.();
@@ -269,7 +288,11 @@ export async function mountAssignmentSelector(target, { api, testId, start }) {
     const chosen = choices.get(classes.value);
     if (!chosen || !names.value) return;
     const scope = {testId,sittingId:chosen.sittingId,classCode:chosen.classCode,studentRef:names.value};
-    const stop = await mountAssignmentWaiting(state,{api,scope,start});
+    const stop = await mountAssignmentWaiting(state,{api,scope,start:async session=>{
+      await start(session);
+      handedOff=true;
+      clearTimeout(timer);
+    }});
     if (current === generation) halt = stop;
     else stop();
   };
@@ -292,8 +315,10 @@ export async function mountAssignmentWaiting(target, { api, scope, start, storag
       failures = 0;
       lastState=status.state;
       onState(status.canStart===true?lastState:undefined);
-      message.textContent = statusText[status.state] ?? 'Chờ giao';
-      if (status.state==='assigned' && !status.canStart) message.textContent='Đã giao · Chờ đến giờ bắt đầu';
+      message.textContent = status.sittingClosed && !status.canStart && status.state!=='submitted' ?
+        'Ngoài giờ thi' : scope.sittingId.startsWith('window-') && status.canStart && status.state==='assigned' ?
+          'Ca thi đang mở' : statusText[status.state] ?? 'Chờ giao';
+      if (!status.sittingClosed && status.state==='assigned' && !status.canStart) message.textContent='Đã giao · Chờ đến giờ bắt đầu';
       button.disabled = ready || status.canStart!==true;
       button.textContent = status.state === 'running' ? 'Tiếp tục' : label;
       if (status.state === 'submitted') { stop(); return; }
@@ -313,7 +338,7 @@ export async function mountAssignmentWaiting(target, { api, scope, start, storag
       }
       failures++;
       button.disabled = true;
-      message.textContent = 'Chưa kiểm tra được quyền bắt đầu. Đang thử lại…';
+      message.textContent = error.message==='SITTING_CLOSED'?'Ngoài giờ thi':'Chưa kiểm tra được quyền bắt đầu. Đang thử lại…';
     }
     timer = setTimeout(refresh, Math.min(30000,5000 * 2 ** Math.min(failures,3)));
   }
@@ -337,8 +362,8 @@ export async function mountAssignmentWaiting(target, { api, scope, start, storag
       token = session.token; storage.setItem(key,token);
     }
     await refresh();
-  } catch {
-    message.textContent = 'Chưa mở được phiên chờ. Hãy kiểm tra lớp, tên và ca thi với người vận hành.';
+  } catch (error) {
+    message.textContent = error.message==='SITTING_CLOSED'?'Ngoài giờ thi':'Chưa mở được phiên chờ. Hãy kiểm tra lớp, tên và ca thi với người vận hành.';
   }
   return stop;
 }
