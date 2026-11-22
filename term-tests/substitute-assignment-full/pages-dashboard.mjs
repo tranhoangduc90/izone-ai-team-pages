@@ -57,7 +57,9 @@ async function mountSitting(epoch, value) {
     }
   };
   action.disabled=true;
-  body.replaceChildren(message,action);
+  const note=document.createElement('p'); note.className='description';
+  note.textContent='Học viên vào link đã nhận và chọn lớp, họ tên. Thu hồi chỉ dừng lượt mới. Lượt đang làm vẫn nộp được.';
+  body.replaceChildren(message,action,note);
   const link=document.getElementById('listening-assignment-link');
   if(link){link.hidden=true;link.removeAttribute('href');}
   show(value);
@@ -66,7 +68,7 @@ async function mountSitting(epoch, value) {
 async function refreshAccess() {
   const request = ++check;
   retry.parentElement.hidden=false;
-  feedback('Đang kiểm tra quyền Giao bài…');
+  feedback('Đang kiểm tra quyền vận hành ca thi…');
   try {
     const sitting = await api('teacher/sitting').catch(error => {
       if (error.message === 'NOT_FOUND') return {enabled:false};
@@ -107,8 +109,8 @@ async function refreshAccess() {
     clearDashboard();
     const needsLogin = error.message === 'LOGIN_REQUIRED';
     if(error.message==='SITTING_CONTROL_DENIED'){feedback('Tài khoản chỉ xem kết quả hoặc chưa có quyền mở ca.');return;}
-    feedback(needsLogin ? 'Hãy đăng nhập tại Khu vực giảng viên để mở danh sách Giao bài.' :
-      'Chưa kiểm tra được quyền Giao bài. Bấm Kiểm tra lại quyền để thử lại.', needsLogin);
+    feedback(needsLogin ? 'Đăng nhập tại Khu vực giảng viên để điều khiển ca thi.' :
+      'Chưa kiểm tra được quyền vận hành ca thi. Bấm Kiểm tra lại quyền để thử lại.', needsLogin);
   }
 }
 
@@ -151,7 +153,7 @@ addEventListener('izone:substitute-teacher-state', event => {
   clearDashboard();
   if (state === 'ready') void refreshAccess();
   else feedback(state === 'restoring' ? 'Đang xác minh phiên giảng viên…' :
-    'Hãy đăng nhập tại Khu vực giảng viên để mở danh sách Giao bài.', state !== 'restoring');
+    'Đăng nhập tại Khu vực giảng viên để điều khiển ca thi.', state !== 'restoring');
 });
 document.getElementById('logout').addEventListener('click', () => {
   ++check;
