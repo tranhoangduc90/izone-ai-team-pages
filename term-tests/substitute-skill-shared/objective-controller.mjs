@@ -116,7 +116,7 @@ function fail(e){text('notice',({CLASS_NOT_ELIGIBLE:'Lớp này chưa được c
 const managedAssignmentClasses=({known:new Map(),has(code){return this.known.get(code)===true;},async check(code){
     if(!/^IC\d{3,8}$/.test(String(code)))return false;
     if(this.known.has(code))return this.has(code);
-    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4');
+    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122');
     const result=await assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/')('student/entry',{query:{testId:testId,classCode:code}});
     if(typeof result.managed!=='boolean')throw Error('ASSIGNMENT_SCOPE_UNAVAILABLE');
     this.known.set(code,result.managed);return result.managed;
@@ -129,7 +129,7 @@ async function checkAssignmentEntry(studentRef){
  if(!(managedAssignmentClasses.check?await managedAssignmentClasses.check(classCode):managedAssignmentClasses.has(classCode)))return false;
  if(!assignmentEntry){
   const [{createStudentEntry,assignmentSessionHeaders:forSession},{assignmentClient}]=await Promise.all([
-    import('../substitute-assignment-full/assignment-student-entry.mjs?v=registration-live-20261120-r4'),import('../substitute-assignment-full/assignment-browser.mjs?v=registration-live-20261120-r4')]);
+    import('../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122'),import('../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122')]);
   assignmentSessionHeaders=forSession;
   const target=document.createElement('div');target.className='assignment-entry';$('student').parentElement.after(target);
   assignmentEntry=createStudentEntry({api:assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/'),testId,target,
