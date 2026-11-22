@@ -1,6 +1,6 @@
-import {loadClassDirectory} from './class-directory.mjs';
+import {loadClassDirectory} from './class-directory.mjs?v=roster-picker-20261122';
 let classDirectory;
-import {bindIdentitySelection} from './identity-selection.mjs';
+import {bindIdentitySelection,restorePreparedSelection} from './identity-selection.mjs?v=roster-picker-20261122';
 // Dùng adapter ghi chú thuần; không khởi tạo pane hoặc controller Reading.
 import {nativeAnnotations} from './native-reading.mjs';
 import {nativeVisibility,updateNativeShell,audioProgress} from './native-shell.mjs?v=20261118-parity12-v1';
@@ -42,6 +42,7 @@ const managedAssignmentClasses=({known:new Map(),has(code){return this.known.get
 let assignmentEntry;
 let assignmentSessionHeaders=()=>({});
 async function checkAssignmentEntry(studentRef){
+ restorePreparedSelection(state,$('class'),$('student'));
  const classCode=$('class').value;
  if(state?.startedAt||state?.sealed)return false;
  if(!(managedAssignmentClasses.check?await managedAssignmentClasses.check(classCode):managedAssignmentClasses.has(classCode)))return false;
@@ -143,7 +144,7 @@ async function start(){
    (navigator.onLine===false||!assignmentEntry?.canStart(state.identity))){
   text('notice','Chưa xác nhận quyền bắt đầu. Kiểm tra trạng thái Giao bài và kết nối mạng.');return;
  }if(busy)return;busy=true;try{await own();emitSubmission('start_requested');const v=await api('start',state.identity);emitSubmission('start_confirmed',{startedAt:v.startedAt,deadlineAt:v.deadlineAt});anchor(v);state.phase=v.status;state.deadlineAt=v.deadlineAt;state.lastServer=v;state.startedAt=v.startedAt;await persist();displayExam();tick();}catch(e){fail(e);}finally{busy=false;}}
-bindIdentitySelection({loadRoster:async code=>{classDirectory?.requireEligible(code);return (await api('roster?class='+encodeURIComponent(code),null,'GET')).students;},onRoster:rows=>{roster=rows;},onConfirm:prepare,onError:fail,isBusy:()=>busy});
+bindIdentitySelection({loadRoster:async code=>{classDirectory?.requireEligible(code);return (await api('roster?class='+encodeURIComponent(code),null,'GET')).students;},onRoster:rows=>{roster=rows;},onConfirm:prepare,isBusy:()=>busy});
 $('start').onclick=start;
 $('submit').onclick=()=>{if(!ownerHeld||state?.phase!=='draft'||state.sealed)return;const missing=payload().snapshot.tasks.filter(t=>!t.essay.trim()).map(t=>'Task '+t.taskNumber);$('confirm-submit').querySelector('p').textContent=missing.length?missing.join(', ')+' đang để trống và sẽ được tính 0 điểm. Bạn vẫn muốn nộp và khóa bài?':'Bài sẽ được khóa sau khi nộp. Bạn đã kiểm tra bài làm chưa?';$('confirm-submit').showModal();};$('cancel-submit').onclick=()=>$('confirm-submit').close();$('accept-submit').onclick=()=>{$('confirm-submit').close();void seal(false,true);};
 // Kiểm trạng thái/biên nhận bằng các vòng đọc nền; không yêu cầu học viên bấm.

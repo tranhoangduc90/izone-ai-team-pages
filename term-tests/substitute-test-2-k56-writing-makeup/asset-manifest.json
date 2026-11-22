@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-2-k56-writing-makeup",
-  "build": "issue611-52af0820a937a924",
+  "build": "issue611-95cd1a32a0fe0e8c",
   "assets": [
     {
       "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
@@ -35,6 +35,22 @@
       "sha256": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76"
     },
     {
+      "path": "../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122",
+      "sha256": "cfab1d2998a5543b9adbc6f0a6cd4bca9c8cfbdec1f2521e33f9e321f9143d11"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-catalog.mjs",
+      "sha256": "b7f5016b6b9c21414de6b08d60a3eef8b4f0c1d4e2c7a0d42e0ee5449b882a56"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122",
+      "sha256": "d54091d35143d792591ccb900885d4a9835e14e581c42d4477db70638977ff54"
+    },
+    {
+      "path": "../substitute-assignment-full/public-sitting-status.mjs?v=sitting-release-20261122",
+      "sha256": "d274af38c8ec86ea4e0dc3bf22f1c30a7be4126db771f7c7e88b012c727b9ec0"
+    },
+    {
       "path": "../substitute-shared/backup-export-submission-recovery-v1.mjs?v=20261112-submission-recovery-v1",
       "sha256": "9921c9a5bc6f653b7bcf9a644d4359b4c57cead4066460973adf0d232c2387d1"
     },
@@ -59,12 +75,12 @@
       "sha256": "e832f8b3e8a08da40ed01399d5184634c9f4d78dff6e1a637c3cfd2656236a5c"
     },
     {
-      "path": "../substitute-skill-shared/class-directory.mjs",
-      "sha256": "b2dbf79704b9aa4945097104e024443312be6ead613bcae73f57bcd1da910cdf"
+      "path": "../substitute-skill-shared/class-directory.mjs?v=roster-picker-20261122",
+      "sha256": "2f94c8379b7c306a96c3415634a249192a103426c53068e3383e15a9e99bc91a"
     },
     {
-      "path": "../substitute-skill-shared/identity-selection.mjs",
-      "sha256": "28cbe583dbb66f2a66042e1565b2f221146c891f041b2cf83f1279dbfd71de57"
+      "path": "../substitute-skill-shared/identity-selection.mjs?v=roster-picker-20261122",
+      "sha256": "680520721e87430e77a3a5e798f6bad7160dbb0438d8ec48c460722ddf4a33af"
     },
     {
       "path": "../substitute-skill-shared/legacy-demo-offline.mjs",
@@ -91,6 +107,10 @@
       "sha256": "966c11135dcbc7a3181e4017d68421e634aa1db3a9d33913a83ffd2237fb5857"
     },
     {
+      "path": "../substitute-skill-shared/native-writing.mjs?v=roster-picker-20261122",
+      "sha256": "966c11135dcbc7a3181e4017d68421e634aa1db3a9d33913a83ffd2237fb5857"
+    },
+    {
       "path": "../substitute-skill-shared/offline-worker.js",
       "sha256": "454ae6856478457e7b73ea18d5bbbfd6234ab6caf1324882261f85168805e09b"
     },
@@ -111,8 +131,8 @@
       "sha256": "d047605cd8a0c988885f7818aac8e03141e2ce76eb66054913fe8512f021fa2b"
     },
     {
-      "path": "../substitute-skill-shared/writing-controller.mjs?v=20261118-parity12-v1",
-      "sha256": "5757ed8de683f93ab73e09566223810717bd2cb3a9c1e6b664fb50a9adb5240d"
+      "path": "../substitute-skill-shared/writing-controller.mjs?v=roster-picker-20261122",
+      "sha256": "b4bb56d76e5d198f46686109a60c7abeaab7f7b19c0caf6d95a94b1879612186"
     },
     {
       "path": "../substitute-skill-shared/writing-feedback.mjs",
@@ -127,8 +147,8 @@
       "sha256": "1ba81e2f584378234b7e84a91df0bf07bc5a72cf8d57ad3070592218c7687e89"
     },
     {
-      "path": "../substitute-skill-shared/writing.mjs?v=20261118-parity12-v1",
-      "sha256": "9fb69d36ba86693a8d06706ff31bdfcf275efa721ff782d4d84c6a2b7abd10bd"
+      "path": "../substitute-skill-shared/writing.mjs?v=roster-picker-20261122",
+      "sha256": "ba975ce0a625af6f082722e92c33b16f9efe0f5b2c96b6ce732f77254f13075b"
     },
     {
       "path": "../substitute-test-1-k56-computer-based/annotations.js",
@@ -176,7 +196,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "0948b460a74bedb7fa6d6b0ae51bc55233d364187d32f4b47f11ce7aedcdf56c"
+      "sha256": "65175899dff0e70d23f7d0a7e64fe5835647ef97791fdee4f64402c03c43099d"
     },
     {
       "path": "sw.js",

@@ -1,5 +1,6 @@
 importScripts('../substitute-skill-shared/legacy-demo-worker.js');
-const BUILD = 'reading-retake-20261118-substitute-parity12';
+const BUILD = 'reading-retake-20261122-roster-picker';
+const PARITY_CACHE = 'reading-retake:reading-retake-20261118-substitute-parity12';
 const PREVIOUS_CACHE = 'reading-retake:reading-retake-20261114-retake-log-v1';
 const COHORT_CACHE = 'reading-retake:reading-retake-20261111-cohort';
 const LEGACY_CACHE = 'reading-retake:reading-retake-20261106-v1';
@@ -104,9 +105,11 @@ function legacyFetch(event){
       }
     }
     const cache = await caches.open(CACHE);
+    const parity = await caches.open(PARITY_CACHE);
     const previous = await caches.open(PREVIOUS_CACHE);
     const cohort = await caches.open(COHORT_CACHE);
     const offlineCache = await cache.match(VERIFIED) ? cache
+      : await parity.match(VERIFIED) ? parity
       : await previous.match(VERIFIED) ? previous
       : await cohort.match(VERIFIED) ? cohort : await caches.open(LEGACY_CACHE);
     const page = await offlineCache.match(navigation ? BASE + 'index.html' : url.href);

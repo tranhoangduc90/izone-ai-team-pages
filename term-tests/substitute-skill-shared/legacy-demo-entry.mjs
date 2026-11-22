@@ -1,4 +1,4 @@
-import {legacyProfile} from './class-directory.mjs';
+import {legacyProfile} from './class-directory.mjs?v=roster-picker-20261122';
 
 // Only the DEMO branch uses the skill runtime. Real routes retain their controller.
 export async function bootLegacyDemo(){
@@ -13,5 +13,5 @@ export async function bootLegacyDemo(){
   if(!event.target.value||event.target.value==='DEMO')return;
   event.stopImmediatePropagation();const url=new URL(location.href);url.searchParams.delete('class');if(profile.testId.includes('k56-listening'))url.searchParams.set('course','56');location.assign(url);
  },true);
- await import(profile.skill==='listening'?'./objective-controller-listening-report-v1.mjs?v=20261118-parity12-v1':'./objective-controller.mjs?v=20261118-parity12-v1');
+ await import(profile.skill==='listening'?'./objective-controller-listening-report-v1.mjs?v=roster-picker-20261122':'./objective-controller.mjs?v=roster-picker-20261122');
 }

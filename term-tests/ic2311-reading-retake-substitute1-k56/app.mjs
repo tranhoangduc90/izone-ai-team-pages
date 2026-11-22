@@ -1,8 +1,10 @@
+import {connectLegacyDirectory} from '../substitute-skill-shared/class-directory.mjs?v=roster-picker-20261122';
+import {createRosterFeedback} from '../substitute-skill-shared/identity-selection.mjs?v=roster-picker-20261122';
 import {connectLegacyPresentation} from '../substitute-skill-shared/legacy-presentation.mjs';
-import {API,BUILD,PRODUCT,SLUG,CONTENT_VERSION,CONTENT_HASH,DURATION_MS} from './config.mjs';
+import {API,BUILD,PRODUCT,SLUG,CONTENT_VERSION,CONTENT_HASH,DURATION_MS} from './config.mjs?v=roster-picker-20261122';
 import {DurableStore} from './storage.mjs';
 import {Telemetry} from './telemetry.mjs?v=sitting-release-20261122';
-import {prepareOffline} from './offline.mjs';
+import {prepareOffline} from './offline.mjs?v=roster-picker-20261122';
 import {mountNativeReading,nativeLayout,nativeAnnotations} from './native-ui.mjs';
 const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value,show=(id,v=true)=>{const result=$(id).hidden=!v;queueMicrotask(()=>legacyUi?.refresh());return result;};
 const storage=await new DurableStore().open();let state=await storage.get('current'),preparation=await storage.get('preparation'),roster,content,layoutReady=false,ready=false,busy=false,syncing=false,retryAt=0,failures=0,releaseOwner,ownerHeld=false,baseElapsed=0,baseMono=performance.now(),sealing=false;
@@ -302,29 +304,33 @@ try{
    if(error.code!=='NOT_FOUND')throw error;
    const {value:legacy}=await journal.request('/roster?purpose=prepare',null,{permit:null,method:'GET'});
    if(legacy.contentHash!==CONTENT_HASH||legacy.classCode!=='IC2311'||!Array.isArray(legacy.students))throw Error('CONTENT_MISMATCH');
-   roster=legacy;classPicker.replaceChildren(new Option(legacy.classCode,legacy.classCode));
-   fillStudents('Chọn tên của bạn');
+   const directory=await connectLegacyDirectory();
+   if(directory.canEnter(legacy.classCode)){
+    roster=legacy;classPicker.value=legacy.classCode;
+    fillStudents('Chọn tên của bạn');
+   }
   }
   if(catalog){
    if(catalog.contentHash!==CONTENT_HASH||!Array.isArray(catalog.classes))throw Error('CONTENT_MISMATCH');
-   classPicker.replaceChildren(new Option('Chọn lớp của bạn',''),...catalog.classes.map(code=>new Option(code,code)));
-   classPicker.disabled=false;
    let latestRosterRequest=0;
-   classPicker.addEventListener('change',async()=>{
+   const feedback=createRosterFeedback($('student'),loadRoster,$('identity-status'));
+   async function loadRoster(){
    const request=++latestRosterRequest,classCode=classPicker.value;
-   roster=null;fillStudents(classCode?'Đang tải danh sách…':'Chọn lớp trước');text('identity-status','');
+   roster=null;fillStudents(classCode?'Đang tải danh sách…':'Chọn lớp trước');feedback(classCode?'Đang tải danh sách học viên…':'');
    if(!classCode)return;
    try{
     const {value:members}=await journal.request('/self-enrollment/roster?class='+encodeURIComponent(classCode),null,{permit:null,method:'GET'});
     if(request!==latestRosterRequest)return;
     if(members.classCode!==classCode||!Array.isArray(members.students))throw Error('CONTENT_MISMATCH');
     roster=members;fillStudents('Chọn tên của bạn');
-    if(!members.students.length)text('identity-status','Lớp này không còn học viên trong danh sách vào thi.');
+    feedback(members.students.length?'':'Không có học viên đủ điều kiện trong lớp này.');
    }catch{
     if(request!==latestRosterRequest)return;
-    fillStudents('Chưa tải được danh sách');text('identity-status','Hãy chọn lại lớp để tải danh sách học viên.');
+    fillStudents('Chưa tải được danh sách');feedback('Không tải được danh sách học viên.',true);
    }
-   });
+   }
+   classPicker.addEventListener('change',loadRoster);
+   await connectLegacyDirectory({enable:true});
   }
  }
  await renderContent();
