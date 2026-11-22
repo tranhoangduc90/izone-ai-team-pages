@@ -12,13 +12,13 @@ async function read(relative, encoding = 'utf8') {
   return fs.readFile(path.join(root, relative), encoding);
 }
 
-test('landing K56 giữ tên ba bài và nhãn các nhóm dự phòng', async () => {
+test('landing K56 giữ tên ba bài chính và hướng dẫn xử lý sự cố', async () => {
   const html = await read('term-tests/k56-demo/index.html');
   assert.equal(/Listening:\s*\d+\s*câu|Reading:\s*\d+\s*câu/.test(html), false);
-  for (const label of [
-    'Term Test 1', 'Term Test 2', 'Mini Test',
-    'Audio Backup', 'Answer Sheet dự phòng', 'Bài dự phòng theo kỹ năng'
-  ]) assert.match(html, new RegExp(`>${label}<`));
+  for (const label of ['Term Test 1', 'Term Test 2', 'Mini Test']) assert.match(html, new RegExp(`>${label}<`));
+  assert.match(html, /id="paperExam"/);
+  assert.match(html, /Substitute Test sau ca/);
+  assert.doesNotMatch(html, /Audio Backup|Answer Sheet dự phòng|Bài dự phòng theo kỹ năng/);
 });
 
 test('landing K56 không giới thiệu IC2264 như lớp duy nhất dùng dữ liệu thật', async () => {

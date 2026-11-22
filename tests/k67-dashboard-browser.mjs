@@ -78,8 +78,9 @@ try {
       await columns('.exam-layout > section');
       assert.equal(await id('rescue').evaluate(node => node.open), false);
       await id('rescue').locator('summary').click();
-      assert.equal(await id('backupAudio').locator('small').textContent(), 'Nguồn audio thay thế cho phần Listening.');
-      assert.equal(await id('answerSheet').locator('small').textContent(), 'Phiếu trả lời để học viên nhập đáp án.');
+      assert.match(await id('rescue').innerText(), /kiểm tra biên nhận.*Substitute Test sau ca/);
+      assert.equal(await id('rescue').locator('a, button').count(), 0);
+      assert.equal(await id('answerSheet').textContent(), 'Phiếu trả lời');
       for (const [mode, label] of [['lis_first', 'Listening trước'], ['read_first', 'Reading trước']]) {
         await button(label).click();
         const field = id('studentLink');
@@ -96,10 +97,8 @@ try {
           await openTab(id('answerSheet'), base + slug + '/?class=IC2139&mode=' + mode);
         }
       }
-      assert.equal(await id('paperAudio').evaluate(node => node.href), await id('backupAudio').evaluate(node => node.href));
       if (width === 1440) {
         await openTab(id('paperAudio'), base + audio);
-        await openTab(id('backupAudio'), base + audio);
       }
       if (slug === 'term-test-1' && process.env.K67_QA_DIR && [1440, 390].includes(width)) {
         await page.mouse.move(0, 0);
