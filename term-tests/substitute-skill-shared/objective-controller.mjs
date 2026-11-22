@@ -1,5 +1,5 @@
-import {loadClassDirectory} from './class-directory.mjs';
-import {bindIdentitySelection} from './identity-selection.mjs';
+import {loadClassDirectory} from './class-directory.mjs?v=roster-picker-20261122';
+import {bindIdentitySelection,restorePreparedSelection} from './identity-selection.mjs?v=roster-picker-20261122';
 import {nativeVisibility,updateNativeShell,audioProgress} from './native-shell.mjs?v=20261118-parity12-v1';
 import {portalStatus} from './portal-status.mjs';
 import {DurableStore,PREFIX} from './storage.mjs';
@@ -124,6 +124,7 @@ const managedAssignmentClasses=({known:new Map(),has(code){return this.known.get
 let assignmentEntry;
 let assignmentSessionHeaders=()=>({});
 async function checkAssignmentEntry(studentRef){
+ restorePreparedSelection(state,$('class'),$('student'));
  const classCode=$('class').value;
  if(state?.startedAt||state?.sealed)return false;
  if(!(managedAssignmentClasses.check?await managedAssignmentClasses.check(classCode):managedAssignmentClasses.has(classCode)))return false;
@@ -286,7 +287,7 @@ async function start(){
 }
 let roster=[],classDirectory;
 async function classes(){classDirectory=await loadClassDirectory(testId,$('class'));text('prepare-status','Chọn lớp, họ tên và xác nhận đúng người trước khi làm bài.');const hinted=new URL(location.href).searchParams.get('class');if(hinted&&[...$('class').options].some(o=>o.value===hinted)){$('class').value=hinted;$('class').dispatchEvent(new Event('change'));}}
-bindIdentitySelection({loadRoster:async code=>{classDirectory?.requireEligible(code);return (await api('roster?class='+encodeURIComponent(code),null,'GET')).students;},onRoster:rows=>{roster=rows;},onConfirm:prepare,onError:fail,isBusy:()=>busy});
+bindIdentitySelection({loadRoster:async code=>{classDirectory?.requireEligible(code);return (await api('roster?class='+encodeURIComponent(code),null,'GET')).students;},onRoster:rows=>{roster=rows;},onConfirm:prepare,isBusy:()=>busy});
 $('start').onclick=start;
 $('submit').onclick=()=>{if(!ownerHeld||state?.phase!=='draft'||state.sealed)return;const empty=content.controls.length-Object.values(state.answers||{}).filter(v=>String(v).trim()).length;$('confirm-submit').querySelector('p').textContent='Bạn còn '+empty+' câu chưa trả lời.'+(isListening&&!state.audioEndedAt?' Xác nhận nộp sẽ kết thúc audio.':'')+' Bài sẽ được khóa sau khi nộp.';$('confirm-submit').showModal();};$('accept-submit').onclick=()=>{$('confirm-submit').close();void seal();};$('cancel-submit').onclick=()=>$('confirm-submit').close();$('check-result').onclick=()=>void check();$('retry-send').onclick=()=>void sync();
 $('retry-audio').onclick=()=>void prepare();

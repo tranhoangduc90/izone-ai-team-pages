@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-1-k56-reading-makeup",
-  "build": "issue611-a79b5a52cca88893",
+  "build": "issue611-ead81b9dc2b33b28",
   "scopePath": "/term-tests/ic2311-reading-retake-substitute1-k56/",
   "assets": [
     {
@@ -104,6 +104,22 @@
       "sha256": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76"
     },
     {
+      "path": "../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122",
+      "sha256": "cfab1d2998a5543b9adbc6f0a6cd4bca9c8cfbdec1f2521e33f9e321f9143d11"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-catalog.mjs",
+      "sha256": "b7f5016b6b9c21414de6b08d60a3eef8b4f0c1d4e2c7a0d42e0ee5449b882a56"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122",
+      "sha256": "d54091d35143d792591ccb900885d4a9835e14e581c42d4477db70638977ff54"
+    },
+    {
+      "path": "../substitute-assignment-full/public-sitting-status.mjs?v=sitting-release-20261122",
+      "sha256": "d274af38c8ec86ea4e0dc3bf22f1c30a7be4126db771f7c7e88b012c727b9ec0"
+    },
+    {
       "path": "../substitute-k56-shared/styles.css",
       "sha256": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e"
     },
@@ -149,15 +165,19 @@
     },
     {
       "path": "../substitute-skill-shared/class-directory.mjs",
-      "sha256": "b2dbf79704b9aa4945097104e024443312be6ead613bcae73f57bcd1da910cdf"
+      "sha256": "2f94c8379b7c306a96c3415634a249192a103426c53068e3383e15a9e99bc91a"
     },
     {
-      "path": "../substitute-skill-shared/identity-selection.mjs",
-      "sha256": "28cbe583dbb66f2a66042e1565b2f221146c891f041b2cf83f1279dbfd71de57"
+      "path": "../substitute-skill-shared/class-directory.mjs?v=roster-picker-20261122",
+      "sha256": "2f94c8379b7c306a96c3415634a249192a103426c53068e3383e15a9e99bc91a"
     },
     {
-      "path": "../substitute-skill-shared/legacy-demo-entry.mjs",
-      "sha256": "7da084a1683f112699bf0db926a91768a431d9b7b12bc8246876dff5d4bc72b3"
+      "path": "../substitute-skill-shared/identity-selection.mjs?v=roster-picker-20261122",
+      "sha256": "680520721e87430e77a3a5e798f6bad7160dbb0438d8ec48c460722ddf4a33af"
+    },
+    {
+      "path": "../substitute-skill-shared/legacy-demo-entry.mjs?v=roster-picker-20261122",
+      "sha256": "a7fd5245bf0ced051795ddc87eeb0e40f786030dd53fd9be4382cefd8723819e"
     },
     {
       "path": "../substitute-skill-shared/legacy-demo-offline.mjs",
@@ -196,12 +216,12 @@
       "sha256": "cd79a1720b290f7818edb4a640854f9b96e8e60dbef7fefd9ce29d87824985af"
     },
     {
-      "path": "../substitute-skill-shared/objective-controller-listening-report-v1.mjs?v=20261118-parity12-v1",
-      "sha256": "0b74ec04a423677b5331a67b6c85c47fd895b64aff9741d900fec64631249d6a"
+      "path": "../substitute-skill-shared/objective-controller-listening-report-v1.mjs?v=roster-picker-20261122",
+      "sha256": "912a36e2d386ec571434e9332e587c8063cdd49268275fcca976af32ec2129c7"
     },
     {
-      "path": "../substitute-skill-shared/objective-controller.mjs?v=20261118-parity12-v1",
-      "sha256": "66124df1f54672133658ea88309e6cdb2fd7cc76c62da077c28a887b544164a7"
+      "path": "../substitute-skill-shared/objective-controller.mjs?v=roster-picker-20261122",
+      "sha256": "4ee1b19dc986d17f75ab0b9af0a782fa9f1bfcfeb076cf25c3b45b055e0897b7"
     },
     {
       "path": "../substitute-skill-shared/offline.mjs",
@@ -253,19 +273,23 @@
     },
     {
       "path": "./",
-      "sha256": "892ded93ea370907d7d2c67ac81012d460bc8b46c9b6e7387fa5697a959b3266"
+      "sha256": "a11668969d09c01f145a2a2ce1146181382a236751d4091b819c276b800fe6ae"
     },
     {
       "path": "app.mjs",
-      "sha256": "50a3e23f424025e132a0992292f431f4193621dcbbc91df9b5ba8878563f5818"
+      "sha256": "21b273a85066c342e42bcf091bbf33124ae77eddc064371a61dba916fcf1f088"
     },
     {
-      "path": "boot.js",
-      "sha256": "a11eb33c14f18f9c5ebb962acddb48df4df688cb38eb236bf3e97b06607379d9"
+      "path": "boot.js?v=roster-picker-20261122",
+      "sha256": "30dba78c378944610a1ea0005b17fdf55e4f994875484e147471bb8c2ee47f39"
     },
     {
       "path": "config.mjs",
-      "sha256": "bca612a7e51238a2ce196d84aae1988f6e83f1224cb4e1cfdab3687fc1878f47"
+      "sha256": "ec2186c6c9895abb12011f58afebdb7a1b59ed6a46a067a535583575889e6ba4"
+    },
+    {
+      "path": "index.html",
+      "sha256": "a11668969d09c01f145a2a2ce1146181382a236751d4091b819c276b800fe6ae"
     },
     {
       "path": "log-contract.mjs",
@@ -277,7 +301,7 @@
     },
     {
       "path": "offline.mjs",
-      "sha256": "3a0f9331c395a812a07395977b8b2235a86b866debb13f9253da38474897f1d8"
+      "sha256": "3e5a5374194cb6d8ce8ee5f60d37a933771959dd9502694bbfd56d8212e8e79a"
     },
     {
       "path": "review-redirect.mjs?v=20261111-cohort",
@@ -289,7 +313,7 @@
     },
     {
       "path": "sw.js",
-      "sha256": "a7126bfd7013f45e720757f87145d7c6513fafa1eb5dd3be8a8c0ba805c2acc1"
+      "sha256": "78fc3cb02ad124238b41177076954b14e8606e6fedd536309675747813ad6721"
     },
     {
       "path": "teacher-sso.js?v=20261106-retake1",
@@ -309,7 +333,7 @@
     },
     {
       "path": "telemetry.mjs",
-      "sha256": "dc432a6f49902d56661f57f610600064ddff9c34a93dd87348452408b8c473ef"
+      "sha256": "14b8493ea5e427f872fe07907493f3813ea8a6164ef3627dedb7c291af10313e"
     },
     {
       "path": "upgrade.css",

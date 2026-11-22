@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-2-k67-listening-makeup",
-  "build": "issue611-9c02324e8f0f32c9",
+  "build": "issue611-e72d5422009495ad",
   "assets": [
     {
       "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
@@ -23,16 +23,16 @@
       "sha256": "123ba2486940da3496d2dfa7a5f0ee40205eb383b19d6641a770f655519f2f3a"
     },
     {
-      "path": "../../shared/master170/assets/izone-logo-color.png",
-      "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
-    },
-    {
       "path": "../../shared/master170/assets/SourceSans3-Italic-Variable.woff2",
       "sha256": "2cac627e742dec5b6fa73a0ad243a97e189c362ea11ae85c22b2e52b214d00a3"
     },
     {
       "path": "../../shared/master170/assets/SourceSans3-Variable.woff2",
       "sha256": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8"
+    },
+    {
+      "path": "../../shared/master170/assets/izone-logo-color.png",
+      "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
     },
     {
       "path": "../../shared/master170/icons.svg?v=20261028-master11",
@@ -99,6 +99,22 @@
       "sha256": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76"
     },
     {
+      "path": "../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122",
+      "sha256": "cfab1d2998a5543b9adbc6f0a6cd4bca9c8cfbdec1f2521e33f9e321f9143d11"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-catalog.mjs",
+      "sha256": "b7f5016b6b9c21414de6b08d60a3eef8b4f0c1d4e2c7a0d42e0ee5449b882a56"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122",
+      "sha256": "d54091d35143d792591ccb900885d4a9835e14e581c42d4477db70638977ff54"
+    },
+    {
+      "path": "../substitute-assignment-full/public-sitting-status.mjs?v=sitting-release-20261122",
+      "sha256": "d274af38c8ec86ea4e0dc3bf22f1c30a7be4126db771f7c7e88b012c727b9ec0"
+    },
+    {
       "path": "../substitute-k67-shared/semantic-layout.css?v=20260922-reset-layout",
       "sha256": "588ef64059cd30c77c3da4c0965ee9864a4f18ce874137203fc300890337c4db"
     },
@@ -151,12 +167,12 @@
       "sha256": "45160e724036d14f16c2f40304b88b14e4fa654db956e86d1d319b9edb3d191a"
     },
     {
-      "path": "../substitute-skill-shared/class-directory.mjs",
-      "sha256": "b2dbf79704b9aa4945097104e024443312be6ead613bcae73f57bcd1da910cdf"
+      "path": "../substitute-skill-shared/class-directory.mjs?v=roster-picker-20261122",
+      "sha256": "2f94c8379b7c306a96c3415634a249192a103426c53068e3383e15a9e99bc91a"
     },
     {
-      "path": "../substitute-skill-shared/identity-selection.mjs",
-      "sha256": "28cbe583dbb66f2a66042e1565b2f221146c891f041b2cf83f1279dbfd71de57"
+      "path": "../substitute-skill-shared/identity-selection.mjs?v=roster-picker-20261122",
+      "sha256": "680520721e87430e77a3a5e798f6bad7160dbb0438d8ec48c460722ddf4a33af"
     },
     {
       "path": "../substitute-skill-shared/legacy-demo-offline.mjs",
@@ -183,12 +199,12 @@
       "sha256": "cd79a1720b290f7818edb4a640854f9b96e8e60dbef7fefd9ce29d87824985af"
     },
     {
-      "path": "../substitute-skill-shared/objective-controller-listening-report-v1.mjs?v=20261118-parity12-v1",
-      "sha256": "0b74ec04a423677b5331a67b6c85c47fd895b64aff9741d900fec64631249d6a"
+      "path": "../substitute-skill-shared/objective-controller-listening-report-v1.mjs?v=roster-picker-20261122",
+      "sha256": "912a36e2d386ec571434e9332e587c8063cdd49268275fcca976af32ec2129c7"
     },
     {
-      "path": "../substitute-skill-shared/objective-listening-report-v1.mjs?v=20261118-parity12-v1",
-      "sha256": "eecc2dcbf695a6796d5473519fd3e51d198afb8108156b5427639ab27484ac7a"
+      "path": "../substitute-skill-shared/objective-listening-report-v1.mjs?v=roster-picker-20261122",
+      "sha256": "a7a11a39c4f292b888b7237125515ca233f083bf0bb0ac77f8bd48cdd2590784"
     },
     {
       "path": "../substitute-skill-shared/offline-worker.js",
@@ -244,7 +260,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "f61aeedf88ffdf8c0c298d6d4d206f15a5ab07b5c568b1ba9a2c42e36a2fd66e"
+      "sha256": "df407a61f6fe6d814ec80a51fdc6be7012ae9913883c21b9b50cb0673a40cc03"
     },
     {
       "path": "sw.js",

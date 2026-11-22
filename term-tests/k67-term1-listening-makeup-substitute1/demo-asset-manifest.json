@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-1-k67-listening-makeup",
-  "build": "issue611-f5f9384e8ce42177",
+  "build": "issue611-59b82c826b79e13b",
   "scopePath": "/term-tests/k67-term1-listening-makeup-substitute1/",
   "assets": [
     {
@@ -48,16 +48,16 @@
       "sha256": "123ba2486940da3496d2dfa7a5f0ee40205eb383b19d6641a770f655519f2f3a"
     },
     {
-      "path": "../../shared/master170/assets/izone-logo-color.png",
-      "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
-    },
-    {
       "path": "../../shared/master170/assets/SourceSans3-Italic-Variable.woff2",
       "sha256": "2cac627e742dec5b6fa73a0ad243a97e189c362ea11ae85c22b2e52b214d00a3"
     },
     {
       "path": "../../shared/master170/assets/SourceSans3-Variable.woff2",
       "sha256": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8"
+    },
+    {
+      "path": "../../shared/master170/assets/izone-logo-color.png",
+      "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
     },
     {
       "path": "../../shared/master170/icons.svg?v=20261028-master11",
@@ -200,6 +200,22 @@
       "sha256": "db7ca659a6e847cd1f23451cfe68ea6603367fe1ec378b649d733d92ac817234"
     },
     {
+      "path": "../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122",
+      "sha256": "cfab1d2998a5543b9adbc6f0a6cd4bca9c8cfbdec1f2521e33f9e321f9143d11"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-catalog.mjs",
+      "sha256": "b7f5016b6b9c21414de6b08d60a3eef8b4f0c1d4e2c7a0d42e0ee5449b882a56"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122",
+      "sha256": "d54091d35143d792591ccb900885d4a9835e14e581c42d4477db70638977ff54"
+    },
+    {
+      "path": "../substitute-assignment-full/public-sitting-status.mjs?v=sitting-release-20261122",
+      "sha256": "d274af38c8ec86ea4e0dc3bf22f1c30a7be4126db771f7c7e88b012c727b9ec0"
+    },
+    {
       "path": "../substitute-k67-shared/semantic-layout.css?v=20260922-reset-layout",
       "sha256": "588ef64059cd30c77c3da4c0965ee9864a4f18ce874137203fc300890337c4db"
     },
@@ -257,15 +273,19 @@
     },
     {
       "path": "../substitute-skill-shared/class-directory.mjs",
-      "sha256": "b2dbf79704b9aa4945097104e024443312be6ead613bcae73f57bcd1da910cdf"
+      "sha256": "2f94c8379b7c306a96c3415634a249192a103426c53068e3383e15a9e99bc91a"
     },
     {
-      "path": "../substitute-skill-shared/identity-selection.mjs",
-      "sha256": "28cbe583dbb66f2a66042e1565b2f221146c891f041b2cf83f1279dbfd71de57"
+      "path": "../substitute-skill-shared/class-directory.mjs?v=roster-picker-20261122",
+      "sha256": "2f94c8379b7c306a96c3415634a249192a103426c53068e3383e15a9e99bc91a"
     },
     {
-      "path": "../substitute-skill-shared/legacy-demo-entry.mjs",
-      "sha256": "7da084a1683f112699bf0db926a91768a431d9b7b12bc8246876dff5d4bc72b3"
+      "path": "../substitute-skill-shared/identity-selection.mjs?v=roster-picker-20261122",
+      "sha256": "680520721e87430e77a3a5e798f6bad7160dbb0438d8ec48c460722ddf4a33af"
+    },
+    {
+      "path": "../substitute-skill-shared/legacy-demo-entry.mjs?v=roster-picker-20261122",
+      "sha256": "a7fd5245bf0ced051795ddc87eeb0e40f786030dd53fd9be4382cefd8723819e"
     },
     {
       "path": "../substitute-skill-shared/legacy-demo-offline.mjs",
@@ -304,12 +324,12 @@
       "sha256": "cd79a1720b290f7818edb4a640854f9b96e8e60dbef7fefd9ce29d87824985af"
     },
     {
-      "path": "../substitute-skill-shared/objective-controller-listening-report-v1.mjs?v=20261118-parity12-v1",
-      "sha256": "0b74ec04a423677b5331a67b6c85c47fd895b64aff9741d900fec64631249d6a"
+      "path": "../substitute-skill-shared/objective-controller-listening-report-v1.mjs?v=roster-picker-20261122",
+      "sha256": "912a36e2d386ec571434e9332e587c8063cdd49268275fcca976af32ec2129c7"
     },
     {
-      "path": "../substitute-skill-shared/objective-controller.mjs?v=20261118-parity12-v1",
-      "sha256": "66124df1f54672133658ea88309e6cdb2fd7cc76c62da077c28a887b544164a7"
+      "path": "../substitute-skill-shared/objective-controller.mjs?v=roster-picker-20261122",
+      "sha256": "4ee1b19dc986d17f75ab0b9af0a782fa9f1bfcfeb076cf25c3b45b055e0897b7"
     },
     {
       "path": "../substitute-skill-shared/offline.mjs",
@@ -365,19 +385,19 @@
     },
     {
       "path": "./",
-      "sha256": "e924535e44ace85ede85d7c3595c34cb44751eb08f2737561c99018abd4fcce4"
+      "sha256": "acfa9ecfc67c4e356fe3805d716f9002c16372b1babaa89fbca52cabdc88305d"
     },
     {
       "path": "app-listening-report-v1.mjs?v=20261116-listening-report-v1",
-      "sha256": "013c620f34e63082e27504efbb0758a276ef92118128029fb63c8df2d5f2208b"
+      "sha256": "092bc30cef986666a8dce771ba89ea1637cdbb3991333214a8abfafc26a7ddf1"
     },
     {
       "path": "audio-status-v1.mjs?v=20261111-audio-status-v1",
       "sha256": "3e5ee8b44d9a3070bddf24bcdac8c5063d1bc30346f4a6427e0dc37ace610c61"
     },
     {
-      "path": "boot-listening-report-v1.js?v=20261116-listening-report-v1",
-      "sha256": "30cf1b2b38bcfbce30888e9d44baba434ca3aa20653de2a7858c43fa94a2158e"
+      "path": "boot-listening-report-v1.js?v=roster-picker-20261122",
+      "sha256": "9b25a5171cabe640885830c97cbfddf616ecbcfd6bbc1db84cfb9356feda426a"
     },
     {
       "path": "config.mjs",
@@ -390,6 +410,10 @@
     {
       "path": "config.mjs?v=20261112-submission-reconciliation",
       "sha256": "408205a91042b1d3502502f9608b31d04d59ceec8f79209ade889109dc5e2253"
+    },
+    {
+      "path": "index.html",
+      "sha256": "acfa9ecfc67c4e356fe3805d716f9002c16372b1babaa89fbca52cabdc88305d"
     },
     {
       "path": "offline-sw-listening-report-v1.js",
@@ -409,7 +433,7 @@
     },
     {
       "path": "telemetry.mjs?v=20261112-submission-reconciliation",
-      "sha256": "ab969d07f262fcafbd7df97e0341ee6224bb3aa19f696d036d78a14cd7d62fe1"
+      "sha256": "7f97a7b71d3bf8944414cd8aaf85849bd20aa8c400c9b765b70301e7797c1ec4"
     }
   ]
 }
