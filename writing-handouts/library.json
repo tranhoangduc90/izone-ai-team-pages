@@ -15,7 +15,8 @@
       "CS.221224",
       "CS.171124",
       "CS.070724",
-      "CS.280924"
+      "CS.280924",
+      "CS2.100825"
     ]
   },
   "handouts": [
@@ -41,7 +42,8 @@
         "CS.221224",
         "CS.171124",
         "CS.070724",
-        "CS.280924"
+        "CS.280924",
+        "CS2.100825"
       ]
     },
     {
@@ -65,7 +67,8 @@
         "CS.221224",
         "CS.171124",
         "CS.070724",
-        "CS.280924"
+        "CS.280924",
+        "CS2.100825"
       ],
       "dashboardPath": "../sw-task2-writing/teacher.html"
     },
@@ -90,7 +93,8 @@
         "CS.221224",
         "CS.171124",
         "CS.070724",
-        "CS.280924"
+        "CS.280924",
+        "CS2.100825"
       ],
       "dashboardPath": "../sw-task2-writing/teacher.html"
     },
@@ -115,7 +119,8 @@
         "CS.221224",
         "CS.171124",
         "CS.070724",
-        "CS.280924"
+        "CS.280924",
+        "CS2.100825"
       ],
       "dashboardPath": "../sw-task2-writing/teacher.html"
     },
@@ -129,9 +134,19 @@
       "statement": "The bar chart below shows the percentage of Australian men and women in different age groups who did regular physical activity in 2010.",
       "studentPath": "./index.html",
       "classes": [
-        "CS.070626",
+        "CS.181026",
         "CS.160826",
-        "CS.181026"
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924",
+        "CS2.100825"
       ]
     },
     {
@@ -144,9 +159,19 @@
       "statement": "The table below shows employment patterns for males and females in New Zealand in 1993 and 2003.",
       "studentPath": "./index.html",
       "classes": [
-        "CS.070626",
+        "CS.181026",
         "CS.160826",
-        "CS.181026"
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924",
+        "CS2.100825"
       ]
     },
     {
@@ -159,9 +184,19 @@
       "statement": "The pie charts show the proportion of users across different age groups on three apps:Twitter, Facebook and YouTube.",
       "studentPath": "./index.html",
       "classes": [
-        "CS.070626",
+        "CS.181026",
         "CS.160826",
-        "CS.181026"
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924",
+        "CS2.100825"
       ]
     },
     {
@@ -174,9 +209,19 @@
       "statement": "The table below gives information on the number of Australian people who visited the seven most popular destinations in 1999 and 2009.",
       "studentPath": "./index.html",
       "classes": [
-        "CS.070626",
+        "CS.181026",
         "CS.160826",
-        "CS.181026"
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924",
+        "CS2.100825"
       ]
     },
     {
@@ -200,7 +245,8 @@
         "CS.221224",
         "CS.171124",
         "CS.070724",
-        "CS.280924"
+        "CS.280924",
+        "CS2.100825"
       ],
       "dashboardPath": "../sw-task2-writing/teacher.html"
     },
@@ -225,7 +271,8 @@
         "CS.221224",
         "CS.171124",
         "CS.070724",
-        "CS.280924"
+        "CS.280924",
+        "CS2.100825"
       ],
       "dashboardPath": "../sw-task2-writing/teacher.html"
     },
@@ -250,7 +297,8 @@
         "CS.221224",
         "CS.171124",
         "CS.070724",
-        "CS.280924"
+        "CS.280924",
+        "CS2.100825"
       ],
       "dashboardPath": "../sw-task2-writing/teacher.html"
     },
@@ -275,7 +323,8 @@
         "CS.221224",
         "CS.171124",
         "CS.070724",
-        "CS.280924"
+        "CS.280924",
+        "CS2.100825"
       ],
       "dashboardPath": "../sw-task2-writing/teacher.html"
     },
@@ -289,9 +338,19 @@
       "statement": "The chart below shows the average earnings of people in various areas of work in one country in 2000 and 2010. The table shows the average salary for all sectors in the same years. Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
       "studentPath": "./index.html",
       "classes": [
-        "CS.070626",
+        "CS.181026",
         "CS.160826",
-        "CS.181026"
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924",
+        "CS2.100825"
       ]
     },
     {
@@ -304,9 +363,19 @@
       "statement": "The line graph below illustrates the proportion of mobile phone sales by three manufacturers (Motorola, Nokia and Sony Ericsson) between 1994 and 2004. Summarise the information by selecting and reporting the main features and make comparisons where relevant.",
       "studentPath": "./index.html",
       "classes": [
-        "CS.070626",
+        "CS.181026",
         "CS.160826",
-        "CS.181026"
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924",
+        "CS2.100825"
       ]
     }
   ]

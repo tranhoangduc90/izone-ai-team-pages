@@ -558,7 +558,7 @@ async function refresh() {
     renderReconciliation();
     const rosterButton = $("sw-roster-open");
     const selected = rosterTarget();
-    rosterButton.hidden = !result.data.permissions?.swClassRoster || !selected.classRef || !selected.classLabel.startsWith("CS.");
+    rosterButton.hidden = !result.data.permissions?.swClassRoster || !selected.classRef || !/^CS[0-9]*[.]/u.test(selected.classLabel);
     rosterButton.textContent = result.data.permissions?.swClassRosterAdds ? "Thêm học viên" : "Học viên đã thêm";
     $("teacher-login").hidden = true;authView.ready();
     $("teacher-dashboard").hidden = false;
