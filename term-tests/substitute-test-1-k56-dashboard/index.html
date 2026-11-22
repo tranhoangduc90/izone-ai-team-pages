@@ -16,7 +16,7 @@
   <header class="bar">
     <div class="wrap bar-inner">
       <img class="brand" src="../substitute-shared/izone-logo-color.png" width="114" height="42" alt="IZONE · IELTS Chiến lược">
-      <div class="header-actions"><button id="listening-assignment-open" class="teacher" type="button">Giao bài</button><button id="catalog-open" class="teacher" type="button">Link của 12 bài</button><button id="teacher" class="teacher" type="button">
+      <div class="header-actions"><button id="listening-assignment-open" class="teacher" type="button">Mở và đóng ca thi</button><button id="catalog-open" class="teacher" type="button">Link của 12 bài</button><button id="teacher" class="teacher" type="button">
         <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
         Khu vực giảng viên
       </button></div>
@@ -85,7 +85,7 @@
     </div>
     <section id="teacher-auth-slot"><div id="auth-panel"><p id="auth-status" class="description" role="status">Đang khôi phục đăng nhập giảng viên…</p><div id="google" hidden></div><button id="retry-auth" class="button secondary" type="button" hidden>Thử xác minh lại</button></div></section>
     <p id="session-status" class="description"></p><button id="logout" class="button secondary" type="button" hidden>Đăng xuất giảng viên</button>
-    <p class="description"><button id="teacher-assignment-open" class="button primary" type="button">Giao bài</button></p>
+    <p class="description"><button id="teacher-assignment-open" class="button primary" type="button">Mở và đóng ca thi</button></p>
     <p id="teacher-assignment-status" class="description" role="status"></p>
     <p class="description">Lấy link thi bù ngay trên trang này. Các đường xem kết quả được giữ bên dưới.</p>
     <div class="result-links">
@@ -108,7 +108,7 @@
   <dialog id="listening-assignment" aria-labelledby="listening-assignment-title">
     <header class="dialog-head assignment-header">
       <div>
-        <h2 id="listening-assignment-title" tabindex="-1" autofocus>Giao bài</h2>
+        <h2 id="listening-assignment-title" tabindex="-1" autofocus>Mở và đóng ca thi</h2>
         <p class="assignment-subtitle">Substitute K56/K67</p>
       </div>
       <button id="listening-assignment-close" class="button secondary close" type="button" aria-label="Đóng hộp thoại">×</button>
@@ -122,6 +122,6 @@
       <a id="listening-assignment-link" class="button secondary" hidden target="_blank" rel="noopener noreferrer">Mở link chung <span aria-hidden="true">↗</span><span class="sr-only"> trong tab mới</span></a>
     </footer>
   </dialog>
-  <script type="module" src="../substitute-assignment-full/pages-dashboard.mjs?v=sitting-release-20261122"></script>
+  <script type="module" src="../substitute-assignment-full/pages-dashboard.mjs?v=entry-ui-20261122"></script>
 </body>
 </html>

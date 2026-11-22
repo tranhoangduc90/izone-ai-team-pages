@@ -1230,8 +1230,17 @@
     }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || 'Không tải được danh sách lớp từ Portal.');
-    return Array.isArray(data.students) ? data.students : [];
+    if (!Array.isArray(data.students)) throw new Error('ROSTER_RESPONSE_INVALID');
+    return data.students;
   }
+
+  const retryRoster = document.createElement('button');
+  retryRoster.type = 'button';
+  retryRoster.className = 'button secondary';
+  retryRoster.textContent = 'Thử lại tải danh sách';
+  retryRoster.hidden = true;
+  elements.bootstrapStudent.after(retryRoster);
+  retryRoster.addEventListener('click',()=>elements.bootstrapClass.dispatchEvent(new Event('change')));
 
   elements.bootstrapClass.addEventListener('change', async () => {
     if (preparing || state.listeningStartedAt || state.attemptToken) {
@@ -1245,6 +1254,11 @@
     if (classCode) query.set('class', classCode);
     else query.delete('class');
     try{history.replaceState(history.state, '', `${location.pathname}?${query.toString()}${location.hash}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
+    retryRoster.hidden = true;
+    showNotice('');
+    elements.bootstrapStudent.replaceChildren(new Option(selectedClass ? 'Đang tải danh sách…' : 'Chọn lớp trước', ''));
+    elements.bootstrapStudent.disabled = true;
+    let rosterFailed = false;
     try {
       const loaded = await loadDemoRoster(selectedClass);
       if (generation !== classLoadGeneration) return;
@@ -1252,20 +1266,24 @@
     } catch (error) {
       if (generation !== classLoadGeneration) return;
       roster = [];
-      showNotice(`Không tải được danh sách lớp: ${error.message}`, true);
+      rosterFailed = true;
+      retryRoster.hidden = false;
+      showNotice('Chưa tải được danh sách học viên. Bấm Thử lại tải danh sách.', true);
     }
-    const options = [new Option(selectedClass ? 'Nhấn để chọn đúng tên' : 'Chọn lớp trước', '')];
+    const options = [new Option(rosterFailed ? 'Chưa tải được danh sách học viên' : !selectedClass ? 'Chọn lớp trước' : roster.length ? 'Nhấn để chọn đúng tên' : 'Lớp này chưa có học viên trong danh sách', '')];
     for (const student of roster) options.push(new Option(student.name, student.ref));
     elements.bootstrapStudent.replaceChildren(...options);
-    elements.bootstrapStudent.disabled = !selectedClass;
+    elements.bootstrapStudent.disabled = rosterFailed || roster.length === 0;
     elements.bootstrapStudent.value = '';
     state = { audioVolume: state.audioVolume };
     saveState({ classCode: selectedClass?.code || '', identityConfirmed: false });
-    elements.bootstrapDownloadStatus.textContent = selectedClass
-      ? 'Hãy chọn đúng họ và tên của bạn trong lớp này.'
-      : 'Hãy chọn lớp trước khi chọn học viên.';
-    elements.bootstrapDownloadStep.dataset.state = selectedClass ? 'active' : 'locked';
-    if (selectedClass) await selectRememberedFromCurrentRoster();
+    elements.bootstrapDownloadStatus.textContent = rosterFailed
+      ? 'Bấm Thử lại tải danh sách học viên.'
+      : !selectedClass ? 'Hãy chọn lớp trước khi chọn học viên.'
+      : roster.length ? 'Hãy chọn đúng họ và tên của bạn trong lớp này.'
+      : 'Lớp này chưa có học viên trong danh sách.';
+    elements.bootstrapDownloadStep.dataset.state = roster.length ? 'active' : 'locked';
+    if (roster.length) await selectRememberedFromCurrentRoster();
   });
   elements.bootstrapStudent.addEventListener('change', () => {
     if (preparing || state.listeningStartedAt || state.attemptToken) {
