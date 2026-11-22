@@ -5,6 +5,7 @@
  * Khi lỗi: Node báo đúng assertion hoặc lỗi trình duyệt; không gọi API production.
  */
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -35,10 +36,16 @@ test('các bài test có đủ computer-based, answer sheet và Listening audio'
   assert.match(html, /kiểm tra biên nhận.*Substitute Test sau ca/);
   assert.doesNotMatch(html, /Audio Backup|id="backupAudio"|Answer Sheet dự phòng/);
   assert.match(html, /accounts\.google\.com/);
-  assert.match(html, /type="module" src="shared\/landing\.js/);
+  assert.match(html, /type="module" src="shared\/landing-incident-guidance-v1\.js"/);
   assert.match(styles, /\.landing-actions \.button \{[^}]*min-height: 62px/);
   assert.match(styles, /\.button-audio \{[^}]*grid-column: 1 \/ -1/);
   assert.match(styles, /#teacherDashboard \{ grid-column: 1 \/ -1; \}/);
+});
+
+test('script K67 cũ giữ hash mà worker ngoại tuyến K56 yêu cầu', async () => {
+  const legacy = await readFile(join(repoRoot, 'term-tests/shared/landing.js'), 'utf8');
+  const digest = createHash('sha256').update(legacy.replace(/\r\n/g, '\n')).digest('hex');
+  assert.equal(digest, 'd0ee67d7f89e4e882c96236e0e378b9cf6fb06e54d4eb9442032f661a18c78f1');
 });
 
 test('ba trang Listening audio dùng đúng tài sản K67 và cho phát bất cứ giờ nào', async () => {

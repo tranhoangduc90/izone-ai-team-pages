@@ -27,7 +27,7 @@ try {
     for (const [file, url, type] of [
       ['index.html', base, 'text/html'],
       ['k67-landing.css', base + 'k67-landing.css?*', 'text/css'],
-      ['shared/landing.js', base + 'shared/landing.js?*', 'text/javascript']
+      ['shared/landing-incident-guidance-v1.js', base + 'shared/landing-incident-guidance-v1.js', 'text/javascript']
     ]) {
       const body = await readFile(new URL('../term-tests/' + file, import.meta.url), 'utf8');
       await context.route(url, route => route.fulfill({ contentType: type + '; charset=utf-8', body }));
