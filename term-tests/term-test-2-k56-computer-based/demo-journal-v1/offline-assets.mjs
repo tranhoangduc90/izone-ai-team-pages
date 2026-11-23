@@ -405,7 +405,7 @@ export const ASSET_HASHES={
   "content.js": "61653a59ae0b7427f5de300cbbc6ceb0121a668664811436802cdfa89a370aa5",
   "demo-journal-v1/index.html": "ac3bc89d1196a3195e7f49520625bad51630921c63288ea5c36a0143ba1df02c",
   "demo-journal-v1/listening-preparation.mjs": "3b62e3e5c6065be16fb3402700f85499d2dccfc1fa9c5517826e8f8ac5ee7ded",
-  "demo-journal-v1/offline-worker.js": "e26a2dd234e1b3a03bee540759735ec69102c97215bb4f60c2eb4023f1c2087b",
+  "demo-journal-v1/offline-worker.js": "1ea2e8b8d7049cee940ff3e7cccf886f3d961b23d6c09ae7cadb3d3781f9dc20",
   "demo-journal-v1/offline.mjs": "7257f9988afd4a833432525cac11514d11ee445dfe6540856f93ce1e607a11fb",
   "exam.css": "b89325ce97e1efef761f3f8996aecef28a35b02cef20ac1a24f6521d1ada3012",
   "index-listening-first-frame-v1.html": "bf6580de729156a788d30680b47ad220ee7c55255a0de30d4dfb2ead24d9ac10",
@@ -440,4 +440,4 @@ export const ASSET_HASHES={
   "worker-listening-report-v3.mjs": "2b945e08a2e5b9cca8488bc854481a963675a2e9d1fc770e5740df3c3cf1d20b",
   "worker-sso-repair-v1.mjs": "f519a4240a721cb354f1e2c0eea6faa7a989f14c8072be55d1f89da5500d29ce"
 };
-export const ASSET_BUILD_ID="4a6679676df5d7d22ae4fec082b5ccd1a4aa66c0b4d205bbdd88fc1659229b93";
+export const ASSET_BUILD_ID="5115112d9e832965111b77c0c8a38216d1ed08a4377a3fff9c983a30746a4930";

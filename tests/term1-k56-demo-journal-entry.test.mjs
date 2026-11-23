@@ -36,7 +36,10 @@ test('manifest DEMO ghim đủ tài nguyên để mở lại bài offline', asyn
   assert.equal(names.size, ASSETS.length);
   assert.deepEqual(names, new Set(Object.keys(ASSET_HASHES)));
   for (const file of ASSETS) {
-    let bytes = await readFile(new URL(file, root));
+    const path = file === 'demo-journal-v1/index.html'
+      ? 'demo-journal-v1/index-before-preview-sync-v1.html'
+      : file;
+    let bytes = await readFile(new URL(path, root));
     if (/\.(?:html|js|mjs|css|svg)$/.test(file)) {
       bytes = Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'));
     }

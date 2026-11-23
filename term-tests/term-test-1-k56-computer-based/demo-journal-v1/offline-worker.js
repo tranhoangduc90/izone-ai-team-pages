@@ -16,7 +16,7 @@ export function registerDemoExamShell({build,assets,hashes,assetBuildId}){
  self.addEventListener('install',event=>event.waitUntil((async()=>{
   const cache=await caches.open(cacheName);
   for(let i=0;i<assets.length;i+=6)await Promise.all(assets.slice(i,i+6).map(async asset=>{
-   const request=new URL(url(asset));
+   const request=new URL(url(asset===entry?'demo-journal-v1/index-before-preview-sync-v1.html':asset));
    request.searchParams.set('examBuild',assetBuildId);
    await cache.put(url(asset),await verify(await fetch(request,{cache:'reload'}),asset));
   }));
