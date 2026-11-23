@@ -66,3 +66,9 @@ body.reading-skills{background:#f5f6f8;color:#202b3b;overflow:hidden}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 @media(max-width:800px),(max-width:1000px) and (max-height:500px){.header-notes{display:block;font-size:11px;margin-left:auto}.app-header .quiet{margin-left:0}.app-header #teacher{margin-left:0}.product-name{margin-right:auto}.app-header{gap:12px}}
+@media(max-width:600px){
+ .study-footer>.homework-submit-progress{grid-column:1/-1}
+ .homework-submit-progress .progress-label{font-size:13px}
+ body[data-submit-progress][data-homework-layout="compact"] .study-footer:has(>.homework-submit-progress:not([hidden]))>.footer-tools{grid-row:2}
+ body[data-submit-progress][data-homework-layout="compact"] .study-footer:has(>.homework-submit-progress:not([hidden]))>.footer-status{grid-column:1}
+}

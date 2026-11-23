@@ -13,7 +13,9 @@
   }
   document.querySelectorAll('[data-action="notes"],[data-action="review"]').forEach(el=>el.disabled=locked);
   const jump=document.querySelector('#practice-gate-jump');if(jump)jump.onclick=()=>{card.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});document.querySelector('.practice-open')?.focus({preventScroll:true});};
-  if(wasLocked&&!locked&&!readonlyView)activeClient?.flush?.().catch(()=>{});wasLocked=locked;
+  if(wasLocked&&!locked&&!readonlyView)activeClient?.flush?.().catch(()=>{});
+  if(gate&&wasLocked!==locked)gate.dispatchEvent(new Event('reading67:practice-lock',{bubbles:true}));
+  wasLocked=locked;
  }
  async function refresh(client,current,attemptId){clearTimeout(timer);try{const next=await client.practice(attemptId);if(current!==generation)return;value=next;const input=document.querySelector('#practice-share');if(input&&!localUrl&&next.url)input.value=next.url;paint();if(['queued','processing'].includes(next.status))timer=setTimeout(()=>refresh(client,current,attemptId),4000);}catch{if(current!==generation)return;value={status:'unavailable',message:'Chưa đọc được trạng thái link; bài đang viết vẫn được giữ.'};paint();}}
  function bind({content,teacher,client,attemptId,readonly=false}){
