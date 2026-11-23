@@ -435,7 +435,7 @@ export const ASSET_HASHES={
   "bootstrap-term2-demo-journal-v1-preview-fast-pilot-v1.js": "96a4bba0b75bd8589a2218dde9cbe2a1dbefe2f9da87879e00dbb6d7003d869f",
   "bootstrap-term2-demo-journal-v1-preview-ready-v1.js": "725976e0fef6bf9fc609686fb53ed6ef6dd814ff37bdbc9f69818c09227119b9",
   "bootstrap-term2-demo-journal-v1-preview-sync-v1.js": "8e7d4ba8152f3d275673a22151d8c41b6f391c4bd82d9145be212a835c7dd010",
-  "bootstrap-term2-demo-journal-v1-preview-verified-v1-protected-listening-v1.js": "17f0c9d62cef7067fdfaf4eaa694c24a2298570278247a8629a60b8118469cea",
+  "bootstrap-term2-demo-journal-v1-preview-verified-v1-protected-listening-v1.js": "2612f8b915a4b6b36705f1c27646109deb9271e1090ac7ae45443681c98e7daa",
   "bootstrap-term2-demo-journal-v1.js": "8b39c568a2bd5ad9a2be2d8c25a30c18855ecc932ba1b2808a6890eaa899f76c",
   "content.js": "61653a59ae0b7427f5de300cbbc6ceb0121a668664811436802cdfa89a370aa5",
   "demo-journal-v1/index-before-preview-sync-v1.html": "ac3bc89d1196a3195e7f49520625bad51630921c63288ea5c36a0143ba1df02c",
@@ -490,4 +490,4 @@ export const ASSET_HASHES={
   "worker-listening-report-v3.mjs": "2b945e08a2e5b9cca8488bc854481a963675a2e9d1fc770e5740df3c3cf1d20b",
   "worker-sso-repair-v1.mjs": "f519a4240a721cb354f1e2c0eea6faa7a989f14c8072be55d1f89da5500d29ce"
 };
-export const ASSET_BUILD_ID="1ca6eb3042d19f3288c4362fda0c2175790c5eaa459bc4eebf7e1791a326e94e";
+export const ASSET_BUILD_ID="1bbc36aa42f4a370cd95b98507207f51c3c9039f7ed9a0dc14aa0fcfd4025213";

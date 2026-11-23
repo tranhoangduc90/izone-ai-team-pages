@@ -13,7 +13,8 @@ const root=resolve(fileURLToPath(new URL('../',import.meta.url))),output=process
 const modules=process.env.CODEX_NODE_MODULES||resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
 const {chromium}=createRequire(pathToFileURL(resolve(modules,'playwright/package.json')))('playwright');
 const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.mp3':'audio/mpeg'};
-export async function fixture(mode,{profile,native,product=2,paper=false,demo=false,port=0,defaultAutoplay=false,headed=false}={}){
+export async function fixture(mode,{profile,native,product=2,paper=false,demo=false,port=0,defaultAutoplay=false,headed=false,
+ allowBackForwardCache=false}={}){
  await mkdir(output,{recursive:true});
  const controls={assetFailures:new Set(),assetOverrides:new Map(),realAudio:false,r2Audio:false,primaryAudioFail:false,audioCalls:[],apiDelayMs:0};
  const blockJournalAssets=process.env.K56_BLOCK_JOURNAL_ASSETS==='1';
@@ -28,6 +29,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
   try{let data=controls.assetOverrides.has(url.pathname)?Buffer.from(controls.assetOverrides.get(url.pathname)):await readFile(p);if(['.html','.js','.mjs','.css','.svg'].includes(extname(p)))data=Buffer.from(data.toString('utf8').replace(/\r\n/g,'\n'));res.writeHead(200,{'content-type':mime[extname(p)]||'application/octet-stream'});res.end(data);}catch{res.writeHead(404).end();}});
  await new Promise((ok,no)=>{server.once('error',no);server.listen(port,'127.0.0.1',ok);});const base=`http://127.0.0.1:${server.address().port}`;
  const launchOptions={channel:process.env.TERM2_BROWSER_CHANNEL||'msedge',headless:!headed,
+ ...(allowBackForwardCache?{ignoreDefaultArgs:['--disable-back-forward-cache']}:{}),
   args:defaultAutoplay?[]:['--autoplay-policy=no-user-gesture-required']},contextOptions={acceptDownloads:true,viewport:{width:1440,height:1000}};
  const profileDir=profile?resolve(output,profile):null;
  let browser,context,page;

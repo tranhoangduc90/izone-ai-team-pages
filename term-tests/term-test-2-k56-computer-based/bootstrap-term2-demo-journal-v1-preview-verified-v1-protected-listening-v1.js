@@ -1448,6 +1448,13 @@
     discardPreparedPlayer();
     revokePreview('pagehide');
   });
+  window.addEventListener('pageshow', event => {
+    if (!event.persisted || (!term2Offline?.active && !window.TERM_TEST_BOOTSTRAP)) return;
+    // The preserved document can still have an old owner or a detached player.
+    // Let the existing reload path recover the current attempt from durable state.
+    window.TERM_TEST_ALLOW_NAVIGATION = true;
+    window.location.reload();
+  });
   window.addEventListener('online', () => {
     if (window.TERM_TEST_BOOTSTRAP) return;
     if (encryptedAudio || preparing) return;

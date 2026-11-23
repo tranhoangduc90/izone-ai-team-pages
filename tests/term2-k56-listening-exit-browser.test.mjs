@@ -7,12 +7,38 @@ process.env.K56_FIXTURE_IMPORT_ONLY = '1';
 const {fixture, wait} = await import('./term2-offline-browser.mjs');
 const demo = process.env.TERM2_TEST_DEMO === '1';
 const headed = process.env.TERM2_TEST_HEADED === '1';
+const testBackForwardCache = process.env.TERM2_TEST_BFCACHE === '1';
 
 const guardRequested = page => page.evaluate(() => {
   const event = new Event('beforeunload', {cancelable: true});
   window.dispatchEvent(event);
   return event.defaultPrevented;
 });
+
+async function traceHistoryDocuments(page) {
+  const pageShows = [];
+  await page.exposeBinding('recordFixturePageShow', (_source, entry) => pageShows.push(entry));
+  await page.addInitScript(() => {
+    window.fixtureDocumentId = crypto.randomUUID();
+    addEventListener('pageshow', event => {
+      void window.recordFixturePageShow({documentId: window.fixtureDocumentId,
+        url: location.href, persisted: event.persisted}).catch(() => {});
+    });
+  });
+  return pageShows;
+}
+
+async function traverseAwayAndReturn(exam, previous, {offlineOnReturn = false} = {}) {
+  const {page} = exam;
+  const previousPrompts = exam.controls.beforeUnloadSpies.length;
+  exam.controls.beforeUnloadDecision = 'leave';
+  const prompt = page.waitForEvent('dialog', {predicate: value => value.type() === 'beforeunload', timeout: 8000});
+  await Promise.all([prompt, page.goBack({waitUntil: 'commit', timeout: 8000})]);
+  assert.equal(page.url(), previous);
+  if (offlineOnReturn) await exam.context.setOffline(true);
+  await page.goForward({waitUntil: 'commit', timeout: 8000});
+  return previousPrompts;
+}
 
 async function readPlayerJournal(path) {
   const deadline = Date.now() + 15000;
@@ -30,13 +56,13 @@ async function readPlayerJournal(path) {
   assert.fail(`Player cleanup or blocked callback absent from ${batches.length} sealed Collector fixture batches`);
 }
 
-async function startListening(exam, mode, answer, afterStart) {
+async function startListening(exam, mode, answer, afterStart, previousPage = 'about:blank') {
   const {page} = exam;
   exam.controls.r2Audio = true;
   exam.controls.listeningReportsEnabled = true;
   exam.controls.preparedOverride = {term2ParallelEntry: true};
   exam.controls.beforeUnloadSpies = [];
-  await page.goto('about:blank');
+  await page.goto(previousPage);
   await page.goto(exam.url);
   await page.locator(`#bootstrapStudent option[value="${exam.student}"]`).waitFor({state: 'attached'});
   await page.selectOption('#bootstrapStudent', exam.student);
@@ -615,7 +641,115 @@ for (const mode of ['read_first', 'lis_first']) {
       }
     });
   }
+  test(`Term 2 K56 checks back-forward traversal with browser caching allowed (${mode})`,
+    {timeout: 90000, skip: !testBackForwardCache}, async () => {
+    const exam = await fixture(mode, {product: 2, defaultAutoplay: true, allowBackForwardCache: true, demo});
+    const {page} = exam;
+    const answer = `Back-forward traversal draft (${mode})`;
+    exam.controls.assetOverrides.set('/fixture-previous.html', '<title>History fixture</title><p>Previous document</p>');
+    const previous = new URL('/fixture-previous.html', exam.url).href;
+    try {
+      const pageShows = await traceHistoryDocuments(page);
+      await startListening(exam, mode, answer, undefined, previous);
+      const initial = await page.evaluate(() => ({scope: window.K56_TERM2_OFFLINE.scope,
+        documentId: window.fixtureDocumentId}));
+      const offlineOnReturn = mode === 'read_first';
+      await traverseAwayAndReturn(exam, previous, {offlineOnReturn});
+      await page.getByRole('dialog', {name: 'Listening gián đoạn'}).waitFor({timeout: 8000});
+      const returned = await page.evaluate(expected => {
+        const runtime = window.K56_TERM2_OFFLINE;
+        return {documentId: window.fixtureDocumentId, scope: runtime.scope,
+          heldAudio: Boolean(runtime.player), activeController: Boolean(window.K56_LISTENING_AUDIO),
+          draftKept: Object.values(runtime.record.snapshot.drafts.listening).includes(expected),
+          interrupted: Boolean(runtime.record.sections.listening.interrupted),
+          next: runtime.sectionResponse().nextSection};
+      }, answer);
+      const {documentId, ...restored} = returned;
+      assert.notEqual(documentId, initial.documentId, 'The restored view must re-read the durable exam state');
+      assert.ok(pageShows.some(entry => entry.documentId === initial.documentId && entry.persisted), 'The browser did not exercise BFCache');
+      assert.deepEqual(restored, {scope: initial.scope, heldAudio: false, activeController: false,
+        draftKept: true, interrupted: true, next: mode === 'read_first' ? 'writing' : 'reading'});
+      assert.equal(exam.controls.beforeUnloadSpies.length, 1, 'Revalidation must not ask the learner to leave again');
+      if (offlineOnReturn) {
+        assert.equal(await page.evaluate(() => navigator.onLine), false);
+        await exam.context.setOffline(false);
+      }
+      await wait(page, () => window.K56_TERM2_OFFLINE.pending === 0, 'Restored interruption synchronized');
+      const interruptions = [...exam.receipts.values()].filter(row => row.kind === 'interrupt');
+      assert.equal(interruptions.length, 1);
+      assert.deepEqual(exam.errors, []);
+      if (process.env.TERM2_EVIDENCE) await writeFile(resolve(process.env.TERM2_EVIDENCE, `${mode}-history-restored.json`),
+        JSON.stringify({mode, pageShows, restoredPersistedDocument: true, revalidatedDocument: documentId,
+          draftKept: true, sameScope: true, heldAudio: false, offlineOnReturn, next: returned.next,
+          oneInterruptReceipt: true, prompts: 1}, null, 2));
+    } finally {
+      await exam.close();
+    }
+  });
 }
+
+test('Term 2 K56 revalidates active Reading and Writing after back-forward caching',
+  {timeout: 120000, skip: !testBackForwardCache}, async () => {
+  const exam = await fixture('read_first', {product: 2, defaultAutoplay: true, allowBackForwardCache: true, demo});
+  const {page} = exam;
+  const evidence = [];
+  exam.controls.r2Audio = true;
+  exam.controls.preparedOverride = {term2ParallelEntry: true};
+  exam.controls.beforeUnloadSpies = [];
+  exam.controls.assetOverrides.set('/fixture-previous.html', '<title>History fixture</title><p>Previous document</p>');
+  const previous = new URL('/fixture-previous.html', exam.url).href;
+  try {
+    const pageShows = await traceHistoryDocuments(page);
+    await page.goto(previous);
+    await page.goto(exam.url);
+    await page.locator(`#bootstrapStudent option[value="${exam.student}"]`).waitFor({state: 'attached'});
+    await page.selectOption('#bootstrapStudent', exam.student);
+    await page.click('#confirmIdentity');
+    await page.getByRole('button', {name: 'Bắt đầu Reading', exact: true}).click();
+
+    const checkSkill = async (skill, field) => {
+      const draft = `Back-forward cache ${skill} fixture draft`;
+      const snapshot = () => page.evaluate(section => {
+        const runtime = window.K56_TERM2_OFFLINE;
+        const {startedAt, deadlineAt} = runtime.record.sections[section];
+        return {scope: runtime.scope, startedAt, deadlineAt, documentId: window.fixtureDocumentId,
+          next: runtime.sectionResponse().nextSection};
+      }, skill);
+      await field.fill(draft);
+      const before = await snapshot();
+      assert.ok(before.startedAt && before.deadlineAt);
+      const previousPrompts = await traverseAwayAndReturn(exam, previous);
+      await field.waitFor();
+      await page.waitForFunction(id => window.fixtureDocumentId !== id && window.K56_TERM2_APP_READY, before.documentId);
+      const after = await snapshot();
+      assert.ok(pageShows.some(entry => entry.documentId === before.documentId && entry.persisted));
+      assert.notEqual(after.documentId, before.documentId);
+      assert.equal(after.next, skill);
+      assert.equal(after.startedAt, before.startedAt);
+      assert.equal(after.deadlineAt, before.deadlineAt);
+      assert.deepEqual(after.scope, before.scope);
+      assert.equal(await field.inputValue(), draft);
+      assert.equal(await guardRequested(page), true);
+      assert.equal(exam.controls.beforeUnloadSpies.length, previousPrompts + 1);
+      evidence.push({skill, sameScope: true, timerKept: true, draftKept: true, restoredPersistedDocument: true});
+    };
+
+    await checkSkill('reading', page.locator('#readingQuestions input[data-number]').first());
+    await page.click('#submitReading');
+    await page.click('#bootstrapPreview');
+    await page.click('#bootstrapStart');
+    await wait(page, () => window.K56_TERM2_OFFLINE?.player?.currentTime > 0.5, 'Listening playing before Writing');
+    await page.click('#submitListening');
+    await page.click('#startWriting');
+    await checkSkill('writing', page.locator('[data-writing-task="task1"]'));
+    assert.equal([...exam.receipts.values()].filter(row => row.kind === 'interrupt').length, 0);
+    assert.deepEqual(exam.errors, []);
+    if (process.env.TERM2_EVIDENCE) await writeFile(resolve(process.env.TERM2_EVIDENCE, 'timed-skills-history.json'),
+      JSON.stringify({demo, evidence}, null, 2));
+  } finally {
+    await exam.close();
+  }
+});
 
 test('Term 2 K56 scopes the leave guard to active exam skills', {timeout: 90000}, async () => {
   const exam = await fixture('read_first', {product: 2, defaultAutoplay: true});
