@@ -136,7 +136,8 @@ const targets = [
   ['term-test-1-computer-based', 'student-cache-v2'],
   ['term-test-2-computer-based', 'student-cache-v2'],
   ['term-test-1-k56-computer-based', 'demo-journal-v1'],
-  ['term-test-2-k56-computer-based', 'demo-journal-v1']
+  ['term-test-2-k56-computer-based', 'demo-journal-v1'],
+  ['mini-test-k56-computer-based', 'mini-student-cache-v2']
 ];
 for (const [route, kind] of targets) {
   test(route + ' / ' + kind + ' loads the same build online and offline', async () => {
@@ -145,11 +146,11 @@ for (const [route, kind] of targets) {
     const entry = demo ? kind + '/index' : 'index-' + kind;
     const manifest = demo ? kind + '/offline-assets' : 'offline-assets-' + kind;
     const published = new URL(demo ? kind + '/index.html' : 'index.html', base);
-    const pinned = entry + '-preview-sync-v1.html';
+    const pinned = entry + '-preview-ready-v1.html';
     const html = await text(published);
     assert.equal(html, await text(new URL(pinned, base)));
     assert.match(html, /src="\.\.\/shared\/cbt-audio-preview-sync-v1\.js"/);
-    const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(new URL(manifest + '-preview-sync-v1.mjs', base));
+    const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(new URL(manifest + '-preview-ready-v1.mjs', base));
     assert.deepEqual(new Set(ASSETS), new Set(Object.keys(ASSET_HASHES)));
     assert.equal(ASSET_BUILD_ID, sha(JSON.stringify(ASSET_HASHES)));
     for (const name of ASSETS) {
@@ -159,5 +160,101 @@ for (const [route, kind] of targets) {
     }
     assert.ok(ASSETS.includes('../' + helper));
     assert.ok(ASSETS.includes(pinned));
+    if (route === 'term-test-1-computer-based' || route === 'term-test-2-computer-based') {
+      const app = ASSETS.find(asset => /\.\.\/shared\/app-term.*-preview-ready-v1\.js$/.test(asset));
+      assert.ok(app, 'Include the app used after Reading');
+      const appScript = await text(new URL(app, base));
+      assert.match(appScript, /\{mountContinuityStart\}=await import\('..\/k67-shared\/offline-journey-ui-term2-audio-v2-preview-ready-v1\.mjs/);
+    }
   });
 }
+
+for (const [route, kind] of targets) {
+  test(route + ' / ' + kind + ' keeps preview locked until exam audio is ready', async () => {
+    const base = new URL(route + '/', root);
+    const html = await text(new URL(kind === 'demo-journal-v1' ? kind + '/index.html' : 'index.html', base));
+    const boot = html.match(/(?:src|data-bootstrap)="([^"?]*bootstrap-[^"?]*-preview-ready-v1\.js)\?/)[1];
+    const script = await text(new URL(boot, base));
+    const availability = script.match(/  function setStartAvailability\(\) \{[\s\S]*?\n  \}/)[0];
+    const offline = { record: { prepared: { offline: true } }, active: false };
+    const isK56 = route.includes('-k56-');
+    const player = { ready: false, canPlay: false };
+    const elements = {
+      bootstrapPreview: {}, bootstrapPreviewStep: {dataset: {state: 'active'}},
+      bootstrapPreviewStatus: {}, bootstrapStart: {}, bootstrapStartStatus: {}, bootstrapRetry: {hidden: true}
+    };
+    const scope = {
+      elements, preparing: true, previewObjectUrl: 'blob:preview', previewHeard: false,
+      state: {}, timerOnly: false, legacyListeningResume: false, encryptedAudio: {}, preparedPlayer: player,
+      term1Offline: offline, term2Offline: offline, miniOffline: offline,
+      miniJourney: {needsAudio: () => true, view: () => ({nextSection: 'listening'}), continuity: () => true},
+      journeyPlayer: player, window: {}
+    };
+    const update = runInNewContext(availability + '\nsetStartAvailability', scope);
+    const buttons = () => [elements.bootstrapPreview.disabled, elements.bootstrapStart.disabled];
+    update();
+    assert.deepEqual(buttons(), [true, true]);
+
+    scope.preparing = false;
+    update();
+    assert.deepEqual(buttons(), [true, true]);
+
+    player.ready = player.canPlay = true;
+    if (isK56) {
+      update();
+      assert.deepEqual(buttons(), [true, true], 'The offline package is still being prepared');
+      offline.active = true;
+    }
+    update();
+    assert.deepEqual(buttons(), [false, true]);
+    scope.previewHeard = true;
+    update();
+    assert.deepEqual(buttons(), [false, false]);
+  });
+}
+
+test('K67 Reading-first inline preview waits for its player and can retry preparation', async () => {
+  const ui = await text(new URL('k67-shared/offline-journey-ui-term2-audio-v2-preview-ready-v1.mjs', root));
+  const definition = ui.match(/export async function mountContinuityStart[\s\S]*?\n\}/)[0].replace('export ', '');
+  const node = () => ({
+    events: {}, setAttribute() {}, addEventListener(event, fn) { this.events[event] = fn; }
+  });
+  const preview = {...node(), paused: true, async play() { this.paused = false; }, pause() { this.paused = true; }};
+  const sample = node();
+  const status = node();
+  const start = node();
+  const controls = {audio: preview, button: sample, p: status};
+  const window = {IZONE_CBT_AUDIO_START_LABEL() {}};
+  let confirmPreview;
+  window.IZONE_CBT_AUDIO_WAIT_FOR_PREVIEW = (_preview, _start, confirm) => { confirmPreview = confirm; };
+  const mount = runInNewContext(definition + '\nmountContinuityStart', {
+    window, document: {createElement: type => controls[type]}
+  });
+  let attempts = 0;
+  let allowRetry;
+  const readyAfterRetry = new Promise(resolve => { allowRetry = resolve; });
+  const journey = {
+    async preparePlayer() {
+      attempts++;
+      return {url: 'blob:test', canPlay: true, ready: attempts === 1
+        ? Promise.reject(new Error('Audio decoder failed')) : readyAfterRetry};
+    }
+  };
+  await mount({host: {append() {}}, start, journey, volume: 1});
+  assert.equal(sample.textContent, 'Thử tải lại audio');
+  assert.equal(start.disabled, true);
+  const retrying = sample.events.click();
+  assert.equal(sample.disabled, true);
+  assert.equal(start.disabled, true);
+  allowRetry();
+  await retrying;
+  assert.equal(sample.textContent, 'Nghe thử');
+  assert.equal(sample.disabled, false);
+  assert.equal(start.disabled, true);
+
+  await sample.events.click();
+  assert.equal(start.disabled, true);
+  confirmPreview();
+  assert.equal(start.disabled, false);
+  assert.equal(preview.paused, true);
+});
