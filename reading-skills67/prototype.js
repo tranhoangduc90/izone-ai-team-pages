@@ -126,7 +126,12 @@ function autoGrow(input){input.style.height='auto';input.style.height=Math.max(i
 function updateProgress(){
   if(!content||!state)return;
   const count=completed();
-  const label=document.querySelector('#progress-label');if(label)label.textContent=`Đã điền ${count}/${totalTargets()} phần`;
+  const label=document.querySelector('#progress-label');
+  if(label){
+    const draftProgress=lessonRenderer()?.draftProgress;
+    const text=draftProgress&&writable()?draftProgress(count,totalTargets(),minimumRequired()):`Đã điền ${count}/${totalTargets()} phần`;
+    if(label.textContent!==text)label.textContent=text;
+  }
   const bar=document.querySelector('#progress-bar');if(bar)bar.style.width=(count/totalTargets()*100)+'%';
   const save=document.querySelector('#save-state');if(save)save.textContent=storageAvailable?(state.savedAt?`Đã lưu trên thiết bị · ${timeLabel(state.savedAt)}`:'Lưu tự động trên thiết bị'):'Chưa lưu được · Giữ trang đang mở';
   const grade=document.querySelector('#grade-button');if(grade)grade.setAttribute('aria-description',count<minimumRequired()?`Cần thêm ${minimumRequired()-count} phần để đủ điều kiện chấm`:`Đã đủ ${minimumRequired()} phần để chấm`);
