@@ -1,0 +1,5 @@
+.lesson-topic { margin-top: -.5rem; color: #425777; }
+.outline-summary h2 { margin: 0; }
+.outline-summary dl { margin: 1rem 0; }
+#completion { margin: 0; font-weight: 700; }
+.check-feedback { white-space: pre-wrap; overflow-wrap: anywhere; }
