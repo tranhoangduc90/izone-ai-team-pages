@@ -135,11 +135,13 @@ const targets = [
   ['term-test-2-k56-computer-based', 'student-cache-v2'],
   ['term-test-1-computer-based', 'student-cache-v2'],
   ['term-test-2-computer-based', 'student-cache-v2'],
-  ['term-test-1-k56-computer-based', 'demo-journal-v1'],
+  ['term-test-1-k56-computer-based', 'demo-journal-v1', 'verified'],
   ['term-test-2-k56-computer-based', 'demo-journal-v1', 'verified'],
-  ['mini-test-k56-computer-based', 'mini-student-cache-v2']
+  ['mini-test-k56-computer-based', 'mini-student-cache-v2'],
+  ['mini-test-lesson-5-computer-based', 'mini-student-cache-v3']
 ];
-for (const [route, kind, release = 'ready'] of targets) {
+for (const [route, kind, pinnedRelease] of targets) {
+  const release = pinnedRelease || (kind === 'demo-journal-v1' ? 'ready' : 'verified');
   test(route + ' / ' + kind + ' loads the same build online and offline', async () => {
     const base = new URL(route + '/', root);
     const demo = kind === 'demo-journal-v1';
@@ -160,18 +162,19 @@ for (const [route, kind, release = 'ready'] of targets) {
       assert.equal(sha(bytes), ASSET_HASHES[name], name);
     }
     assert.ok(ASSETS.includes('../' + previewHelper));
-    if (release === 'verified') assert.ok(ASSETS.includes(kind + '/offline-worker-preview-verified-v1.js'));
+    if (release === 'verified' && demo) assert.ok(ASSETS.includes(kind + '/offline-worker-preview-verified-v1.js'));
     assert.ok(ASSETS.includes(pinned));
     if (route === 'term-test-1-computer-based' || route === 'term-test-2-computer-based') {
-      const app = ASSETS.find(asset => /\.\.\/shared\/app-term.*-preview-ready-v1\.js$/.test(asset));
+      const app = ASSETS.find(asset => asset.startsWith('../shared/app-term') && asset.endsWith('-preview-' + release + '-v1.js'));
       assert.ok(app, 'Include the app used after Reading');
       const appScript = await text(new URL(app, base));
-      assert.match(appScript, /\{mountContinuityStart\}=await import\('..\/k67-shared\/offline-journey-ui-term2-audio-v2-preview-ready-v1\.mjs/);
+      assert.ok(appScript.includes("{mountContinuityStart}=await import('../k67-shared/offline-journey-ui-term2-audio-v2-preview-" + release + "-v1.mjs"));
     }
   });
 }
 
-for (const [route, kind, release = 'ready'] of targets) {
+for (const [route, kind, pinnedRelease] of targets) {
+  const release = pinnedRelease || (kind === 'demo-journal-v1' ? 'ready' : 'verified');
   test(route + ' / ' + kind + ' enforces preview and exam readiness', async () => {
     const base = new URL(route + '/', root);
     const html = await text(new URL(kind === 'demo-journal-v1' ? kind + '/index.html' : 'index.html', base));
@@ -183,15 +186,16 @@ for (const [route, kind, release = 'ready'] of targets) {
     const player = { ready: false, canPlay: false };
     const elements = {
       bootstrapPreview: {}, bootstrapPreviewStep: {dataset: {state: 'active'}},
-      bootstrapVolume: {}, bootstrapPreviewStatus: {}, bootstrapStart: {}, bootstrapStartStep: {dataset: {}},
+      bootstrapVolume: {}, bootstrapPreviewStatus: {}, bootstrapStart: {removeAttribute() {}, setAttribute() {}}, bootstrapStartStep: {dataset: {}},
       bootstrapStartStatus: {}, bootstrapRetry: {hidden: true}
     };
     const scope = {
       elements, preparing: true, previewObjectUrl: 'blob:preview', previewHeard: false,
-      sampleReady: false, sampleFailed: false, previewAudio: {paused: true},
+      sampleReady: false, sampleFailed: false, previewAudio: {paused: true, readyState: 0}, pendingListeningPreview: false,
       state: {}, timerOnly: false, legacyListeningResume: false, encryptedAudio: {}, preparedPlayer: player,
       term1Offline: offline, term2Offline: offline, miniOffline: offline,
-      miniJourney: {needsAudio: () => true, view: () => ({nextSection: 'listening'}), continuity: () => true},
+      miniJourney: {needsAudio: () => true, continuationConfirmation: () => null,
+        view: () => ({nextSection: 'listening', examMode: 'lis_first'}), continuity: () => true},
       journeyPlayer: player, window: {}
     };
     const update = runInNewContext(availability + '\nsetStartAvailability', scope);
@@ -201,7 +205,8 @@ for (const [route, kind, release = 'ready'] of targets) {
 
     const previewNeedsExam = release === 'ready';
     scope.sampleReady = true;
-    if (release === 'verified') {
+    scope.previewAudio.readyState = 3;
+    if (release === 'verified' && isK56) {
       scope.encryptedAudio = null;
       update();
       assert.deepEqual(buttons(), [true, true], 'Preview requires the full verified audio');
@@ -219,7 +224,7 @@ for (const [route, kind, release = 'ready'] of targets) {
       if (!previewNeedsExam) scope.previewHeard = true;
       update();
       assert.deepEqual(buttons(), [previewNeedsExam, true], 'The offline package is still being prepared');
-      if (release === 'verified') assert.match(elements.bootstrapStartStatus.textContent, /gói làm bài offline/);
+      if (release === 'verified') assert.match(elements.bootstrapStartStatus.textContent, /Đã nghe đủ 10 giây/);
       scope.previewHeard = false;
       offline.active = true;
     }
