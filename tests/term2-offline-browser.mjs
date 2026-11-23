@@ -44,6 +44,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
    controls.beforeUnloadSpies.push({message:dialog.message(),decision:controls.beforeUnloadDecision});
    return controls.beforeUnloadDecision==='stay'?dialog.dismiss():dialog.accept();
   }
+  if(dialog.type()==='confirm'&&controls.answerConfirmation)return controls.answerConfirmation(dialog);
   if(dialog.type()==='confirm'&&controls.dismissNextConfirmation){controls.dismissNextConfirmation=false;return dialog.dismiss();}
   return dialog.accept();
  }

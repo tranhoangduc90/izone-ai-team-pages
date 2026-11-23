@@ -426,7 +426,7 @@ export const ASSET_HASHES={
   "bootstrap-listening-report-v3.js": "9050d3cbaf362464ac9af0221b7ee5f36f04da23e9709afa125b6954ee606b4b",
   "bootstrap-log-renewal-student-cache-v2-preview-ready-v1.js": "4caa0475a964e832c78823614c1ed6c59516b4936c92bc012a3f4af244d9fc47",
   "bootstrap-log-renewal-student-cache-v2-preview-sync-v1.js": "18e91b6bf83c11b43c0554f399e65b1701d80251d8da1e8829cf5a6fc72effcb",
-  "bootstrap-log-renewal-student-cache-v2-preview-verified-v1-protected-listening-v1.js": "7388d6e0c69c0987ad796af30437d380b468224a002af267df93829dbc048d24",
+  "bootstrap-log-renewal-student-cache-v2-preview-verified-v1-protected-listening-v1.js": "16032a8a109d1a8b1920aaf8493728db08b95b139c4347f34c8b588bd4cf655f",
   "bootstrap-log-renewal-student-cache-v2.js": "186c3fef7af9474b356c7e9a3bc8707e068b968d82b089f64c59d78a1006e3ac",
   "bootstrap-sso-repair-v1-log-renewal-v1.js": "d8db5c815f39fd58a0abace94183132d4adcfd3a6ee00cff8e3f7ff52cdce594",
   "bootstrap-sso-repair-v1.js": "9b6fde847da6b255a7cb9f986279f7b81b3fe27485c9ce9794cb37e9535493ec",
@@ -476,4 +476,4 @@ export const ASSET_HASHES={
   "worker-listening-report-v3.mjs": "2b945e08a2e5b9cca8488bc854481a963675a2e9d1fc770e5740df3c3cf1d20b",
   "worker-sso-repair-v1.mjs": "f519a4240a721cb354f1e2c0eea6faa7a989f14c8072be55d1f89da5500d29ce"
 };
-export const ASSET_BUILD_ID="8a69f0d06e6f8797d92bb3917ac857a6c9aa92fc337deefcc7d257dc7c829b82";
+export const ASSET_BUILD_ID="21d1b9f612c819f60dded167d8176707f8ba6972d9335bde4bf03187ec45eaf3";

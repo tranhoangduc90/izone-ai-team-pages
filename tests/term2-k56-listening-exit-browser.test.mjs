@@ -8,6 +8,7 @@ const {fixture, wait} = await import('./term2-offline-browser.mjs');
 const demo = process.env.TERM2_TEST_DEMO === '1';
 const headed = process.env.TERM2_TEST_HEADED === '1';
 const testBackForwardCache = process.env.TERM2_TEST_BFCACHE === '1';
+const testAudioRaces = process.env.TERM2_TEST_AUDIO_RACES === '1';
 
 const guardRequested = page => page.evaluate(() => {
   const event = new Event('beforeunload', {cancelable: true});
@@ -475,6 +476,147 @@ for (const mode of ['read_first', 'lis_first']) {
       assert.ok(evidence.position > 1820);
       assert.equal(evidence.ended, true);
       if (process.env.TERM2_EVIDENCE) await writeFile(resolve(process.env.TERM2_EVIDENCE, `${mode}-near-eof.json`), JSON.stringify(evidence, null, 2));
+    } finally {
+      await exam.close();
+    }
+  });
+
+  for (const choice of ['cancel', 'confirm']) {
+    test(`Term 2 K56 settles Listening once when a ${choice} dialog crosses EOF (${mode})`,
+      {timeout: 90000, skip: !testAudioRaces}, async () => {
+      const exam = await fixture(mode, {product: 2, defaultAutoplay: true, demo});
+      const {page} = exam;
+      const answer = 'Preserved while EOF and early submission compete';
+      try {
+        await startListening(exam, mode, answer);
+        const audio = await page.evaluateHandle(() => window.K56_TERM2_OFFLINE.player);
+        let actualConfirmation;
+        exam.controls.answerConfirmation = async dialog => {
+          actualConfirmation = dialog.message();
+          // Keep the browser modal open long enough for the media pipeline to reach its natural end.
+          await new Promise(resolve => setTimeout(resolve, 1900));
+          await (choice === 'cancel' ? dialog.dismiss() : dialog.accept());
+        };
+        const before = await audio.evaluate(element => new Promise(resolve => {
+          element.addEventListener('seeked', () => resolve({position: element.currentTime, duration: element.duration}), {once: true});
+          element.currentTime = element.duration - 1.2;
+        }));
+        assert.ok(before.position < before.duration && before.duration - before.position < 1.3);
+        await page.click('#submitListening');
+        const evidence = await verifyListeningSeal(exam, mode, audio, answer);
+        assert.match(actualConfirmation, /Listening/);
+        assert.equal(exam.controls.beforeUnloadSpies.length, 0);
+        assert.equal([...exam.receipts.values()].filter(row => row.section === 'listening' && row.kind === 'interrupt').length, 0);
+        if (choice === 'cancel') assert.equal(evidence.ended, true);
+        if (process.env.TERM2_EVIDENCE) await writeFile(resolve(process.env.TERM2_EVIDENCE, `${mode}-eof-${choice}-race.json`),
+          JSON.stringify({mode, choice, dialogHeldMs: 1900, before, sealedExactlyOnce: true, ...evidence}, null, 2));
+      } finally {
+        await exam.close();
+      }
+    });
+  }
+
+  test(`Term 2 K56 detaches the player while the start play promise is pending (${mode})`,
+    {timeout: 90000, skip: !testAudioRaces}, async () => {
+    const exam = await fixture(mode, {product: 2, defaultAutoplay: true, demo});
+    const {page} = exam;
+    const answer = 'Preserved while the start play callback is pending';
+    try {
+      await page.addInitScript(() => {
+        const nativePlay = HTMLMediaElement.prototype.play;
+        HTMLMediaElement.prototype.play = function (...args) {
+          const genuine = nativePlay.apply(this, args);
+          if (this !== window.K56_TERM2_OFFLINE?.player || window.fixturePendingPlay) return genuine;
+          window.fixturePendingPlay = {status: 'pending'};
+          return genuine.then(() => new Promise(resolve => {
+            window.fixturePendingPlay.resolve = () => {
+              window.fixturePendingPlay.status = 'released';
+              resolve();
+            };
+          }));
+        };
+      });
+      await startListening(exam, mode, answer);
+      await wait(page, () => window.fixturePendingPlay?.status === 'pending' && !!window.fixturePendingPlay.resolve, 'Start result held');
+      const audio = await page.evaluateHandle(() => window.K56_TERM2_OFFLINE.player);
+      const oldController = await page.evaluateHandle(() => window.K56_LISTENING_AUDIO);
+      await page.getByRole('button', {name: 'Báo lỗi âm thanh', exact: true}).click();
+      await page.getByRole('button', {name: 'Tôi không nghe thấy âm thanh', exact: true}).click();
+      await page.getByRole('button', {name: /Tôi đã hiểu\. Đến phần thi tiếp theo/}).click();
+      const next = mode === 'read_first' ? 'writing' : 'reading';
+      await (mode === 'read_first' ? page.locator('#startWriting') : page.locator('#k56SectionReady button')).waitFor();
+      assert.equal(await page.evaluate(() => window.fixturePendingPlay.status), 'pending');
+      const releasedState = await audio.evaluate(async element => {
+        window.fixturePendingPlay.resolve();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        return {source: element.hasAttribute('src'), attached: element.isConnected, paused: element.paused,
+          readyState: element.readyState, position: element.currentTime, status: window.fixturePendingPlay.status};
+      });
+      assert.deepEqual(releasedState, {source: false, attached: false, paused: true, readyState: 0, position: 0, status: 'released'});
+      const result = await oldController.evaluate(controller => controller.play('fixture_after_pending_release')
+        .then(() => 'unexpected-playback', error => error.name));
+      assert.equal(result, 'AbortError');
+      const after = await page.evaluate(expected => {
+        const runtime = window.K56_TERM2_OFFLINE;
+        return {activePlayer: Boolean(runtime.player), activeController: Boolean(window.K56_LISTENING_AUDIO),
+          interrupted: Boolean(runtime.record.sections.listening.interrupted), sealed: Boolean(runtime.record.sections.listening.sealed),
+          draftKept: Object.values(runtime.record.snapshot.drafts.listening).includes(expected), next: runtime.sectionResponse().nextSection};
+      }, answer);
+      assert.deepEqual(after, {activePlayer: false, activeController: false, interrupted: true, sealed: false, draftKept: true, next});
+      await wait(page, () => window.K56_TERM2_OFFLINE.pending === 0, 'Interrupted receipt synchronized');
+      assert.equal([...exam.receipts.values()].filter(row => row.section === 'listening' && row.kind === 'interrupt').length, 1);
+      assert.deepEqual(exam.errors, []);
+      if (process.env.TERM2_EVIDENCE) await writeFile(resolve(process.env.TERM2_EVIDENCE, `${mode}-pending-play.json`),
+        JSON.stringify({mode, pendingAtTransition: true, releasedState, latePlayResult: result, ...after}, null, 2));
+    } finally {
+      await exam.close();
+    }
+  });
+
+  test(`Term 2 K56 keeps the leave warning after a failed local seal (${mode})`,
+    {timeout: 90000, skip: !testAudioRaces}, async () => {
+    const exam = await fixture(mode, {product: 2, defaultAutoplay: true, demo});
+    const {page} = exam;
+    const answer = 'Preserved during local Listening seal retry';
+    try {
+      await startListening(exam, mode, answer);
+      const audio = await page.evaluateHandle(() => window.K56_TERM2_OFFLINE.player);
+      exam.disconnected = true;
+      await exam.context.setOffline(true);
+      await page.evaluate(() => {
+        const runtime = window.K56_TERM2_OFFLINE;
+        const persist = runtime.persist.bind(runtime);
+        let failed = false;
+        runtime.persist = async (...args) => {
+          if (!failed && args[0] === true && runtime.record.sections.listening?.sealed) {
+            failed = true;
+            throw new Error('Fixture local seal write failed');
+          }
+          return persist(...args);
+        };
+      });
+      await page.click('#submitListening');
+      await page.getByText(/Không thể lưu Listening: Fixture local seal write failed/).waitFor();
+      const operationId = await page.evaluate(() => window.K56_TERM2_OFFLINE.record.sections.listening.operationId);
+      assert.ok(operationId);
+      assert.equal([...exam.receipts.values()].some(receipt => receipt.operationId === operationId), false);
+      assert.equal(await page.locator('#listeningQuestions input[data-number]').first().inputValue(), answer);
+      assert.equal(await guardRequested(page), true, 'A provisional seal must keep the leave warning until local save succeeds');
+      exam.controls.beforeUnloadDecision = 'stay';
+      const prompt = page.waitForEvent('dialog', {predicate: dialog => dialog.type() === 'beforeunload', timeout: 5000});
+      await Promise.all([prompt, page.reload({timeout: 6000}).catch(error => {
+        if (!/ERR_ABORTED|Timeout/.test(error.message)) throw error;
+      })]);
+      assert.equal(await page.locator('#listeningQuestions input[data-number]').first().inputValue(), answer);
+      assert.equal(exam.controls.beforeUnloadSpies.length, 1);
+      await page.click('#submitListening');
+      exam.disconnected = false;
+      await exam.context.setOffline(false);
+      const evidence = await verifyListeningSeal(exam, mode, audio, answer);
+      assert.equal([...exam.receipts.values()].find(receipt => receipt.receiptId === evidence.receipt).operationId, operationId);
+      assert.equal(await guardRequested(page), false);
+      if (process.env.TERM2_EVIDENCE) await writeFile(resolve(process.env.TERM2_EVIDENCE, `${mode}-local-seal-retry.json`),
+        JSON.stringify({mode, operationId, nativeWarningAfterFailedSeal: true, oneReceiptForSameOperation: true, ...evidence}, null, 2));
     } finally {
       await exam.close();
     }

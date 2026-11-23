@@ -1476,7 +1476,8 @@
     if (term2Offline?.active) {
       const nextSection = term2Offline.sectionResponse().nextSection;
       const section = term2Offline.record.sections[nextSection];
-      if (section?.startedAt && !section.sealed && !section.interrupted) {
+      // A tentative seal can advance nextSection before the local save succeeds.
+      if (term2Offline.listeningController || (section?.startedAt && !section.sealed && !section.interrupted)) {
         event.preventDefault();
         event.returnValue = true;
       }
