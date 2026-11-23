@@ -136,7 +136,7 @@ const targets = [
   ['term-test-1-computer-based', 'student-cache-v2'],
   ['term-test-2-computer-based', 'student-cache-v2'],
   ['term-test-1-k56-computer-based', 'demo-journal-v1'],
-  ['term-test-2-k56-computer-based', 'demo-journal-v1', 'fast-pilot'],
+  ['term-test-2-k56-computer-based', 'demo-journal-v1', 'verified'],
   ['mini-test-k56-computer-based', 'mini-student-cache-v2']
 ];
 for (const [route, kind, release = 'ready'] of targets) {
@@ -149,7 +149,7 @@ for (const [route, kind, release = 'ready'] of targets) {
     const pinned = entry + '-preview-' + release + '-v1.html';
     const html = await text(published);
     assert.equal(html, await text(new URL(pinned, base)));
-    const previewHelper = release === 'fast-pilot' ? 'shared/cbt-audio-preview-fast-pilot-v1.js' : helper;
+    const previewHelper = release === 'verified' ? 'shared/cbt-audio-preview-fast-pilot-v1.js' : helper;
     assert.ok(html.includes('src="../' + previewHelper + '"'));
     const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(new URL(manifest + '-preview-' + release + '-v1.mjs', base));
     assert.deepEqual(new Set(ASSETS), new Set(Object.keys(ASSET_HASHES)));
@@ -160,7 +160,7 @@ for (const [route, kind, release = 'ready'] of targets) {
       assert.equal(sha(bytes), ASSET_HASHES[name], name);
     }
     assert.ok(ASSETS.includes('../' + previewHelper));
-    if (release === 'fast-pilot') assert.ok(ASSETS.includes(kind + '/sound-check-pilot-v1.wav'));
+    if (release === 'verified') assert.ok(ASSETS.includes(kind + '/offline-worker-preview-verified-v1.js'));
     assert.ok(ASSETS.includes(pinned));
     if (route === 'term-test-1-computer-based' || route === 'term-test-2-computer-based') {
       const app = ASSETS.find(asset => /\.\.\/shared\/app-term.*-preview-ready-v1\.js$/.test(asset));
@@ -175,7 +175,7 @@ for (const [route, kind, release = 'ready'] of targets) {
   test(route + ' / ' + kind + ' enforces preview and exam readiness', async () => {
     const base = new URL(route + '/', root);
     const html = await text(new URL(kind === 'demo-journal-v1' ? kind + '/index.html' : 'index.html', base));
-    const boot = html.match(/(?:src|data-bootstrap)="([^"?]*bootstrap-[^"?]*-preview-(?:ready|fast-pilot)-v1\.js)\?/)[1];
+    const boot = html.match(/(?:src|data-bootstrap)="([^"?]*bootstrap-[^"?]*-preview-(?:ready|verified)-v1\.js)\?/)[1];
     const script = await text(new URL(boot, base));
     const availability = script.match(/  function setStartAvailability\(\) \{[\s\S]*?\n  \}/)[0];
     const offline = { record: { prepared: { offline: true } }, active: false };
@@ -199,8 +199,14 @@ for (const [route, kind, release = 'ready'] of targets) {
     update();
     assert.deepEqual(buttons(), [true, true]);
 
-    const previewNeedsExam = release !== 'fast-pilot';
+    const previewNeedsExam = release === 'ready';
     scope.sampleReady = true;
+    if (release === 'verified') {
+      scope.encryptedAudio = null;
+      update();
+      assert.deepEqual(buttons(), [true, true], 'Preview requires the full verified audio');
+      scope.encryptedAudio = {};
+    }
     update();
     assert.deepEqual(buttons(), [previewNeedsExam, true]);
 
@@ -213,6 +219,7 @@ for (const [route, kind, release = 'ready'] of targets) {
       if (!previewNeedsExam) scope.previewHeard = true;
       update();
       assert.deepEqual(buttons(), [previewNeedsExam, true], 'The offline package is still being prepared');
+      if (release === 'verified') assert.match(elements.bootstrapStartStatus.textContent, /gói làm bài offline/);
       scope.previewHeard = false;
       offline.active = true;
     }
