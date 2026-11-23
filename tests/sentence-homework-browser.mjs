@@ -1,12 +1,15 @@
 // Entry/renderer thật, client giả cách ly; không có request ghi hoặc AI/Google thật.
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {serveDirectory} from './fixtures/static-ui-server.mjs';
-const root=path.resolve(fileURLToPath(new URL('../',import.meta.url))),dir=process.env.READING_SENTENCE_PRIVATE_DIR,out=process.env.READING_SENTENCE_UI_OUT||dir+'/ui';
+const root=path.resolve(fileURLToPath(new URL('../',import.meta.url))),dir=process.env.READING_SENTENCE_PRIVATE_DIR;
+const out=process.env.READING_SENTENCE_UI_OUT||(dir?path.join(dir,'ui'):path.join(os.tmpdir(),'sentence-homework-browser'));
 const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE));
-const content=JSON.parse(await fs.readFile(dir+'/content.private.json','utf8'));
+const content=dir?JSON.parse(await fs.readFile(dir+'/content.private.json','utf8')):
+ (JSON.parse(await fs.readFile(new URL('../homework-demo/data/67-reading-athletes-and-stress.json',import.meta.url),'utf8'))).content;
 await fs.mkdir(out,{recursive:true});
 const site=await serveDirectory(root),browser=await chromium.launch({channel:'chrome',headless:true}),records=[];
 try{
@@ -40,6 +43,22 @@ try{
    const frame=await page.locator('.sentence-question').first().evaluate(el=>{const s=getComputedStyle(el);return {left:s.borderLeftWidth,top:s.borderTopWidth,bottom:s.borderBottomWidth,radius:s.borderRadius};});assert.deepEqual(frame,{left:'0px',top:'0px',bottom:'1px',radius:'0px'});
    await page.screenshot({path:out+'/questions-'+scenario+'-'+width+'.png'});
    if(scenario==='draft'){
+    const progressLabel=page.locator('#progress-label');
+    const progressFields=content.targets.filter(t=>t.kind!=='location'&&!t.paragraph).slice(0,8);
+    for(const {id} of progressFields)await page.locator(`[data-target="${id}"]`).fill('');
+    assert.equal(await progressLabel.innerText(),'Đã điền 20/28 mục. Cần điền thêm 3 mục để nộp bài.');
+    for(const {id} of progressFields.slice(0,3))await page.locator(`[data-target="${id}"]`).fill(answers[id]);
+    assert.equal(await progressLabel.innerText(),'Đã điền 23/28 mục. Bạn có thể nộp bài để chấm.');
+    for(const {id} of progressFields.slice(3))await page.locator(`[data-target="${id}"]`).fill(answers[id]);
+    assert.equal(await progressLabel.innerText(),'Đã điền đủ 28/28 mục. Bạn có thể nộp bài để chấm.');
+    const selfCheck=page.locator('[data-target="l6.sc.q20.polarity.diagnostic"]');
+    await selfCheck.fill('');
+    assert.equal(await progressLabel.innerText(),'Đã điền đủ 28/28 mục. Bạn có thể nộp bài để chấm.');
+    await selfCheck.fill('Tự kiểm giả');
+    assert.equal(await selfCheck.inputValue(),'Tự kiểm giả');
+    assert.equal(await page.getByText(/Đủ 23\/28 mục để gửi chấm/).count(),0);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    if(width<=600)assert.ok((await progressLabel.boundingBox()).width>=width-45,'Thông báo tiến độ cần đủ chiều ngang trên điện thoại');
     const input=page.locator('[data-target="l6.sc.q19.answer"]');await input.focus();
     const focus=await input.evaluate(el=>{const s=getComputedStyle(el);return {outline:s.outlineStyle,ring:s.boxShadow,border:s.borderColor};});assert.equal(focus.outline,'none');assert.match(focus.ring,/33, 86, 160|21, 43, 78/);assert.equal(focus.border,'rgb(21, 43, 78)');
     await page.locator('[data-font="10"]').click();assert.ok(Math.abs(await input.evaluate(el=>parseFloat(getComputedStyle(el).fontSize))-19.8)<.01);await page.locator('[data-font="-10"]').click();
@@ -50,6 +69,7 @@ try{
     await page.locator('[data-flag="19"]').click();assert.equal(await page.locator('[data-flag="19"]').getAttribute('aria-pressed'),'true');
     await page.reload();await page.waitForSelector('[data-target]',{state:'attached'});if(width<=800||height<500)await page.locator('#tab-questions').click();assert.equal(await input.inputValue(),'studentword');assert.equal(await page.locator('[data-target="l6.sc.q19.location"]').inputValue(),'F');
    }
+   if(scenario!=='draft')assert.doesNotMatch(await page.locator('#progress-label').textContent(),/Bạn có thể nộp bài/);
    if(scenario==='review'||scenario==='teacher'){
     await page.locator('[data-explain="l6.sc.q19.answer"]').click();await page.waitForSelector('#explanation-dialog[open]');assert.match(await page.locator('#explanation-dialog').innerText(),/Bài bạn đã gửi/);await page.keyboard.press('Escape');assert.equal(await page.locator('#explanation-dialog').evaluate(d=>d.open),false);
     if(scenario==='teacher'){assert.equal(await page.locator('#grade-button').count(),0);assert.equal(await page.locator('[data-action="edit"]').count(),0);}

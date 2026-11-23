@@ -1,6 +1,12 @@
 /* Chỉ bài Sentence Completion opt in; dùng font/token/adapter Homework R3 chung. */
 .sentence-homework .sentence-kicker{font-size:14px;color:var(--m170-structure,#174265);font-weight:700;margin:0 0 8px}
 body.sentence-homework .sentence-question{border:0;border-bottom:1px solid #dce1e7;border-radius:0;box-shadow:none;background:transparent;padding:24px 0;margin:0}
+@media(max-width:600px){
+ .sentence-homework .sentence-draft-progress{grid-column:1/-1}
+ .sentence-homework .sentence-draft-progress .progress-label{font-size:13px}
+ body.sentence-homework[data-homework-layout="compact"] .study-footer:has(>.sentence-draft-progress:not([hidden]))>.footer-tools{grid-row:2}
+ body.sentence-homework[data-homework-layout="compact"] .study-footer:has(>.sentence-draft-progress:not([hidden]))>.footer-status{grid-column:1}
+}
 .sentence-homework .sentence-question:last-of-type{border-bottom:0}
 .sentence-homework .sentence-question:first-of-type{padding-top:8px}
 .sentence-homework .sentence-question :is(textarea,input,select){box-sizing:border-box;width:100%;max-width:100%;min-width:0;font-size:calc(18px * var(--reading-scale,1));line-height:1.65;min-height:44px}
