@@ -132,15 +132,15 @@ test('shows the remaining prerequisite when playback is confirmed before exam pr
 
 const targets = [
   ['term-test-1-k56-computer-based', 'student-cache-v1'],
-  ['term-test-2-k56-computer-based', 'student-cache-v2'],
+  ['term-test-2-k56-computer-based', 'student-cache-v2', 'verified', '-protected-listening-v1'],
   ['term-test-1-computer-based', 'student-cache-v2'],
   ['term-test-2-computer-based', 'student-cache-v2'],
   ['term-test-1-k56-computer-based', 'demo-journal-v1', 'verified'],
-  ['term-test-2-k56-computer-based', 'demo-journal-v1', 'verified'],
+  ['term-test-2-k56-computer-based', 'demo-journal-v1', 'verified', '-protected-listening-v1'],
   ['mini-test-k56-computer-based', 'mini-student-cache-v2'],
   ['mini-test-lesson-5-computer-based', 'mini-student-cache-v3']
 ];
-for (const [route, kind, pinnedRelease] of targets) {
+for (const [route, kind, pinnedRelease, variant = ''] of targets) {
   const release = pinnedRelease || (kind === 'demo-journal-v1' ? 'ready' : 'verified');
   test(route + ' / ' + kind + ' loads the same build online and offline', async () => {
     const base = new URL(route + '/', root);
@@ -148,12 +148,12 @@ for (const [route, kind, pinnedRelease] of targets) {
     const entry = demo ? kind + '/index' : 'index-' + kind;
     const manifest = demo ? kind + '/offline-assets' : 'offline-assets-' + kind;
     const published = new URL(demo ? kind + '/index.html' : 'index.html', base);
-    const pinned = entry + '-preview-' + release + '-v1.html';
+    const pinned = entry + '-preview-' + release + '-v1' + variant + '.html';
     const html = await text(published);
     assert.equal(html, await text(new URL(pinned, base)));
     const previewHelper = release === 'verified' ? 'shared/cbt-audio-preview-fast-pilot-v1.js' : helper;
     assert.ok(html.includes('src="../' + previewHelper + '"'));
-    const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(new URL(manifest + '-preview-' + release + '-v1.mjs', base));
+    const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(new URL(manifest + '-preview-' + release + '-v1' + variant + '.mjs', base));
     assert.deepEqual(new Set(ASSETS), new Set(Object.keys(ASSET_HASHES)));
     assert.equal(ASSET_BUILD_ID, sha(JSON.stringify(ASSET_HASHES)));
     for (const name of ASSETS) {
@@ -162,7 +162,7 @@ for (const [route, kind, pinnedRelease] of targets) {
       assert.equal(sha(bytes), ASSET_HASHES[name], name);
     }
     assert.ok(ASSETS.includes('../' + previewHelper));
-    if (release === 'verified' && demo) assert.ok(ASSETS.includes(kind + '/offline-worker-preview-verified-v1.js'));
+    if (release === 'verified' && demo) assert.ok(ASSETS.includes(kind + '/offline-worker-preview-verified-v1' + variant + '.js'));
     assert.ok(ASSETS.includes(pinned));
     if (route === 'term-test-1-computer-based' || route === 'term-test-2-computer-based') {
       const app = ASSETS.find(asset => asset.startsWith('../shared/app-term') && asset.endsWith('-preview-' + release + '-v1.js'));
@@ -178,7 +178,7 @@ for (const [route, kind, pinnedRelease] of targets) {
   test(route + ' / ' + kind + ' enforces preview and exam readiness', async () => {
     const base = new URL(route + '/', root);
     const html = await text(new URL(kind === 'demo-journal-v1' ? kind + '/index.html' : 'index.html', base));
-    const boot = html.match(/(?:src|data-bootstrap)="([^"?]*bootstrap-[^"?]*-preview-(?:ready|verified)-v1\.js)\?/)[1];
+    const boot = html.match(/(?:src|data-bootstrap)="([^"?]*bootstrap-[^"?]*-preview-(?:ready|verified)-v1(?:-protected-listening-v1)?\.js)\?/)[1];
     const script = await text(new URL(boot, base));
     const availability = script.match(/  function setStartAvailability\(\) \{[\s\S]*?\n  \}/)[0];
     const offline = { record: { prepared: { offline: true } }, active: false };
