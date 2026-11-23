@@ -136,21 +136,22 @@ const targets = [
   ['term-test-1-computer-based', 'student-cache-v2'],
   ['term-test-2-computer-based', 'student-cache-v2'],
   ['term-test-1-k56-computer-based', 'demo-journal-v1'],
-  ['term-test-2-k56-computer-based', 'demo-journal-v1'],
+  ['term-test-2-k56-computer-based', 'demo-journal-v1', 'fast-pilot'],
   ['mini-test-k56-computer-based', 'mini-student-cache-v2']
 ];
-for (const [route, kind] of targets) {
+for (const [route, kind, release = 'ready'] of targets) {
   test(route + ' / ' + kind + ' loads the same build online and offline', async () => {
     const base = new URL(route + '/', root);
     const demo = kind === 'demo-journal-v1';
     const entry = demo ? kind + '/index' : 'index-' + kind;
     const manifest = demo ? kind + '/offline-assets' : 'offline-assets-' + kind;
     const published = new URL(demo ? kind + '/index.html' : 'index.html', base);
-    const pinned = entry + '-preview-ready-v1.html';
+    const pinned = entry + '-preview-' + release + '-v1.html';
     const html = await text(published);
     assert.equal(html, await text(new URL(pinned, base)));
-    assert.match(html, /src="\.\.\/shared\/cbt-audio-preview-sync-v1\.js"/);
-    const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(new URL(manifest + '-preview-ready-v1.mjs', base));
+    const previewHelper = release === 'fast-pilot' ? 'shared/cbt-audio-preview-fast-pilot-v1.js' : helper;
+    assert.ok(html.includes('src="../' + previewHelper + '"'));
+    const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(new URL(manifest + '-preview-' + release + '-v1.mjs', base));
     assert.deepEqual(new Set(ASSETS), new Set(Object.keys(ASSET_HASHES)));
     assert.equal(ASSET_BUILD_ID, sha(JSON.stringify(ASSET_HASHES)));
     for (const name of ASSETS) {
@@ -158,7 +159,8 @@ for (const [route, kind] of targets) {
       const bytes = /\.(html|js|mjs|css|svg)$/.test(file.pathname) ? await text(file) : await readFile(file);
       assert.equal(sha(bytes), ASSET_HASHES[name], name);
     }
-    assert.ok(ASSETS.includes('../' + helper));
+    assert.ok(ASSETS.includes('../' + previewHelper));
+    if (release === 'fast-pilot') assert.ok(ASSETS.includes(kind + '/sound-check-pilot-v1.wav'));
     assert.ok(ASSETS.includes(pinned));
     if (route === 'term-test-1-computer-based' || route === 'term-test-2-computer-based') {
       const app = ASSETS.find(asset => /\.\.\/shared\/app-term.*-preview-ready-v1\.js$/.test(asset));
@@ -169,11 +171,11 @@ for (const [route, kind] of targets) {
   });
 }
 
-for (const [route, kind] of targets) {
-  test(route + ' / ' + kind + ' keeps preview locked until exam audio is ready', async () => {
+for (const [route, kind, release = 'ready'] of targets) {
+  test(route + ' / ' + kind + ' enforces preview and exam readiness', async () => {
     const base = new URL(route + '/', root);
     const html = await text(new URL(kind === 'demo-journal-v1' ? kind + '/index.html' : 'index.html', base));
-    const boot = html.match(/(?:src|data-bootstrap)="([^"?]*bootstrap-[^"?]*-preview-ready-v1\.js)\?/)[1];
+    const boot = html.match(/(?:src|data-bootstrap)="([^"?]*bootstrap-[^"?]*-preview-(?:ready|fast-pilot)-v1\.js)\?/)[1];
     const script = await text(new URL(boot, base));
     const availability = script.match(/  function setStartAvailability\(\) \{[\s\S]*?\n  \}/)[0];
     const offline = { record: { prepared: { offline: true } }, active: false };
@@ -181,10 +183,12 @@ for (const [route, kind] of targets) {
     const player = { ready: false, canPlay: false };
     const elements = {
       bootstrapPreview: {}, bootstrapPreviewStep: {dataset: {state: 'active'}},
-      bootstrapPreviewStatus: {}, bootstrapStart: {}, bootstrapStartStatus: {}, bootstrapRetry: {hidden: true}
+      bootstrapVolume: {}, bootstrapPreviewStatus: {}, bootstrapStart: {}, bootstrapStartStep: {dataset: {}},
+      bootstrapStartStatus: {}, bootstrapRetry: {hidden: true}
     };
     const scope = {
       elements, preparing: true, previewObjectUrl: 'blob:preview', previewHeard: false,
+      sampleReady: false, sampleFailed: false, previewAudio: {paused: true},
       state: {}, timerOnly: false, legacyListeningResume: false, encryptedAudio: {}, preparedPlayer: player,
       term1Offline: offline, term2Offline: offline, miniOffline: offline,
       miniJourney: {needsAudio: () => true, view: () => ({nextSection: 'listening'}), continuity: () => true},
@@ -195,14 +199,21 @@ for (const [route, kind] of targets) {
     update();
     assert.deepEqual(buttons(), [true, true]);
 
+    const previewNeedsExam = release !== 'fast-pilot';
+    scope.sampleReady = true;
+    update();
+    assert.deepEqual(buttons(), [previewNeedsExam, true]);
+
     scope.preparing = false;
     update();
-    assert.deepEqual(buttons(), [true, true]);
+    assert.deepEqual(buttons(), [previewNeedsExam, true]);
 
     player.ready = player.canPlay = true;
     if (isK56) {
+      if (!previewNeedsExam) scope.previewHeard = true;
       update();
-      assert.deepEqual(buttons(), [true, true], 'The offline package is still being prepared');
+      assert.deepEqual(buttons(), [previewNeedsExam, true], 'The offline package is still being prepared');
+      scope.previewHeard = false;
       offline.active = true;
     }
     update();
