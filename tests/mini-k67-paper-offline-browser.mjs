@@ -18,7 +18,7 @@ assert.ok(['','1','2'].includes(term),'K67_PAPER_TERM must be 1, 2 or empty for 
 const slug = term ? 'term-test-' + term : 'mini-test-lesson-5';
 const testDeparture = process.env.K67_PAPER_CONFIRMED_DEPARTURE === '1';
 const testNativeDeparture = testDeparture && process.env.K67_PAPER_NATIVE_DEPARTURE === '1';
-assert.ok(!testDeparture || term === '2','Confirmed departure rehearsal starts on Term 2.');
+assert.ok(!testDeparture || term,'Confirmed departure rehearsal targets a Term paper journey.');
 const paperFlagOff = term && process.env.K67_PAPER_FLAG_OFF === '1';
 const routeName = '/term-tests/' + slug + '/';
 const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.css': 'text/css',
@@ -136,10 +136,10 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
         const key = reading ? 'Reading' : 'Listening';
         const reload = page.getByRole('button', { name: 'Tải lại trang', exact: true });
         const modal = page.getByRole('dialog', { name: 'Xác nhận rời bài thi' });
-        await page.waitForFunction(({skill, number}) => Object.keys(localStorage)
-          .filter(key=>key.startsWith('term2-k67-paper-journey-v1:'))
+        await page.waitForFunction(({skill, number, prefix}) => Object.keys(localStorage)
+          .filter(key=>key.startsWith(prefix))
           .some(key=>JSON.parse(localStorage.getItem(key))?.drafts?.[skill]?.[number]==='A'),
-          {skill:section, number:reading?readingNumber:'11'});
+          {skill:section, number:reading?readingNumber:'11',prefix:'term'+term+'-k67-paper-journey-v1:'});
         const origin=await page.evaluate(()=>performance.timeOrigin);
         const native = testNativeDeparture && index===0;
         if(native){
@@ -233,7 +233,7 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       assert.equal(journeys.length,1);
       for(const section of order)assert.equal(journeys[0].sections[section].operationId,seenOperations.get(section));
     }else{
-      const bridge = term==='2'?'bridge-term2-k67-paper-browser-cloud-v1.mjs':'bridge.mjs';
+      const bridge = term?'bridge-term'+term+'-k67-paper-browser-cloud-v1.mjs':'bridge.mjs';
       assert.ok(journalFailures.has('/term-tests/shared/exam-journal/'+bridge));
     }
     assert.deepEqual(errors, []);
