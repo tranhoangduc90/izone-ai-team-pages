@@ -11,6 +11,7 @@ const headed = process.env.TERM2_TEST_HEADED === '1';
 const testBackForwardCache = process.env.TERM2_TEST_BFCACHE === '1';
 const testAudioRaces = process.env.TERM2_TEST_AUDIO_RACES === '1';
 const testRecovery = process.env.TERM2_TEST_LISTENING_RECOVERY === '1';
+const testAnomalyHistory = process.env.TERM2_TEST_ANOMALY_HISTORY === '1';
 
 const guardRequested = page => page.evaluate(() => {
   const event = new Event('beforeunload', {cancelable: true});
@@ -641,14 +642,20 @@ for (const mode of ['read_first', 'lis_first']) {
       const stayedAfter = await verifyStayInListening(exam, answer);
       const audio = await page.evaluateHandle(() => window.K56_TERM2_OFFLINE.player);
       const queuedPlay = await page.evaluateHandle(() => window.K56_LISTENING_AUDIO.play);
-      const interruptionPosition = await audio.evaluate(async element => {
+      if (testAnomalyHistory) await wait(page, () => window.K56_TERM2_OFFLINE.player.currentTime > 11,
+        'At least eleven seconds of ordinary playback', 20000);
+      const interruptionPosition = await audio.evaluate(async (element, naturalPosition) => {
+        if (naturalPosition) {
+          element.pause();
+          return element.currentTime;
+        }
         const sought = new Promise(resolve => element.addEventListener('seeked', resolve, {once: true}));
         element.currentTime = 53.122;
         element.pause();
         await sought;
         return element.currentTime;
-      });
-      assert.ok(Math.abs(interruptionPosition - 53.122) < 0.5);
+      }, testAnomalyHistory);
+      assert.ok(testAnomalyHistory ? interruptionPosition > 11 : Math.abs(interruptionPosition - 53.122) < 0.5);
       await page.getByRole('button', {name: 'Báo lỗi âm thanh', exact: true}).click();
       await page.getByRole('button', {name: 'Tôi không nghe thấy âm thanh', exact: true}).click();
       await page.getByRole('button', {name: /Tôi đã hiểu\. Đến phần thi tiếp theo/}).click();
@@ -704,6 +711,9 @@ for (const mode of ['read_first', 'lis_first']) {
       const commands = diagnostics.filter(row => row.action === 'audio_command');
       const start = commands.find(row => row.command === 'play' && row.reason === 'exam_start');
       const pause = diagnostics.find(row => row.action === 'audio_anomaly' && row.event === 'pause');
+      if (testAnomalyHistory) {
+        assert.ok(pause.previous.filter(row => row.action === 'audio_progress_sample').length >= 6);
+      }
       const disposal = diagnostics.find(row => row.action === 'audio_player_retired');
       const blocked = diagnostics.find(row => row.action === 'audio_late_play_blocked' && row.reason === 'fixture_late_start');
       assert.ok(start && pause && disposal && blocked, 'Expected start, observed pause, cleanup and blocked callback in the fixture journal');

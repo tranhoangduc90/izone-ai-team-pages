@@ -132,11 +132,11 @@ test('shows the remaining prerequisite when playback is confirmed before exam pr
 
 const targets = [
   ['term-test-1-k56-computer-based', 'student-cache-v1'],
-  ['term-test-2-k56-computer-based', 'student-cache-v2', 'verified', '-protected-listening-v1'],
+  ['term-test-2-k56-computer-based', 'student-cache-v2', 'verified', '-protected-listening-v2'],
   ['term-test-1-computer-based', 'student-cache-v2'],
   ['term-test-2-computer-based', 'student-cache-v2'],
   ['term-test-1-k56-computer-based', 'demo-journal-v1', 'verified'],
-  ['term-test-2-k56-computer-based', 'demo-journal-v1', 'verified', '-protected-listening-v1'],
+  ['term-test-2-k56-computer-based', 'demo-journal-v1', 'verified', '-protected-listening-v2'],
   ['mini-test-k56-computer-based', 'mini-student-cache-v2'],
   ['mini-test-lesson-5-computer-based', 'mini-student-cache-v3']
 ];
@@ -178,7 +178,7 @@ for (const [route, kind, pinnedRelease] of targets) {
   test(route + ' / ' + kind + ' enforces preview and exam readiness', async () => {
     const base = new URL(route + '/', root);
     const html = await text(new URL(kind === 'demo-journal-v1' ? kind + '/index.html' : 'index.html', base));
-    const boot = html.match(/(?:src|data-bootstrap)="([^"?]*bootstrap-[^"?]*-preview-(?:ready|verified)-v1(?:-protected-listening-v1)?\.js)\?/)[1];
+    const boot = html.match(/(?:src|data-bootstrap)="([^"?]*bootstrap-[^"?]*-preview-(?:ready|verified)-v1(?:-protected-listening-v[12])?\.js)\?/)[1];
     const script = await text(new URL(boot, base));
     const availability = script.match(/  function setStartAvailability\(\) \{[\s\S]*?\n  \}/)[0];
     const offline = { record: { prepared: { offline: true } }, active: false };
