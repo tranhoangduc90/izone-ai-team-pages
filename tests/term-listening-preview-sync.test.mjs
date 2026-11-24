@@ -134,7 +134,7 @@ const targets = [
   ['term-test-1-k56-computer-based', 'student-cache-v1', 'verified', '-confirmed-departure-v1'],
   ['term-test-2-k56-computer-based', 'student-cache-v2', 'verified', '-confirmed-departure-v2'],
   ['term-test-1-computer-based', 'student-cache-v2'],
-  ['term-test-2-computer-based', 'student-cache-v2'],
+  ['term-test-2-computer-based', 'student-cache-v2', 'verified', '-confirmed-departure-v1'],
   ['term-test-1-k56-computer-based', 'demo-journal-v1', 'verified', '-confirmed-departure-v1'],
   ['term-test-2-k56-computer-based', 'demo-journal-v1', 'verified', '-confirmed-departure-v2'],
   ['mini-test-k56-computer-based', 'mini-student-cache-v2', 'verified', '-confirmed-departure-v1'],
@@ -165,7 +165,7 @@ for (const [route, kind, pinnedRelease, variant = ''] of targets) {
     if (release === 'verified' && demo) assert.ok(ASSETS.includes(kind + '/offline-worker-preview-verified-v1' + variant + '.js'));
     assert.ok(ASSETS.includes(pinned));
     if (route === 'term-test-1-computer-based' || route === 'term-test-2-computer-based') {
-      const app = ASSETS.find(asset => asset.startsWith('../shared/app-term') && asset.endsWith('-preview-' + release + '-v1.js'));
+      const app = ASSETS.find(asset => asset.startsWith('../shared/app-term') && asset.endsWith('-preview-' + release + '-v1' + variant + '.js'));
       assert.ok(app, 'Include the app used after Reading');
       const appScript = await text(new URL(app, base));
       assert.ok(appScript.includes("{mountContinuityStart}=await import('../k67-shared/offline-journey-ui-term2-audio-v2-preview-" + release + "-v1.mjs"));
