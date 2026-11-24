@@ -199,14 +199,14 @@ for (const mode of ['read_first', 'lis_first']) {
       await exam.close();
     }
   });
-  test(`Term 2 K56 keeps the same Listening source during network and tab transitions (${mode})`, {timeout: 90000}, async () => {
-    const exam = await fixture(mode, {product: 2, defaultAutoplay: true, demo, headed});
+  test(`Term ${product} K56 keeps the same Listening source during network and tab transitions (${mode})`, {timeout: 90000}, async () => {
+    const exam = await fixture(mode, {product, defaultAutoplay: true, demo, headed});
     const {page} = exam;
     const answer = `Network and tab Listening draft (${mode})`;
     try {
       await startListening(exam, mode, answer);
       const before = await page.evaluate(() => {
-        const runtime = window.K56_TERM2_OFFLINE;
+        const runtime = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
         const player = runtime.player;
         const source = player.getAttribute('src');
         window.verifyListeningPlayer = () => runtime.player === player && source === player.getAttribute('src');
@@ -223,30 +223,32 @@ for (const mode of ['read_first', 'lis_first']) {
       await next.bringToFront();
       const visibility = await page.evaluate(() => document.visibilityState);
       await page.evaluate(() => {
-        window.K56_TERM2_OFFLINE.player.dispatchEvent(new Event('waiting'));
+        (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player.dispatchEvent(new Event('waiting'));
       });
-      await page.waitForFunction(position => window.K56_TERM2_OFFLINE.player.currentTime >= position + 2, before.position);
+      await page.waitForFunction(position => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player.currentTime >= position + 2, before.position);
       await page.bringToFront();
       await next.close();
       await exam.context.setOffline(false);
       await wait(page, () => navigator.onLine, 'Browser observed network return');
       const after = await page.evaluate(({playerId, lastSequence}) => {
-        const runtime = window.K56_TERM2_OFFLINE;
+        const runtime = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
         const player = runtime.player;
         const rows = runtime.record.submissionDiagnostics || runtime.diagnostics || [];
         const during = rows.filter(row => row.playerId === playerId && row.sequence > lastSequence);
         return {same: window.verifyListeningPlayer(), position: player.currentTime, rate: player.playbackRate,
           paused: player.paused, events: during.map(({action, command, reason, event}) => ({action, command, reason, event})),
-          interrupted: Boolean(runtime.record.sections.listening.interrupted)};
+          interrupted: Boolean(runtime.record.sections.listening.interrupted || runtime.record.listeningCheckpoint?.interruption),
+          pendingClockTransitions: runtime.record.listeningClockSync?.pending.length || 0};
       }, before);
       assert.equal(after.same, true);
       assert.equal(after.rate, 1);
       assert.equal(after.paused, false);
       assert.equal(after.interrupted, false);
+      assert.equal(after.pendingClockTransitions, 0);
       assert.deepEqual(after.events.filter(row => ['audio_command', 'audio_anomaly'].includes(row.action)), []);
       assert.equal(await page.locator('#listeningQuestions input[data-number]').first().inputValue(), answer);
       assert.deepEqual(exam.errors, []);
-      if (process.env.TERM2_EVIDENCE) await writeFile(resolve(process.env.TERM2_EVIDENCE, `${mode}-network-tab-listening.json`),
+      if (evidenceDir) await writeFile(resolve(evidenceDir, `${mode}-network-tab-listening.json`),
         JSON.stringify({mode, headed, visibilityWhileAway: visibility, before, after, draftKept: true}, null, 2));
     } finally {
       await exam.close();
@@ -1023,40 +1025,45 @@ test('Term 2 K56 scopes the leave guard to active exam skills', {timeout: 90000}
   }
 });
 
-test('Term 2 K56 observes a real browser media decode failure without sealing Listening', {timeout: 90000}, async () => {
-  const exam = await fixture('read_first', {product: 2, defaultAutoplay: true});
-  const {page} = exam;
-  const answer = 'Keep my draft after a media decoder error';
-  try {
-    await startListening(exam, 'read_first', answer);
-    const corrupted = await page.evaluate(() => {
-      const player = window.K56_TERM2_OFFLINE.player;
-      const url = URL.createObjectURL(new Blob(['Fixture invalid MP3 stream'], {type: 'audio/mpeg'}));
-      return new Promise(resolve => {
-        player.addEventListener('error', event => {
-          URL.revokeObjectURL(url);
-          resolve({code: player.error?.code, trusted: event.isTrusted});
-        }, {once: true});
-        player.src = url;
+for (const mode of term1 ? ['read_first', 'lis_first'] : ['read_first']) {
+  test(`Term ${product} K56 observes a real browser media decode failure without sealing Listening (${mode})`, {timeout: 90000}, async () => {
+    const exam = await fixture(mode, {product, demo, defaultAutoplay: true});
+    const {page} = exam;
+    const answer = 'Keep my draft after a media decoder error';
+    try {
+      await startListening(exam, mode, answer);
+      const corrupted = await page.evaluate(() => {
+        const player = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player;
+        const url = URL.createObjectURL(new Blob(['Fixture invalid MP3 stream'], {type: 'audio/mpeg'}));
+        return new Promise(resolve => {
+          player.addEventListener('error', event => {
+            URL.revokeObjectURL(url);
+            resolve({code: player.error?.code, trusted: event.isTrusted});
+          }, {once: true});
+          player.src = url;
+        });
       });
-    });
-    assert.ok(corrupted.code > 0);
-    assert.equal(corrupted.trusted, true);
-    await page.locator('.cbt-audio-status').filter({hasText: 'Audio bị gián đoạn.'}).waitFor();
-    assert.equal(await page.locator('#listeningQuestions input[data-number]').first().inputValue(), answer);
-    const evidence = await page.evaluate(() => {
-      const runtime = window.K56_TERM2_OFFLINE;
-      const rows = runtime.record.submissionDiagnostics || runtime.diagnostics || [];
-      return {event: rows.findLast(row => row.event === 'error' && row.state?.mediaErrorCode > 0),
-        sealed: Boolean(runtime.record.sections.listening.sealed)};
-    });
-    assert.equal(evidence.event?.state.mediaErrorCode, corrupted.code);
-    assert.equal(evidence.sealed, false);
-    assert.equal([...exam.receipts.values()].some(row => row.section === 'listening' && row.kind === 'seal'), false);
-    assert.deepEqual(exam.errors, []);
-    if (process.env.TERM2_EVIDENCE) await writeFile(resolve(process.env.TERM2_EVIDENCE, 'real-decode-failure.json'),
-      JSON.stringify({corrupted, event: evidence.event, draftKept: true, listeningSealed: false}, null, 2));
-  } finally {
-    await exam.close();
-  }
-});
+      assert.ok(corrupted.code > 0);
+      assert.equal(corrupted.trusted, true);
+      if (testRecovery) {
+        await page.getByRole('dialog',{name:'Báo lỗi âm thanh'})
+          .getByText(/Âm thanh gặp sự cố và không thể nghe tiếp/).waitFor();
+      } else await page.locator('.cbt-audio-status').filter({hasText: 'Audio bị gián đoạn.'}).waitFor();
+      assert.equal(await page.locator('#listeningQuestions input[data-number]').first().inputValue(), answer);
+      const evidence = await page.evaluate(() => {
+        const runtime = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
+        const rows = runtime.record.submissionDiagnostics || runtime.diagnostics || [];
+        return {event: rows.findLast(row => row.event === 'error' && row.state?.mediaErrorCode > 0),
+          sealed: Boolean(runtime.record.sections.listening.sealed)};
+      });
+      assert.equal(evidence.event?.state.mediaErrorCode, corrupted.code);
+      assert.equal(evidence.sealed, false);
+      assert.equal([...exam.receipts.values()].some(row => row.section === 'listening' && row.kind === 'seal'), false);
+      assert.deepEqual(exam.errors, []);
+      if (evidenceDir) await writeFile(resolve(evidenceDir, term1 ? `${mode}-real-decode-failure.json` : 'real-decode-failure.json'),
+        JSON.stringify({corrupted, event: evidence.event, draftKept: true, listeningSealed: false}, null, 2));
+    } finally {
+      await exam.close();
+    }
+  });
+}
