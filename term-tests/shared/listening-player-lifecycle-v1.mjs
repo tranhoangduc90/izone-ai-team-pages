@@ -200,13 +200,22 @@ export function createListeningPlayer({audio, isCurrent, skill, emit, onInterrup
   async function readOutputs() {
     if (readingDevices || !devices?.enumerateDevices || !active()) return;
     readingDevices = true;
-    let outputChangeId;
     try {
-      while (active()) {
-        outputChangeId = pendingDeviceChange;
+      do {
+        const outputChangeId = pendingDeviceChange;
         pendingDeviceChange = null;
-        const outputs = new Set((await devices.enumerateDevices()).filter(item => item.kind === 'audiooutput' && item.deviceId).map(item => item.deviceId));
-        if (!active()) return;
+        let outputs;
+        try {
+          const listed = await devices.enumerateDevices();
+          outputs = new Set(listed.filter(item => item.kind === 'audiooutput' && item.deviceId).map(item => item.deviceId));
+        } catch (error) {
+          record('audio_output_result', {outputChangeId, outcome: 'unobserved', errorCode: error?.name || 'Error'});
+          continue;
+        }
+        if (!active()) {
+          if (outputChangeId) record('audio_output_result', {outputChangeId, outcome: 'cancelled'});
+          return;
+        }
         const sink = audio.sinkId;
         const specificOutputsVisible = [...outputs].some(id => id !== 'default' && id !== 'communications');
         const missing = Boolean(sink && sink !== 'default' && specificOutputsVisible && visibleOutputs?.has(sink) && !outputs.has(sink));
@@ -226,10 +235,7 @@ export function createListeningPlayer({audio, isCurrent, skill, emit, onInterrup
               active: active(), state: mediaState(audio, document)});
           }
         }
-        if (!pendingDeviceChange) return;
-      }
-    } catch (error) {
-      record('audio_output_result', {outputChangeId, outcome: 'unobserved', errorCode: error?.name || 'Error'});
+      } while (pendingDeviceChange && active());
     } finally {
       readingDevices = false;
     }
@@ -243,6 +249,7 @@ export function createListeningPlayer({audio, isCurrent, skill, emit, onInterrup
     if (isDefault || !devices.enumerateDevices) {
       record('audio_output_result', {outputChangeId, outcome: isDefault ? 'default_route_unobserved' : 'unsupported'});
     } else {
+      if (pendingDeviceChange) record('audio_output_result', {outputChangeId: pendingDeviceChange, outcome: 'superseded'});
       pendingDeviceChange = outputChangeId;
       void readOutputs();
     }
@@ -253,6 +260,10 @@ export function createListeningPlayer({audio, isCurrent, skill, emit, onInterrup
     if (retired) return;
     retired = true;
     cancelProbe();
+    if (pendingDeviceChange) {
+      record('audio_output_result', {outputChangeId: pendingDeviceChange, outcome: 'cancelled'});
+      pendingDeviceChange = null;
+    }
     disposalId = crypto.randomUUID();
     const before = mediaState(audio, document);
     // Abort pending play through the element's resource selection algorithm, including when already paused.

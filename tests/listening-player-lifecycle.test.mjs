@@ -190,6 +190,57 @@ test('default output change keeps playback and only logs the route as unobserved
   player.retire('test_finished');
 });
 
+test('a burst of device changes accounts for superseded observations and switches only once', async () => {
+  const {player, audio, mediaDevices, rows} = fixture();
+  const notify = () => mediaDevices.dispatchEvent(new Event('devicechange'));
+  audio.sinkId = 'fixture-headset';
+  mediaDevices.enumerateDevices = async () => [{kind:'audiooutput', deviceId:'fixture-headset'}];
+  notify();
+  await new Promise(resolve => setImmediate(resolve));
+
+  let completeReading;
+  mediaDevices.enumerateDevices = () => new Promise(done => { completeReading = done; });
+  const earlier = rows.length;
+  notify();
+  notify();
+  notify();
+  const speakers = [{kind:'audiooutput', deviceId:'fixture-speakers'}];
+  mediaDevices.enumerateDevices = async () => speakers;
+  completeReading(speakers);
+  await new Promise(resolve => setImmediate(resolve));
+
+  const changes = rows.slice(earlier).filter(row=>row.action === 'audio_device_change');
+  const results = changes.map(change=>rows.filter(row=>row.action === 'audio_output_result' && row.outputChangeId === change.outputChangeId));
+  assert.deepEqual(results.map(group=>group.map(row=>row.outcome)), [['resolved'], ['superseded'], ['unobserved']]);
+  assert.deepEqual(audio.calls, ['setSinkId']);
+  assert.equal(audio.sinkId, '');
+  player.retire('test_finished');
+});
+
+test('a new route observation still runs after an output enumeration fails', async () => {
+  const {player, audio, mediaDevices, rows} = fixture();
+  audio.sinkId = 'fixture-headset';
+  const notify = () => mediaDevices.dispatchEvent(new Event('devicechange'));
+  mediaDevices.enumerateDevices = async () => [{kind:'audiooutput', deviceId:'fixture-headset'}];
+  notify();
+  await new Promise(resolve => setImmediate(resolve));
+
+  let failReading;
+  mediaDevices.enumerateDevices = () => new Promise((_,reject) => { failReading = reject; });
+  const earlier = rows.length;
+  notify();
+  notify();
+  mediaDevices.enumerateDevices = async () => [{kind:'audiooutput', deviceId:'fixture-speaker'}];
+  failReading(new DOMException('Simulated I/O failure', 'NotReadableError'));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const results = rows.slice(earlier).filter(row=>row.action === 'audio_output_result');
+  assert.deepEqual(results.map(row=>row.outcome), ['unobserved','resolved']);
+  assert.equal(results[0].errorCode,'NotReadableError');
+  assert.deepEqual(audio.calls,['setSinkId']);
+  player.retire('test_finished');
+});
+
 for (const outcome of ['rejected', 'unsupported']) {
   test(`specific output change remains observable when fallback is ${outcome}`, async () => {
     const {player, audio, mediaDevices, rows, actions, interruptions} = fixture();

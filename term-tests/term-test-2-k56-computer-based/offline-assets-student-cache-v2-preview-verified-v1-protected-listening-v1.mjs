@@ -405,7 +405,7 @@ export const ASSET_HASHES = {
   "../shared/exam-order.js": "b8bfff8d4e8e16fd487db614423ec1e83230196695b7572b48ef284a3faebd88",
   "../shared/landing-model.js": "040a785315efcd45415c9df3539bcce03c16ad5436fbb21eaedd5caea67ead89",
   "../shared/landing.js": "d0ee67d7f89e4e882c96236e0e378b9cf6fb06e54d4eb9442032f661a18c78f1",
-  "../shared/listening-player-lifecycle-v1.mjs": "2dac79f245222944413d99733c7fe883d946aec5146ad261cb10547c023b53eb",
+  "../shared/listening-player-lifecycle-v1.mjs": "a0e11880d85be1814d5c54492c2c945bc46ab6dbd2cc58c95fc41a2923f10ac4",
   "../shared/listening-recovery-state-v1.mjs": "0e44095f4cf138bc5fc15e759ecfe21abf6655d802ad8340f696ca0828dee348",
   "../shared/listening-recovery-v1.mjs": "1f5834415cffc30a807a2c700956def24d7e3b2d1b0b8f5d465f0d5ecca406b6",
   "../shared/section-submission-k56-term-v1.mjs": "e60b3c241a9e74c615de5685d12088ce12faa2c0cfe97818d27a8867ba4bc7ff",
@@ -486,4 +486,4 @@ export const ASSET_HASHES = {
   "worker-listening-report-v3.mjs": "2b945e08a2e5b9cca8488bc854481a963675a2e9d1fc770e5740df3c3cf1d20b",
   "worker-sso-repair-v1.mjs": "f519a4240a721cb354f1e2c0eea6faa7a989f14c8072be55d1f89da5500d29ce"
 };
-export const ASSET_BUILD_ID="a2669122c9c8bb05233f1f66d034052be5e7fed6db1b8ec2c95d8bf437bebc7e";
+export const ASSET_BUILD_ID="fe795f3d0693d11ad1dc16286c53b5817f3e84ead702bd55a897f9bf1e95d1f7";
