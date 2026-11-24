@@ -18,6 +18,7 @@ const testCases = [
   {mode:'read_first', demo:true, action:'reload'},
   {mode:'lis_first', demo:true, action:'close'},
 ];
+if(product===1)testCases.push({mode:'read_first',demo:false,action:'cancel_then_close'});
 const warning = 'Nếu bạn rời trang hoặc tải lại, hệ thống sẽ nộp ngay phần thi đang làm với các câu trả lời đã lưu. Bạn không thể quay lại làm tiếp phần này.';
 const next = ' Khi mở lại bài thi, bạn sẽ chuyển sang phần tiếp theo.';
 const last = ' Khi mở lại, bạn sẽ thấy màn hình kết thúc bài thi.';
@@ -86,7 +87,9 @@ for(const {mode,demo,action} of testCases) {
       await start(page,first);
       const input=page.locator('#'+first+'Questions input[data-number]').first();
       await input.fill(answer);
-      assert.equal(await page.locator('.exam-departure-note p').first().innerText(),warning+next);
+      const policy=await page.locator('.exam-departure-note p').first().innerText();
+      if(product===1)assert.match(policy,/Khi hệ thống chưa nhận được xác nhận, nháp và lượt thi của bạn được giữ/);
+      else assert.equal(policy,warning+next);
       const before=await read(page,first);
       assert.equal(before.active,first);
       if(product===2 && action==='controlled' && process.env.K56_DEPARTURE_SLOW_RESTORE==='1'){
@@ -116,7 +119,7 @@ for(const {mode,demo,action} of testCases) {
       if(action!=='controlled'){
         exam.controls.beforeUnloadDecision='stay';
         await Promise.all([dialog(page),immediateNavigation(page,action).catch(error=>{
-          if(action==='reload' && /ERR_ABORTED|Timeout/.test(error.message))return;
+          if((action==='reload'||action==='cancel_then_close') && /ERR_ABORTED|Timeout/.test(error.message))return;
           throw error;
         })]);
       }
@@ -138,13 +141,21 @@ for(const {mode,demo,action} of testCases) {
       });
       assert.equal((await read(page,first)).active,first);
       assert.equal((await read(page,first)).sealed,false);
+      // The previous history entry is outside this exam worker's offline scope.
+      if(product===1&&action==='back'){
+        exam.disconnected=false;
+        await exam.context.setOffline(false);
+      }
       exam.controls.beforeUnloadDecision='leave';
       if(action==='controlled'){
         await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
         await prompt.getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
-      } else if(action==='close'){
-        const closed=page.waitForEvent('close');
-        await Promise.all([dialog(page),closed,immediateNavigation(page,action)]);
+      } else if(action==='close'||action==='cancel_then_close'){
+        if(action==='cancel_then_close')await page.close({runBeforeUnload:false});
+        else{
+          const closed=page.waitForEvent('close');
+          await Promise.all([dialog(page),closed,immediateNavigation(page,action)]);
+        }
         page=await exam.context.newPage();
         // A new tab on shared DEMO needs a confirmed identity before showing a local attempt.
         exam.controls.pauseOperations=true;
@@ -159,11 +170,26 @@ for(const {mode,demo,action} of testCases) {
           await page.goForward({waitUntil:'commit',timeout:8000});
         }
       }
-      await page.waitForFunction(previousDocument=>window.departureTestDocument!==previousDocument,before.document);
+      // Back/forward cache can restore the same untouched document when no seal was created.
+      const mayRestoreDocument=product===1&&action==='back';
+      if(!mayRestoreDocument)await page.waitForFunction(previousDocument=>window.departureTestDocument!==previousDocument,before.document);
       await wait(page,()=>(window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.active,'Restored departed attempt');
       const departed=await read(page,first);
       assert.equal(departed.attempt,before.attempt);
-      assert.notEqual(departed.document,before.document);
+      if(!mayRestoreDocument)assert.notEqual(departed.document,before.document);
+      if(product===1 && action!=='controlled'){
+        assert.equal(departed.sealed,false);
+        assert.equal(departed.next,first);
+        assert.equal(departed.departure,undefined);
+        assert.equal(departed.deadline,before.deadline);
+        assert.ok(Object.values(departed.draft||{}).includes(answer));
+        assert.equal(departed.queued.some(op=>op.section===first&&op.kind==='seal'),false);
+        assert.equal(exam.controls.beforeUnloadSpies.length,action==='cancel_then_close'?1:2);
+        if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,`${evidencePrefix}native-unconfirmed-${action}-${mode}.json`),
+          JSON.stringify({mode,demo,action,prompts:exam.controls.beforeUnloadSpies.length,
+            sameAttempt:true,draftPreserved:true,originalDeadline:true,localSeal:false},null,2));
+        return;
+      }
       assert.equal(departed.sealed,true);
       assert.equal(departed.next,second);
       assert.equal(departed.active,null);
