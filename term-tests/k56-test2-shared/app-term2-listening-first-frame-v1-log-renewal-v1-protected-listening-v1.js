@@ -929,8 +929,12 @@
   const sectionDraftOwners = { listening: '', reading: '' };
   const sectionDraftLocked = { listening: false, reading: false };
 
+  function sectionDraftAllowed(skill) {
+    return !demoMode || skill === 'listening' && offline?.active && offline.listeningRecoveryEnabled;
+  }
+
   function sectionDraftPending(skill) {
-    return !demoMode && !window.K56_DEMO_RESETTING && !sectionDraftLocked[skill] && !state.completed && !state[skill + 'Submitted']
+    return sectionDraftAllowed(skill) && !window.K56_DEMO_RESETTING && !sectionDraftLocked[skill] && !state.completed && !state[skill + 'Submitted']
       && Boolean(state[skill + 'StartedAt'])
       && Boolean(skill === 'listening' ? state.examSessionToken : state.attemptToken)
       && state.draftRevisions[skill] > state.draftAckRevisions[skill];
@@ -946,7 +950,7 @@
   }
 
   async function saveSectionDraft(skill) {
-    if (demoMode) return null;
+    if (!sectionDraftAllowed(skill)) return null;
     const container = skill === 'listening' ? elements.listeningQuestions : elements.readingQuestions;
     const answers = collectAnswers(container);
     const path = skill === 'listening'
@@ -3187,6 +3191,7 @@
     },host:document.querySelector('.page-shell')});
     offline.mountListeningSavedCard(elements.listeningSavedView);
     offline.mountResultCard(elements.resultReadyView);
+    if (skill === 'listening' && offline.listeningRecoveryEnabled) scheduleSectionDraft(skill, 0);
     saveSession();window.K56_TERM2_APP_READY=true;window.dispatchEvent(new Event('term2:app-ready'));
   }else initialize();
   // Khi đóng tab, gửi đúng base đã biết; không ACK local hay tự vượt xung đột khi chưa có phản hồi.

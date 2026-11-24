@@ -1,0 +1,18 @@
+.cbt-listening-recovery-state,
+.cbt-listening-unavailable {
+  margin-block: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e2bdc5;
+  border-inline-start: 4px solid #b52845;
+  border-radius: 8px;
+  background: #fdf4f6;
+  color: #532433;
+  text-align: start;
+}
+
+.cbt-listening-recovery-state[hidden] { display: none; }
+.cbt-listening-recovery-state p,
+.cbt-listening-unavailable p { margin: 0; }
+.cbt-listening-recovery-state p + p,
+.cbt-listening-unavailable p { margin-block-start: 6px; }
+.cbt-listening-recovery-state .button { margin-block-start: 8px; }

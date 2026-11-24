@@ -1,4 +1,4 @@
-export const ASSETS=[
+export const ASSETS = [
   "../../shared/audio/catalog.mjs",
   "../../shared/audio/chunks-audio-status-v1.mjs",
   "../../shared/audio/config.mjs",
@@ -235,9 +235,14 @@ export const ASSETS=[
   "../shared/listening-player-lifecycle-v1.mjs",
   "../k56-test2-shared/app-term2-listening-first-frame-v1-log-renewal-v1-protected-listening-v1.js",
   "../k56-audio-recovery-term2-protected-listening-v1.js",
-  "listening-first-frame-report-v2-protected-listening-v1.js"
+  "listening-first-frame-report-v2-protected-listening-v1.js",
+  "../k67-shared/listening-report-choices-v3.mjs",
+  "../shared/listening-recovery-state-v1.mjs",
+  "../shared/listening-recovery-v1.mjs",
+  "listening-recovery-v1.css",
+  "../k56-offline-shared/listening-clock-sync-v1.mjs"
 ];
-export const ASSET_HASHES={
+export const ASSET_HASHES = {
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
   "../../shared/audio/chunks-audio-status-v1.mjs": "57a754c3fe10a2470df67679fea2f9ce1a749a21296907f9a7d49409481881b1",
   "../../shared/audio/config.mjs": "8c6f4f6f92d15e44fab4016d73f76d06d1a6695b10095d32226a853a3456ef1d",
@@ -339,7 +344,8 @@ export const ASSET_HASHES={
   "../k56-listening-offline-worker.js": "127318a193ed5689f1f42cc4c841582c1af4fcbe695aea9a61341cd526a10e0e",
   "../k56-offline-shared/demo-store-audio-status-v1.mjs": "90b3a6d83ccecb6f404b370cf6ed85ebb285bcbccff4cf40a098703aa3311cb8",
   "../k56-offline-shared/interruption-dialog-stability-v1.css": "4cdda9369c290c388082466a67e9bea6a0067e8a03489b5b43039b480178ba66",
-  "../k56-offline-shared/listening-continuity-protected-v1.mjs": "96ad6e2ff58115e4922b05976871023a7a8492b66d3a60be05f9627d35b29612",
+  "../k56-offline-shared/listening-clock-sync-v1.mjs": "65c5c2be9597e16bebc09bc10814789655425d877fb7dcf3cdb723edd15e91b8",
+  "../k56-offline-shared/listening-continuity-protected-v1.mjs": "4583d4545fc7aed3e06c239056d1f3aac46bc4daa286180ae7156c7aa0e51fb9",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
   "../k56-offline-shared/runtime-parallel-entry-v2-log-renewal-v1.mjs": "d0c346035bbcd5f986dbc19fa4e23e6fbe821ac1dac06e871fa30213d9568405",
   "../k56-offline-shared/runtime-parallel-entry-v2.mjs": "c57054cd39c0ab2523c058b2a7c17177c2f4ec579c08bd5de7e4b593dead1c8e",
@@ -351,7 +357,7 @@ export const ASSET_HASHES={
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/public-audio-audio-status-v1.mjs": "30c109b154046f13fef9f9b53e722b35b3f268fa60d2d874b507a9fed077e24c",
   "../k56-shared/teacher-session-client.js": "e23d770dc0a4beb35a5b9751990cfd9667e1ea2568d0bffb3125e721dafefa27",
-  "../k56-test2-shared/app-term2-listening-first-frame-v1-log-renewal-v1-protected-listening-v1.js": "318cf70e12744755998fbb3e99fc3e9c6ae33365e9df949e31cbcae147080a18",
+  "../k56-test2-shared/app-term2-listening-first-frame-v1-log-renewal-v1-protected-listening-v1.js": "f6eabc218567b4cafa7036aa64de2d9e089ac6ba75b3f179a466f6e63747c4b5",
   "../k56-test2-shared/app-term2-listening-first-frame-v1-log-renewal-v1.js": "292d30a8f5d4956f01a975cfed81e13384bad00cf85c2d5188bf64199e81d21f",
   "../k56-test2-shared/app-term2-listening-first-frame-v1.js": "a6f48f9e8d92c1683a6721ac123312621a0ce3f5ce1e515d670bbcb9e6b0e58d",
   "../k56-test2-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
@@ -365,6 +371,7 @@ export const ASSET_HASHES={
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
   "../k67-shared/listening-report-choices-v1.css": "e1c2b8d36bb0681a82efbf108a4580880ef0561daa63a38266d3634c98cfaea9",
   "../k67-shared/listening-report-choices-v2.mjs": "ab760d1ac15cbbf634dfc8aee81631ff9ee9b807bd6a772190e6cc1f02165967",
+  "../k67-shared/listening-report-choices-v3.mjs": "6ee037f39663b754334433a57c742513e0914b244454e97fcecde110c2d3a097",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
@@ -399,6 +406,8 @@ export const ASSET_HASHES={
   "../shared/landing-model.js": "040a785315efcd45415c9df3539bcce03c16ad5436fbb21eaedd5caea67ead89",
   "../shared/landing.js": "d0ee67d7f89e4e882c96236e0e378b9cf6fb06e54d4eb9442032f661a18c78f1",
   "../shared/listening-player-lifecycle-v1.mjs": "2dac79f245222944413d99733c7fe883d946aec5146ad261cb10547c023b53eb",
+  "../shared/listening-recovery-state-v1.mjs": "0e44095f4cf138bc5fc15e759ecfe21abf6655d802ad8340f696ca0828dee348",
+  "../shared/listening-recovery-v1.mjs": "1f5834415cffc30a807a2c700956def24d7e3b2d1b0b8f5d465f0d5ecca406b6",
   "../shared/section-submission-k56-term-v1.mjs": "e60b3c241a9e74c615de5685d12088ce12faa2c0cfe97818d27a8867ba4bc7ff",
   "../shared/styles.css": "e19be7903218548bc254d0ceca072fa999dbf42a654585bf10e93dfafbc13ec5",
   "../shared/teacher-audio-recovery.css": "cc53a29792f4ada666cc5c440b1d544ae70f8d14e2910262b4465a4247d979b4",
@@ -426,7 +435,7 @@ export const ASSET_HASHES={
   "bootstrap-listening-report-v3.js": "9050d3cbaf362464ac9af0221b7ee5f36f04da23e9709afa125b6954ee606b4b",
   "bootstrap-log-renewal-student-cache-v2-preview-ready-v1.js": "4caa0475a964e832c78823614c1ed6c59516b4936c92bc012a3f4af244d9fc47",
   "bootstrap-log-renewal-student-cache-v2-preview-sync-v1.js": "18e91b6bf83c11b43c0554f399e65b1701d80251d8da1e8829cf5a6fc72effcb",
-  "bootstrap-log-renewal-student-cache-v2-preview-verified-v1-protected-listening-v1.js": "16032a8a109d1a8b1920aaf8493728db08b95b139c4347f34c8b588bd4cf655f",
+  "bootstrap-log-renewal-student-cache-v2-preview-verified-v1-protected-listening-v1.js": "5978cec470decbba9a12f2eeb175a65c3ec2c76492872f6a9ca0f67940eba7d7",
   "bootstrap-log-renewal-student-cache-v2.js": "186c3fef7af9474b356c7e9a3bc8707e068b968d82b089f64c59d78a1006e3ac",
   "bootstrap-sso-repair-v1-log-renewal-v1.js": "d8db5c815f39fd58a0abace94183132d4adcfd3a6ee00cff8e3f7ff52cdce594",
   "bootstrap-sso-repair-v1.js": "9b6fde847da6b255a7cb9f986279f7b81b3fe27485c9ce9794cb37e9535493ec",
@@ -439,14 +448,15 @@ export const ASSET_HASHES={
   "index-sso-repair-v1.html": "efea5bfada45b5c3b23b1a533c3a65490c340218540e394b3cad8b977c262225",
   "index-student-cache-v2-preview-ready-v1.html": "c6b7af7e761594726c7e90b3e31dd13fe9292355538df25205e3ae341f64d68a",
   "index-student-cache-v2-preview-sync-v1.html": "0adeed310996bf7b4c4f9fcd53f5bda47b9948159401767d0f2f010a62b7b8b1",
-  "index-student-cache-v2-preview-verified-v1-protected-listening-v1.html": "914a5cc04651c89584a165d02dbdc080666c0739024d4b248ac000078c82379c",
+  "index-student-cache-v2-preview-verified-v1-protected-listening-v1.html": "5b097a9a3aec41efcf760bfab7fdead8bb74a52d6ab620205b98a246b2a92bfd",
   "index-student-cache-v2.html": "9621d7f4ea523adc6de683be9081fa076a7cf7ab991fed9a92a0211672822d60",
   "layout-updates.css": "f4e81684b6a9c416b72bc7c3ceccdc2e39dda0d0c569f2cd11a6dd7daff3fe9a",
-  "listening-first-frame-report-v2-protected-listening-v1.js": "ec90ade347111bd229ad638d4902aa0d49552af304d1203b8dbe340e23625727",
+  "listening-first-frame-report-v2-protected-listening-v1.js": "b0b51c47ff20f17a8c12ac5cf292174013634d5c611515e94805871204bbc32e",
   "listening-first-frame-report-v2.js": "693d85514ad91f35169e9a285f1de7705ae1ca03dc41450a4148910c950dcce0",
   "listening-first-frame-v1.css": "6e4672ceaa118d8cf81782d9ae99db117a5611364087852ee934f7bd6508347a",
   "listening-first-frame-v1.js": "5194318652dbd963547aafdf1395487b3e316dffe428f719f775d297726db546",
   "listening-preparation-v1.mjs": "4f0a63c18acc725e045c7ceb701e9730642fbf653a5acbf3076229f52457049f",
+  "listening-recovery-v1.css": "6dcfd0aab54bf216625a41fb4b1ff7cf51572ed25bc09210af665baf442757b5",
   "listening-report-evidence-v1.mjs": "3893fd2cd468ccef98b40a5abbbdf1d3335dbaf1da994bf5fc9f2f99fb1bc54f",
   "listening-report-map-v1.mjs": "7cb1eddaf6dc144841cbaedb49ed14478b5daba8de4d880aa47eeb44a52150d0",
   "listening-report-outbox-v1.mjs": "4e526c740e33ca80800a9db1589f214b9cda7a46586e420be0ca091271ca62d4",
@@ -476,4 +486,4 @@ export const ASSET_HASHES={
   "worker-listening-report-v3.mjs": "2b945e08a2e5b9cca8488bc854481a963675a2e9d1fc770e5740df3c3cf1d20b",
   "worker-sso-repair-v1.mjs": "f519a4240a721cb354f1e2c0eea6faa7a989f14c8072be55d1f89da5500d29ce"
 };
-export const ASSET_BUILD_ID="21d1b9f612c819f60dded167d8176707f8ba6972d9335bde4bf03187ec45eaf3";
+export const ASSET_BUILD_ID="a2669122c9c8bb05233f1f66d034052be5e7fed6db1b8ec2c95d8bf437bebc7e";

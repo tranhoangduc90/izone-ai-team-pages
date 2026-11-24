@@ -19,7 +19,7 @@
     const verified = await verifyListeningPreparation(content, testConfig, AbortSignal.timeout(10000));
     if (!reportModules) {
       const [{attachListeningReportChoices}, {term2K56ListeningReportMap}, outbox] = await Promise.all([
-        import('../k67-shared/listening-report-choices-v2.mjs'), import('./listening-report-map-v1.mjs'),
+        import('../k67-shared/listening-report-choices-v3.mjs'), import('./listening-report-map-v1.mjs'),
         import('./listening-report-outbox-v1.mjs'),
       ]);
       reportModules = {attachListeningReportChoices, map: term2K56ListeningReportMap, outbox};
@@ -951,7 +951,7 @@
     saveState({...started,studentRef:runtime.record.studentRef,identityConfirmed:true});
     await enterExam({...prepared,...started},audio);
     if (!runtime.playerReady) throw new Error('Bộ điều khiển audio chưa sẵn sàng. Bài được giữ.');
-    if (!runtime.record.sections.listening.sealed && !runtime.record.player.ended && !runtime.record.player.held) {
+    if (!runtime.record.sections.listening.sealed && !runtime.record.player.ended && !runtime.record.player.held && !(runtime.listeningRecoveryEnabled && runtime.record.listeningCheckpoint)) {
       assertVisibleListening();
       observe('play_requested');
       try { await window.K56_LISTENING_AUDIO.play('exam_start'); observe('play_resolved'); }
@@ -975,7 +975,7 @@
     if (listening?.startedAt && !listening.sealed && !listening.interrupted && !runtime.record.player.ended) {
       const observe = startObservation(++onlineStartEpoch, 'offline');
       observe('reload_during_audio', {positionSeconds: Number(runtime.record.player.position) || 0});
-      await runtime.interruptListening('page_interrupted');
+      if (!(runtime.listeningRecoveryEnabled && runtime.record.listeningCheckpoint)) await runtime.interruptListening('page_interrupted');
     }
     const p=runtime.record.prepared,current=runtime.sectionResponse();
     state={...state,...(runtime.record.snapshot||{}),...current,studentRef:runtime.record.studentRef,identityConfirmed:true};

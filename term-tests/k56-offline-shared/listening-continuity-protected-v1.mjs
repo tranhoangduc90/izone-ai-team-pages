@@ -1,3 +1,5 @@
+import {drainListeningClock, queueListeningClock} from './listening-clock-sync-v1.mjs';
+import {bindListeningRecovery} from '../shared/listening-recovery-v1.mjs';
 import {createListeningPlayer, recordListeningPreparationCommand} from '../shared/listening-player-lifecycle-v1.mjs';
 
 export function withProtectedListening(Base) {
@@ -9,6 +11,32 @@ export function withProtectedListening(Base) {
       });
     }
 
+    get listeningRecoveryEnabled() {
+      return this.record?.prepared?.offline?.listeningRecoveryVersion === 1;
+    }
+
+    async open() {
+      await super.open();
+      globalThis.addEventListener?.('online', this.onListeningClockOnline ??= () => drainListeningClock(this));
+      drainListeningClock(this);
+      return this;
+    }
+
+    saveListeningRecovery(attempt, checkpoint, transition, remainingMs, playerId, interruptionId) {
+      if (!this.owned || this.record !== attempt) return;
+      attempt.listeningCheckpoint = checkpoint;
+      const transitionChanged = transition !== 'local';
+      if (transitionChanged) queueListeningClock(this, attempt, checkpoint, transition, remainingMs, playerId, interruptionId);
+      if (transitionChanged) this.observe('listening_checkpoint_changed', {
+        section: 'listening', playerId, transition, positionMs: checkpoint.positionMs, remainingMs,
+        interruptionId, resumeCount: checkpoint.resumeCount
+      });
+      void this.persist(false, !transitionChanged).catch(() => {
+        if (this.record === attempt) this.observe('listening_checkpoint_save_failed', {
+          section: 'listening', playerId, transition, positionMs: checkpoint.positionMs
+        });
+      });
+    }
     preloadListening(blob, onReady, onFailure) {
       const attempt = this.record;
       const audio = document.createElement('audio');
@@ -55,25 +83,61 @@ export function withProtectedListening(Base) {
       return super.detachLatest();
     }
 
-    attachPlayer({audio, resumeButton, manualButton, render, form, observeListening}) {
+    attachPlayer({audio, resumeButton, manualButton, render, renderRecovery, form, observeListening}) {
       const attempt = this.record;
       const source = audio.getAttribute('src');
       let terminal = '';
       let interrupting = false;
       let started = false;
       let interruptionMessage;
-      const update = (message = interruptionMessage || 'Đang phát bài thi') => render(message, audio.currentTime, audio.duration);
+      let autoReportedInterruption;
+      const update = (message = interruptionMessage || 'Đang phát bài thi') => {
+        const position = recovery && recovery.state.phase !== 'ended' ? recovery.state.positionMs / 1000 : audio.currentTime;
+        render(message, position, audio.duration);
+      };
       const events = new AbortController();
       const listen = (target, type, handler) => target.addEventListener(type, handler, {signal: events.signal});
       const lifecycle = createListeningPlayer({audio,
         isCurrent: () => this.owned && this.record === attempt && this.player === audio && !terminal,
         skill: () => this.record === attempt ? this.sectionResponse().nextSection : null,
         emit: (action, data) => { if (this.record === attempt) this.observe(action, {section: 'listening', ...data}); },
-        onInterruption: () => {
-          interruptionMessage = 'Audio bị gián đoạn. Hãy bấm Báo lỗi âm thanh.';
-          update();
+        onInterruption: reason => {
+          if (recovery) {
+            recovery.interrupt(reason);
+          } else {
+            interruptionMessage = 'Audio bị gián đoạn. Hãy bấm Báo lỗi âm thanh.';
+            update();
+          }
         },
       });
+      const recovery = this.listeningRecoveryEnabled ? bindListeningRecovery({
+        audio, durationMs: Math.round(attempt.prepared.timing.listeningDurationSeconds * 1000),
+        checkpoint: attempt.player.ended ? null : attempt.listeningCheckpoint,
+        active: lifecycle.active, command: lifecycle.command, signal: events.signal,
+        emit: (action, data) => this.observe(action, {section: 'listening', playerId: lifecycle.playerId, ...data}),
+        save: (checkpoint, transition, remainingMs, interruptionId) =>
+          this.saveListeningRecovery(attempt, checkpoint, transition, remainingMs, lifecycle.playerId, interruptionId),
+        render: state => {
+          const held = ['paused', 'resuming'].includes(state.phase);
+          if (state.phase === 'resuming') resumeButton.textContent = 'Đang khôi phục…';
+          else if (held) resumeButton.textContent = 'Nghe tiếp';
+          if (state.phase !== 'starting') {
+            resumeButton.hidden = !held || state.phase === 'paused' && !state.canResume;
+            resumeButton.disabled = state.phase === 'resuming';
+          }
+          renderRecovery?.(state);
+          update(held ? 'Đồng hồ Listening đang tạm dừng' : undefined);
+          if (state.phase !== 'paused' || state.canResume || autoReportedInterruption === state.interruption.id) return;
+          const interruption = state.interruption;
+          queueMicrotask(() => {
+            if (!lifecycle.active() || state.interruption !== interruption || autoReportedInterruption === interruption.id) return;
+            autoReportedInterruption = interruption.id;
+            this.observe('listening_report_auto_open_requested', {section: 'listening', playerId: lifecycle.playerId,
+              interruptionId: interruption.id, reason: interruption.reason, positionMs: state.positionMs});
+            manualButton.click();
+          });
+        }
+      }) : null;
       const retire = (reason, nextSkill) => {
         events.abort();
         lifecycle.retire(reason, {nextSkill, operationId: attempt.sections.listening?.operationId, releaseSource: () => {
@@ -84,28 +148,40 @@ export function withProtectedListening(Base) {
           this.playerReady = false;
         }
         resumeButton.hidden = true;
+        renderRecovery?.(null);
         if (window.K56_LISTENING_AUDIO === controller) delete window.K56_LISTENING_AUDIO;
         if (this.listeningController === controller) this.listeningController = null;
       };
       const playBlocked = () => {
-        if (started || !lifecycle.active()) return;
+        if (started || !lifecycle.active() || recovery && !recovery.mayStart()) return;
         resumeButton.textContent = 'Phát audio';
         resumeButton.hidden = false;
         update('Trình duyệt chưa cho phát. Hãy bấm Phát audio');
       };
-      const play = reason => lifecycle.command('play', reason, () => audio.play());
+      const play = reason => lifecycle.command('play', reason, () => {
+        if (recovery && !recovery.mayStart()) {
+          throw new DOMException('Lượt Listening đang tạm dừng; hãy bấm Nghe tiếp.', 'InvalidStateError');
+        }
+        return audio.play();
+      });
       listen(resumeButton, 'click', () => {
-        if (!started && lifecycle.active()) void play('retry_initial_play').catch(playBlocked);
+        if (recovery && !recovery.mayStart()) {
+          void recovery.resume();
+        } else if (!started && lifecycle.active()) {
+          void play('retry_initial_play').catch(playBlocked);
+        }
       });
       listen(audio, 'playing', () => {
         if (!lifecycle.active()) return;
         if (!started) this.observe('audio_playing', {position: audio.currentTime,
           ...(this.listeningStartIntent === undefined ? {} : {elapsedMs: performance.now() - this.listeningStartIntent})});
         started = true;
-        resumeButton.hidden = true;
-        update();
+        if (!recovery) {
+          resumeButton.hidden = true;
+          update();
+        }
       });
-      listen(audio, 'timeupdate', () => { if (lifecycle.active() && !audio.paused) update(); });
+      if (!recovery) listen(audio, 'timeupdate', () => { if (lifecycle.active() && !audio.paused) update(); });
 
       // Keep the report button bound during a failed local write so the same interruption can be retried.
       listen(manualButton, 'click', async () => {
@@ -133,6 +209,7 @@ export function withProtectedListening(Base) {
         const expected = Number(attempt.prepared.timing.listeningDurationSeconds);
         if (!lifecycle.active() || !event.isTrusted || !audio.ended || audio.seeking || !Number.isFinite(audio.duration)
           || Math.abs(audio.duration - expected) > 2 || audio.currentTime < audio.duration - 0.5) return;
+        if (recovery && !recovery.acceptEnd(event)) return;
         terminal = 'ended';
         try { observeListening?.({phase: 'eof_accepted', configuredDurationSeconds: expected}); } catch { /* Diagnostics only. */ }
         this.observe('audio_ended', {position: audio.currentTime, duration: audio.duration});
@@ -149,6 +226,9 @@ export function withProtectedListening(Base) {
 
       const controller = {
         play, playBlocked,
+        blockedReport: () => recovery?.state.phase === 'paused' && !recovery.state.canResume
+          ? {interruptionId: recovery.state.interruption.id, playerId: lifecycle.playerId, positionMs: recovery.state.positionMs}
+          : null,
         beforeAutoSubmit: async () => ({submit: Boolean(attempt.player.ended), deadlineChanged: !attempt.player.ended}),
         submitting: () => {
           if (terminal) return;
@@ -174,7 +254,8 @@ export function withProtectedListening(Base) {
       this.listeningController = controller;
       this.player = audio;
       this.playerReady = true;
-      update();
+      if (recovery && !attempt.player.ended) recovery.restoreView();
+      else update();
       return controller;
     }
   };

@@ -817,7 +817,7 @@
         pendingReportId=null;
       });
       report.attachListeningReportChoices({audio:player,button,host:examCard,profile:report.map,
-        assetHash:protectedBootstrap.officialAudioHash,active,
+        assetHash:protectedBootstrap.officialAudioHash,active,blockedReport:()=>runtime?.listeningController?.blockedReport?.(),
         captureEvidence:positionSeconds=>capture?.(positionSeconds),
         interceptClick(event){
           if(forwarding||pendingReportId)return false;
@@ -845,7 +845,30 @@
         ()=>runtime.owned&&runtime.record===owner&&runtime.player===player&&!owner.sections.listening?.sealed
           &&!owner.sections.listening?.interrupted&&!runtime.interruptionPending,runtime,capture);
       setListeningVisible(true);examRetryButton.hidden=true;
+      const recoveryNotice=document.createElement('section');
+      recoveryNotice.className='cbt-listening-recovery-state';
+      recoveryNotice.hidden=true;
+      const recoveryText=document.createElement('p');
+      recoveryText.setAttribute('role','status');
+      const recoveryTime=document.createElement('p');
+      const originalControls=resumeButton.parentNode;
+      recoveryNotice.append(recoveryText,recoveryTime);
+      listeningForm.source.toolbar.before(recoveryNotice);
       const controller=runtime.attachPlayer({audio:player,resumeButton,manualButton,form:listeningForm.form,
+        renderRecovery(state){
+          const held=state?.phase==='paused'||state?.phase==='resuming';
+          if(held){
+            if(resumeButton.parentNode!==recoveryNotice)recoveryNotice.append(resumeButton);
+          }else if(resumeButton.parentNode===recoveryNotice)originalControls.prepend(resumeButton);
+          recoveryNotice.hidden=!held;
+          if(!held)return;
+          const copy=state.phase==='resuming'?'Đang khôi phục âm thanh từ mốc đã lưu…':state.canResume
+            ?'Âm thanh vừa bị dừng vì vấn đề trên máy của bạn. Hãy đóng các tab trình duyệt và phần mềm không dùng cho bài thi, rồi bấm Nghe tiếp để nghe từ chỗ vừa dừng.'
+            :'Âm thanh gặp sự cố và không thể nghe tiếp trong lượt Listening này.';
+          if(recoveryText.textContent!==copy)recoveryText.textContent=copy;
+          const status='Còn '+formatTime(Math.ceil(state.remainingMs/1000))+' · Mốc nghe '+formatTime(state.positionMs/1000)+' · Đã nghe tiếp '+state.resumeCount+'/2 lần';
+          if(recoveryTime.textContent!==status)recoveryTime.textContent=status;
+        },
         observeListening:window.K56AudioRecovery?.journalObserver?.(protectedBootstrap,player,'offline'),
         render(prefix,current,duration){playbackProgress.max=duration||1;playbackProgress.value=current||0;examStatus.textContent=prefix+' · '+formatTime(current)+' / '+formatTime(duration);uiState.audio.started=true;}});
       examVolumeInput.addEventListener('input',()=>{player.volume=Number(examVolumeInput.value);uiState.audio.volume=player.volume;saveUiState();});

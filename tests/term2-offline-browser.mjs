@@ -51,7 +51,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
  page.on('pageerror',e=>errors.push(e.message));page.on('dialog',handleDialog);
  const mini=product==='mini';
  const slug=mini?'mini-test-k56':'term-test-'+product+'-k56';
- const classCode=demo?'CODEXDEMO56':'IC5601';
+ const classCode=native?.classCode || (demo?'CODEXDEMO56':'IC5601');
  const asset=audioCatalog[slug];
  const audio=await readFile(resolve(root,'term-tests/k56-audio-assets',new URL(asset.url).pathname.split('/').pop()));
  const routeHandler=async route=>{
@@ -119,6 +119,14 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
    Object.assign(native.content,content);
    const response=await fetch(native.base+endpoint.slice(slug.length),{method:'POST',headers:{'content-type':'application/json','x-term2-permit':request.headers()['x-term2-permit']||'','x-exam-journal-request-id':request.headers()['x-exam-journal-request-id']||''},body:request.postData()});
    const json=await response.json();
+   if(endpoint.endsWith('/offline/listening-clock')){
+    controls.nativeClockRequests ??=[];
+    controls.nativeClockRequests.push({body,status:response.status,receipt:json});
+    if(response.ok&&controls.dropClockAckOnce?.has(body.phase)){
+     controls.dropClockAckOnce.delete(body.phase);
+     return route.abort();
+    }
+   }
    if((controls.loseAck===true?'seal':controls.loseAck)===body.kind&&!controls.ackLost&&endpoint.endsWith('/offline/operation')&&json.receipt?.status==='accepted'){
     controls.ackLost=true;return route.abort();
    }
@@ -183,12 +191,25 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
    }
   }
   if(endpoint.endsWith('/offline/prepare')){
+   controls.clockOwner=body.ownerId;
    if(mini&&controls.onlineMini)return route.fulfill({status:503,json:{ok:false,error:'OFFLINE_NEW_DISABLED'}});
    if(controls.denyOfflinePrepare)return route.fulfill({status:403,json:{ok:false,error:'FIXTURE_ACCESS_DENIED',message:'Fixture từ chối quyền thi.'}});
    const audioDownload=controls.r2Audio&&body.audioTransport==='r2-direct-v1'
     ? {version:1,policy:'r2-direct-v1',method:'GET',url:`https://e340869dcc6ff285504947407d148104.r2.cloudflarestorage.com/izone-audio-r2-lab-20261023/${asset.key}?X-Amz-Signature=fixture`,sha256:asset.sha256,byteLength:asset.byteLength,validForSeconds:600,fallback:'public-pages'}
     : undefined;
-   return route.fulfill({json:{...prepared,audioDownload,offline:{policy:mini?'mini-k56-offline-v1':`term${product}-offline-v1`,permit:'fixture-permit-no-production-authority',ownerId:body.ownerId,preparedAt:prepared.serverNow,...(controls.listeningReportsEnabled?{listeningReportsEnabled:true}:{})}}});
+   return route.fulfill({json:{...prepared,audioDownload,offline:{policy:mini?'mini-k56-offline-v1':`term${product}-offline-v1`,permit:'fixture-permit-no-production-authority',ownerId:body.ownerId,preparedAt:prepared.serverNow,...(controls.listeningReportsEnabled?{listeningReportsEnabled:true}:{}),...(controls.listeningRecoveryEnabled?{listeningRecoveryVersion:1}:{})}}});
+  }
+  if(endpoint.endsWith('/offline/listening-clock')&&controls.listeningClock){
+   if(body.attemptToken!==id||body.examSessionToken!==session||body.ownerId!==controls.clockOwner||body.generation!==0)
+    return route.fulfill({status:403,json:{ok:false,error:'OFFLINE_SCOPE_CONFLICT'}});
+   try{
+    const result=await controls.listeningClock.commit(body);
+    if(controls.dropClockPauseAckOnce&&body.phase==='paused'&&!controls.clockPauseAckDropped){
+     controls.clockPauseAckDropped=body.operationId;
+     return route.abort();
+    }
+    return route.fulfill({json:result});
+   }catch(error){return route.fulfill({status:error.status||500,json:{ok:false,error:error.code}});}
   }
   if(endpoint.endsWith('/offline/status'))return route.fulfill({json:{ok:true,persisted:receipts.has(body.operationId),receipt:receipts.get(body.operationId)||null}});
   if(product===1&&endpoint.endsWith('/offline/resume'))return route.fulfill({json:{ok:true,completedElsewhere:controls.completedElsewhere||{}}});
@@ -200,6 +221,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
     :route.fulfill({status:409,json:{ok:false,error:'FIXTURE_OPERATION_CONFLICT'}});
    const receipt={version:1,receiptId:randomUUID(),operationId:body.operationId,payloadHash,attemptToken:id,examSessionToken:session,generation:0,...controls.recoveredRun,section:body.section,kind:body.kind,acceptedRevision:body.revision,status:'accepted',serverCommittedAt:new Date().toISOString()};
    if(mini&&body.kind==='seal'&&body.section==='writing'&&!body.payload.task2.replace(/[\s\p{Default_Ignorable_Code_Point}]/gu,''))receipt.writingBlank=true;
+   if(controls.listeningClock&&body.section==='listening'&&body.kind==='start')await controls.listeningClock.start(id,body.payload.startedAt);
    receipts.set(body.operationId,receipt);
    if((controls.loseAck===true?'seal':controls.loseAck)===body.kind&&!controls.ackLost){controls.ackLost=true;return route.abort();}
    return route.fulfill({json:{ok:true,persisted:true,receipt}});

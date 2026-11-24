@@ -61,6 +61,7 @@ async function startListening(exam, mode, answer, afterStart, previousPage = 'ab
   const {page} = exam;
   exam.controls.r2Audio = true;
   exam.controls.listeningReportsEnabled = true;
+  exam.controls.listeningRecoveryEnabled = process.env.TERM2_TEST_LISTENING_RECOVERY === '1';
   exam.controls.preparedOverride = {term2ParallelEntry: true};
   exam.controls.beforeUnloadSpies = [];
   await page.goto(previousPage);
