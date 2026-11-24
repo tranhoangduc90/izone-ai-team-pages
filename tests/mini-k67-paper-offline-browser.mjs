@@ -15,11 +15,19 @@ const root = resolve(fileURLToPath(new URL('../', import.meta.url)));
 const ref = '11111111-1111-4111-8111-111111111111';
 const term = process.env.K67_PAPER_TERM || (process.env.K67_PAPER_TERM1 === '1' ? '1' : '');
 assert.ok(['','1','2'].includes(term),'K67_PAPER_TERM must be 1, 2 or empty for Mini.');
-const slug = term ? 'term-test-' + term : 'mini-test-lesson-5';
+const pretest = process.env.K67_PAPER_PRETEST === '1';
+assert.ok(!pretest || !term,'Select either Pretest or a Term profile.');
+const journey = Boolean(term || pretest);
+const slug = pretest?'pretest-lesson-16':term?'term-test-'+term:'mini-test-lesson-5';
+const listenNumber = pretest?'21':'11';
+const readingNumber = pretest?'18':term==='2'?'1':'24';
+const draftPrefix=(pretest?'pretest-lesson-16-k67-paper-v1':'term'+term+'-k67-paper-journey-v1')+':';
 const testDeparture = process.env.K67_PAPER_CONFIRMED_DEPARTURE === '1';
 const testNativeDeparture = testDeparture && process.env.K67_PAPER_NATIVE_DEPARTURE === '1';
-assert.ok(!testDeparture || term,'Confirmed departure rehearsal targets a Term paper journey.');
-const paperFlagOff = term && process.env.K67_PAPER_FLAG_OFF === '1';
+assert.ok(!testDeparture || journey,'Confirmed departure rehearsal targets a paper journey with native receipts.');
+const testPreviousPretestShell = pretest && process.env.K67_PAPER_UPGRADE_SHELL === '1';
+const testLeaseFallback = pretest && process.env.K67_PAPER_IDB_LEASE === '1';
+const paperFlagOff = journey && process.env.K67_PAPER_FLAG_OFF === '1';
 const routeName = '/term-tests/' + slug + '/';
 const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.css': 'text/css',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
@@ -28,15 +36,20 @@ const close = server => new Promise(resolve => server.close(resolve));
 
 for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline ' + mode, { timeout: 90000 }, async () => {
   const assets = { getTiming: () => ({ readingDurationMinutes: term ? 60 : 20 }) };
-  const f = await createMiniFixture({ examOrder: true, assets, ...(term
-    ? {[`term${term}PaperJourneyMode`]:paperFlagOff?'off':'on',completeSchema:true} : {miniPaperOffline:'on'}) });
-  if(term){
-    const definition=JSON.stringify({questions:Array.from({length:40},(_,i)=>({number:i+1,type:'Câu thử',accepted:['A']}))});
+  const f = await createMiniFixture({ examOrder: true, assets, ...(journey
+    ? {[pretest?'pretestPaperJourneyMode':'term'+term+'PaperJourneyMode']:paperFlagOff?'off':'on',completeSchema:true} : {miniPaperOffline:'on'}) });
+  if(journey){
+    const definition=(start,count)=>JSON.stringify({questions:Array.from({length:count},(_,i)=>({number:i+start,type:'Câu thử',accepted:['A']}))});
+    const listening=pretest?definition(21,20):definition(1,40);
+    const reading=pretest?definition(14,13):definition(1,40);
     await f.db.query(`INSERT INTO assessment.test_definition(slug,title,version,listening_definition,reading_definition,is_active)
-      VALUES($1,'Đề giả Term',1,$2,$2,true)`,[slug,definition]);
+      VALUES($1,'Đề giả',1,$2,$3,true)`,[slug,listening,reading]);
+    if(pretest)await f.db.query('UPDATE assessment.test_definition SET open_class_ids=$2 WHERE slug=$1',
+      [slug, JSON.stringify(['1293'])]);
   }
   const api = createServer(f.app);
   const journalFailures = new Set();
+  let servePreviousShell = testPreviousPretestShell && mode==='read_first';
   const web = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const pathname = url.pathname;
@@ -46,7 +59,9 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       return res.writeHead(503).end();
     }
     try {
-      const file = resolve(root, '.' + (pathname.endsWith('/') ? pathname + 'index.html' : pathname));
+      const requested = pathname.endsWith('/') ? pathname + 'index.html' : pathname;
+      const file = resolve(root, '.' + (servePreviousShell && requested === routeName+'index.html'
+        ? routeName+'index-audio-status-v2.html' : requested));
       if (!file.startsWith(root + sep)) return res.writeHead(403).end();
       const type = extname(file);
       let data = await readFile(file);
@@ -65,6 +80,17 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
   try {
     browser = await chromium.launch({ headless: true, channel: process.env.TERM2_BROWSER_CHANNEL || 'msedge' });
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
+    if(testLeaseFallback)await context.addInitScript(blockPageHideWrite=>{
+      Object.defineProperty(navigator,'locks',{value:undefined});
+      if(!blockPageHideWrite)return;
+      window.addEventListener('pagehide',()=>{
+        const transaction=IDBDatabase.prototype.transaction;
+        IDBDatabase.prototype.transaction=function(stores,mode,...options){
+          if(mode==='readwrite')throw new DOMException('Simulated document closing','AbortError');
+          return transaction.call(this,stores,mode,...options);
+        };
+      },{capture:true,once:true});
+    },testNativeDeparture&&process.env.K67_PAPER_IDB_BLOCK_PAGEHIDE_WRITE==='1');
     page = await context.newPage();
     let stayAtNativePrompt=false;
     const observe = page => {
@@ -97,7 +123,7 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       const data = await result.text();
       if(!result.ok&&u.pathname.includes('journey'))debug.push([u.pathname,result.status,data]);
       if (req.method() === 'POST' && result.ok && !lostAck
-        && (term ? u.pathname.endsWith('/paper-journey/seal')
+        && (journey ? u.pathname.endsWith('/paper-journey/seal')
           : u.pathname.endsWith('/offline/operation') && req.postDataJSON().kind === 'seal')) {
         lostAck = true;
         return route.abort();
@@ -109,8 +135,8 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
     await page.goto(url);
     await page.locator('#studentSelect option[value="' + ref + '"]').waitFor({ state: 'attached' });
     await page.locator('#studentSelect').selectOption(ref);
-    if(!term)await page.locator('#miniEnter').click();
-    await page.getByRole('button', { name: 'Xác nhận, tiếp tục', exact: true }).click();
+    if(!journey)await page.locator('#miniEnter').click();
+    if(!pretest)await page.getByRole('button', { name: 'Xác nhận, tiếp tục', exact: true }).click();
     if(paperFlagOff){
       await page.locator(mode==='lis_first'?'#submitListening':'#startReading').waitFor({state:'visible'});
       assert.equal(await page.getByRole('button',{name:'Tải bài làm về máy'}).count(),0);
@@ -118,6 +144,16 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       return;
     }
     await page.getByRole('button', { name: 'Tải bài làm về máy' }).waitFor();
+    if(servePreviousShell){
+      assert.match(await page.evaluate(()=>navigator.serviceWorker.controller.scriptURL),/\/offline-worker-audio-status-v2\.js\?/);
+      servePreviousShell=false;
+      await page.reload();
+      const student = page.locator('#studentSelect');
+      await student.or(page.getByRole('button',{name:'Tải bài làm về máy'})).first().waitFor();
+      if(await student.isVisible())await student.selectOption(ref);
+      await page.getByRole('button',{name:'Tải bài làm về máy'}).waitFor();
+      assert.match(await page.evaluate(()=>navigator.serviceWorker.controller.scriptURL),/confirmed-departure-v1\.js\?/);
+    }
     await context.setOffline(true);
     const order = mode === 'lis_first' ? ['listening','reading'] : ['reading','listening'];
     for (const [index, section] of order.entries()) {
@@ -128,18 +164,28 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
         assert.equal(await page.locator('#listeningView').isVisible(),false);
         await page.getByRole('button',{name:'Bắt đầu Listening',exact:true}).click();
       }
-      const readingNumber=term==='2'?'1':'24';
-      const selector = reading ? `#readingQuestions [data-number="${readingNumber}"]` : '#listeningQuestions [data-number="11"]';
+      const selector = reading ? `#readingQuestions [data-number="${readingNumber}"]` : `#listeningQuestions [data-number="${listenNumber}"]`;
       const field = page.locator(selector);
       if (reading) await field.fill('A'); else await field.selectOption('A');
       if (testDeparture) {
         const key = reading ? 'Reading' : 'Listening';
         const reload = page.getByRole('button', { name: 'Tải lại trang', exact: true });
         const modal = page.getByRole('dialog', { name: 'Xác nhận rời bài thi' });
-        await page.waitForFunction(({skill, number, prefix}) => Object.keys(localStorage)
-          .filter(key=>key.startsWith(prefix))
-          .some(key=>JSON.parse(localStorage.getItem(key))?.drafts?.[skill]?.[number]==='A'),
-          {skill:section, number:reading?readingNumber:'11',prefix:'term'+term+'-k67-paper-journey-v1:'});
+        await page.waitForFunction(async ({skill, number, prefix, lease}) => {
+          const saved = value => value?.drafts?.[skill]?.[number]==='A';
+          if(!lease)return Object.keys(localStorage).filter(key=>key.startsWith(prefix))
+            .some(key=>saved(JSON.parse(localStorage.getItem(key))));
+          return new Promise(resolve=>{
+            const request=indexedDB.open('izone-pretest-lesson-16-k67-paper-v1',1);
+            request.onerror=()=>resolve(false);
+            request.onsuccess=()=>{
+              const db=request.result;
+              const read=db.transaction('records').objectStore('records').getAll();
+              read.onerror=()=>{db.close();resolve(false);};
+              read.onsuccess=()=>{db.close();resolve(read.result.some(saved));};
+            };
+          });
+        },{skill:section,number:reading?readingNumber:listenNumber,prefix:draftPrefix,lease:testLeaseFallback});
         const origin=await page.evaluate(()=>performance.timeOrigin);
         const native = testNativeDeparture && index===0;
         if(native){
@@ -186,9 +232,9 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
         const download = page.waitForEvent('download');
         await page.getByRole('button', { name: 'Tải bài làm về máy' }).click();
         const html = await readFile(await (await download).path(), 'utf8');
-        assert.match(html, term ? /<dd>A<\/dd>/ : /<td>A<\/td>/);
+        assert.match(html, journey ? /<dd>A<\/dd>/ : /<td>A<\/td>/);
         assert.doesNotMatch(html, /permit|examSessionToken/i);
-        if(term){
+        if(journey){
           await page.getByText('Đã lưu nháp trên máy',{exact:true}).waitFor();
           await page.close();page=await context.newPage();observe(page);await page.goto(url);
           const name=page.locator('#termPaperRecovery input');
@@ -203,11 +249,11 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       await page.locator(reading ? '#submitReading' : '#submitListening').click();
     }
     await page.locator('#resultReadyView').waitFor({ state: 'visible' });
-    if(term)assert.equal((await f.db.query('SELECT count(*)::int AS n FROM assessment.term_test_attempt WHERE completed_at IS NOT NULL')).rows[0].n,0);
+    if(journey)assert.equal((await f.db.query('SELECT count(*)::int AS n FROM assessment.term_test_attempt WHERE completed_at IS NOT NULL')).rows[0].n,0);
     else assert.equal((await f.db.query('SELECT count(*)::int AS n FROM assessment.mini_k67_paper_offline_operation')).rows[0].n,0);
     await context.setOffline(false);
-    await page.getByText(term?'Máy chủ đã xác nhận nhận bài':'Máy chủ đã xác nhận các thao tác đã gửi.', { exact: true }).waitFor({ timeout: 25000 });
-    if(term){
+    await page.getByText(journey?'Máy chủ đã xác nhận nhận bài':'Máy chủ đã xác nhận các thao tác đã gửi.', { exact: true }).waitFor({ timeout: 25000 });
+    if(journey){
       const download=page.waitForEvent('download');
       await page.getByRole('button',{name:'Tải bài làm về máy'}).click();
       const html=await readFile(await (await download).path(),'utf8');
@@ -218,10 +264,10 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
     await page.locator('#resultView').waitFor({ state: 'visible' });
     const rows = (await f.db.query('SELECT * FROM assessment.term_test_attempt')).rows;
     assert.equal(rows.length, 1);
-    assert.equal(rows[0].listening_answers['11'], 'A');
-    assert.equal(rows[0].reading_answers[term==='2'?'1':'24'], 'A');
-    if(term){
-      assert.equal(new Date(rows[0].reading_deadline_at)-new Date(rows[0].reading_started_at),60*60_000);
+    assert.equal(rows[0].listening_answers[listenNumber], 'A');
+    assert.equal(rows[0].reading_answers[readingNumber], 'A');
+    if(journey){
+      assert.equal(new Date(rows[0].reading_deadline_at)-new Date(rows[0].reading_started_at),(term?60:20)*60_000);
       assert.equal(rows[0].writing_scope,'lr_only');
       assert.equal(rows[0].writing_submitted_at,null);
       assert.equal(mediaRequests,0);
@@ -233,7 +279,7 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       assert.equal(journeys.length,1);
       for(const section of order)assert.equal(journeys[0].sections[section].operationId,seenOperations.get(section));
     }else{
-      const bridge = term?'bridge-term'+term+'-k67-paper-browser-cloud-v1.mjs':'bridge.mjs';
+      const bridge = pretest?'bridge-pretest-k67-paper-cloud-v1.mjs':term?'bridge-term'+term+'-k67-paper-browser-cloud-v1.mjs':'bridge.mjs';
       assert.ok(journalFailures.has('/term-tests/shared/exam-journal/'+bridge));
     }
     assert.deepEqual(errors, []);
