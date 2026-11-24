@@ -14,7 +14,7 @@ const modules=process.env.CODEX_NODE_MODULES||resolve(process.env.USERPROFILE,'.
 const {chromium}=createRequire(pathToFileURL(resolve(modules,'playwright/package.json')))('playwright');
 const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.mp3':'audio/mpeg'};
 export async function fixture(mode,{profile,native,product=2,paper=false,demo=false,port=0,defaultAutoplay=false,headed=false,
- allowBackForwardCache=false}={}){
+ allowBackForwardCache=false,legacyExit=false}={}){
  await mkdir(output,{recursive:true});
  const controls={assetFailures:new Set(),assetOverrides:new Map(),realAudio:false,r2Audio:false,primaryAudioFail:false,audioCalls:[],apiDelayMs:0};
  const blockJournalAssets=process.env.K56_BLOCK_JOURNAL_ASSETS==='1';
@@ -26,7 +26,13 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
    return res.writeHead(503,{'cache-control':'no-store'}).end('Fixture unavailable journal asset');
   }
   if(controls.assetFailures.has(url.pathname))return res.writeHead(503).end('Fixture unavailable asset');
-  try{let data=controls.assetOverrides.has(url.pathname)?Buffer.from(controls.assetOverrides.get(url.pathname)):await readFile(p);if(['.html','.js','.mjs','.css','.svg'].includes(extname(p)))data=Buffer.from(data.toString('utf8').replace(/\r\n/g,'\n'));res.writeHead(200,{'content-type':mime[extname(p)]||'application/octet-stream'});res.end(data);}catch{res.writeHead(404).end();}});
+ try{
+  const legacyEntry=legacyExit&&/^\/term-tests\/term-test-2-k56-computer-based\/(?:demo-journal-v1\/)?(?:index\.html)?$/.test(url.pathname);
+  const source=legacyEntry?resolve(p,'..',demo?'index-preview-verified-v1-protected-listening-v2.html':'index-student-cache-v2-preview-verified-v1-protected-listening-v2.html'):p;
+  let data=controls.assetOverrides.has(url.pathname)?Buffer.from(controls.assetOverrides.get(url.pathname)):await readFile(source);
+  if(['.html','.js','.mjs','.css','.svg'].includes(extname(p)))data=Buffer.from(data.toString('utf8').replace(/\r\n/g,'\n'));
+  res.writeHead(200,{'content-type':mime[extname(p)]||'application/octet-stream'});res.end(data);
+ }catch{res.writeHead(404).end();}});
  await new Promise((ok,no)=>{server.once('error',no);server.listen(port,'127.0.0.1',ok);});const base=`http://127.0.0.1:${server.address().port}`;
  const launchOptions={channel:process.env.TERM2_BROWSER_CHANNEL||'msedge',headless:!headed,
  ...(allowBackForwardCache?{ignoreDefaultArgs:['--disable-back-forward-cache']}:{}),
@@ -109,7 +115,8 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
    return route.fulfill({json:{ok:true,persisted:true,storage:'collector',scopeId:body.bindingId,batchId,
     eventPayloadSha256:payloadHash,acknowledgedIds:ids}});
   }
-  if(controls.apiDelayMs&&endpoint.includes('/offline/')){await new Promise(ok=>setTimeout(ok,controls.apiDelayMs));return route.fulfill({status:503,json:{ok:false,error:'FIXTURE_SLOW_UNAVAILABLE'}}).catch(()=>{});}
+ if(controls.pauseOperations&&endpoint.endsWith('/offline/operation'))return route.abort('internetdisconnected');
+ if(controls.apiDelayMs&&endpoint.includes('/offline/')){await new Promise(ok=>setTimeout(ok,controls.apiDelayMs));return route.fulfill({status:503,json:{ok:false,error:'FIXTURE_SLOW_UNAVAILABLE'}}).catch(()=>{});}
   if(endpoint.startsWith('roster'))return route.fulfill({json:{class:{name:classCode},students:[{ref:student,name:'Học viên giả Term 2'}]}});
   if(endpoint.endsWith('student-identity'))return route.fulfill({json:{ok:true,status:'missing'}});
   if(endpoint==='result'&&controls.resultResponse)return route.fulfill({json:controls.resultResponse});
@@ -264,7 +271,7 @@ export async function activateWorkerUpdate(page) {
   });
 }
 if(!process.env.TERM2_FULL_ROUND&&!process.env.K56_FIXTURE_IMPORT_ONLY)for(const mode of ['lis_first','read_first'])test('Term 2 offline/phục hồi/tải file: '+mode,{timeout:180000},async()=>{
- const f=await fixture(mode),p=f.page;f.controls.r2Audio=true;
+ const f=await fixture(mode,{legacyExit:true}),p=f.page;f.controls.r2Audio=true;
  try{
   await p.goto(f.url);await p.locator('#bootstrapStudent option[value="'+f.student+'"]').waitFor({state:'attached'});
   await p.selectOption('#bootstrapStudent',f.student);await p.click('#confirmIdentity');

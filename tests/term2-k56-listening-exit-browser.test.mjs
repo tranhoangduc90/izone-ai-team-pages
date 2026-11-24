@@ -758,7 +758,7 @@ for (const mode of ['read_first', 'lis_first']) {
       const nativeEntry = freshDemo && process.env.TERM2_NATIVE_RECOVERY_FIXTURE;
       const native = nativeEntry && await (await import(pathToFileURL(nativeEntry).href)).createNativeRecoveryFixture();
       if (native) t.after(() => native.close());
-      const exam = await fixture(mode, {product: 2, defaultAutoplay: true, demo, native});
+      const exam = await fixture(mode, {product: 2, defaultAutoplay: true, demo, native, legacyExit: true});
       const {page} = exam;
       const answer = `Draft before ${action} (${mode})`;
       try {
@@ -853,7 +853,7 @@ for (const mode of ['read_first', 'lis_first']) {
   }
   test(`Term 2 K56 checks back-forward traversal with browser caching allowed (${mode})`,
     {timeout: 90000, skip: !testBackForwardCache}, async () => {
-    const exam = await fixture(mode, {product: 2, defaultAutoplay: true, allowBackForwardCache: true, demo});
+    const exam = await fixture(mode, {product: 2, defaultAutoplay: true, allowBackForwardCache: true, demo, legacyExit: true});
     const {page} = exam;
     const answer = `Back-forward traversal draft (${mode})`;
     exam.controls.assetOverrides.set('/fixture-previous.html', '<title>History fixture</title><p>Previous document</p>');
@@ -912,7 +912,7 @@ for (const mode of ['read_first', 'lis_first']) {
 
 test('Term 2 K56 revalidates active Reading and Writing after back-forward caching',
   {timeout: 120000, skip: !testBackForwardCache}, async () => {
-  const exam = await fixture('read_first', {product: 2, defaultAutoplay: true, allowBackForwardCache: true, demo});
+  const exam = await fixture('read_first', {product: 2, defaultAutoplay: true, allowBackForwardCache: true, demo, legacyExit: true});
   const {page} = exam;
   const evidence = [];
   exam.controls.r2Audio = true;

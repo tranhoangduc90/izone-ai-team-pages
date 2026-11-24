@@ -67,7 +67,7 @@ async function openListening(exam, mode) {
 for (const mode of ['read_first','lis_first']) {
   test('Term 2 K56 freezes, resumes at the saved checkpoint and opens the existing report (' + mode + ')',
     {timeout: stopAtIncidentPosition ? 200000 : 150000}, async () => {
-      const exam = await fixture(mode, {demo, headed: process.env.TERM2_TEST_HEADED === '1'});
+      const exam = await fixture(mode, {demo, headed: process.env.TERM2_TEST_HEADED === '1', legacyExit: true});
       const {page} = exam;
       const nativeClock = await clockFixture();
       if (nativeClock) {

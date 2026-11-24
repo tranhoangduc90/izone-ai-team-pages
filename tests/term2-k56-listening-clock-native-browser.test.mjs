@@ -15,7 +15,8 @@ for (const mode of ['read_first', 'lis_first']) {
       const {createNativeRecoveryFixture} = await import(pathToFileURL(nativeEntry));
       const native = await createNativeRecoveryFixture();
       t.after(() => native.close());
-      const exam = await fixture(mode, {demo, native});
+      // This clock regression deliberately reopens a legacy shell where reload resumes Listening.
+      const exam = await fixture(mode, {demo, native, legacyExit:true});
       t.after(() => exam.close());
       const {page} = exam;
       const answer = 'synthetic draft saved across outages';
