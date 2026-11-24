@@ -501,8 +501,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
             const saved=Object.keys(localStorage).filter(key=>key.startsWith(prefix))
               .map(key=>JSON.parse(localStorage.getItem(key))).find(record=>record?.sections?.listening);
             return saved?{checkpoint:saved.sections.listening.listeningCheckpoint,clock:saved.listeningClockSync,
-              pauseLogSaved:saved.submissionDiagnostics?.some(({data})=>
-                data?.checkpointState?.action==='audio_anomaly'&&data.checkpointState.event==='pause')}:null;
+              pauseLogSaved:[...(saved.submissionDiagnostics||[]).map(({data})=>data?.checkpointState),
+                ...(saved.listeningDiagnostics||[])].some(row=>row?.action==='audio_anomaly'&&row.event==='pause')}:null;
           },storagePrefix);
           const readClock=async()=>{
             const reply=await fetch(base+'/preview/listening-recovery-clock');
