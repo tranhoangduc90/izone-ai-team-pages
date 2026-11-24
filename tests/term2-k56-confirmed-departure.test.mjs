@@ -11,6 +11,8 @@ const product=selected==='mini'?'mini':Number(selected||2);
 assert.ok([1,2,'mini'].includes(product));
 const taskId=product===2?'task1':'task2';
 const productLabel=product==='mini'?'Mini':`Term ${product}`;
+const verified=product!=='mini';
+const recorderOutage=process.env.K56_DEPARTURE_RECORDER_OUTAGE==='1';
 const evidencePrefix=product===2?'':product===1?'term1-':'mini-';
 const testCases = [
   {mode:'read_first', demo:false, action:'controlled'},
@@ -18,7 +20,7 @@ const testCases = [
   {mode:'read_first', demo:true, action:'reload'},
   {mode:'lis_first', demo:true, action:'close'},
 ];
-if(product===1)testCases.push({mode:'read_first',demo:false,action:'cancel_then_close'});
+if(verified)testCases.push({mode:'read_first',demo:false,action:'cancel_then_close'});
 const warning = 'Nếu bạn rời trang hoặc tải lại, hệ thống sẽ nộp ngay phần thi đang làm với các câu trả lời đã lưu. Bạn không thể quay lại làm tiếp phần này.';
 const next = ' Khi mở lại bài thi, bạn sẽ chuyển sang phần tiếp theo.';
 const last = ' Khi mở lại, bạn sẽ thấy màn hình kết thúc bài thi.';
@@ -77,6 +79,7 @@ for(const {mode,demo,action} of testCases) {
     exam.controls.listeningReportsEnabled=true;
     exam.controls.listeningRecoveryEnabled=true;
     exam.controls.beforeUnloadSpies=[];
+    if(recorderOutage)exam.controls.assetFailures.add('/term-tests/shared/exam-journal/recorder.mjs');
     const previous=new URL('/term-tests/shared/exam-journal/bridge.mjs',exam.url).href;
     try {
       await exam.context.addInitScript(()=>{window.departureTestDocument=crypto.randomUUID();});
@@ -85,10 +88,12 @@ for(const {mode,demo,action} of testCases) {
       await selectStudent(page,exam);
       await wait(page,()=>(window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.active,'Prepared attempt');
       await start(page,first);
+      if(recorderOutage)await page.waitForFunction(async()=>Boolean(await caches.match(
+        new URL('/term-tests/shared/exam-journal/recorder.mjs',location.origin).href)));
       const input=page.locator('#'+first+'Questions input[data-number]').first();
       await input.fill(answer);
       const policy=await page.locator('.exam-departure-note p').first().innerText();
-      if(product===1)assert.match(policy,/Khi hệ thống chưa nhận được xác nhận, nháp và lượt thi của bạn được giữ/);
+      if(verified)assert.match(policy,/Khi hệ thống chưa nhận được xác nhận, nháp và lượt thi của bạn được giữ/);
       else assert.equal(policy,warning+next);
       const before=await read(page,first);
       assert.equal(before.active,first);
@@ -142,7 +147,7 @@ for(const {mode,demo,action} of testCases) {
       assert.equal((await read(page,first)).active,first);
       assert.equal((await read(page,first)).sealed,false);
       // The previous history entry is outside this exam worker's offline scope.
-      if(product===1&&action==='back'){
+      if(verified&&action==='back'){
         exam.disconnected=false;
         await exam.context.setOffline(false);
       }
@@ -172,19 +177,24 @@ for(const {mode,demo,action} of testCases) {
         }
       }
       // Back/forward cache can restore the same untouched document when no seal was created.
-      const mayRestoreDocument=product===1&&action==='back';
+      const mayRestoreDocument=verified&&action==='back';
       if(!mayRestoreDocument)await page.waitForFunction(previousDocument=>window.departureTestDocument!==previousDocument,before.document);
       await wait(page,()=>(window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.active,'Restored departed attempt');
       const departed=await read(page,first);
       assert.equal(departed.attempt,before.attempt);
       if(!mayRestoreDocument)assert.notEqual(departed.document,before.document);
-      if(product===1 && action!=='controlled'){
+      if(verified && action!=='controlled'){
         assert.equal(departed.sealed,false);
         assert.equal(departed.next,first);
         assert.equal(departed.departure,undefined);
         assert.equal(departed.deadline,before.deadline);
         assert.ok(Object.values(departed.draft||{}).includes(answer));
         assert.equal(departed.queued.some(op=>op.section===first&&op.kind==='seal'),false);
+        if(native){
+          const {rows}=await native.db.query(`SELECT count(*)::int AS count FROM assessment.term2_offline_operation
+            WHERE attempt_id=$1 AND section=$2 AND kind='seal'`,[departed.attempt,first]);
+          assert.equal(rows[0].count,0);
+        }
         assert.equal(exam.controls.beforeUnloadSpies.length,action==='cancel_then_close'?1:2);
         if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,`${evidencePrefix}native-unconfirmed-${action}-${mode}.json`),
           JSON.stringify({mode,demo,action,prompts:exam.controls.beforeUnloadSpies.length,
