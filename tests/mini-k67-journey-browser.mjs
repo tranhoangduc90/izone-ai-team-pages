@@ -16,6 +16,7 @@ const full=process.env.K67_JOURNEY_FULL==='1';
 const checkListeningLayout=process.env.K67_JOURNEY_CHECK_LISTENING_LAYOUT==='1';
 const eofJournal=process.env.K67_JOURNEY_EOF_JOURNAL==='1';
 const writingOnly=process.env.K67_JOURNEY_WRITING_ONLY==='1';
+const testDeparture=process.env.K67_JOURNEY_CONFIRMED_DEPARTURE==='1';
 const term1=process.env.K67_JOURNEY_TERM1==='1';
 const term2=process.env.K67_JOURNEY_TERM2==='1';
 const term=term1||term2;
@@ -248,6 +249,70 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       if(await field.evaluate(node=>node.tagName)==='SELECT')await field.selectOption({index:1});
       else await field.fill('A');
       log('section_started',{section});
+      if(testDeparture&&term2&&section===order[0]){
+        const answer=await field.inputValue();
+        const label=section==='reading'?'Reading':'Listening';
+        const nextSkill=section==='reading'?'listening':'reading';
+        if(section==='listening')await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.currentTime>.3);
+        const before=await page.evaluate(()=>{
+          const journey=window.TERM_TEST_BOOTSTRAP.miniJourney;
+          return {view:journey.view(),origin:performance.timeOrigin,position:document.getElementById('miniJourneyAudio')?.currentTime};
+        });
+        await page.waitForFunction(({skill,value})=>
+          Object.values(window.TERM_TEST_BOOTSTRAP.miniJourney.drafts()[skill]||{}).includes(value),{skill:section,value:answer});
+        const reload=page.getByRole('button',{name:'Tải lại trang',exact:true});
+        const modal=page.getByRole('dialog',{name:'Xác nhận rời bài thi'});
+        if(section==='reading'){
+          await reload.click();
+          await modal.getByRole('button',{name:'Ở lại làm bài',exact:true}).click();
+        }else{
+          dismissNextDialog=true;
+          await Promise.all([page.waitForEvent('dialog',{predicate:dialog=>dialog.type()==='beforeunload',timeout:7000}),
+            page.reload({waitUntil:'commit',timeout:7000}).catch(error=>{
+              if(!/ERR_ABORTED|Timeout/.test(error.message))throw error;
+            })]);
+          assert.equal(dismissNextDialog,false);
+          assert.ok(await page.evaluate(()=>document.getElementById('miniJourneyAudio').currentTime)>=before.position);
+        }
+        assert.equal(await field.inputValue(),answer);
+        assert.equal(await page.evaluate(()=>performance.timeOrigin),before.origin);
+        await page.evaluate(()=>{
+          document.dispatchEvent(new Event('visibilitychange'));
+          document.getElementById('miniJourneyAudio')?.dispatchEvent(new Event('waiting'));
+        });
+        assert.equal(await page.evaluate(()=>Boolean(window.TERM_TEST_BOOTSTRAP.miniJourney.departure.state().departed)),false);
+        if(section==='reading'){
+          await reload.click();
+          await modal.getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
+        }else await Promise.all([page.waitForEvent('dialog',{predicate:dialog=>dialog.type()==='beforeunload',timeout:7000}),
+          page.reload({waitUntil:'commit',timeout:12000})]);
+        await page.waitForFunction(origin=>performance.timeOrigin!==origin,before.origin);
+        await page.waitForFunction(skill=>window.TERM_TEST_BOOTSTRAP?.miniJourney?.view().nextSection===skill,nextSkill);
+        const after=await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.miniJourney.view());
+        assert.equal(after.examSessionToken,before.view.examSessionToken);
+        await page.getByText('Phần '+label+' đã khóa trên thiết bị. Đang chờ máy chủ xác nhận.',{exact:true}).waitFor();
+        let lost=false,operationId;
+        await context.route('**/cbt-journey/seal',async request=>{
+          const body=request.request().postDataJSON();
+          assert.equal(body.section,section);
+          if(!operationId)operationId=body.operationId;
+          else assert.equal(body.operationId,operationId);
+          const response=await request.fetch();
+          if(!lost&&response.ok()){lost=true;return request.abort('failed');}
+          return request.fulfill({response});
+        });
+        await context.setOffline(false);
+        await page.getByText('Máy chủ đã nhận phần '+label+'.',{exact:true}).waitFor({timeout:25000});
+        assert.equal(lost,true);
+        const snapshot=await (await context.request.get(base+'/preview/rehearsal-receipt-readback')).json();
+        assert.equal(snapshot.rows.length,1);
+        assert.equal(snapshot.rows[0][section[0]],operationId);
+        assert.equal(snapshot.rows[0][section+'_submitted'],true);
+        assert.equal(snapshot.rows[0][nextSkill+'_submitted'],false);
+        assert.ok(Object.values(snapshot.rows[0][section+'_answers']).includes(answer));
+        log('departure_passed',{section,scopeKept:true,receiptLost:true,sqlReadback:true});
+        return;
+      }
       if(section==='listening'&&continuity){
         const audio=page.locator('#miniJourneyAudio');
         await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.currentTime>.25);
