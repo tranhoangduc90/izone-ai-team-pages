@@ -11,8 +11,8 @@ const product=selected==='mini'?'mini':Number(selected||2);
 assert.ok([1,2,'mini'].includes(product));
 const taskId=product===2?'task1':'task2';
 const productLabel=product==='mini'?'Mini':`Term ${product}`;
-const verified=product!=='mini';
 const recorderOutage=process.env.K56_DEPARTURE_RECORDER_OUTAGE==='1';
+const operationTable=product==='mini'?'assessment.mini_k56_offline_operation':'assessment.term2_offline_operation';
 const evidencePrefix=product===2?'':product===1?'term1-':'mini-';
 const testCases = [
   {mode:'read_first', demo:false, action:'controlled'},
@@ -20,7 +20,7 @@ const testCases = [
   {mode:'read_first', demo:true, action:'reload'},
   {mode:'lis_first', demo:true, action:'close'},
 ];
-if(verified)testCases.push({mode:'read_first',demo:false,action:'cancel_then_close'});
+testCases.push({mode:'read_first',demo:false,action:'cancel_then_close'});
 const warning = 'Nếu bạn rời trang hoặc tải lại, hệ thống sẽ nộp ngay phần thi đang làm với các câu trả lời đã lưu. Bạn không thể quay lại làm tiếp phần này.';
 const next = ' Khi mở lại bài thi, bạn sẽ chuyển sang phần tiếp theo.';
 const last = ' Khi mở lại, bạn sẽ thấy màn hình kết thúc bài thi.';
@@ -93,8 +93,7 @@ for(const {mode,demo,action} of testCases) {
       const input=page.locator('#'+first+'Questions input[data-number]').first();
       await input.fill(answer);
       const policy=await page.locator('.exam-departure-note p').first().innerText();
-      if(verified)assert.match(policy,/Khi hệ thống chưa nhận được xác nhận, nháp và lượt thi của bạn được giữ/);
-      else assert.equal(policy,warning+next);
+      assert.match(policy,/Khi hệ thống chưa nhận được xác nhận, nháp và lượt thi của bạn được giữ/);
       const before=await read(page,first);
       assert.equal(before.active,first);
       if(product===2 && action==='controlled' && process.env.K56_DEPARTURE_SLOW_RESTORE==='1'){
@@ -147,7 +146,7 @@ for(const {mode,demo,action} of testCases) {
       assert.equal((await read(page,first)).active,first);
       assert.equal((await read(page,first)).sealed,false);
       // The previous history entry is outside this exam worker's offline scope.
-      if(verified&&action==='back'){
+      if(action==='back'){
         exam.disconnected=false;
         await exam.context.setOffline(false);
       }
@@ -177,13 +176,13 @@ for(const {mode,demo,action} of testCases) {
         }
       }
       // Back/forward cache can restore the same untouched document when no seal was created.
-      const mayRestoreDocument=verified&&action==='back';
+      const mayRestoreDocument=action==='back';
       if(!mayRestoreDocument)await page.waitForFunction(previousDocument=>window.departureTestDocument!==previousDocument,before.document);
       await wait(page,()=>(window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.active,'Restored departed attempt');
       const departed=await read(page,first);
       assert.equal(departed.attempt,before.attempt);
       if(!mayRestoreDocument)assert.notEqual(departed.document,before.document);
-      if(verified && action!=='controlled'){
+      if(action!=='controlled'){
         assert.equal(departed.sealed,false);
         assert.equal(departed.next,first);
         assert.equal(departed.departure,undefined);
@@ -191,7 +190,7 @@ for(const {mode,demo,action} of testCases) {
         assert.ok(Object.values(departed.draft||{}).includes(answer));
         assert.equal(departed.queued.some(op=>op.section===first&&op.kind==='seal'),false);
         if(native){
-          const {rows}=await native.db.query(`SELECT count(*)::int AS count FROM assessment.term2_offline_operation
+          const {rows}=await native.db.query(`SELECT count(*)::int AS count FROM ${operationTable}
             WHERE attempt_id=$1 AND section=$2 AND kind='seal'`,[departed.attempt,first]);
           assert.equal(rows[0].count,0);
         }
@@ -228,7 +227,7 @@ for(const {mode,demo,action} of testCases) {
       assert.equal(prepareCalls(),admissionBeforeReconnect,'Reconnect must reuse the owned sealed run');
       assert.equal(exam.controls.ackLost,true);
       const receipts=native
-        ? (await native.db.query(`SELECT operation_id,payload,receipt FROM assessment.term2_offline_operation
+        ? (await native.db.query(`SELECT operation_id,payload,receipt FROM ${operationTable}
              WHERE attempt_id=$1 AND section=$2 AND kind='seal'`,[departed.attempt,first])).rows
         : [...exam.receipts.values()].filter(receipt=>receipt.section===first&&receipt.kind==='seal')
           .map(receipt=>({operation_id:receipt.operationId,receipt}));
@@ -244,7 +243,41 @@ for(const {mode,demo,action} of testCases) {
           sealReceipts:receipts.map(row=>row.receipt.receiptId)},null,2));
       if(action==='controlled'){
         await start(page,second);
-        await page.locator('#listeningQuestions input[data-number]').first().fill('Giữ câu Listening');
+        const listeningAnswer=page.locator('#listeningQuestions input[data-number]').first();
+        await listeningAnswer.fill('Giữ câu Listening');
+        if(product==='mini'){
+          await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
+          assert.equal(await prompt.locator('p').innerText(),warning+last);
+          await prompt.getByRole('button',{name:'Ở lại làm bài',exact:true}).click();
+          assert.equal(await listeningAnswer.inputValue(),'Giữ câu Listening');
+          exam.disconnected=true;
+          await exam.context.setOffline(true);
+          const listening=await read(page,'listening');
+          await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
+          await prompt.getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
+          await page.waitForFunction(previousDocument=>window.departureTestDocument!==previousDocument,listening.document);
+          await wait(page,()=>window.K56_MINI_OFFLINE?.record?.sections.listening?.sealed,'Final Listening restored');
+          const final=await read(page,'listening');
+          assert.equal(final.next,'result');
+          assert.equal(final.attempt,before.attempt);
+          assert.ok(Object.values(JSON.parse(final.content).answers).includes('Giữ câu Listening'));
+          assert.equal(final.receipt,undefined);
+          exam.controls.ackLost=false;
+          exam.disconnected=false;
+          await exam.context.setOffline(false);
+          await page.evaluate(()=>{const runtime=window.K56_MINI_OFFLINE;runtime.retryAt=0;return runtime.flush();});
+          await page.waitForFunction(id=>window.K56_MINI_OFFLINE?.record.receipts[id]?.status==='accepted',final.operationId);
+          const finalRows=native
+            ?(await native.db.query(`SELECT operation_id FROM ${operationTable}
+                WHERE attempt_id=$1 AND section='listening' AND kind='seal'`,[final.attempt])).rows
+            :[...exam.receipts.values()].filter(receipt=>receipt.section==='listening'&&receipt.kind==='seal')
+              .map(receipt=>({operation_id:receipt.operationId}));
+          assert.deepEqual(finalRows.map(row=>row.operation_id),[final.operationId]);
+          if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,'mini-confirmed-departure-final-listening.json'),
+            JSON.stringify({finalSkill:'listening',next:'result',sameAttempt:true,localDraftKept:true,
+              acknowledgmentDropped:exam.controls.ackLost,serverReceipts:finalRows.length},null,2));
+          return;
+        }
         await page.click('#submitListening');
         await wait(page,()=>(window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.record.operations.length===0,'Listening accepted before Writing');
         await page.click('#startWriting');
@@ -293,7 +326,7 @@ for(const {mode,demo,action} of testCases) {
   });
 }
 
-test(`${productLabel} Writing uses the final-skill Vietnamese rule`,async()=>{
+test(`${productLabel} uses the final-skill Vietnamese rule`,async()=>{
   const {departureWarning}=await import('../term-tests/k56-offline-shared/exam-departure-v1.mjs');
   assert.equal(departureWarning(true),warning+last);
 });

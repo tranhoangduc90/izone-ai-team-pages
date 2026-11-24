@@ -1,0 +1,383 @@
+/*
+ * Dữ liệu nhận vào: mã lớp nhập tay hoặc danh sách lớp API trả sau khi Google xác thực giảng viên.
+ * Xử lý: ghim lớp demo đã phục hồi; lớp thật vẫn theo quyền backend.
+ * Kết quả: nút thử mở CODEXDEMO56; link gửi học viên, answer sheet và kết quả giữ lớp đang chọn.
+ * Khi lỗi: giữ ô nhập tay, không hiện dữ liệu lớp và báo rõ để người dùng thử đăng nhập lại.
+ */
+
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../k56-shared/teacher-session-client.js?rev=20261022-v1&startup=20261026-v2';
+import { buildK56LandingClasses } from './landing-model.js?rev=20261020-demo-first-v1';
+
+import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup2';
+import { demoJournalPage } from '../demo/journal-entry-v4.mjs';
+const appConfig = window.TERM_TEST_APP_CONFIG || {};
+const demoClassCode = 'CODEXDEMO56';
+const input = document.getElementById('classCode');
+const classSelect = document.getElementById('classSelect');
+const classHelp = document.getElementById('classHelp');
+const loginBadge = document.getElementById('loginBadge');
+const loginStatus = document.getElementById('loginStatus');
+const googleSignInButton = document.getElementById('googleSignInButton');
+const logoutButton = document.getElementById('logoutButton');
+const apiBaseUrls = appConfig.API_BASE_URLS || [appConfig.API_BASE_URL];
+const sessionClients = new Map(apiBaseUrls.map(apiBaseUrl => [apiBaseUrl, createTeacherSessionClient({
+  apiBaseUrl,
+  sessionPath: '/api/auth/session'
+})]));
+const authenticatedApiUrls = new Set();
+const authView=createTeacherAuthState({panel:googleSignInButton,notice:loginStatus,badge:loginBadge,retry:()=>restoreSessions()});
+let googleStarted=false;
+let loginGeneration = 0;
+const landingUrl = window.location.href;
+const landingQuery = new URLSearchParams(location.search);
+let examMode = landingQuery.get('mode') === 'read_first' ? 'read_first' : 'lis_first';
+const testChoices = [...document.querySelectorAll('[data-test]')];
+const openExam = document.getElementById('openExam');
+const heading = document.getElementById('chosenName');
+const studentLinkPanel = document.getElementById('studentLinkPanel');
+const studentLink = document.getElementById('studentLink');
+const studentLinkStatus = document.getElementById('studentLinkStatus');
+const paperExam = document.getElementById('paperExam');
+const paperExamLink = document.getElementById('paperExamLink');
+const paperExamLabel = document.getElementById('paperExamLabel');
+const paperExamUrl = document.getElementById('paperExamUrl');
+const paperExamHelp = document.getElementById('paperExamHelp');
+const rescue = document.getElementById('rescue');
+let selectedTest = testChoices.find(button => button.dataset.slug === landingQuery.get('test'));
+let opening;
+
+function cancelOpening() {
+  if (!opening) return;
+  opening.controller.abort();
+  classHelp.textContent = opening.previousHelp;
+  opening = undefined;
+  openExam.disabled = false;
+}
+
+function updateLandingUrl() {
+  landingQuery.set('mode', examMode);
+  const classCode = selectedClassCode();
+  if (validClassCode(classCode)) landingQuery.set('class', classCode);
+  else landingQuery.delete('class');
+  if (selectedTest) landingQuery.set('test', selectedTest.dataset.slug);
+  else landingQuery.delete('test');
+  if (opening && (opening.classCode !== classCode || opening.mode !== examMode)) cancelOpening();
+  renderShareLinks(classCode);
+  try{window.history.replaceState(window.history.state, '', `?${landingQuery.toString()}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
+}
+function testLink(destination, classCode) {
+  const params = new URLSearchParams({ class: classCode, mode: examMode });
+  const page = demoJournalPage(destination, classCode);
+  return `../${page}?${params.toString()}`;
+}
+
+function renderShareLinks(classCode) {
+  const available = Boolean(selectedTest && validClassCode(classCode));
+  studentLinkPanel.hidden = !available;
+  paperExamHelp.hidden = available;
+  paperExamLink.hidden = !available;
+  const studentUrl = available ? new URL(testLink(selectedTest.dataset.test, classCode), landingUrl).href : '';
+  if (studentLink.value !== studentUrl) {
+    studentLink.value = studentUrl;
+    studentLinkStatus.textContent = '';
+    studentLinkStatus.removeAttribute('data-copied');
+  }
+  if (!available) {
+    paperExamLink.removeAttribute('href');
+    return;
+  }
+  paperExamLink.href = new URL(testLink(selectedTest.dataset.slug, classCode), landingUrl).href;
+  paperExamLabel.textContent = `Answer Sheet ${selectedTest.textContent.trim()}`;
+  paperExamUrl.textContent = paperExamLink.href;
+}
+
+document.getElementById('copyStudentLink').addEventListener('click', async () => {
+  const url = studentLink.value;
+  if (!url) return;
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(url);
+    copied = true;
+  } catch {
+    if (studentLink.value !== url) return;
+    studentLink.focus();
+    studentLink.select();
+    try { copied = document.execCommand('copy'); } catch { /* Giữ link được chọn để sao chép thủ công. */ }
+  }
+  if (studentLink.value !== url) return;
+  studentLinkStatus.textContent = copied ? 'Đã sao chép đường dẫn.' : 'Đường dẫn đã được chọn. Bạn có thể sao chép bằng Ctrl+C hoặc ⌘+C.';
+  studentLinkStatus.toggleAttribute('data-copied', copied);
+});
+
+document.querySelectorAll('[data-mode]').forEach(button => {
+  const refresh = () => {
+    const selected = button.dataset.mode === examMode;
+    button.classList.toggle('is-selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  };
+  refresh();
+  button.addEventListener('click', () => {
+    examMode = button.dataset.mode;
+    updateLandingUrl();
+    document.querySelectorAll('[data-mode]').forEach(item => {
+      const selected = item.dataset.mode === examMode;
+      item.classList.toggle('is-selected', selected);
+      item.setAttribute('aria-pressed', String(selected));
+    });
+  });
+});
+function selectedClassCode() {
+  const value = classSelect.hidden ? input.value : classSelect.value;
+  const normalized = String(value || '').trim().toUpperCase();
+  const classCode = normalized;
+  if (classSelect.hidden) input.value = classCode;
+  return classCode;
+}
+
+function validClassCode(value) {
+  return /^[A-Z0-9_-]{2,32}$/.test(value) && (!value.startsWith('CODEXDEMO') || value === 'CODEXDEMO56') && value !== 'CODEXID261018';
+}
+
+function showManualEntry(message = 'Bạn vẫn có thể nhập mã lớp khi chưa đăng nhập.') {
+  input.hidden = false;
+  classSelect.hidden = true;
+  classSelect.replaceChildren();
+  classHelp.textContent = message;
+  loginBadge.textContent = 'Giảng viên chưa đăng nhập';
+  logoutButton.hidden = true;
+  googleSignInButton.hidden = false;
+  renderShareLinks(input.value.trim().toUpperCase());
+}
+
+function showAuthorizedClasses(payload) {
+  authView.ready();
+  const classes = buildK56LandingClasses(payload.classes);
+  if (!classes.length) {
+    showManualEntry('Tài khoản chưa được cấp lớp. Bạn có thể nhập mã lớp đã được mở bài.');
+    authView.ready();
+    loginStatus.textContent = 'Đã đăng nhập, chưa có lớp được cấp quyền.';
+    logoutButton.hidden = false;
+    return;
+  }
+  const requested = selectedClassCode();
+  classSelect.replaceChildren(...classes.map(item => {
+    const option = document.createElement('option');
+    option.value = item.name;
+    option.textContent = item.label || item.name;
+    return option;
+  }));
+  const matchingClass = classes.find(item => item.name.toUpperCase() === requested);
+  classSelect.value = matchingClass?.name || classes[0].name;
+  input.hidden = true;
+  classSelect.hidden = false;
+  input.value = classSelect.value;
+  updateLandingUrl();
+  classHelp.textContent = 'Lớp demo luôn ở đầu. Các lớp thật hiển thị theo quyền tài khoản, lớp mới hơn nằm trên.';
+  const reviewerName = payload.reviewer?.displayName || payload.reviewer?.email || 'Giảng viên';
+  loginBadge.textContent = `Đã đăng nhập: ${reviewerName}`;
+  loginStatus.textContent = `Đã tải ${classes.length - 1} lớp thật và lớp demo dùng thử.`;
+  logoutButton.hidden = false;
+  googleSignInButton.hidden = true;
+}
+
+async function loadAuthorizedClasses() {
+  if (!appConfig.API_BASE_URL) throw new Error('Chưa cấu hình địa chỉ API.');
+  if (!authenticatedApiUrls.size) throw new Error('Bạn chưa đăng nhập Google.');
+  const generation = loginGeneration;
+  const results = await Promise.allSettled(Array.from(authenticatedApiUrls, async apiBaseUrl => {
+    const response = await fetch(`${apiBaseUrl}/api/term-tests/teacher/options`, teacherSessionRequestOptions({ cache: 'no-store' }));
+    return { response, payload: await response.json().catch(() => null) };
+  }));
+  if (generation !== loginGeneration) return;
+  const responses = results.filter(item => item.status === 'fulfilled').map(item => item.value);
+  const accepted = responses.filter(item => item.response.ok && item.payload?.ok);
+  if (!accepted.length) {
+    const { response, payload } = responses[0] || { response: { status: 0 }, payload: null };
+    const error = new Error(payload?.message || (response.status === 401
+      ? 'Phiên Google đã hết hạn; hãy đăng nhập lại.'
+      : `Không tải được danh sách lớp (mã ${response.status}).`));
+    error.status = response.status;
+    throw error;
+  }
+  const classes = Array.from(new Map(accepted.flatMap(item => item.payload.classes || []).map(item => [item.name, item])).values());
+  showAuthorizedClasses({ reviewer: accepted[0].payload.reviewer, classes });
+  if (accepted.length < results.length) {
+    loginStatus.textContent += ' Một nguồn danh sách lớp chưa tải được. Bạn có thể nhập mã lớp đã được mở bài.';
+  }
+}
+
+function resetLogin() {
+  cancelOpening();
+  loginGeneration += 1;
+  authenticatedApiUrls.clear();
+  showManualEntry();
+}
+
+async function connectSession(restoring = false) {
+  loginStatus.textContent = restoring ? 'Đang khôi phục phiên đăng nhập...' : 'Đang tải các lớp được cấp quyền...';
+  try {
+    await loadAuthorizedClasses();
+  } catch (error) {
+    resetLogin();
+    authView.failed(error);if(authView.needsLogin)setupGoogleSignIn();
+  }
+}
+
+async function loginAvailableApis(credential) {
+  const generation = loginGeneration;
+  const results = await Promise.allSettled(Array.from(sessionClients, async ([apiBaseUrl, client]) => {
+    await client.login(credential);
+    if (generation !== loginGeneration) throw { staleSession: true };
+    authenticatedApiUrls.add(apiBaseUrl);
+  }));
+  if (authenticatedApiUrls.size) return;
+  const failure = results.find(item => item.status === 'rejected');
+  throw failure?.reason || new Error('Tài khoản chưa được cấp quyền cho hệ thống K56.');
+}
+
+function setupGoogleSignIn() {
+  if(googleStarted)return;googleStarted=true;
+  if (!appConfig.GOOGLE_CLIENT_ID) {
+    loginStatus.textContent = 'Chưa cấu hình Google OAuth Client ID.';
+    return;
+  }
+  const renderButton = () => {
+    window.google.accounts.id.initialize({
+      client_id: appConfig.GOOGLE_CLIENT_ID,
+      auto_select: false,
+      callback: async response => {
+        resetLogin();
+        const generation = loginGeneration;
+        try {
+          await loginAvailableApis(response.credential || '');
+          if (generation !== loginGeneration) return;
+          await connectSession();
+        } catch (error) {
+          if (error.staleSession || generation !== loginGeneration) return;
+          resetLogin();
+          loginStatus.textContent = `Không thể đăng nhập: ${error.message}`;
+        }
+      }
+    });
+    window.google.accounts.id.renderButton(googleSignInButton, {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      text: 'signin_with',
+      shape: 'rectangular'
+    });
+  };
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.defer = true;
+  script.onload = renderButton;
+  script.onerror = () => {googleStarted=false;authView.failed(new Error('Không tải được nút đăng nhập Google. Hãy thử lại.'));};
+  document.head.append(script);
+}
+
+function requireClass() {
+  const classCode = selectedClassCode();
+  const control = classSelect.hidden ? input : classSelect;
+  control.setCustomValidity(validClassCode(classCode) ? '' : 'Hãy nhập hoặc chọn mã lớp hợp lệ.');
+  return control.reportValidity() ? classCode : '';
+}
+
+function renderTest() {
+  document.getElementById('testPicker').hidden = Boolean(selectedTest);
+  document.getElementById('testActions').hidden = !selectedTest;
+  document.getElementById(selectedTest ? 'pickStep' : 'actionStep').removeAttribute('aria-current');
+  document.getElementById(selectedTest ? 'actionStep' : 'pickStep').setAttribute('aria-current', 'step');
+  heading.textContent = selectedTest?.textContent || '';
+  paperExam.open = false;
+  rescue.open = false;
+}
+
+for (const button of testChoices) button.addEventListener('click', () => {
+  if (!requireClass()) return;
+  selectedTest = button;
+  renderTest();
+  updateLandingUrl();
+  heading.focus();
+});
+
+document.getElementById('changeTest').addEventListener('click', () => {
+  cancelOpening();
+  const prior = selectedTest;
+  selectedTest = undefined;
+  renderTest();
+  updateLandingUrl();
+  prior.focus();
+});
+
+openExam.addEventListener('click', async () => {
+  const classCode = requireClass();
+  if (!classCode || !selectedTest || opening) return;
+  const { slug, test } = selectedTest.dataset;
+  const request = { classCode, mode: examMode, controller: new AbortController(), previousHelp: classHelp.textContent };
+  opening = request;
+  openExam.disabled = true;
+  classHelp.textContent = 'Đang kiểm tra bài demo của lớp Codex Demo 56...';
+  try {
+    const apiBaseUrl = appConfig.API_FOR_CLASS(demoClassCode);
+    const response = await fetch(
+      `${apiBaseUrl}/api/term-tests/roster?class=${encodeURIComponent(demoClassCode)}&test=${encodeURIComponent(slug)}`,
+      { cache: 'no-store', signal: AbortSignal.any([request.controller.signal, AbortSignal.timeout(15000)]) }
+    );
+    const payload = await response.json();
+    if (opening !== request || selectedClassCode() !== classCode) return;
+    if (!response.ok || !payload.ok) throw new Error(payload.message || 'Lớp này chưa được mở bài test trên hệ thống K56.');
+    if (!Array.isArray(payload.students) || !payload.students.length) throw new Error('Lớp chưa có danh sách học viên cho bài test này.');
+    updateLandingUrl();
+    window.location.href = testLink(test, demoClassCode);
+  } catch (error) {
+    if (opening === request) classHelp.textContent = `Không mở được bài test: ${error.message}`;
+  } finally {
+    if (opening === request) {
+      opening = undefined;
+      openExam.disabled = false;
+    }
+  }
+});
+
+document.getElementById('teacherDashboard')?.addEventListener('click', () => {
+  cancelOpening();
+  const classCode = selectedClassCode();
+  const query = new URLSearchParams();
+  if (validClassCode(classCode)) query.set('class', classCode);
+  if (selectedTest) query.set('test', selectedTest.dataset.slug);
+  window.location.href = `../teacher-k56/${query.size ? '?' + query : ''}`;
+});
+
+logoutButton.addEventListener('click', async () => {
+  resetLogin();
+  await Promise.allSettled(Array.from(sessionClients.values(), client => client.logout()));
+  authView.signedOut();setupGoogleSignIn();
+  window.google?.accounts?.id?.disableAutoSelect?.();
+  loginStatus.textContent = 'Đã đăng xuất. Bạn có thể nhập mã lớp hoặc đăng nhập tài khoản khác.';
+});
+
+const requestedClass = new URLSearchParams(location.search).get('class');
+const initialClass = String(requestedClass || '').trim().toUpperCase();
+input.value = validClassCode(initialClass) ? initialClass : '';
+showManualEntry();
+renderTest();
+updateLandingUrl();
+classSelect.addEventListener('change', () => {
+  input.value = selectedClassCode();
+  updateLandingUrl();
+});
+input.addEventListener('input', () => {
+  input.setCustomValidity('');
+  const classCode = input.value.trim().toUpperCase();
+  if (opening && classCode !== opening.classCode) cancelOpening();
+  renderShareLinks(classCode);
+});
+input.addEventListener('change', updateLandingUrl);
+async function restoreSessions(){
+ authView.checking();
+ const results=await Promise.allSettled(Array.from(sessionClients,async([apiBaseUrl,client])=>{if(await client.restore())authenticatedApiUrls.add(apiBaseUrl);}));
+ if(authenticatedApiUrls.size){await connectSession(true);if(results.some(r=>r.status==='rejected'))loginStatus.textContent+=' Một nguồn đăng nhập chưa khôi phục được.';}
+ else{const failure=results.find(r=>r.status==='rejected');if(failure)authView.failed(failure.reason);else{authView.signedOut();setupGoogleSignIn();}}
+}
+void restoreSessions();

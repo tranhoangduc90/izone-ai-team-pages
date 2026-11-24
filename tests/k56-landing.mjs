@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import {demoJournalPage} from '../term-tests/demo/journal-entry-v3.mjs';
+import {demoJournalPage} from '../term-tests/demo/journal-entry-v4.mjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {sortClassesNewestFirst,buildK56LandingClasses} from '../term-tests/k56-demo/landing-model.js';
-const source=fs.readFileSync(new URL('../term-tests/k56-demo/landing.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
+const source=fs.readFileSync(new URL('../term-tests/k56-demo/landing-mini-k56-verified-exit-v1.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
 function element(){return {value:'',hidden:false,dataset:{},handlers:{},classList:{toggle(){}},setAttribute(){},removeAttribute(){},focus(){},after(){},addEventListener(n,f){this.handlers[n]=f},replaceChildren(...children){this.children=children},setCustomValidity(s){this.validation=s},reportValidity(){return !this.validation},append(){}};}
 const elements=Object.fromEntries(['classCode','classSelect','classHelp','loginBadge','loginStatus','googleSignInButton','logoutButton','teacherDashboard',
   'openExam','chosenName','rescue','testPicker','testActions','pickStep','actionStep','changeTest',
@@ -40,7 +40,7 @@ assert.equal(elements.classSelect.children.length,2);
 assert.equal(elements.classSelect.children[0].value,'CODEXDEMO56');
 response={ok:true,students:[{ref:'synthetic'}]};
 await open(buttons[1]);assert.equal(context.window.location.href,'../term-test-2-k56-computer-based/demo-journal-v1/?class=CODEXDEMO56&mode=lis_first');
-await open(buttons[2]);assert.equal(context.window.location.href,'../mini-test-k56-computer-based/index-mini-cbt-listening-recovery-v2.html?class=CODEXDEMO56&mode=lis_first');
+await open(buttons[2]);assert.equal(context.window.location.href,'../mini-test-k56-computer-based/index-mini-cbt-listening-recovery-v2-verified-exit-v1.html?class=CODEXDEMO56&mode=lis_first');
 buttons[1].handlers.click();
 assert.equal(elements.paperExamLink.href,'https://example.test/term-tests/term-test-2-k56/?class=IC2264&mode=lis_first');
 elements.teacherDashboard.handlers.click();assert.equal(context.window.location.href,'../teacher-k56/?class=IC2264&test=term-test-2-k56');
@@ -50,7 +50,7 @@ assert.ok(requests.some(r=>r.options?.credentials==='include'));
   const demoPaths = [
     '../term-test-1-k56-computer-based/demo-journal-v1/',
     '../term-test-2-k56-computer-based/demo-journal-v1/',
-    '../mini-test-k56-computer-based/index-mini-cbt-listening-recovery-v2.html'
+    '../mini-test-k56-computer-based/index-mini-cbt-listening-recovery-v2-verified-exit-v1.html'
   ];
 for(const classCode of ['IC2264','IC2305','CODEXDEMO56']) for(const mode of ['lis_first','read_first']) {
   elements.classCode.value=classCode;
