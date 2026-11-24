@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
-import {demoJournalPage} from '../term-tests/demo/journal-entry-v3.mjs';
+import {demoJournalPage} from '../term-tests/demo/journal-entry-v4.mjs';
 import test from 'node:test';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import * as model from '../term-tests/k56-demo/landing-model.js';
 
-const source=fs.readFileSync(new URL('../term-tests/k56-demo/landing.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
+const source=fs.readFileSync(new URL('../term-tests/k56-demo/landing-mini-k56-verified-exit-v1.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
 const demoEntry = {
  'term-test-1-k56-computer-based': '../term-test-1-k56-computer-based/demo-journal-v1/',
  'term-test-2-k56-computer-based': '../term-test-2-k56-computer-based/demo-journal-v1/',
- 'mini-test-k56-computer-based': '../mini-test-k56-computer-based/index-mini-cbt-listening-recovery-v2.html'
+ 'mini-test-k56-computer-based': '../mini-test-k56-computer-based/index-mini-cbt-listening-recovery-v2-verified-exit-v1.html'
 };
 const fakeClasses=[{name:'CODEXDEMO806'},{name:'IC2305'},{name:'IC2264'}];
 const tick=()=>new Promise(resolve=>setImmediate(resolve));

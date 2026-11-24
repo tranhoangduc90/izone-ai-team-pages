@@ -241,7 +241,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
  await context.route('**/*',routeHandler);
  const destination=slug+(paper?'':'-computer-based');
  const demoEntry=mini&&demo&&!paper
-  ? (await import('../term-tests/demo/journal-entry-v3.mjs')).demoJournalPage(destination,classCode)
+  ? (await import('../term-tests/demo/journal-entry-v4.mjs')).demoJournalPage(destination,classCode)
   : destination+'/'+(demo&&!mini?'demo-journal-v1/':'');
  const url=base+`/term-tests/${demoEntry}?class=${classCode}&mode=${mode}`;
  return {get page(){return page;},get context(){return context;},get browser(){return browser;},server,url,student,calls,errors,receipts,controls,get disconnected(){return disconnected;},set disconnected(v){disconnected=v;},

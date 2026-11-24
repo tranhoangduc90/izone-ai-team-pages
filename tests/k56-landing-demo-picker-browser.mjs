@@ -73,7 +73,7 @@ test('Chromium desktop/mobile: giữ link lớp thật, nút DEMO luôn mở COD
           await select.selectOption(code);
           await page.locator(`[data-slug="${slug}"]`).click();
           const demoPath = slug === 'mini-test-k56'
-            ? 'mini-test-k56-computer-based/index-mini-cbt-listening-recovery-v2.html'
+            ? 'mini-test-k56-computer-based/index-mini-cbt-listening-recovery-v2-verified-exit-v1.html'
             : slug + '-computer-based/demo-journal-v1/';
           const studentPath = code === 'CODEXDEMO56' ? demoPath : slug + '-computer-based/';
           const studentUrl = `${base}/term-tests/${studentPath}?class=${code}&mode=${mode}`;
