@@ -313,12 +313,14 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       }
       await page.waitForFunction(({skill,value})=>
         Object.values(window.TERM_TEST_BOOTSTRAP.miniJourney.drafts()[skill]||{}).includes(value),{skill:section,value:answer});
+      const leaveButton=page.locator('.exam-departure-note').getByRole('button',{name:'Rời trang',exact:true});
+      const verifiedDeparture=await leaveButton.count()===1;
       const explicitButton=action==='leave'
-        ? term2?page.getByRole('button',{name:'Rời trang',exact:true}):page.locator('#termTestChangeStudent')
+        ? verifiedDeparture?leaveButton:page.locator('#termTestChangeStudent')
         : page.getByRole('button',{name:'Tải lại trang',exact:true});
       const modal=page.getByRole('dialog',{name:'Xác nhận rời bài thi'});
       const explicit=['controlled','writing','leave','final'].includes(action);
-      const unverifiedNative=term2&&!explicit;
+      const unverifiedNative=verifiedDeparture&&!explicit;
       const history=action==='back'?await context.newCDPSession(page):null;
       const prior=history?await history.send('Page.getNavigationHistory'):null;
       const backEntry=prior?.entries[prior.currentIndex-1]?.id;
@@ -377,7 +379,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         }
       }
       if(action==='leave'){
-        if(term2){
+        if(verifiedDeparture){
           await page.waitForURL(new URL('../',url).href);
           await page.goto(url,{waitUntil:'domcontentloaded'});
         }
