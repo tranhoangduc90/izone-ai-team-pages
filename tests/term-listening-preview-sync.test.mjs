@@ -133,7 +133,7 @@ test('shows the remaining prerequisite when playback is confirmed before exam pr
 const targets = [
   ['term-test-1-k56-computer-based', 'student-cache-v1', 'verified', '-confirmed-departure-v1'],
   ['term-test-2-k56-computer-based', 'student-cache-v2', 'verified', '-confirmed-departure-v2'],
-  ['term-test-1-computer-based', 'student-cache-v2'],
+  ['term-test-1-computer-based', 'student-cache-v2', 'verified', '-confirmed-departure-v1'],
   ['term-test-2-computer-based', 'student-cache-v2', 'verified', '-confirmed-departure-v1'],
   ['term-test-1-k56-computer-based', 'demo-journal-v1', 'verified', '-confirmed-departure-v1'],
   ['term-test-2-k56-computer-based', 'demo-journal-v1', 'verified', '-confirmed-departure-v2'],
