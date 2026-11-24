@@ -180,6 +180,14 @@ for(const order of orders)test('Mini K56 paper '+order,{timeout:170000},async()=
       assert.equal(await field.inputValue(),answer);
       assert.equal(await active.page.evaluate(()=>performance.timeOrigin),timeOrigin);
       await active.page.reload({waitUntil:'commit'});
+      await active.page.waitForFunction(previous=>performance.timeOrigin!==previous,timeOrigin);
+      await field.waitFor({state:'visible'});
+      assert.equal(await field.inputValue(),answer);
+      const beforeConfirm=(await fixture.db.query("SELECT operation_id FROM assessment.mini_k56_offline_operation WHERE kind='seal'")).rows;
+      assert.equal(beforeConfirm.length,0);
+      console.log(JSON.stringify({order,section,nativeReloadKeptAttempt:true,seals:0}));
+      await reloadButton(active.page).click();
+      await acceptReload(active.page);
     }
     await active.page.waitForFunction(previous=>performance.timeOrigin!==previous,timeOrigin);
     await retryPending(active.page).waitFor();

@@ -13,14 +13,17 @@ const require=createRequire(resolve(process.env.USERPROFILE,'.cache/codex-runtim
 const {chromium}=require('playwright');
 const root=resolve(fileURLToPath(new URL('../',import.meta.url)));
 const slug='mini-test-k56';
-const route='/term-tests/'+slug+'/';
+const demo=process.env.MINI_PAPER_VERIFIED_DEMO==='true';
+const route='/term-tests/'+(demo?'mini-test-k56-demo-paper-v1':slug)+'/';
+const classCode=demo?'CODEXDEMO56':'IC5601';
 const api='/api/term-tests/'+slug+'/';
 const labels={reading:'Reading',listening:'Listening'};
 const type={'.js':'text/javascript','.mjs':'text/javascript','.html':'text/html','.css':'text/css','.svg':'image/svg+xml'};
 const variant=process.env.MINI_PAPER_ONLINE_ORDER;
-const noShell=process.env.MINI_PAPER_NO_SHELL==='true';
+const noShell=demo||process.env.MINI_PAPER_NO_SHELL==='true';
 
-for(const order of noShell?['read_first']:variant?[variant]:['read_first','lis_first'])test('Mini K56 paper online '+order,{timeout:120000},async()=>{
+for(const order of variant?[variant]:noShell&&!demo?['read_first']:['read_first','lis_first'])
+test('Mini K56 paper '+(demo?'DEMO':'online')+' '+order,{timeout:120000},async()=>{
   const f=await createFixture();
   const web=createServer(async(req,res)=>{
     try{
@@ -47,7 +50,7 @@ for(const order of noShell?['read_first']:variant?[variant]:['read_first','lis_f
     }while(true);
     origin='http://127.0.0.1:'+web.address().port;
     browser=await chromium.launch({channel:'msedge',headless:true});
-    const destination=origin+route+'?class=IC5601&mode='+order;
+    const destination=origin+route+'?class='+classCode+'&mode='+order;
     const ref=f.students[0].ref;
     async function open(){
       const context=await browser.newContext(noShell?{serviceWorkers:'block'}:{});
@@ -99,10 +102,24 @@ for(const order of noShell?['read_first']:variant?[variant]:['read_first','lis_f
       await reload(page).click();
       await page.getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
     }
+    async function resumeDraft(page,section,value){
+      const field=page.locator('#'+section+'Questions input:visible,#'+section+'Questions select:visible').first();
+      const identity=page.getByRole('button',{name:'Xác nhận và tiếp tục',exact:true});
+      const start=page.getByRole('button',{name:'Nhập đáp án '+labels[section],exact:true}).first();
+      await field.or(identity).or(start).first().waitFor();
+      if(await identity.isVisible()){
+        await page.locator('#studentSelect').selectOption(ref);
+        await identity.click();
+      }
+      await field.or(start).first().waitFor();
+      if(await start.isVisible())await start.click();
+      await field.waitFor();
+      assert.equal(await field.inputValue(),value);
+    }
     const pending=(page,section)=>page.getByText('Phần '+labels[section]+' đã khóa trên thiết bị. Đang chờ máy chủ xác nhận.',{exact:true});
     const accepted=(page,section)=>page.getByText('Máy chủ đã nhận phần '+labels[section]+'.',{exact:true});
     const active=await open();
-    const other=order==='lis_first'?await open():null;
+    const other=order==='lis_first'&&!noShell?await open():null;
     const answer=await fill(active,section,'A',1);
     const alternate=other&&await fill(other,section,'B',2);
     if(other)assert.notEqual(alternate.answer,answer.answer);
@@ -119,13 +136,15 @@ for(const order of noShell?['read_first']:variant?[variant]:['read_first','lis_f
       const reopened=await newPage(active);
       await online(active);
       await reopened.goto(destination);
-      const entry=reopened.locator('#miniPaperEnter');
-      const choice=reopened.locator('#studentSelect:enabled');
-      const confirmed=await Promise.race([
-        accepted(reopened,section).waitFor().then(()=>true),
-        choice.waitFor().then(()=>false)
-      ]);
-      if(!confirmed){await choice.selectOption(ref);await entry.click();}
+      await resumeDraft(reopened,section,answer.answer);
+      assert.equal((await rows()).length,0);
+      await confirm(reopened);
+      if(demo){
+        const identity=reopened.getByRole('button',{name:'Xác nhận và tiếp tục',exact:true});
+        await identity.waitFor();
+        await reopened.locator('#studentSelect').selectOption(ref);
+        await identity.click();
+      }
     }else if(order==='read_first'){
       await reload(active.page).click();
       await active.page.getByRole('button',{name:'Ở lại làm bài',exact:true}).click();
@@ -141,6 +160,13 @@ for(const order of noShell?['read_first']:variant?[variant]:['read_first','lis_f
       active.stay=false;
       assert.equal(await answer.field.inputValue(),answer.answer);
       await active.page.reload({waitUntil:'commit'});
+      await active.page.waitForFunction(previous=>performance.timeOrigin!==previous,original);
+      await online(active);
+      await active.page.reload({waitUntil:'domcontentloaded'});
+      await resumeDraft(active.page,section,answer.answer);
+      assert.equal((await rows()).length,0);
+      await offline(active);
+      await confirm(active.page);
     }
     if(!noShell){
       await pending(active.page,section).waitFor();
@@ -184,7 +210,10 @@ for(const order of noShell?['read_first']:variant?[variant]:['read_first','lis_f
       const [saved]=(await f.db.query('SELECT listening_answers FROM assessment.term_test_attempt WHERE id=$1',[stored.id])).rows;
       assert.equal(saved.listening_answers[final.key],final.answer);
     }
-    assert.ok(requests.some(row=>row.path===api+'offline/prepare'&&row.code==='OFFLINE_NEW_DISABLED'));
+    if(demo){
+      assert.ok(requests.some(row=>row.path===api+'attempt/prepare-mini-demo-paper'&&row.status===200));
+      assert.ok(!requests.some(row=>row.path===api+'offline/prepare'));
+    }else assert.ok(requests.some(row=>row.path===api+'offline/prepare'&&row.code==='OFFLINE_NEW_DISABLED'));
     assert.ok(requests.some(row=>row.path===api+'submission-status'&&row.persisted===true));
     for(const profile of profiles)assert.deepEqual(profile.errors,[]);
     console.log(JSON.stringify({order,section,oneCanonicalWrite:true,droppedResponse:true,competingLocalDraftPreserved:!!other,noShell}));
