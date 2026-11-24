@@ -635,6 +635,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
             const acknowledge=advanced==='result'?'Tôi đã hiểu.':'Tôi đã hiểu. Đến phần thi tiếp theo.';
             await next.getByRole('button',{name:acknowledge,exact:true}).click();
             assert.equal(await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.miniJourney.view().nextSection),advanced);
+            if(pretest&&advanced==='result')await page.locator('#resultReadyView').waitFor();
             assert.equal((await readClock()).listening_submitted_at,null);
             log('listening_hard_stop_then_report_verified',{next:advanced});
           }
@@ -667,6 +668,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
               row.source==='unknown'&&row.playerId&&Math.abs(row.positionMs-before.checkpoint.positionMs)<500),
               'The first offline pause stays in the journal after closing and reopening the tab.');
             assert.ok(observations.some(row=>row?.action==='audio_player_retired'&&row.playerId&&row.disposalId));
+            if(pretest)assert.ok(observations.some(row=>row?.action==='audio_anomaly'&&Array.isArray(row.playerHistory)));
             if(simulateOutput)assert.ok(observations.some(latePlayLogged));
             if(recorderOutage){
               const requests=await (await fetch(base+'/preview/recorder-requests')).json();
