@@ -92,13 +92,17 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       K67_PREVIEW_TERM1_DEMO_CBT:demoRecovery?'true':'false',
       K67_PREVIEW_TERM2_LISTENING_RECOVERY:recovery?'true':'false',
       K67_PREVIEW_TERM2_DEMO_CBT:demoRecovery?'true':'false',
+      K67_PREVIEW_MINI_LISTENING_RECOVERY:recovery&&!term&&!pretest?'true':'false',
+      K67_PREVIEW_MINI_DEMO_CBT:demoRecovery&&!term&&!pretest?'true':'false',
+      K67_PREVIEW_PRETEST_LISTENING_RECOVERY:recovery&&pretest?'true':'false',
       K67_PREVIEW_RESCUE_CLASS:rescueClass,
       K67_PREVIEW_AUDIO_PROTECTION:'true',K67_PREVIEW_REAL_MINI_AUDIO:full&&!term?'true':'false',
       K67_PREVIEW_REAL_TERM1_AUDIO:(full||r2Smoke)&&term1?'true':'false',K67_PREVIEW_AUDIO_SECONDS:'18',
       K67_PREVIEW_REAL_TERM2_AUDIO:(full||r2Smoke)&&term2?'true':'false',
       K67_PREVIEW_TERM2_R2_CONFIG:process.env.K67_JOURNEY_TERM2_R2_CONFIG||'',
       K67_PREVIEW_TERM1_R2_CONFIG:process.env.K67_JOURNEY_TERM1_R2_CONFIG||'',
-      K67_PREVIEW_MINI_REVIEW_SECONDS:full?'120':'3',K67_PREVIEW_MINI_READING_MINUTES:full?'20':'.12'},stdio:['ignore','ignore','pipe']});
+      K67_PREVIEW_MINI_REVIEW_SECONDS:full?'120':'3',
+      K67_PREVIEW_MINI_READING_MINUTES:full?'20':process.env.K67_PREVIEW_MINI_READING_MINUTES||'.12'},stdio:['ignore','ignore','pipe']});
   let browser,page,fixtureError='';
   let sectionInProgress,dismissNextDialog=false;
   fixture.stderr.on('data',chunk=>{fixtureError=(fixtureError+String(chunk)).slice(-3_000);});
@@ -491,7 +495,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         if(recovery){
           const answer=await field.inputValue();
           assert.equal(offers.find(offer=>offer.listeningRecoveryVersion)?.listeningRecoveryVersion,1);
-          const storagePrefix=term2?'term2-k67-cbt-journey-v1:':'term1-k67-cbt-journey-v1:';
+          const storagePrefix=(term2?'term2-k67-cbt-journey-v1':term1?'term1-k67-cbt-journey-v1':
+            pretest?'pretest-lesson-16-k67-cbt-v1':'mini-k67-cbt-journey-v1')+':';
           const onDisk=()=>page.evaluate(prefix=>{
             const saved=Object.keys(localStorage).filter(key=>key.startsWith(prefix))
               .map(key=>JSON.parse(localStorage.getItem(key))).find(record=>record?.sections?.listening);
@@ -626,8 +631,9 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
             const next=page.getByRole('dialog',{name:'Listening gián đoạn'});
             await next.waitFor();
             assert.equal(await reopenedAudio.count(),0);
-            await next.getByRole('button',{name:'Tôi đã hiểu. Đến phần thi tiếp theo.',exact:true}).click();
-            const advanced=mode==='lis_first'?'reading':'writing';
+            const advanced=mode==='lis_first'?'reading':term?'writing':'result';
+            const acknowledge=advanced==='result'?'Tôi đã hiểu.':'Tôi đã hiểu. Đến phần thi tiếp theo.';
+            await next.getByRole('button',{name:acknowledge,exact:true}).click();
             assert.equal(await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.miniJourney.view().nextSection),advanced);
             assert.equal((await readClock()).listening_submitted_at,null);
             log('listening_hard_stop_then_report_verified',{next:advanced});
