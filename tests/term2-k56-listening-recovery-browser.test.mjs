@@ -6,12 +6,14 @@ import {pathToFileURL} from 'node:url';
 
 process.env.K56_FIXTURE_IMPORT_ONLY = '1';
 const {fixture, wait} = await import('./term2-offline-browser.mjs');
-const demo = process.env.TERM2_TEST_DEMO === '1';
-const evidenceDir = process.env.TERM2_EVIDENCE;
-const stopAtIncidentPosition = process.env.TERM2_TEST_INCIDENT_POSITION === '1';
+const term1 = process.env.TERM1_RECOVERY_TEST === '1';
+const demo = (term1 ? process.env.TERM1_FIXTURE_DEMO : process.env.TERM2_TEST_DEMO) === '1';
+const evidenceDir = term1 ? process.env.TERM1_EVIDENCE : process.env.TERM2_EVIDENCE;
+const product = term1 ? 1 : 2;
+const stopAtIncidentPosition = !term1 && process.env.TERM2_TEST_INCIDENT_POSITION === '1';
 
 async function clockFixture() {
-  const entry = process.env.TERM2_CLOCK_MODULE;
+  const entry = !term1 && process.env.TERM2_CLOCK_MODULE;
   if (!entry) return null;
   const server = await import(pathToFileURL(entry).href);
   const {PGlite} = await import(pathToFileURL(process.env.TERM2_CLOCK_PGLITE_ENTRY).href);
@@ -47,13 +49,13 @@ async function openListening(exam, mode) {
   exam.controls.r2Audio = true;
   exam.controls.listeningReportsEnabled = true;
   exam.controls.listeningRecoveryEnabled = true;
-  exam.controls.preparedOverride = {term2ParallelEntry: true};
+  exam.controls.preparedOverride = {[term1 ? 'term1ParallelEntry' : 'term2ParallelEntry']: true};
   const {page} = exam;
   await page.goto(exam.url);
   await page.locator('#bootstrapStudent option[value="' + exam.student + '"]').waitFor({state: 'attached'});
   await page.selectOption('#bootstrapStudent', exam.student);
   await page.click('#confirmIdentity');
-  await wait(page, () => window.K56_TERM2_OFFLINE?.active, 'Exam prepared');
+  await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.active, 'Exam prepared');
   if (mode === 'read_first') {
     await page.getByRole('button', {name: 'Bắt đầu Reading', exact: true}).click();
     await page.locator('#readingQuestions input[data-number]').first().fill('Reading checkpoint');
@@ -61,13 +63,13 @@ async function openListening(exam, mode) {
   }
   await page.click('#bootstrapPreview');
   await page.click('#bootstrapStart', {timeout: 45000});
-  await wait(page, () => window.K56_TERM2_OFFLINE?.player?.currentTime > 0.6, 'First verified playback');
+  await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.player?.currentTime > 0.6, 'First verified playback');
 }
 
 for (const mode of ['read_first','lis_first']) {
-  test('Term 2 K56 freezes, resumes at the saved checkpoint and opens the existing report (' + mode + ')',
+  test('Term ' + product + ' K56 freezes, resumes at the saved checkpoint and opens the existing report (' + mode + ')',
     {timeout: stopAtIncidentPosition ? 200000 : 150000}, async () => {
-      const exam = await fixture(mode, {demo, headed: process.env.TERM2_TEST_HEADED === '1', legacyExit: true});
+      const exam = await fixture(mode, {demo, headed: process.env.TERM2_TEST_HEADED === '1', legacyExit: !term1, product});
       const {page} = exam;
       const nativeClock = await clockFixture();
       if (nativeClock) {
@@ -78,13 +80,13 @@ for (const mode of ['read_first','lis_first']) {
       const answer = 'Giữ đáp án khi dừng';
       const answerInput = page.locator('#listeningQuestions input[data-number]').first();
       const resume = page.getByRole('button', {name: 'Nghe tiếp', exact: true});
-      const checkpoint = () => page.evaluate(() => window.K56_TERM2_OFFLINE.record.listeningCheckpoint);
+      const checkpoint = () => page.evaluate(() => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.listeningCheckpoint);
       try {
         await openListening(exam, mode);
         await answerInput.fill(answer);
         if (stopAtIncidentPosition) {
           milestones.beforeStop = await page.evaluate(async () => {
-            const runtime = window.K56_TERM2_OFFLINE;
+            const runtime = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
             const audio = runtime.player;
             const source = audio.getAttribute('src');
             await new Promise((resolve,reject) => {
@@ -106,7 +108,7 @@ for (const mode of ['read_first','lis_first']) {
           assert.equal(milestones.beforeStop.playbackRate,1);
           assert.equal(milestones.beforeStop.samePlayer,true);
           assert.equal(milestones.beforeStop.mediaReadyState,4);
-        } else await page.evaluate(() => window.K56_TERM2_OFFLINE.player.pause());
+        } else await page.evaluate(() => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player.pause());
         await resume.waitFor();
         const notice = page.locator('.cbt-listening-recovery-state');
         await notice.getByText(/Âm thanh vừa bị dừng vì vấn đề/).waitFor();
@@ -116,20 +118,21 @@ for (const mode of ['read_first','lis_first']) {
         await page.waitForTimeout(550);
         assert.equal(await notice.innerText(), heldTime);
 
-        await wait(page, () => !window.K56_TERM2_OFFLINE.criticalSaves, 'Draft saved before reload');
+        await wait(page, () => !(window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).criticalSaves, 'Draft saved before reload');
+        if (term1) await page.evaluate(() => { window.TERM_TEST_ALLOW_NAVIGATION = true; });
         await page.reload({waitUntil: 'domcontentloaded'});
         await resume.waitFor({timeout: 35000});
         assert.equal(await answerInput.inputValue(), answer);
-        assert.equal(await page.evaluate(() => window.K56_TERM2_OFFLINE.player.paused), true);
+        assert.equal(await page.evaluate(() => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player.paused), true);
         assert.equal((await checkpoint()).positionMs, milestones.paused.positionMs);
 
         await resume.click();
-        await wait(page, () => window.K56_TERM2_OFFLINE.record.listeningCheckpoint?.resumeCount === 1
-          && !window.K56_TERM2_OFFLINE.player.paused, 'First verified recovery');
+        await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.listeningCheckpoint?.resumeCount === 1
+          && !(window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player.paused, 'First verified recovery');
         milestones.first = await checkpoint();
 
         await page.evaluate(() => {
-          const audio = window.K56_TERM2_OFFLINE.player;
+          const audio = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player;
           audio.currentTime += 30;
         });
         await resume.waitFor();
@@ -137,27 +140,27 @@ for (const mode of ['read_first','lis_first']) {
         assert.equal(milestones.seek.interruption.reason, 'unexpected_seek');
         assert.ok(milestones.seek.positionMs < milestones.first.positionMs + 2000);
         await resume.click();
-        await wait(page, () => window.K56_TERM2_OFFLINE.record.listeningCheckpoint?.resumeCount === 2
-          && !window.K56_TERM2_OFFLINE.player.paused, 'Second verified recovery');
+        await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.listeningCheckpoint?.resumeCount === 2
+          && !(window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player.paused, 'Second verified recovery');
 
-        await page.evaluate(() => { window.K56_TERM2_OFFLINE.player.playbackRate = 1.75; });
+        await page.evaluate(() => { (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player.playbackRate = 1.75; });
         const report = page.getByRole('dialog', {name: 'Báo lỗi âm thanh'});
         await report.getByText(/Âm thanh gặp sự cố và không thể nghe tiếp/).waitFor();
         await report.getByText(/Bài thi listening cần được nghe liền mạch/).waitFor();
         milestones.unavailable = await checkpoint();
         assert.equal(milestones.unavailable.interruption.reason, 'resume_limit_reached');
         assert.equal(await answerInput.inputValue(), answer);
-        assert.equal(await page.evaluate(() => Boolean(window.K56_TERM2_OFFLINE.record.sections.listening.interrupted)), false);
+        assert.equal(await page.evaluate(() => Boolean((window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.sections.listening.interrupted)), false);
         if (evidenceDir) await page.screenshot({path: resolve(evidenceDir, mode + '-recovery-report.png')});
         await report.getByRole('button', {name: 'Tôi không nghe thấy âm thanh', exact: true}).click();
         await page.getByRole('button', {name: /Tôi đã hiểu\. Đến phần thi tiếp theo/}).click();
         await (mode === 'read_first' ? page.locator('#startWriting') : page.locator('#k56SectionReady button')).waitFor();
-        await wait(page, () => !window.K56_TERM2_OFFLINE.pending, 'Interruption receipt stored');
+        await wait(page, () => !(window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).pending, 'Interruption receipt stored');
         const listeningReceipts = [...exam.receipts.values()].filter(row => row.section === 'listening');
         assert.equal(listeningReceipts.filter(row => row.kind === 'interrupt').length, 1);
         assert.equal(listeningReceipts.filter(row => row.kind === 'seal').length, 0);
         const final = await page.evaluate(() => {
-          const runtime = window.K56_TERM2_OFFLINE;
+          const runtime = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
           return {nextSection: runtime.sectionResponse().nextSection,
             playerRetired: !runtime.player && !window.K56_LISTENING_AUDIO,
             diagnostics: runtime.record.submissionDiagnostics || runtime.diagnostics || []};
@@ -165,7 +168,7 @@ for (const mode of ['read_first','lis_first']) {
         assert.equal(final.nextSection, mode === 'read_first' ? 'writing' : 'reading');
         assert.equal(final.playerRetired, true);
         if (nativeClock) {
-          await wait(page, () => !window.K56_TERM2_OFFLINE.record.listeningClockSync.pending.length, 'Committed clock receipts');
+          await wait(page, () => !(window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.listeningClockSync.pending.length, 'Committed clock receipts');
           const native = await nativeClock.read();
           const current = native.clock.snapshot;
           assert.equal(current.phase, 'paused');
@@ -190,16 +193,16 @@ for (const mode of ['read_first','lis_first']) {
       }
     });
 
-  test('Term 2 K56 keeps a failed resume at the saved position and opens the report (' + mode + ')',
+  test('Term ' + product + ' K56 keeps a failed resume at the saved position and opens the report (' + mode + ')',
     {timeout: 90000}, async () => {
-      const exam = await fixture(mode, {demo});
+      const exam = await fixture(mode, {demo, product});
       const {page} = exam;
       try {
         await openListening(exam, mode);
         const input = page.locator('#listeningQuestions input[data-number]').first();
         await input.fill('Nháp thử khi Nghe tiếp thất bại');
         const held = await page.evaluate(async () => {
-          const runtime = window.K56_TERM2_OFFLINE;
+          const runtime = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
           const audio = runtime.player;
           audio.pause();
           await new Promise(done => audio.addEventListener('pause', done, {once:true}));
@@ -210,7 +213,7 @@ for (const mode of ['read_first','lis_first']) {
         const report = page.getByRole('dialog',{name:'Báo lỗi âm thanh'});
         await report.getByText(/Âm thanh gặp sự cố và không thể nghe tiếp/).waitFor();
         const stopped = await page.evaluate(() => {
-          const runtime = window.K56_TERM2_OFFLINE;
+          const runtime = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
           const {positionMs, resumeCount, interruption} = runtime.record.listeningCheckpoint;
           return {positionMs,resumeCount,reason:interruption.reason,paused:runtime.player.paused,
             next:runtime.sectionResponse().nextSection};

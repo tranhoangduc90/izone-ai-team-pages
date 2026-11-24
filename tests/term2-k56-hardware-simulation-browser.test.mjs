@@ -5,8 +5,9 @@ import test from 'node:test';
 
 process.env.K56_FIXTURE_IMPORT_ONLY = '1';
 const {fixture, wait} = await import('./term2-offline-browser.mjs');
-const demo = process.env.TERM2_TEST_DEMO === '1';
-const evidenceDir = process.env.TERM2_EVIDENCE;
+const term1 = process.env.TERM1_HARDWARE_TEST === '1';
+const demo = (term1 ? process.env.TERM1_FIXTURE_DEMO : process.env.TERM2_TEST_DEMO) === '1';
+const evidenceDir = term1 ? process.env.TERM1_EVIDENCE : process.env.TERM2_EVIDENCE;
 
 async function installDeviceSimulation(page) {
   await page.addInitScript(() => {
@@ -47,13 +48,13 @@ async function start(exam, mode) {
   exam.controls.r2Audio = true;
   exam.controls.listeningReportsEnabled = true;
   exam.controls.listeningRecoveryEnabled = true;
-  exam.controls.preparedOverride = {term2ParallelEntry:true};
+  exam.controls.preparedOverride = {[term1 ? 'term1ParallelEntry' : 'term2ParallelEntry']:true};
   await installDeviceSimulation(page);
   await page.goto(exam.url);
   await page.locator(`#bootstrapStudent option[value="${exam.student}"]`).waitFor({state:'attached'});
   await page.selectOption('#bootstrapStudent', exam.student);
   await page.click('#confirmIdentity');
-  await wait(page, () => window.K56_TERM2_OFFLINE?.active, 'Prepared Listening attempt');
+  await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.active, 'Prepared Listening attempt');
   if (mode === 'read_first') {
     await page.getByRole('button', {name:'Bắt đầu Reading', exact:true}).click();
     await page.locator('#readingQuestions input[data-number]').first().fill('Reading before device simulation');
@@ -61,9 +62,9 @@ async function start(exam, mode) {
   }
   await page.click('#bootstrapPreview');
   await page.click('#bootstrapStart', {timeout:45000});
-  await wait(page, () => window.K56_TERM2_OFFLINE?.player?.currentTime > 0.5, 'Main MP3 advances');
+  await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.player?.currentTime > 0.5, 'Main MP3 advances');
   await page.evaluate(() => {
-    const lab = window.listeningDeviceLab, runtime = window.K56_TERM2_OFFLINE;
+    const lab = window.listeningDeviceLab, runtime = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
     const original = runtime.observe.bind(runtime);
     runtime.observe = (action, row) => {
       if (action.startsWith('audio_') || action.startsWith('listening_')) lab.rows.push({action, ...structuredClone(row)});
@@ -72,12 +73,13 @@ async function start(exam, mode) {
     lab.player = runtime.player;
     lab.source = lab.player.getAttribute('src');
     lab.latePlay = lab.actions.get('play');
+    lab.lateAppPlay = runtime.listeningController.play;
   });
 }
 
 for (const mode of ['read_first','lis_first']) {
-  test(`Term 2 K56 simulates output changes and headset commands (${mode})`, {timeout:120000}, async () => {
-    const exam = await fixture(mode, {demo});
+  test(`${term1?'Term 1':'Term 2'} K56 simulates output changes and headset commands (${mode})`, {timeout:120000}, async () => {
+    const exam = await fixture(mode, {demo,product:term1?1:2});
     const {page} = exam;
     const collector = evidenceDir && resolve(evidenceDir, `${mode}-hardware-collector.jsonl`);
     if (collector) exam.controls.journalBatchFile = collector;
@@ -87,7 +89,7 @@ for (const mode of ['read_first','lis_first']) {
     const snapshot = () => page.evaluate(() => {
       const lab = window.listeningDeviceLab, audio = lab.player;
       return {position:Math.round(audio.currentTime * 1000), rate:audio.playbackRate, paused:audio.paused,
-        samePlayer:audio === window.K56_TERM2_OFFLINE.player, sameSource:audio.getAttribute('src') === lab.source};
+        samePlayer:audio === (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player, sameSource:audio.getAttribute('src') === lab.source};
     });
     async function outputChange(label, {outputs, selected, behavior, commands = [], outcome, switches = 0}) {
       const before = await snapshot();
@@ -173,11 +175,11 @@ for (const mode of ['read_first','lis_first']) {
       });
       const resume = page.getByRole('button', {name:'Nghe tiếp', exact:true});
       await resume.waitFor();
-      const pause = await page.evaluate(() => window.K56_TERM2_OFFLINE.record.listeningCheckpoint);
+      const pause = await page.evaluate(() => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.listeningCheckpoint);
       assert.ok(pause.positionMs >= beforeStop.position && pause.positionMs - beforeStop.position < 400);
       assert.equal(pause.resumeCount,0);
       await resume.click();
-      await wait(page, () => window.K56_TERM2_OFFLINE.record.listeningCheckpoint?.resumeCount === 1,
+      await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.listeningCheckpoint?.resumeCount === 1,
         'User resume after simulated Windows Stop');
       const first = await snapshot();
       assert.equal(first.samePlayer && first.sameSource && !first.paused && first.rate === 1, true);
@@ -199,16 +201,17 @@ for (const mode of ['read_first','lis_first']) {
       await page.getByRole('button',{name:'Tôi không nghe thấy âm thanh', exact:true}).click();
       await page.getByRole('button',{name:/Tôi đã hiểu\. Đến phần thi tiếp theo/}).click();
       await (mode === 'read_first' ? page.locator('#startWriting') : page.locator('#k56SectionReady button')).waitFor();
-      await wait(page, () => window.K56_TERM2_OFFLINE.pending === 0, 'Interruption receipt recorded');
+      await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).pending === 0, 'Interruption receipt recorded');
       await page.evaluate(() => window.listeningDeviceLab.finishSwitch());
       await page.waitForFunction(start => window.listeningDeviceLab.rows.slice(start).some(row=>
         row.action === 'audio_output_result' && row.outcome === 'resolved' && row.active === false), beforeLeaving);
-      const proof = await page.evaluate(() => {
+      const proof = await page.evaluate(async () => {
         const lab = window.listeningDeviceLab, audio = lab.player;
         lab.latePlay({action:'play'});
-        return {next:window.K56_TERM2_OFFLINE.sectionResponse().nextSection, attached:audio.isConnected,
+        const lateCallback = await lab.lateAppPlay('fixture_late_start').then(()=>'played', error=>error.name);
+        return {next:(window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).sectionResponse().nextSection, attached:audio.isConnected,
           source:audio.hasAttribute('src'), paused:audio.paused, active:lab.actions.size, switches:lab.switches,
-          rows:lab.rows, permissions:lab.permissionCalls};
+          lateCallback, rows:lab.rows, permissions:lab.permissionCalls};
       });
       assert.deepEqual({next:proof.next,attached:proof.attached,source:proof.source,paused:proof.paused,active:proof.active},
         {next:mode === 'read_first' ? 'writing' : 'reading',attached:false,source:false,paused:true,active:0});
@@ -220,6 +223,7 @@ for (const mode of ['read_first','lis_first']) {
       assert.deepEqual(proof.permissions,[]);
       assert.ok(proof.rows.some(row=>row.action === 'audio_anomaly' && row.event === 'pause' && row.source === 'unknown'));
       assert.ok(proof.rows.some(row=>row.action === 'audio_media_action' && row.mediaAction === 'play' && row.disposition === 'inactive'));
+      assert.equal(proof.lateCallback,'AbortError');
       assert.equal([...exam.receipts.values()].filter(row=>row.section === 'listening' && row.kind === 'interrupt').length,1);
       assert.deepEqual(exam.errors,[]);
       if (collector) {
@@ -227,19 +231,28 @@ for (const mode of ['read_first','lis_first']) {
         const expected = proof.rows.filter(row=>changes.includes(row.outputChangeId));
         const deadline = Date.now() + 12000;
         let written = [];
+        let checkpoints = [];
+        const has = (action, matcher = () => true) => checkpoints.some(row=>row.action === action && matcher(row));
+        const completeJournal = () => has('audio_command', row=>row.command === 'play' && Boolean(row.commandId))
+          && has('audio_anomaly', row=>row.event === 'pause' && row.source === 'unknown')
+          && has('audio_media_action', row=>row.mediaAction === 'play' && row.disposition === 'inactive')
+          && has('audio_player_retired', row=>row.sourceCleared && row.callbacksAborted)
+          && has('audio_late_play_blocked', row=>row.reason === 'fixture_late_start' && Boolean(row.disposalId));
         do {
           const contents = await readFile(collector, 'utf8').catch(error => {
             if (error.code !== 'ENOENT') throw error;
             return '';
           });
-          written = contents.trim().split('\n').filter(Boolean).flatMap(line=>JSON.parse(line).rows)
-            .map(row=>row.data.checkpointState).filter(row=>changes.includes(row.outputChangeId));
-          if (written.length === expected.length) break;
+          checkpoints = contents.trim().split('\n').filter(Boolean).flatMap(line=>JSON.parse(line).rows)
+            .map(row=>row.data.checkpointState);
+          written = checkpoints.filter(row=>changes.includes(row.outputChangeId));
+          if (written.length === expected.length && completeJournal()) break;
           await new Promise(done => setTimeout(done,200));
         } while (Date.now() < deadline);
         const ordered = rows => rows.sort((a,b)=>a.sequence-b.sequence).map(({action,outputChangeId,sequence,outcome,playerId})=>
           ({action,outputChangeId,sequence,outcome,playerId}));
         assert.deepEqual(ordered(written),ordered(expected));
+        assert.ok(completeJournal(),'Collector lacked a command, anomaly, media action or cleanup record');
         proof.collectorDeviceSignals = changes.length;
         proof.collectorDeviceRows = written.length;
       }

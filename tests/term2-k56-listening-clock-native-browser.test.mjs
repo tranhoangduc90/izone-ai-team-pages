@@ -6,24 +6,37 @@ import {pathToFileURL} from 'node:url';
 
 process.env.K56_FIXTURE_IMPORT_ONLY = '1';
 const {fixture, wait} = await import('./term2-offline-browser.mjs');
-const nativeEntry = process.env.TERM2_NATIVE_RECOVERY_FIXTURE;
-const demo = process.env.TERM2_TEST_DEMO === '1';
+const term1 = Boolean(process.env.TERM1_NATIVE_RECOVERY_FIXTURE);
+const nativeEntry = process.env.TERM1_NATIVE_RECOVERY_FIXTURE || process.env.TERM2_NATIVE_RECOVERY_FIXTURE;
+const demo = (term1 ? process.env.TERM1_FIXTURE_DEMO : process.env.TERM2_TEST_DEMO) === '1';
 
 for (const mode of ['read_first', 'lis_first']) {
-  test('Term 2 K56 retries real clock events after transport loss and an offline reload (' + mode + ')',
+  test((term1 ? 'Term 1' : 'Term 2')+' K56 retries real clock events after transport loss and an offline reload (' + mode + ')',
     {skip: !nativeEntry && 'Requires a captured K56 HTTP runtime with an isolated synthetic database', timeout: 160000}, async t => {
       const {createNativeRecoveryFixture} = await import(pathToFileURL(nativeEntry));
       const native = await createNativeRecoveryFixture();
       t.after(() => native.close());
       // This clock regression deliberately reopens a legacy shell where reload resumes Listening.
-      const exam = await fixture(mode, {demo, native, legacyExit:true});
+      const exam = await fixture(mode, {demo, native, product:term1?1:2, legacyExit:!term1});
       t.after(() => exam.close());
       const {page} = exam;
       const answer = 'synthetic draft saved across outages';
       const input = page.locator('#listeningQuestions input[data-number]').first();
       const resume = page.getByRole('button', {name:'Nghe tiếp', exact:true});
+      async function waitForResumeAfterReload(){
+        try { await resume.waitFor({timeout:30000}); }
+        catch(error){
+          const details=await page.evaluate(()=>{
+            const runtime=window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE;
+            return {body:document.body.innerText.slice(0,1450),worker:navigator.serviceWorker.controller?.scriptURL,
+              checkpoint:runtime?.record?.listeningCheckpoint,active:runtime?.active,next:runtime?.sectionResponse?.().nextSection,
+              scripts:Array.from(document.scripts).map(script=>script.src.split('/').at(-1))};
+          }).catch(()=>null);
+          throw Error('Nghe tiếp after reload: '+JSON.stringify({details,errors:exam.errors}),{cause:error});
+        }
+      }
       const state = () => page.evaluate(() => {
-        const run = window.K56_TERM2_OFFLINE;
+        const run = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
         const checkpoint = run.record.listeningCheckpoint;
         const duration = run.record.prepared.timing.listeningDurationSeconds * 1000;
         return {scope:run.scope, positionMs:checkpoint.positionMs, remainingMs:duration-checkpoint.positionMs,
@@ -42,8 +55,8 @@ for (const mode of ['read_first', 'lis_first']) {
       await page.locator('#bootstrapStudent option[value="' + exam.student + '"]').waitFor({state:'attached'});
       await page.selectOption('#bootstrapStudent', exam.student);
       await page.click('#confirmIdentity');
-      await wait(page, () => window.K56_TERM2_OFFLINE?.record?.ready, 'Real K56 prepare and cached shell', 45000);
-      assert.equal(await page.evaluate(() => window.K56_TERM2_OFFLINE.listeningRecoveryEnabled),true);
+      await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.record?.ready, 'Real K56 prepare and cached shell', 45000);
+      assert.equal(await page.evaluate(() => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).listeningRecoveryEnabled),true);
       if (mode === 'read_first') {
         await page.getByRole('button',{name:'Bắt đầu Reading',exact:true}).click();
         await page.locator('#readingQuestions input[data-number]').first().fill('A');
@@ -51,12 +64,12 @@ for (const mode of ['read_first', 'lis_first']) {
       }
       await page.click('#bootstrapPreview');
       await page.click('#bootstrapStart',{timeout:45000});
-      await wait(page, () => window.K56_TERM2_OFFLINE?.player?.currentTime > 11, 'Normal 1× playback beyond 10 seconds', 25000);
-      await wait(page, () => window.K56_TERM2_OFFLINE.pending === 0, 'Accepted start receipt');
+      await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.player?.currentTime > 11, 'Normal 1× playback beyond 10 seconds', 25000);
+      await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).pending === 0, 'Accepted start receipt');
       assert.equal(exam.controls.nativeClockRequests?.length ?? 0,0);
 
       await page.evaluate(() => {
-        const run = window.K56_TERM2_OFFLINE;
+        const run = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
         const observe = run.observe;
         run.observe = function (action, details) {
           if (action === 'audio_anomaly') window.fixtureListeningAnomaly = details;
@@ -65,7 +78,7 @@ for (const mode of ['read_first', 'lis_first']) {
       });
       await offline(true);
       await input.fill(answer);
-      await page.evaluate(() => window.K56_TERM2_OFFLINE.player.pause());
+      await page.evaluate(() => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player.pause());
       await resume.waitFor();
       const paused = await state();
       const pause = await page.evaluate(() => window.fixtureListeningAnomaly);
@@ -75,8 +88,9 @@ for (const mode of ['read_first', 'lis_first']) {
       assert.ok(progress.every(row => row.rate === 1 && row.positionMs <= pause.positionMs));
       assert.equal(paused.pending.length,1);
       assert.equal(paused.pending[0].phase,'paused');
+      if (term1) await page.evaluate(() => { window.TERM_TEST_ALLOW_NAVIGATION = true; });
       await page.reload({waitUntil:'domcontentloaded'});
-      await resume.waitFor({timeout:30000});
+      await waitForResumeAfterReload();
       const reloaded = await state();
       assert.equal(await input.inputValue(),answer);
       assert.deepEqual(reloaded.scope,paused.scope);
@@ -88,7 +102,7 @@ for (const mode of ['read_first', 'lis_first']) {
 
       await resume.click();
       await wait(page, () => {
-        const run = window.K56_TERM2_OFFLINE;
+        const run = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
         return run.record.listeningCheckpoint?.resumeCount === 1 && !run.player.paused && run.player.playbackRate === 1;
       }, 'Verified recovery while offline');
       const verified = await state();
@@ -98,14 +112,15 @@ for (const mode of ['read_first', 'lis_first']) {
       assert.equal(verified.pending[1].interruptionId,paused.interruptionId);
       assert.ok(verified.pending[1].positionMs > paused.positionMs);
       assert.ok(verified.pending[1].positionMs - paused.positionMs <= 1500);
-      await page.waitForFunction(position => window.K56_TERM2_OFFLINE.record.listeningCheckpoint?.positionMs > position,
+      await page.waitForFunction(position => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.listeningCheckpoint?.positionMs > position,
         verified.positionMs, {timeout:6000});
       const unfrozen = await state();
       assert.ok(unfrozen.remainingMs < verified.remainingMs);
       assert.equal(exam.controls.nativeClockRequests?.length ?? 0,0);
 
+      if (term1) await page.evaluate(() => { window.TERM_TEST_ALLOW_NAVIGATION = true; });
       await page.reload({waitUntil:'domcontentloaded'});
-      await resume.waitFor({timeout:30000});
+      await waitForResumeAfterReload();
       const secondHold = await state();
       assert.equal(await input.inputValue(),answer);
       assert.equal(secondHold.resumeCount,1);
@@ -115,9 +130,9 @@ for (const mode of ['read_first', 'lis_first']) {
       assert.equal(secondHold.paused,true);
 
       await offline(false);
-      await wait(page, () => window.K56_TERM2_OFFLINE?.record?.listeningClockSync?.pending.length === 0,
+      await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.record?.listeningClockSync?.pending.length === 0,
         'Real API receipts reach the browser after reconnect', 25000);
-      await wait(page, () => window.K56_TERM2_OFFLINE.pending === 0, 'Draft operations acknowledged', 25000);
+      await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).pending === 0, 'Draft operations acknowledged', 25000);
       const final = await state();
       const stored = await native.read(final.scope);
       assert.equal(final.review,undefined);
@@ -142,7 +157,7 @@ for (const mode of ['read_first', 'lis_first']) {
       }
       assert.equal(requests.length,5);
       assert.deepEqual(exam.errors,[]);
-      const evidence = process.env.TERM2_EVIDENCE;
+      const evidence = term1 ? process.env.TERM1_EVIDENCE : process.env.TERM2_EVIDENCE;
       if (evidence) await writeFile(resolve(evidence,mode+'-native-clock-readback.json'),
         JSON.stringify({mode,demo,normalPlaybackClockRequests:0,paused,pauseHistorySamples:progress,reloaded,verified,unfrozen,secondHold,final,stored,
           HTTPStatuses:requests.map(row=>row.status)},null,2));
