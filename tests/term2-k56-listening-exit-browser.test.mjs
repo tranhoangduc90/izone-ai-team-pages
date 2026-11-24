@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile, writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import test from 'node:test';
+import {pathToFileURL} from 'node:url';
 
 process.env.K56_FIXTURE_IMPORT_ONLY = '1';
 const {fixture, wait} = await import('./term2-offline-browser.mjs');
@@ -9,6 +10,7 @@ const demo = process.env.TERM2_TEST_DEMO === '1';
 const headed = process.env.TERM2_TEST_HEADED === '1';
 const testBackForwardCache = process.env.TERM2_TEST_BFCACHE === '1';
 const testAudioRaces = process.env.TERM2_TEST_AUDIO_RACES === '1';
+const testRecovery = process.env.TERM2_TEST_LISTENING_RECOVERY === '1';
 
 const guardRequested = page => page.evaluate(() => {
   const event = new Event('beforeunload', {cancelable: true});
@@ -61,7 +63,7 @@ async function startListening(exam, mode, answer, afterStart, previousPage = 'ab
   const {page} = exam;
   exam.controls.r2Audio = true;
   exam.controls.listeningReportsEnabled = true;
-  exam.controls.listeningRecoveryEnabled = process.env.TERM2_TEST_LISTENING_RECOVERY === '1';
+  exam.controls.listeningRecoveryEnabled = testRecovery;
   exam.controls.preparedOverride = {term2ParallelEntry: true};
   exam.controls.beforeUnloadSpies = [];
   await page.goto(previousPage);
@@ -740,13 +742,21 @@ for (const mode of ['read_first', 'lis_first']) {
   });
 
   for (const action of ['reload', 'back', 'close']) {
-    test(`Term 2 K56 restores the same draft after accepting ${action} (${mode})`, {timeout: 90000}, async () => {
-      const exam = await fixture(mode, {product: 2, defaultAutoplay: true});
+    const freshDemo = demo && action !== 'reload';
+    const behavior = freshDemo ? 'returns to the DEMO roster' : 'restores the same draft';
+    test(`Term 2 K56 ${behavior} after accepting ${action} (${mode})`, {timeout: 90000}, async t => {
+      const nativeEntry = freshDemo && process.env.TERM2_NATIVE_RECOVERY_FIXTURE;
+      const native = nativeEntry && await (await import(pathToFileURL(nativeEntry).href)).createNativeRecoveryFixture();
+      if (native) t.after(() => native.close());
+      const exam = await fixture(mode, {product: 2, defaultAutoplay: true, demo, native});
       const {page} = exam;
       const answer = `Draft before ${action} (${mode})`;
       try {
         await startListening(exam, mode, answer);
-        const scope = await page.evaluate(() => window.K56_TERM2_OFFLINE.scope);
+        const before = await page.evaluate(() => {
+          const runtime = window.K56_TERM2_OFFLINE;
+          return {scope: runtime.scope, positionMs: runtime.record.listeningCheckpoint?.positionMs};
+        });
         const prompt = page.waitForEvent('dialog', {predicate: value => value.type() === 'beforeunload', timeout: 8000});
         exam.controls.beforeUnloadDecision = 'leave';
         let reopened = page;
@@ -760,23 +770,70 @@ for (const mode of ['read_first', 'lis_first']) {
         } else {
           await Promise.all([prompt, page.reload()]);
         }
-        await reopened.getByRole('dialog', {name: 'Listening gián đoạn'}).waitFor();
-        const restored = await reopened.evaluate(() => {
-          const {scope, record} = window.K56_TERM2_OFFLINE;
-          return {scope, draft: record.snapshot.drafts.listening, section: record.sections.listening};
-        });
-        assert.deepEqual(restored.scope, scope);
-        assert.ok(Object.values(restored.draft).includes(answer));
-        assert.equal(restored.section.interrupted, true);
-        assert.equal(Boolean(restored.section.sealed), false);
         assert.equal(exam.controls.beforeUnloadSpies.length, 1);
         assert.equal(exam.controls.beforeUnloadSpies[0].decision, 'leave');
-        await wait(reopened, () => window.K56_TERM2_OFFLINE.pending === 0, 'Restored interruption synchronized');
-        assert.equal(Array.from(exam.receipts.values()).filter(row => row.kind === 'interrupt').length, 1);
+        if (freshDemo) {
+          const select = reopened.locator('#bootstrapStudent');
+          await select.locator(`option[value="${exam.student}"]`).waitFor({state: 'attached'});
+          assert.equal(await select.inputValue(), '');
+          assert.equal(await reopened.evaluate(() => Boolean(window.K56_TERM2_OFFLINE?.active || window.K56_LISTENING_AUDIO)), false);
+          let newScope;
+          if (native) {
+            await reopened.selectOption('#bootstrapStudent', exam.student);
+            await reopened.click('#confirmIdentity');
+            await wait(reopened, () => window.K56_TERM2_OFFLINE?.record?.ready, 'A new DEMO attempt is ready');
+            const fresh = await reopened.evaluate(() => {
+              const runtime = window.K56_TERM2_OFFLINE;
+              const {scope, record, player} = runtime;
+              return {scope, started: Boolean(record.sections.listening?.startedAt),
+                draft: record.snapshot?.drafts?.listening || {}, player: Boolean(player)};
+            });
+            assert.notEqual(fresh.scope.attemptToken, before.scope.attemptToken);
+            assert.notEqual(fresh.scope.examSessionToken, before.scope.examSessionToken);
+            assert.deepEqual({started:fresh.started, draft:fresh.draft, player:fresh.player}, {started:false, draft:{}, player:false});
+            const ownOldSession = await native.read(before.scope);
+            assert.equal(ownOldSession.session.listening_submitted_at, null);
+            newScope = fresh.scope;
+          }
+          if (process.env.TERM2_EVIDENCE) {
+            await writeFile(resolve(process.env.TERM2_EVIDENCE, `${mode}-${action}-leave.json`), JSON.stringify({
+              mode, action, demo, freshRoster: true, nativeAdmission: Boolean(native), priorScope: before.scope, newScope,
+              dialog: exam.controls.beforeUnloadSpies[0],
+            }, null, 2));
+          }
+          assert.deepEqual(exam.errors, []);
+          return;
+        }
+        const resumedControl = reopened.getByRole('button', {name: 'Nghe tiếp', exact: true});
+        await (testRecovery ? resumedControl : reopened.getByRole('dialog', {name: 'Listening gián đoạn'})).waitFor();
+        const restored = await reopened.evaluate(() => {
+          const {scope, record, player} = window.K56_TERM2_OFFLINE;
+          return {scope, draft: record.snapshot.drafts.listening, section: record.sections.listening,
+            checkpoint: record.listeningCheckpoint, playerPaused: player?.paused};
+        });
+        assert.deepEqual(restored.scope, before.scope);
+        assert.ok(Object.values(restored.draft).includes(answer));
+        assert.equal(Boolean(restored.section.interrupted), !testRecovery);
+        assert.equal(Boolean(restored.section.sealed), false);
+        if (testRecovery) {
+          assert.equal(restored.playerPaused, true);
+          assert.equal(restored.checkpoint.interruption.reason, 'page_reopened');
+          assert.equal(restored.checkpoint.resumeCount, 0);
+          assert.ok(restored.checkpoint.positionMs >= before.positionMs);
+          await resumedControl.click();
+          await wait(reopened, () => window.K56_TERM2_OFFLINE.record.listeningCheckpoint?.resumeCount === 1,
+            'Explicit playback on the restored attempt');
+          const position = await reopened.evaluate(() => window.K56_TERM2_OFFLINE.record.listeningCheckpoint.positionMs);
+          assert.ok(position > restored.checkpoint.positionMs && position - restored.checkpoint.positionMs < 1500);
+        }
+        await wait(reopened, () => window.K56_TERM2_OFFLINE.pending === 0, 'Restored draft synchronized');
+        const interruptReceipts = Array.from(exam.receipts.values()).filter(row => row.kind === 'interrupt').length;
+        assert.equal(interruptReceipts, testRecovery ? 0 : 1);
         if (process.env.TERM2_EVIDENCE) {
           await writeFile(resolve(process.env.TERM2_EVIDENCE, `${mode}-${action}-leave.json`), JSON.stringify({
-            mode, action, restoredSameScope: true, draftKept: true, interrupted: true,
-            acknowledgedByFixture: true, dialog: exam.controls.beforeUnloadSpies[0],
+            mode, action, demo, restoredSameScope: true, draftKept: true, interrupted: !testRecovery,
+            checkpoint: restored.checkpoint, resumedAfterClick: testRecovery, interruptReceipts,
+            dialog: exam.controls.beforeUnloadSpies[0],
           }, null, 2));
         }
       } finally {
@@ -798,33 +855,45 @@ for (const mode of ['read_first', 'lis_first']) {
         documentId: window.fixtureDocumentId}));
       const offlineOnReturn = mode === 'read_first';
       await traverseAwayAndReturn(exam, previous, {offlineOnReturn});
-      await page.getByRole('dialog', {name: 'Listening gián đoạn'}).waitFor({timeout: 8000});
+      const control = testRecovery ? page.getByRole('button', {name: 'Nghe tiếp', exact: true})
+        : page.getByRole('dialog', {name: 'Listening gián đoạn'});
+      await control.waitFor({timeout: 12000});
       const returned = await page.evaluate(expected => {
         const runtime = window.K56_TERM2_OFFLINE;
         return {documentId: window.fixtureDocumentId, scope: runtime.scope,
           heldAudio: Boolean(runtime.player), activeController: Boolean(window.K56_LISTENING_AUDIO),
           draftKept: Object.values(runtime.record.snapshot.drafts.listening).includes(expected),
           interrupted: Boolean(runtime.record.sections.listening.interrupted),
-          next: runtime.sectionResponse().nextSection};
+          next: runtime.sectionResponse().nextSection, checkpoint: runtime.record.listeningCheckpoint,
+          playerPaused: runtime.player?.paused};
       }, answer);
-      const {documentId, ...restored} = returned;
+      const {documentId, checkpoint, playerPaused, ...restored} = returned;
       assert.notEqual(documentId, initial.documentId, 'The restored view must re-read the durable exam state');
       assert.ok(pageShows.some(entry => entry.documentId === initial.documentId && entry.persisted), 'The browser did not exercise BFCache');
-      assert.deepEqual(restored, {scope: initial.scope, heldAudio: false, activeController: false,
-        draftKept: true, interrupted: true, next: mode === 'read_first' ? 'writing' : 'reading'});
+      assert.deepEqual(restored, {scope: initial.scope, heldAudio: testRecovery, activeController: testRecovery,
+        draftKept: true, interrupted: !testRecovery, next: testRecovery ? 'listening' : mode === 'read_first' ? 'writing' : 'reading'});
       assert.equal(exam.controls.beforeUnloadSpies.length, 1, 'Revalidation must not ask the learner to leave again');
       if (offlineOnReturn) {
         assert.equal(await page.evaluate(() => navigator.onLine), false);
+      }
+      if (testRecovery) {
+        assert.equal(playerPaused, true);
+        assert.equal(checkpoint.interruption.reason, 'page_reopened');
+        await control.click();
+        await wait(page, () => window.K56_TERM2_OFFLINE.record.listeningCheckpoint?.resumeCount === 1,
+          'Explicit recovery after BFCache');
+      }
+      if (offlineOnReturn) {
         await exam.context.setOffline(false);
       }
       await wait(page, () => window.K56_TERM2_OFFLINE.pending === 0, 'Restored interruption synchronized');
       const interruptions = [...exam.receipts.values()].filter(row => row.kind === 'interrupt');
-      assert.equal(interruptions.length, 1);
+      assert.equal(interruptions.length, testRecovery ? 0 : 1);
       assert.deepEqual(exam.errors, []);
       if (process.env.TERM2_EVIDENCE) await writeFile(resolve(process.env.TERM2_EVIDENCE, `${mode}-history-restored.json`),
         JSON.stringify({mode, pageShows, restoredPersistedDocument: true, revalidatedDocument: documentId,
-          draftKept: true, sameScope: true, heldAudio: false, offlineOnReturn, next: returned.next,
-          oneInterruptReceipt: true, prompts: 1}, null, 2));
+          draftKept: true, sameScope: true, heldAudio: returned.heldAudio, offlineOnReturn, next: returned.next,
+          checkpoint, resumedAfterClick: testRecovery, interruptReceipts: interruptions.length, prompts: 1}, null, 2));
     } finally {
       await exam.close();
     }

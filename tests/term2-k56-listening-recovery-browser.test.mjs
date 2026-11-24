@@ -8,6 +8,7 @@ process.env.K56_FIXTURE_IMPORT_ONLY = '1';
 const {fixture, wait} = await import('./term2-offline-browser.mjs');
 const demo = process.env.TERM2_TEST_DEMO === '1';
 const evidenceDir = process.env.TERM2_EVIDENCE;
+const stopAtIncidentPosition = process.env.TERM2_TEST_INCIDENT_POSITION === '1';
 
 async function clockFixture() {
   const entry = process.env.TERM2_CLOCK_MODULE;
@@ -65,7 +66,7 @@ async function openListening(exam, mode) {
 
 for (const mode of ['read_first','lis_first']) {
   test('Term 2 K56 freezes, resumes at the saved checkpoint and opens the existing report (' + mode + ')',
-    {timeout: 150000}, async () => {
+    {timeout: stopAtIncidentPosition ? 200000 : 150000}, async () => {
       const exam = await fixture(mode, {demo, headed: process.env.TERM2_TEST_HEADED === '1'});
       const {page} = exam;
       const nativeClock = await clockFixture();
@@ -81,11 +82,36 @@ for (const mode of ['read_first','lis_first']) {
       try {
         await openListening(exam, mode);
         await answerInput.fill(answer);
-        await page.evaluate(() => window.K56_TERM2_OFFLINE.player.pause());
+        if (stopAtIncidentPosition) {
+          milestones.beforeStop = await page.evaluate(async () => {
+            const runtime = window.K56_TERM2_OFFLINE;
+            const audio = runtime.player;
+            const source = audio.getAttribute('src');
+            await new Promise((resolve,reject) => {
+              const until = performance.now() + 66000;
+              function sample() {
+                if (audio.paused || runtime.record.listeningCheckpoint?.interruption || performance.now() > until) {
+                  reject(Error('Audio did not advance without interruption to the reference position.'));
+                } else if (audio.currentTime >= 53.122) resolve();
+                else requestAnimationFrame(sample);
+              }
+              sample();
+            });
+            const proof = {positionMs: Math.round(audio.currentTime * 1000), playbackRate: audio.playbackRate,
+              mediaReadyState: audio.readyState, samePlayer: audio === runtime.player && source === audio.getAttribute('src')};
+            audio.pause();
+            return proof;
+          });
+          assert.ok(milestones.beforeStop.positionMs >= 53122 && milestones.beforeStop.positionMs <= 53222);
+          assert.equal(milestones.beforeStop.playbackRate,1);
+          assert.equal(milestones.beforeStop.samePlayer,true);
+          assert.equal(milestones.beforeStop.mediaReadyState,4);
+        } else await page.evaluate(() => window.K56_TERM2_OFFLINE.player.pause());
         await resume.waitFor();
         const notice = page.locator('.cbt-listening-recovery-state');
         await notice.getByText(/Âm thanh vừa bị dừng vì vấn đề/).waitFor();
         milestones.paused = await checkpoint();
+        if (stopAtIncidentPosition) assert.ok(Math.abs(milestones.paused.positionMs - milestones.beforeStop.positionMs) < 100);
         const heldTime = await notice.innerText();
         await page.waitForTimeout(550);
         assert.equal(await notice.innerText(), heldTime);
