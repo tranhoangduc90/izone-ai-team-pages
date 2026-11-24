@@ -35,11 +35,15 @@ const results = [];
 let outcome = 'partial';
 async function setup(options = {}) {
   const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 900 } });
-  const requests = [], errors = [], unexpected = [], confirmations = [];
+  const requests = [], errors = [], unexpected = [], confirmations = [], leaveWarnings = [];
+  const leave = {stay: false};
   const started = new Map();
   context.on('page', page => {
     page.setDefaultTimeout(8000); page.on('pageerror', error => errors.push(error.message));
-    page.on('dialog', dialog => { if (dialog.type() === 'beforeunload') return dialog.accept();
+    page.on('dialog', dialog => { if (dialog.type() === 'beforeunload') {
+      leaveWarnings.push({message:dialog.message(), stayed:leave.stay});
+      return leave.stay ? dialog.dismiss() : dialog.accept();
+    }
       confirmations.push(dialog.message()); return options.cancelConfirm ? dialog.dismiss() : dialog.accept(); });
   });
   await context.addInitScript(({ origin, identity, key, blocked }) => {
@@ -94,14 +98,14 @@ async function setup(options = {}) {
     unexpected.push(url.pathname); return send({ ok: false, message: 'Unexpected paper fixture' }, 503);
   });
   const page = await context.newPage();
-  return { context, page, requests, errors, unexpected, confirmations,
+  return { context, page, requests, errors, unexpected, confirmations, leave, leaveWarnings,
     open: (target = page) => target.goto(`${origin}/term-tests/${slug}/?${options.omitClass ? '' : 'class=LOPTHU&'}mode=read_first`),
     memory: () => page.evaluate(key => JSON.parse(localStorage.getItem(key) || 'null'), key) };
 }
 async function scenario(name, options, run) {
   const f = await setup(options);
   try { await f.open(); await run(f); assert.deepEqual(f.errors, []); assert.deepEqual(f.unexpected, []);
-    results.push({ name, outcome: 'passed' }); console.log('PASS', name);
+    results.push({ name, outcome: 'passed', ...(f.leaveWarnings.length ? {leaveWarnings:f.leaveWarnings} : {}) }); console.log('PASS', name);
   } catch (error) { results.push({ name, outcome: 'failed', error: error.message, requests: f.requests,
     pageErrors: f.errors, unexpected: f.unexpected });
     await f.page.screenshot({ path: path.join(out, `failure-${results.length}.png`), fullPage: true }); throw error;
@@ -141,7 +145,9 @@ try {
     await f.page.waitForFunction(() => document.querySelector('#studentSelect')?.options.length === 3);
     assert.equal(await f.page.locator('#studentSelect').inputValue(), '');
     const drafts = await f.page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('izone-test:'))
-      .map(key => JSON.parse(localStorage.getItem(key))).filter(value => value.studentRef === '11111111-1111-4111-8111-111111111111'));
+      .map(key => {
+        try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
+      }).filter(value => value?.studentRef === '11111111-1111-4111-8111-111111111111'));
     assert.equal(drafts.some(value => Object.values(value.drafts?.reading || {}).includes('BẢN NHÁP A')), true);
     assert.equal((await f.memory()).identity, null);
   });
@@ -168,10 +174,20 @@ try {
       revision:'other_tab_12345678',updatedAt:new Date().toISOString() })),{key,identity:b});
     await f.page.locator('#termIdentityOtherTabNotice').waitFor();
     assert.equal(await answer.inputValue(),'NHÁP GIẤY A');
+    if (slug === 'term-test-2-k56') {
+      f.leave.stay = true;
+      const warning = f.page.waitForEvent('dialog', {predicate: dialog => dialog.type() === 'beforeunload'});
+      await Promise.all([warning, f.page.reload({waitUntil:'commit',timeout:5000}).catch(error => {
+        if (!/ERR_ABORTED|Timeout/.test(error.message)) throw error;
+      })]);
+      assert.equal(await answer.inputValue(),'NHÁP GIẤY A');
+      f.leave.stay = false;
+    }
     await f.page.reload(); await f.page.locator('#readingView').waitFor({ state:'visible' });
     assert.equal(await f.page.locator('#studentSelect').inputValue(),refA);
     assert.equal(await f.page.locator('#readingQuestions input[type="text"]').first().inputValue(),'NHÁP GIẤY A');
     assert.equal((await f.memory()).identity.id,b.id);
+    if (slug === 'term-test-2-k56') assert.deepEqual(f.leaveWarnings.map(warning=>warning.stayed),[true,false]);
   });
   await scenario('Link thiếu lớp có nhiều lựa chọn: chỉ chọn lớp, không chọn lại người',
     { identity: a, omitClass: true, multipleClasses: true }, async f => {
