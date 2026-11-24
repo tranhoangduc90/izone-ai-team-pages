@@ -12,17 +12,20 @@ const {createFixture}=await import(pathToFileURL(backend));
 const require=createRequire(resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json'));
 const {chromium}=require('playwright');
 const root=resolve(fileURLToPath(new URL('../', import.meta.url)));
-const slug='term-test-2-k56';
+const slug=process.env.K56_PAPER_DEPARTURE_SLUG || 'term-test-2-k56';
+assert.ok(['term-test-1-k56','term-test-2-k56'].includes(slug));
+const writingTask=slug==='term-test-1-k56'?'task2':'task1';
 const routeName='/term-tests/'+slug+'/';
 const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.svg':'image/svg+xml'};
 const modeOnly=process.env.K56_PAPER_DEPARTURE_ORDER;
 const modes=modeOnly?[modeOnly]:['read_first','lis_first'];
 
-for(const mode of modes)test('Term Test 2 K56 paper confirmed departure '+mode,{timeout:140000},async()=>{
+for(const mode of modes)test(slug+' paper confirmed departure '+mode,{timeout:140000},async()=>{
   const f=await createFixture();
   const web=createServer(async(req,res)=>{
     try{
       const url=new URL(req.url,'http://localhost');
+      if(url.pathname==='/before-exam')return res.writeHead(200,{'content-type':'text/html'}).end('<title>Trước bài thi</title>');
       const file=resolve(root,'.'+(url.pathname.endsWith('/')?url.pathname+'index.html':url.pathname));
       if(!file.startsWith(root+sep))return res.writeHead(403).end();
       const type=extname(file);
@@ -77,6 +80,7 @@ for(const mode of modes)test('Term Test 2 K56 paper confirmed departure '+mode,{
     page.setDefaultTimeout(21000);
     page.on('pageerror',e=>errors.push(e.message));
     page.on('dialog',dialog=>dismissPrompt&&dialog.type()==='beforeunload'?dialog.dismiss():dialog.accept());
+    await page.goto(origin+'/before-exam');
     await page.goto(origin+routeName+'?class=IC5601&mode='+mode);
     await page.locator('#studentSelect option[value="'+f.students[0].ref+'"]').waitFor({state:'attached'});
     await page.locator('#studentSelect').selectOption(f.students[0].ref);
@@ -90,6 +94,14 @@ for(const mode of modes)test('Term Test 2 K56 paper confirmed departure '+mode,{
     const answer=await field.inputValue();
     const name=await field.getAttribute('data-number')||await field.getAttribute('data-answer-key');
     const documentOrigin=await page.evaluate(()=>performance.timeOrigin);
+    const timing=()=>page.evaluate(({slug,section,ref})=>{
+      const prefix='izone-test:'+slug+':IC5601';
+      const snapshot=JSON.parse(sessionStorage.getItem(prefix+':student:'+ref));
+      return [snapshot.attemptToken,snapshot.examSessionToken,snapshot.generation,
+        snapshot[section+'StartedAt'],snapshot[section+'DeadlineAt']];
+    },{slug,section,ref:f.students[0].ref});
+    const activeTiming=await timing();
+    assert.ok(activeTiming[0] && activeTiming[1] && activeTiming[3] && activeTiming[4]);
     await context.setOffline(true);
     connected=false;
     if(mode==='read_first'){
@@ -98,6 +110,7 @@ for(const mode of modes)test('Term Test 2 K56 paper confirmed departure '+mode,{
       await dialog.getByRole('button',{name:'Ở lại làm bài',exact:true}).click();
       assert.equal(await field.inputValue(),answer);
       assert.equal(await page.evaluate(()=>performance.timeOrigin),documentOrigin);
+      assert.deepEqual(await timing(),activeTiming);
       await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
       await dialog.getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
     }else{
@@ -108,6 +121,7 @@ for(const mode of modes)test('Term Test 2 K56 paper confirmed departure '+mode,{
       })]);
       assert.equal(await field.inputValue(),answer);
       assert.equal(await page.evaluate(()=>performance.timeOrigin),documentOrigin);
+      assert.deepEqual(await timing(),activeTiming);
       dismissPrompt=false;
       await page.reload({waitUntil:'commit'});
     }
@@ -144,11 +158,12 @@ for(const mode of modes)test('Term Test 2 K56 paper confirmed departure '+mode,{
       await page.getByRole('dialog').getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
       await page.getByRole('button',{name:'Bắt đầu Writing',exact:true}).click();
       const essay='This draft belongs to the final Writing section of the synthetic K56 attempt.';
-      await page.locator('#writingView textarea[data-writing-task="task1"]').fill(essay);
+      const editor=page.locator('#writingView textarea[data-writing-task="'+writingTask+'"]');
+      await editor.fill(essay);
       await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
       await page.getByRole('dialog').getByText(/Khi mở lại, bạn sẽ thấy màn hình kết thúc bài thi\./).waitFor();
       await page.getByRole('dialog').getByRole('button',{name:'Ở lại làm bài',exact:true}).click();
-      assert.equal(await page.locator('#writingView textarea[data-writing-task="task1"]').inputValue(),essay);
+      assert.equal(await editor.inputValue(),essay);
       submitPath='/api/term-tests/'+slug+'/writing/finalize';
       preservedOperation=undefined;
       await context.setOffline(true);
@@ -173,9 +188,32 @@ for(const mode of modes)test('Term Test 2 K56 paper confirmed departure '+mode,{
       const [writing]=(await f.db.query('SELECT receipt FROM assessment.term_online_submission_hold WHERE section=$1 AND receipt IS NOT NULL',['writing'])).rows;
       assert.equal(writing.receipt.attemptToken,rows[0].receipt.attemptToken);
       assert.equal(writing.receipt.operationId,preservedOperation);
-      assert.equal(JSON.parse(attemptedBody).task1,essay);
+      assert.equal(JSON.parse(attemptedBody)[writingTask],essay);
+      const storedField=writingTask==='task2'?'writing_task_2':'writing_task_1';
+      const [stored]=(await f.db.query('SELECT '+storedField+' AS text FROM assessment.term_test_attempt WHERE id=$1',[writing.receipt.attemptToken])).rows;
+      assert.equal(stored.text,essay);
       assert.deepEqual(errors,[]);
       console.log(JSON.stringify({mode,section:'writing',next:'result',nativeClose:true,reopenedFreshTab:true}));
+    }
+    if(mode==='lis_first' && slug==='term-test-1-k56'){
+      submitPath='/api/term-tests/'+slug+'/reading';
+      preservedOperation=undefined;
+      await page.getByRole('button',{name:'Bắt đầu Reading',exact:true}).click();
+      const reading=page.locator('#readingQuestions input:visible').first();
+      await reading.fill('HISTORY');
+      const question=await reading.getAttribute('data-number');
+      const requested=page.waitForEvent('dialog',{predicate:dialog=>dialog.type()==='beforeunload'});
+      await Promise.all([requested,page.goBack({waitUntil:'commit'})]);
+      await page.waitForURL(origin+'/before-exam');
+      await page.goForward({waitUntil:'commit'});
+      await page.getByText('Máy chủ đã nhận phần Reading.',{exact:true}).waitFor();
+      await page.getByRole('button',{name:'Bắt đầu Writing',exact:true}).waitFor();
+      const captured=(await f.db.query('SELECT receipt FROM assessment.term_online_submission_hold WHERE section=$1 AND receipt IS NOT NULL',['reading'])).rows;
+      assert.equal(captured.length,1);
+      assert.equal(captured[0].receipt.operationId,preservedOperation);
+      const [state]=(await f.db.query('SELECT reading_answers FROM assessment.term_test_attempt WHERE id=$1',[captured[0].receipt.attemptToken])).rows;
+      assert.equal(state.reading_answers[question],'HISTORY');
+      console.log(JSON.stringify({mode,section:'reading',next:'writing',nativeBack:true,receiptCount:captured.length}));
     }
   }catch(error){
     const text=await page?.locator('#notice').textContent({timeout:1000}).catch(()=>null);
