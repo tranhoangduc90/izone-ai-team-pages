@@ -23,15 +23,16 @@ assert.ok(['','back','close','writing','leave','final'].includes(departureAction
 const term1=process.env.K67_JOURNEY_TERM1==='1';
 const term2=process.env.K67_JOURNEY_TERM2==='1';
 const term=term1||term2;
+const pretest=process.env.K67_JOURNEY_PRETEST==='1';
 const continuity=process.env.K67_JOURNEY_CONTINUITY||'';
 assert.ok(!continuity||['eof','manual','interrupt','reload','upgrade'].includes(continuity));
 const interrupted=['interrupt','reload'].includes(continuity);
 const upgrade=continuity==='upgrade';
 const studentShellRepair=process.env.K67_JOURNEY_MINI_STUDENT_SHELL==='1';
-assert.ok(!(term1&&term2),'Select only one Term profile.');
+assert.ok([term1,term2,pretest].filter(Boolean).length<=1,'Select only one K67 profile.');
 assert.ok(!studentShellRepair||(upgrade&&!term),'The student shell upgrade targets Mini K67 CBT.');
 assert.ok(!writingOnly||(term2&&!full),'Writing-only fixture targets Term 2 without real audio.');
-const slug=term1?'term-test-1':term2?'term-test-2':'mini-test-lesson-5';
+const slug=pretest?'pretest-lesson-16':term1?'term-test-1':term2?'term-test-2':'mini-test-lesson-5';
 const reopenTab=process.env.K67_JOURNEY_REOPEN_TAB==='1';
 const breakAudio=process.env.K67_JOURNEY_AUDIO_FAULT==='1';
 const r2Smoke=process.env.K67_JOURNEY_R2_SMOKE==='1';
@@ -75,7 +76,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
   await new Promise(resolve=>listener.close(resolve));
   const base=`http://127.0.0.1:${port}`;
   const fixture=spawn(process.execPath,[process.env.K67_JOURNEY_PREVIEW_TOOL||'tools/preview-exam-order.mjs',pages],{cwd:backend,windowsHide:true,
-    env:{...process.env,K67_ORDER_NATIVE_URL:'',K67_PREVIEW_PORT:String(port),K67_PREVIEW_MINI_CBT_JOURNEY:term?'off':'on',
+    env:{...process.env,K67_ORDER_NATIVE_URL:'',K67_PREVIEW_PORT:String(port),K67_PREVIEW_MINI_CBT_JOURNEY:term||pretest?'off':'on',
+      K67_PREVIEW_PRETEST_CBT_JOURNEY:pretest?'on':process.env.K67_PREVIEW_PRETEST_CBT_JOURNEY,
       K67_PREVIEW_TERM1_CBT_JOURNEY:term1?'on':'off',
       K67_PREVIEW_TERM2_CBT_JOURNEY:term2?'on':'off',K67_PREVIEW_LISTENING_CONTINUITY:continuity?'true':'false',
       K67_PREVIEW_RESCUE_CLASS:rescueClass,
@@ -195,9 +197,10 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     }
     const startName = term ? `Bắt đầu Term Test ${term1 ? 1 : 2}` : 'Bắt đầu bài Mini K67';
     const confirmedStartName = 'Đã nghe rõ Bắt đầu thi Listening';
-    await page.getByRole('button',{
+    const startButton=pretest && mode==='read_first'?page.locator('#bootstrapStart'):page.getByRole('button',{
       name: mode === 'lis_first' ? confirmedStartName : startName, exact:true,
-    }).click({timeout:50_000});
+    });
+    await startButton.click({timeout:50_000});
     log('started');
     await page.getByRole('button',{name:'Tải bài làm về máy'}).waitFor();
     if(eofJournal){
@@ -220,12 +223,12 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         return {view:journey.view(),origin:performance.timeOrigin,position:document.getElementById('miniJourneyAudio')?.currentTime};
       });
       if(testDepartureCache){
-        const previousEntry=term?'index-student-cache-v2-preview-verified-v1.html':'index-mini-student-cache-v3-preview-verified-v1.html';
+        const previousEntry=pretest?'index-pretest-student-cache-v2.html':term?'index-student-cache-v2-preview-verified-v1.html':'index-mini-student-cache-v3-preview-verified-v1.html';
         const number=term1?1:2;
-        const bootName=term?'bootstrap-term'+number+'-k67-student-cache-v2-preview-verified-v1.js':'bootstrap-mini-k67-student-cache-v3-preview-verified-v1.js';
+        const bootName=pretest?'bootstrap-pretest-k67-student-cache-v2.js':term?'bootstrap-term'+number+'-k67-student-cache-v2-preview-verified-v1.js':'bootstrap-mini-k67-student-cache-v3-preview-verified-v1.js';
         const files=[previousEntry,term2?bootName:'../term-test-2-computer-based/'+bootName,
-          term1?'../shared/app-term1-k67-parallel-v1-log-renewal-v1-preview-verified-v1.js':term2?'../shared/app-term2-k67-browser-cloud-v1-preview-verified-v1.js':'../shared/app-mini-k67-parallel-log-renewal-v1-preview-verified-v1.js',
-          term?'../mini-test-lesson-5-computer-based/journey-term'+number+'-k67-student-cache-v2-preview-verified-v1.mjs':'journey-mini-k67-student-cache-v3-preview-verified-v1.mjs'];
+          pretest?'../shared/app-pretest-k67-content-journal-v1.js':term1?'../shared/app-term1-k67-parallel-v1-log-renewal-v1-preview-verified-v1.js':term2?'../shared/app-term2-k67-browser-cloud-v1-preview-verified-v1.js':'../shared/app-mini-k67-parallel-log-renewal-v1-preview-verified-v1.js',
+          pretest?'../mini-test-lesson-5-computer-based/journey-pretest-k67-student-cache-v2.mjs':term?'../mini-test-lesson-5-computer-based/journey-term'+number+'-k67-student-cache-v2-preview-verified-v1.mjs':'journey-mini-k67-student-cache-v3-preview-verified-v1.mjs'];
         const retained=await page.evaluate(async ({paths,prefix,newEntry})=>{
           const worker=navigator.serviceWorker.controller.scriptURL;
           if(!worker.includes('confirmed-departure'))return false;
@@ -237,7 +240,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
               return (await Promise.all(paths.map(path=>cache.match(new URL(path,worker))))).every(response=>response?.ok);
           }
           return false;
-        },{paths:files,prefix:term?'term'+number+'-k67-cbt-shell-v1-parallel-':'mini-k67-cbt-shell-v1-',
+        },{paths:files,prefix:pretest?'pretest-lesson-16-k67-cbt-v1-':term?'term'+number+'-k67-cbt-shell-v1-parallel-':'mini-k67-cbt-shell-v1-',
           newEntry:previousEntry.replace('.html','-confirmed-departure-v1.html')});
         assert.ok(retained,'New worker cache retains all paths needed by an already-open older app');
         const restoredContext=await browser.newContext({serviceWorkers:'block'});

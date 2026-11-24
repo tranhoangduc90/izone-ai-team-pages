@@ -281,3 +281,20 @@ test('K67 Reading-first inline preview waits for its player and can retry prepar
   assert.equal(start.disabled, false);
   assert.equal(preview.paused, true);
 });
+
+test('Pretest K67 keeps the departure build and older pinned CBT shell available', async () => {
+  const base = new URL('pretest-lesson-16-computer-based/', root);
+  const previous = 'pretest-student-cache-v2';
+  const current = previous + '-confirmed-departure-v1';
+  const {ASSETS: oldAssets} = await import(new URL('offline-assets-' + previous + '.mjs', base));
+  const {ASSETS, ASSET_HASHES, ASSET_BUILD_ID} = await import(new URL('offline-assets-' + current + '.mjs', base));
+  assert.equal(await text(new URL('index.html', base)), await text(new URL('index-' + current + '.html', base)));
+  assert.deepEqual(new Set(ASSETS), new Set(Object.keys(ASSET_HASHES)));
+  assert.ok(oldAssets.every(path => ASSETS.includes(path)));
+  assert.equal(ASSET_BUILD_ID, sha(JSON.stringify(ASSET_HASHES)));
+  for (const name of ASSETS) {
+    const file = new URL(name, base);
+    const bytes = /\.(html|js|mjs|css|svg)$/.test(file.pathname) ? await text(file) : await readFile(file);
+    assert.equal(sha(bytes), ASSET_HASHES[name], name);
+  }
+});
