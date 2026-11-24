@@ -85,7 +85,12 @@ for(const mode of modes)test(slug+' paper confirmed departure '+mode,{timeout:14
     await page.locator('#studentSelect option[value="'+f.students[0].ref+'"]').waitFor({state:'attached'});
     await page.locator('#studentSelect').selectOption(f.students[0].ref);
     await page.getByRole('button',{name:'Bắt đầu '+label,exact:mode==='lis_first'}).first().click();
-    await page.waitForFunction(()=>navigator.serviceWorker.controller?.scriptURL.includes('offline-worker-confirmed-departure'));
+    await page.waitForFunction(()=>navigator.serviceWorker.controller?.scriptURL.includes('offline-worker-confirmed-departure-v1-verified-exit-v1.js'));
+    if(section==='listening'){
+      const players=await page.locator('audio').evaluateAll(elements=>elements.filter(audio=>audio.src||audio.currentSrc).length);
+      assert.equal(players,0,'The answer sheet does not own the examination audio player.');
+      console.log(JSON.stringify({mode,section,examAudioPlayers:players}));
+    }
     const field=page.locator('#'+section+'Questions [data-answer-key]:visible').first()
       .or(page.locator('#'+section+'Questions select:visible,#'+section+'Questions input:visible').first()).first();
     const kind=await field.evaluate(node=>node.tagName);
@@ -124,6 +129,27 @@ for(const mode of modes)test(slug+' paper confirmed departure '+mode,{timeout:14
       assert.deepEqual(await timing(),activeTiming);
       dismissPrompt=false;
       await page.reload({waitUntil:'commit'});
+      await page.waitForFunction(at=>performance.timeOrigin!==at,documentOrigin);
+      const saved=await page.evaluate(({slug,ref,section})=>{
+        const state=JSON.parse(localStorage.getItem('izone-test:'+slug+':IC5601:student:'+ref));
+        return {owner:state.examSessionToken,answers:state.drafts[section],departure:state.confirmedDeparture};
+      },{slug,ref:f.students[0].ref,section});
+      assert.equal(saved.owner,activeTiming[1]);
+      assert.ok(Object.values(saved.answers).includes(answer));
+      assert.ok(!saved.departure);
+      connected=true;
+      await context.setOffline(false);
+      await page.reload({waitUntil:'domcontentloaded'});
+      await field.waitFor({state:'visible'});
+      assert.equal(await field.inputValue(),answer);
+      assert.deepEqual(await timing(),activeTiming);
+      const {rows}=await f.db.query('SELECT receipt FROM assessment.term_online_submission_hold WHERE section=$1 AND receipt IS NOT NULL',[section]);
+      assert.equal(rows.length,0);
+      console.log(JSON.stringify({mode,section,nativeReloadKeptAttempt:true,originalDeadline:true,receipts:0}));
+      connected=false;
+      await context.setOffline(true);
+      await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
+      await page.getByRole('dialog',{name:'Xác nhận rời bài thi'}).getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
     }
     await page.waitForFunction(at=>performance.timeOrigin!==at,documentOrigin);
     await page.getByText('Phần '+label+' đã khóa trên thiết bị. Đang chờ máy chủ xác nhận.',{exact:true}).waitFor();
@@ -179,10 +205,17 @@ for(const mode of modes)test(slug+' paper confirmed departure '+mode,{timeout:14
       page.on('pageerror',e=>errors.push(e.message));
       page.on('dialog',dialog=>dialog.accept());
       await page.goto(origin+routeName+'?class=IC5601&mode='+mode);
+      const restoredEditor=page.locator('#writingView textarea[data-writing-task="'+writingTask+'"]');
+      const select=page.locator('#studentSelect');
+      const option=select.locator('option[value="'+f.students[0].ref+'"]');
+      await Promise.race([restoredEditor.waitFor(),option.waitFor({state:'attached'})]);
+      if(!await restoredEditor.isVisible()&&await select.isEnabled())await select.selectOption(f.students[0].ref);
+      await restoredEditor.waitFor();
+      assert.equal(await restoredEditor.inputValue(),essay);
+      assert.equal((await f.db.query("SELECT receipt FROM assessment.term_online_submission_hold WHERE section='writing' AND receipt IS NOT NULL")).rows.length,0);
+      await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
+      await page.getByRole('dialog').getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
       const receiptNote=page.getByText('Máy chủ đã nhận phần Writing.',{exact:true});
-      await Promise.race([receiptNote.waitFor(),page.locator('#studentSelect option[value="'+f.students[0].ref+'"]').waitFor({state:'attached'})]);
-      if (!await receiptNote.isVisible() && await page.locator('#studentSelect').isEnabled())
-        await page.locator('#studentSelect').selectOption(f.students[0].ref);
       await receiptNote.waitFor();
       await page.locator('#resultReadyView').waitFor();
       const [writing]=(await f.db.query('SELECT receipt FROM assessment.term_online_submission_hold WHERE section=$1 AND receipt IS NOT NULL',['writing'])).rows;
@@ -193,7 +226,7 @@ for(const mode of modes)test(slug+' paper confirmed departure '+mode,{timeout:14
       const [stored]=(await f.db.query('SELECT '+storedField+' AS text FROM assessment.term_test_attempt WHERE id=$1',[writing.receipt.attemptToken])).rows;
       assert.equal(stored.text,essay);
       assert.deepEqual(errors,[]);
-      console.log(JSON.stringify({mode,section:'writing',next:'result',nativeClose:true,reopenedFreshTab:true}));
+      console.log(JSON.stringify({mode,section:'writing',next:'result',nativeClosePreserved:true,reopenedFreshTab:true}));
     }
     if(mode==='lis_first' && slug==='term-test-1-k56'){
       submitPath='/api/term-tests/'+slug+'/reading';
@@ -206,6 +239,12 @@ for(const mode of modes)test(slug+' paper confirmed departure '+mode,{timeout:14
       await Promise.all([requested,page.goBack({waitUntil:'commit'})]);
       await page.waitForURL(origin+'/before-exam');
       await page.goForward({waitUntil:'commit'});
+      const restored=page.locator('#readingQuestions input:visible').first();
+      await restored.waitFor();
+      assert.equal(await restored.inputValue(),'HISTORY');
+      assert.equal((await f.db.query("SELECT receipt FROM assessment.term_online_submission_hold WHERE section='reading' AND receipt IS NOT NULL")).rows.length,0);
+      await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
+      await page.getByRole('dialog').getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
       await page.getByText('Máy chủ đã nhận phần Reading.',{exact:true}).waitFor();
       await page.getByRole('button',{name:'Bắt đầu Writing',exact:true}).waitFor();
       const captured=(await f.db.query('SELECT receipt FROM assessment.term_online_submission_hold WHERE section=$1 AND receipt IS NOT NULL',['reading'])).rows;
@@ -213,7 +252,7 @@ for(const mode of modes)test(slug+' paper confirmed departure '+mode,{timeout:14
       assert.equal(captured[0].receipt.operationId,preservedOperation);
       const [state]=(await f.db.query('SELECT reading_answers FROM assessment.term_test_attempt WHERE id=$1',[captured[0].receipt.attemptToken])).rows;
       assert.equal(state.reading_answers[question],'HISTORY');
-      console.log(JSON.stringify({mode,section:'reading',next:'writing',nativeBack:true,receiptCount:captured.length}));
+      console.log(JSON.stringify({mode,section:'reading',next:'writing',nativeBackPreserved:true,receiptCount:captured.length}));
     }
   }catch(error){
     const text=await page?.locator('#notice').textContent({timeout:1000}).catch(()=>null);
