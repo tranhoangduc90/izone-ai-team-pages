@@ -6,8 +6,10 @@ import test from 'node:test';
 process.env.K56_FIXTURE_IMPORT_ONLY = '1';
 const {fixture, wait} = await import('./term2-offline-browser.mjs');
 const term1 = process.env.TERM1_HARDWARE_TEST === '1';
-const demo = (term1 ? process.env.TERM1_FIXTURE_DEMO : process.env.TERM2_TEST_DEMO) === '1';
-const evidenceDir = term1 ? process.env.TERM1_EVIDENCE : process.env.TERM2_EVIDENCE;
+const mini = process.env.MINI_HARDWARE_TEST === '1';
+assert.ok(!(term1 && mini), 'Select a single audio fixture');
+const demo = (mini ? process.env.MINI_FIXTURE_DEMO : term1 ? process.env.TERM1_FIXTURE_DEMO : process.env.TERM2_TEST_DEMO) === '1';
+const evidenceDir = mini ? process.env.MINI_EVIDENCE : term1 ? process.env.TERM1_EVIDENCE : process.env.TERM2_EVIDENCE;
 
 async function installDeviceSimulation(page) {
   await page.addInitScript(() => {
@@ -48,13 +50,13 @@ async function start(exam, mode) {
   exam.controls.r2Audio = true;
   exam.controls.listeningReportsEnabled = true;
   exam.controls.listeningRecoveryEnabled = true;
-  exam.controls.preparedOverride = {[term1 ? 'term1ParallelEntry' : 'term2ParallelEntry']:true};
+  exam.controls.preparedOverride = {[mini ? 'miniCbtParallelEntry' : term1 ? 'term1ParallelEntry' : 'term2ParallelEntry']:true};
   await installDeviceSimulation(page);
   await page.goto(exam.url);
   await page.locator(`#bootstrapStudent option[value="${exam.student}"]`).waitFor({state:'attached'});
   await page.selectOption('#bootstrapStudent', exam.student);
   await page.click('#confirmIdentity');
-  await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.active, 'Prepared Listening attempt');
+  await wait(page, () => (window.K56_MINI_OFFLINE || window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.active, 'Prepared Listening attempt');
   if (mode === 'read_first') {
     await page.getByRole('button', {name:'Bắt đầu Reading', exact:true}).click();
     await page.locator('#readingQuestions input[data-number]').first().fill('Reading before device simulation');
@@ -62,9 +64,9 @@ async function start(exam, mode) {
   }
   await page.click('#bootstrapPreview');
   await page.click('#bootstrapStart', {timeout:45000});
-  await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.player?.currentTime > 0.5, 'Main MP3 advances');
+  await wait(page, () => (window.K56_MINI_OFFLINE || window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.player?.currentTime > 0.5, 'Main MP3 advances');
   await page.evaluate(() => {
-    const lab = window.listeningDeviceLab, runtime = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
+    const lab = window.listeningDeviceLab, runtime = (window.K56_MINI_OFFLINE || window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
     const original = runtime.observe.bind(runtime);
     runtime.observe = (action, row) => {
       if (action.startsWith('audio_') || action.startsWith('listening_')) lab.rows.push({action, ...structuredClone(row)});
@@ -78,8 +80,8 @@ async function start(exam, mode) {
 }
 
 for (const mode of ['read_first','lis_first']) {
-  test(`${term1?'Term 1':'Term 2'} K56 simulates output changes and headset commands (${mode})`, {timeout:120000}, async () => {
-    const exam = await fixture(mode, {demo,product:term1?1:2});
+  test(`${mini?'Mini':term1?'Term 1':'Term 2'} K56 simulates output changes and headset commands (${mode})`, {timeout:120000}, async () => {
+    const exam = await fixture(mode, {demo,product:mini?"mini":term1?1:2});
     const {page} = exam;
     const collector = evidenceDir && resolve(evidenceDir, `${mode}-hardware-collector.jsonl`);
     if (collector) exam.controls.journalBatchFile = collector;
@@ -89,7 +91,7 @@ for (const mode of ['read_first','lis_first']) {
     const snapshot = () => page.evaluate(() => {
       const lab = window.listeningDeviceLab, audio = lab.player;
       return {position:Math.round(audio.currentTime * 1000), rate:audio.playbackRate, paused:audio.paused,
-        samePlayer:audio === (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player, sameSource:audio.getAttribute('src') === lab.source};
+        samePlayer:audio === (window.K56_MINI_OFFLINE || window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player, sameSource:audio.getAttribute('src') === lab.source};
     });
     async function outputChange(label, {outputs, selected, behavior, commands = [], outcome, switches = 0}) {
       const before = await snapshot();
@@ -175,11 +177,11 @@ for (const mode of ['read_first','lis_first']) {
       });
       const resume = page.getByRole('button', {name:'Nghe tiếp', exact:true});
       await resume.waitFor();
-      const pause = await page.evaluate(() => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.listeningCheckpoint);
+      const pause = await page.evaluate(() => (window.K56_MINI_OFFLINE || window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.listeningCheckpoint);
       assert.ok(pause.positionMs >= beforeStop.position && pause.positionMs - beforeStop.position < 400);
       assert.equal(pause.resumeCount,0);
       await resume.click();
-      await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.listeningCheckpoint?.resumeCount === 1,
+      await wait(page, () => (window.K56_MINI_OFFLINE || window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.listeningCheckpoint?.resumeCount === 1,
         'User resume after simulated Windows Stop');
       const first = await snapshot();
       assert.equal(first.samePlayer && first.sameSource && !first.paused && first.rate === 1, true);
@@ -201,7 +203,7 @@ for (const mode of ['read_first','lis_first']) {
       await page.getByRole('button',{name:'Tôi không nghe thấy âm thanh', exact:true}).click();
       await page.getByRole('button',{name:/Tôi đã hiểu\. Đến phần thi tiếp theo/}).click();
       await (mode === 'read_first' ? page.locator('#startWriting') : page.locator('#k56SectionReady button')).waitFor();
-      await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).pending === 0, 'Interruption receipt recorded');
+      await wait(page, () => (window.K56_MINI_OFFLINE || window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).pending === 0, 'Interruption receipt recorded');
       await page.evaluate(() => window.listeningDeviceLab.finishSwitch());
       await page.waitForFunction(start => window.listeningDeviceLab.rows.slice(start).some(row=>
         row.action === 'audio_output_result' && row.outcome === 'resolved' && row.active === false), beforeLeaving);
@@ -209,7 +211,7 @@ for (const mode of ['read_first','lis_first']) {
         const lab = window.listeningDeviceLab, audio = lab.player;
         lab.latePlay({action:'play'});
         const lateCallback = await lab.lateAppPlay('fixture_late_start').then(()=>'played', error=>error.name);
-        return {next:(window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).sectionResponse().nextSection, attached:audio.isConnected,
+        return {next:(window.K56_MINI_OFFLINE || window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).sectionResponse().nextSection, attached:audio.isConnected,
           source:audio.hasAttribute('src'), paused:audio.paused, active:lab.actions.size, switches:lab.switches,
           lateCallback, rows:lab.rows, permissions:lab.permissionCalls};
       });
