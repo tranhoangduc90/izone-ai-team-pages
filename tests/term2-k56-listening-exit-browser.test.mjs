@@ -6,11 +6,14 @@ import {pathToFileURL} from 'node:url';
 
 process.env.K56_FIXTURE_IMPORT_ONLY = '1';
 const {fixture, wait} = await import('./term2-offline-browser.mjs');
-const demo = process.env.TERM2_TEST_DEMO === '1';
+const term1 = process.env.TERM1_EXIT_TEST === '1';
+const demo = (term1 ? process.env.TERM1_FIXTURE_DEMO : process.env.TERM2_TEST_DEMO) === '1';
+const evidenceDir = term1 ? process.env.TERM1_EVIDENCE : process.env.TERM2_EVIDENCE;
+const product = term1 ? 1 : 2;
 const headed = process.env.TERM2_TEST_HEADED === '1';
 const testBackForwardCache = process.env.TERM2_TEST_BFCACHE === '1';
 const testAudioRaces = process.env.TERM2_TEST_AUDIO_RACES === '1';
-const testRecovery = process.env.TERM2_TEST_LISTENING_RECOVERY === '1';
+const testRecovery = term1 || process.env.TERM2_TEST_LISTENING_RECOVERY === '1';
 const testAnomalyHistory = process.env.TERM2_TEST_ANOMALY_HISTORY === '1';
 
 const guardRequested = page => page.evaluate(() => {
@@ -65,14 +68,14 @@ async function startListening(exam, mode, answer, afterStart, previousPage = 'ab
   exam.controls.r2Audio = true;
   exam.controls.listeningReportsEnabled = true;
   exam.controls.listeningRecoveryEnabled = testRecovery;
-  exam.controls.preparedOverride = {term2ParallelEntry: true};
+  exam.controls.preparedOverride = {[term1 ? 'term1ParallelEntry' : 'term2ParallelEntry']: true};
   exam.controls.beforeUnloadSpies = [];
   await page.goto(previousPage);
   await page.goto(exam.url);
   await page.locator(`#bootstrapStudent option[value="${exam.student}"]`).waitFor({state: 'attached'});
   await page.selectOption('#bootstrapStudent', exam.student);
   await page.click('#confirmIdentity');
-  await wait(page, () => window.K56_TERM2_OFFLINE?.active, 'Prepared fixture');
+  await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.active, 'Prepared fixture');
   if (mode === 'read_first') {
     await page.getByRole('button', {name: 'Bắt đầu Reading', exact: true}).click();
     await page.locator('#readingQuestions input[data-number]').first().fill('Reading draft');
@@ -83,7 +86,7 @@ async function startListening(exam, mode, answer, afterStart, previousPage = 'ab
     [...document.querySelectorAll('audio')].find(audio => audio.getAttribute('src')?.endsWith('#t=0,30')));
   await page.click('#bootstrapStart', {timeout: 45000});
   await afterStart?.(page);
-  await wait(page, () => window.K56_TERM2_OFFLINE?.player?.currentTime > 0.5, 'Listening playing');
+  await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.player?.currentTime > 0.5, 'Listening playing');
   const previewReleased = await preview.evaluate(audio => Boolean(audio?.paused && !audio.hasAttribute('src') &&
     !audio.isConnected && audio.readyState === 0));
   await preview.dispose();
@@ -117,8 +120,8 @@ async function verifyStayInListening(exam, answer) {
     catch (error) { throw new Error(`No native ${action} confirmation: ${JSON.stringify(guardState)}`, {cause: error}); }
     assert.equal(page.isClosed(), false, action);
     await wait(page, () => {
-      const audio = window.K56_TERM2_OFFLINE?.player;
-      return audio && !audio.paused && !window.K56_TERM2_OFFLINE.record.sections.listening.interrupted;
+      const audio = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)?.player;
+      return audio && !audio.paused && !(window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.sections.listening.interrupted;
     }, `Stayed in Listening after ${action}`, 3000);
     assert.equal(await page.locator('#listeningQuestions input[data-number]').first().inputValue(), answer);
     observed.push(action);
@@ -130,12 +133,12 @@ async function verifyStayInListening(exam, answer) {
 async function verifyListeningSeal(exam, mode, audio, answer) {
   const {page} = exam;
   await wait(page, () => {
-    const runtime = window.K56_TERM2_OFFLINE;
+    const runtime = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
     return runtime.record.sections.listening?.sealed && !runtime.pending;
   }, 'Listening seal and receipt', 12000);
   await (mode === 'read_first' ? page.locator('#startWriting') : page.locator('#startReading')).waitFor();
   const result = await page.evaluate(() => {
-    const runtime = window.K56_TERM2_OFFLINE;
+    const runtime = (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE);
     const {listening} = runtime.record.sections;
     return {answerValues: Object.values(JSON.parse(listening.content).answers), interrupted: Boolean(listening.interrupted),
       player: {...runtime.record.player}, next: runtime.sectionResponse().nextSection};
@@ -408,19 +411,19 @@ for (const mode of ['read_first', 'lis_first']) {
     });
   }
 
-  test(`Term 2 K56 cancels then confirms early Listening submission (${mode})`, {timeout: 90000}, async () => {
-    const exam = await fixture(mode, {product: 2, defaultAutoplay: true, demo});
+  test(`Term ${product} K56 cancels then confirms early Listening submission (${mode})`, {timeout: 90000}, async () => {
+    const exam = await fixture(mode, {product, defaultAutoplay: true, demo});
     const {page} = exam;
     const answer = 'Kept across cancelled submission';
     try {
       await startListening(exam, mode, answer);
-      const audio = await page.evaluateHandle(() => window.K56_TERM2_OFFLINE.player);
+      const audio = await page.evaluateHandle(() => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player);
       const position = await audio.evaluate(element => element.currentTime);
       exam.controls.dismissNextConfirmation = true;
       await page.click('#submitListening');
       assert.equal(await page.locator('#listeningQuestions input[data-number]').first().inputValue(), answer);
-      await wait(page, () => !window.K56_TERM2_OFFLINE.player.paused, 'Continued after cancellation');
-      assert.equal(await page.evaluate(() => Boolean(window.K56_TERM2_OFFLINE.record.sections.listening.sealed)), false);
+      await wait(page, () => !(window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player.paused, 'Continued after cancellation');
+      assert.equal(await page.evaluate(() => Boolean((window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.sections.listening.sealed)), false);
       assert.ok(await audio.evaluate((element, previous) => element.currentTime >= previous, position));
       assert.equal(exam.controls.dismissNextConfirmation, false, 'Cancellation must have received the submit confirmation');
       assert.equal(exam.controls.beforeUnloadSpies.length, 0);
@@ -428,30 +431,32 @@ for (const mode of ['read_first', 'lis_first']) {
       const evidence = await verifyListeningSeal(exam, mode, audio, answer);
       assert.equal(exam.controls.beforeUnloadSpies.length, 0);
       assert.equal(Boolean(evidence.ended), false);
-      if (process.env.TERM2_EVIDENCE) await writeFile(resolve(process.env.TERM2_EVIDENCE, `${mode}-early-seal.json`), JSON.stringify(evidence, null, 2));
+      if (evidenceDir) await writeFile(resolve(evidenceDir, `${mode}-early-seal.json`), JSON.stringify(evidence, null, 2));
     } finally {
       await exam.close();
     }
   });
 
-  if (process.env.TERM2_NATURAL_EOF === '1') {
-    test(`Term 2 K56 completes a full natural Listening EOF (${mode})`, {timeout: 2050000}, async () => {
-      const exam = await fixture(mode, {product: 2, defaultAutoplay: true, demo});
+  if ((term1 ? process.env.TERM1_NATURAL_EOF : process.env.TERM2_NATURAL_EOF) === '1') {
+    test(`Term ${product} K56 completes a full natural Listening EOF (${mode})`, {timeout: 2050000}, async () => {
+      const exam = await fixture(mode, {product, defaultAutoplay: true, demo});
       const {page} = exam;
       const answer = 'Kept through the full listening recording';
       try {
         const started = Date.now();
         await startListening(exam, mode, answer);
-        const audio = await page.evaluateHandle(() => window.K56_TERM2_OFFLINE.player);
+        const audio = await page.evaluateHandle(() => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).player);
         const setup = await audio.evaluate(element => ({position: element.currentTime, duration: element.duration, playbackRate: element.playbackRate}));
         assert.equal(setup.playbackRate, 1);
         assert.ok(setup.position < 3 && setup.duration > 1800);
-        const evidenceDir = process.env.TERM2_EVIDENCE;
         if (evidenceDir) await writeFile(resolve(evidenceDir, `${mode}-eof-start.json`), JSON.stringify({
           ...setup, startedAt: new Date(started).toISOString(), pid: process.pid,
           worker: await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL),
         }, null, 2));
-        await wait(page, () => window.K56_TERM2_OFFLINE.record.sections.listening?.sealed, 'Natural end sealed Listening', 1950000);
+        await audio.evaluate(element => element.dispatchEvent(new Event('ended')));
+        assert.equal(await page.evaluate(() => Boolean((window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE)
+          .record.sections.listening?.sealed)), false);
+        await wait(page, () => (window.K56_TERM1_OFFLINE || window.K56_TERM2_OFFLINE).record.sections.listening?.sealed, 'Natural end sealed Listening', 1950000);
         const evidence = await verifyListeningSeal(exam, mode, audio, answer);
         assert.equal(evidence.ended, true);
         assert.ok(evidence.position >= setup.duration - 0.5);
