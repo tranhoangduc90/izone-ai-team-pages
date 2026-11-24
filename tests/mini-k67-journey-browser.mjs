@@ -19,7 +19,7 @@ const writingOnly=process.env.K67_JOURNEY_WRITING_ONLY==='1';
 const testDeparture=process.env.K67_JOURNEY_CONFIRMED_DEPARTURE==='1';
 const departureAction=process.env.K67_JOURNEY_DEPARTURE_ACTION||'';
 const testDepartureCache=process.env.K67_JOURNEY_DEPARTURE_CACHE==='1';
-assert.ok(['','back','close','writing','leave'].includes(departureAction));
+assert.ok(['','back','close','writing','leave','final'].includes(departureAction));
 const term1=process.env.K67_JOURNEY_TERM1==='1';
 const term2=process.env.K67_JOURNEY_TERM2==='1';
 const term=term1||term2;
@@ -220,16 +220,16 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         return {view:journey.view(),origin:performance.timeOrigin,position:document.getElementById('miniJourneyAudio')?.currentTime};
       });
       if(testDepartureCache){
-        const previousEntry='index-student-cache-v2-preview-verified-v1.html';
+        const previousEntry=term?'index-student-cache-v2-preview-verified-v1.html':'index-mini-student-cache-v3-preview-verified-v1.html';
         const number=term1?1:2;
-        const bootName='bootstrap-term'+number+'-k67-student-cache-v2-preview-verified-v1.js';
-        const files=[previousEntry,term1?'../term-test-2-computer-based/'+bootName:bootName,
-          term1?'../shared/app-term1-k67-parallel-v1-log-renewal-v1-preview-verified-v1.js':'../shared/app-term2-k67-browser-cloud-v1-preview-verified-v1.js',
-          '../mini-test-lesson-5-computer-based/journey-term'+number+'-k67-student-cache-v2-preview-verified-v1.mjs'];
-        const retained=await page.evaluate(async ({paths,prefix})=>{
+        const bootName=term?'bootstrap-term'+number+'-k67-student-cache-v2-preview-verified-v1.js':'bootstrap-mini-k67-student-cache-v3-preview-verified-v1.js';
+        const files=[previousEntry,term2?bootName:'../term-test-2-computer-based/'+bootName,
+          term1?'../shared/app-term1-k67-parallel-v1-log-renewal-v1-preview-verified-v1.js':term2?'../shared/app-term2-k67-browser-cloud-v1-preview-verified-v1.js':'../shared/app-mini-k67-parallel-log-renewal-v1-preview-verified-v1.js',
+          term?'../mini-test-lesson-5-computer-based/journey-term'+number+'-k67-student-cache-v2-preview-verified-v1.mjs':'journey-mini-k67-student-cache-v3-preview-verified-v1.mjs'];
+        const retained=await page.evaluate(async ({paths,prefix,newEntry})=>{
           const worker=navigator.serviceWorker.controller.scriptURL;
           if(!worker.includes('confirmed-departure'))return false;
-          const entry=new URL('index-student-cache-v2-preview-verified-v1-confirmed-departure-v1.html',worker);
+          const entry=new URL(newEntry,worker);
           for(const name of await caches.keys()){
             if(!name.startsWith(prefix))continue;
             const cache=await caches.open(name);
@@ -237,7 +237,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
               return (await Promise.all(paths.map(path=>cache.match(new URL(path,worker))))).every(response=>response?.ok);
           }
           return false;
-        },{paths:files,prefix:'term'+number+'-k67-cbt-shell-v1-parallel-'});
+        },{paths:files,prefix:term?'term'+number+'-k67-cbt-shell-v1-parallel-':'mini-k67-cbt-shell-v1-',
+          newEntry:previousEntry.replace('.html','-confirmed-departure-v1.html')});
         assert.ok(retained,'New worker cache retains all paths needed by an already-open older app');
         const restoredContext=await browser.newContext({serviceWorkers:'block'});
         try{
@@ -256,7 +257,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         Object.values(window.TERM_TEST_BOOTSTRAP.miniJourney.drafts()[skill]||{}).includes(value),{skill:section,value:answer});
       const explicitButton=action==='leave'?page.locator('#termTestChangeStudent'):page.getByRole('button',{name:'Tải lại trang',exact:true});
       const modal=page.getByRole('dialog',{name:'Xác nhận rời bài thi'});
-      const explicit=['controlled','writing','leave'].includes(action);
+      const explicit=['controlled','writing','leave','final'].includes(action);
       const history=action==='back'?await context.newCDPSession(page):null;
       const prior=history?await history.send('Page.getNavigationHistory'):null;
       const backEntry=prior?.entries[prior.currentIndex-1]?.id;
@@ -272,7 +273,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       };
       if(explicit){
         await explicitButton.click();
-        if(section==='writing')await modal.getByText(/Khi mở lại, bạn sẽ thấy màn hình kết thúc bài thi/).waitFor();
+        if(nextSkill==='result')await modal.getByText(/Khi mở lại, bạn sẽ thấy màn hình kết thúc bài thi/).waitFor();
         await modal.getByRole('button',{name:'Ở lại làm bài',exact:true}).click();
       }else await native(true);
       assert.equal(await field.inputValue(),answer);
@@ -385,7 +386,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       if(await field.evaluate(node=>node.tagName)==='SELECT')await field.selectOption({index:1});
       else await field.fill('A');
       log('section_started',{section});
-      if(testDeparture&&term&&departureAction!=='writing'&&section===order[0]){
+      if(testDeparture&&(departureAction==='final'?section===order.at(-1):departureAction!=='writing'&&section===order[0])){
         await verifyDeparture(section,field);
         return;
       }

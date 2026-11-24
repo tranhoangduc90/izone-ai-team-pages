@@ -138,7 +138,7 @@ const targets = [
   ['term-test-1-k56-computer-based', 'demo-journal-v1', 'verified', '-confirmed-departure-v1'],
   ['term-test-2-k56-computer-based', 'demo-journal-v1', 'verified', '-confirmed-departure-v2'],
   ['mini-test-k56-computer-based', 'mini-student-cache-v2', 'verified', '-confirmed-departure-v1'],
-  ['mini-test-lesson-5-computer-based', 'mini-student-cache-v3']
+  ['mini-test-lesson-5-computer-based', 'mini-student-cache-v3', 'verified', '-confirmed-departure-v1']
 ];
 for (const [route, kind, pinnedRelease, variant = ''] of targets) {
   const release = pinnedRelease || (kind === 'demo-journal-v1' ? 'ready' : 'verified');
