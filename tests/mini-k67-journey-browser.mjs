@@ -16,6 +16,7 @@ const full=process.env.K67_JOURNEY_FULL==='1';
 const checkListeningLayout=process.env.K67_JOURNEY_CHECK_LISTENING_LAYOUT==='1';
 const eofJournal=process.env.K67_JOURNEY_EOF_JOURNAL==='1';
 const recorderOutage=process.env.K67_PREVIEW_TERM2_JOURNAL_RECORDER_DOWN==='1';
+const loseUncommittedJournalWrites=process.env.K67_JOURNEY_LOSE_OFFLINE_JOURNAL_WRITES==='1';
 const writingOnly=process.env.K67_JOURNEY_WRITING_ONLY==='1';
 const testDeparture=process.env.K67_JOURNEY_CONFIRMED_DEPARTURE==='1';
 const departureAction=process.env.K67_JOURNEY_DEPARTURE_ACTION||'';
@@ -158,6 +159,16 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     const journalRows=[];
     const learnerBinding='b'.repeat(64);
     if(eofJournal){
+      if(loseUncommittedJournalWrites)await context.addInitScript(()=>{
+        const add=IDBObjectStore.prototype.add;
+        IDBObjectStore.prototype.add=function(...args){
+          if(!navigator.onLine&&this.name==='events'&&this.transaction.db.name.startsWith('izone-exam-journal-')&&
+            args[0]?.event?.data?.checkpointState?.action==='audio_anomaly'){
+            throw new DOMException('Simulated journal write lost on tab close','AbortError');
+          }
+          return add.apply(this,args);
+        };
+      });
       await context.addInitScript(()=>{
         Object.defineProperty(window,'TERM_TEST_APP_CONFIG',{configurable:true,set(config){
           Object.defineProperty(window,'TERM_TEST_APP_CONFIG',{configurable:true,writable:true,
@@ -481,7 +492,9 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           const onDisk=()=>page.evaluate(prefix=>{
             const saved=Object.keys(localStorage).filter(key=>key.startsWith(prefix))
               .map(key=>JSON.parse(localStorage.getItem(key))).find(record=>record?.sections?.listening);
-            return saved?{checkpoint:saved.sections.listening.listeningCheckpoint,clock:saved.listeningClockSync}:null;
+            return saved?{checkpoint:saved.sections.listening.listeningCheckpoint,clock:saved.listeningClockSync,
+              pauseLogSaved:saved.submissionDiagnostics?.some(({data})=>
+                data?.checkpointState?.action==='audio_anomaly'&&data.checkpointState.event==='pause')}:null;
           },storagePrefix);
           const readClock=async()=>{
             const reply=await fetch(base+'/preview/listening-recovery-clock');
@@ -518,6 +531,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           await page.waitForFunction(prefix=>Object.keys(localStorage).filter(key=>key.startsWith(prefix))
             .some(key=>JSON.parse(localStorage.getItem(key)).listeningClockSync?.pending?.[0]?.phase==='paused'),storagePrefix);
           const before=await onDisk();
+          if(loseUncommittedJournalWrites)assert.equal(before.pauseLogSaved,true,'Run outbox owns the offline pause before tab close.');
           await page.close();
           page=await openPage();
           await page.goto(url,{waitUntil:'domcontentloaded'});
@@ -615,7 +629,9 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
               await page.waitForTimeout(200);
             }
             for(const action of expected)assert.ok(observations.some(row=>row?.action===action),action);
-            assert.ok(observations.some(row=>row?.action==='audio_anomaly'&&row.source==='unknown'&&row.playerId));
+            assert.ok(observations.some(row=>row?.action==='audio_anomaly'&&row.event==='pause'&&
+              row.source==='unknown'&&row.playerId&&Math.abs(row.positionMs-before.checkpoint.positionMs)<500),
+              'The first offline pause stays in the journal after closing and reopening the tab.');
             assert.ok(observations.some(row=>row?.action==='audio_player_retired'&&row.playerId&&row.disposalId));
             if(simulateOutput)assert.ok(observations.some(row=>row?.action==='audio_media_action'&&row.mediaAction==='play'&&row.disposition==='inactive'));
             if(recorderOutage){
