@@ -67,9 +67,22 @@ async function open(slug='term-test-1',mode='lis_first',init){
       await writeFile(path.join(evidence,slug+'-reading-entry.json'),JSON.stringify({requests,messages,errors},null,2),'utf8');
       throw error;
     }
+    const reopened=isPretest?page.waitForEvent('domcontentloaded'):null;
     await page.locator('#submitReading').click();
+    if(reopened){
+      await reopened;
+      await page.locator('#bootstrapStudent').selectOption('66666666-6666-4666-8666-666666666666');
+      await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
+    }
   }
-  await page.locator('#bootstrapPreview').click();await page.locator('#bootstrapStart').click();
+  try{
+    await page.locator('#bootstrapPreview').click();
+    await page.locator('#bootstrapStart').click();
+  }catch(error){
+    const messages=await page.locator('[role="alert"], #notice, #bootstrapNotice').allTextContents();
+    await writeFile(path.join(evidence,slug+'-'+mode+'-listening-entry.json'),JSON.stringify({requests,messages,errors},null,2),'utf8');
+    throw error;
+  }
   await page.locator('#listeningView').waitFor({state:'visible'});
   const token=await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.examSessionToken);
   const read=async()=>{const r=await context.request.get(base+'/preview/audio-state?id='+token);assert.equal(r.status(),200);return r.json();};
@@ -83,27 +96,29 @@ async function sampleAndResume(page){
 
 async function readOnlineAudioJournal(page,context,token) {
   if(!process.env.K67_PREVIEW_EXAM_JOURNAL)return;
-  let rows=[],allCauses=[],bridges=[];
+  let rows=[],allCauses=[];
   for(let attempt=0;attempt<20;attempt++){
-    bridges=await page.evaluate(async slug=>{
+    await page.evaluate(async slug=>{
       const key=JSON.stringify([location.origin+'/api/term-tests/'+slug,slug]);
       const bridge=window[Symbol.for('izone.examJournal.connections.v1')]?.get(key);
       await bridge?.recorder.idle();
-      const result=await bridge?.recorder.flush({force:true});
-      return {onlineCheckpointVersion:bridge?.recordPretestCheckpoint?.toString().includes('cause='),status:result?.status,
-        readers:[...window[Symbol.for('izone.examJournal.connections.v1')]?.values()||[]].map(x=>Object.keys(x))};
+      await bridge?.recorder.flush({force:true});
     },onlineSlug);
     const response=await context.request.get(base+'/preview/writing-journal?session='+token);
     assert.equal(response.status(),200);
     const {events}=await response.json();
     allCauses=[...new Set(events.map(row=>(row.event?.data??row.data)?.cause).filter(Boolean))];
     rows=events.map(row=>row.event?.data??row.data)
-      .filter(row=>['k67_online_listening','term2_k67_online'].includes(row?.cause)).map(row=>row.checkpointState);
+      .filter(row=>['k67_online_listening','term2_k67_online'].includes(row?.cause)||
+        onlineSlug==='pretest-lesson-16'&&row?.cause==='k67_offline_journey'&&row.checkpointState?.mode==='online')
+      .map(row=>row.checkpointState);
     if(rows.some(row=>row.phase==='audio_player_retired')&&
-       rows.some(row=>row.phase==='audio_media_action'&&row.disposition==='inactive'))return rows;
+       rows.some(row=>row.phase==='audio_media_action'&&row.disposition==='inactive')&&
+       rows.some(row=>row.phase==='audio_anomaly'&&row.event==='pause'))return rows;
     await page.waitForTimeout(200);
   }
-  throw Error('Missing retirement or late media action in Collector: '+JSON.stringify({phases:rows.map(row=>row.phase),allCauses,bridges}));
+  await writeFile(path.join(evidence,'online-audio-collector-unexpected.json'),JSON.stringify(rows,null,2),'utf8');
+  throw Error('Missing pause, retirement or late media action in Collector: '+JSON.stringify({phases:rows.map(row=>row.phase),allCauses}));
 }
 
 for(const mode of ['lis_first','read_first'])test(`Media Session giữ nguyên audio online · ${mode}`,async()=>{
@@ -168,6 +183,7 @@ for(const mode of ['lis_first','read_first'])test(`Media Session giữ nguyên a
       const disposal=rows.find(row=>row.phase==='audio_player_retired'&&row.sourceCleared&&row.callbacksAborted);
       assert.ok(disposal);
       const official=rows.filter(row=>row.playerId===disposal.playerId);
+      await writeFile(path.join(evidence,'online-audio-collector-'+mode+'.json'),JSON.stringify(official,null,2),'utf8');
       assert.ok(official.some(row=>row.phase==='audio_anomaly'&&row.event==='pause'&&row.source==='unknown'&&Array.isArray(row.playerHistory)));
       for(const command of ['set_source','load','play','clear_source']){
         assert.ok(official.some(row=>row.phase==='audio_command'&&row.command===command&&row.commandId),command);
@@ -181,7 +197,6 @@ for(const mode of ['lis_first','read_first'])test(`Media Session giữ nguyên a
       const outputChange=official.find(row=>row.phase==='audio_device_change'&&row.sink==='specific');
       assert.ok(outputChange?.outputChangeId);
       assert.ok(official.some(row=>row.phase==='audio_output_result'&&row.outputChangeId===outputChange.outputChangeId&&row.outcome==='resolved'));
-      await writeFile(path.join(evidence,'online-audio-collector-'+mode+'.json'),JSON.stringify(official,null,2),'utf8');
     }
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
