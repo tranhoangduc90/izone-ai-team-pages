@@ -54,11 +54,24 @@ for (const mode of ['read_first', 'lis_first']) {
       await wait(page, () => window.K56_TERM2_OFFLINE.pending === 0, 'Accepted start receipt');
       assert.equal(exam.controls.nativeClockRequests?.length ?? 0,0);
 
+      await page.evaluate(() => {
+        const run = window.K56_TERM2_OFFLINE;
+        const observe = run.observe;
+        run.observe = function (action, details) {
+          if (action === 'audio_anomaly') window.fixtureListeningAnomaly = details;
+          return observe.call(this, action, details);
+        };
+      });
       await offline(true);
       await input.fill(answer);
       await page.evaluate(() => window.K56_TERM2_OFFLINE.player.pause());
       await resume.waitFor();
       const paused = await state();
+      const pause = await page.evaluate(() => window.fixtureListeningAnomaly);
+      assert.equal(pause.source, 'unknown');
+      const progress = pause.previous.filter(row => row.action === 'audio_progress_sample');
+      assert.ok(progress.length >= 6 && progress.length <= 11);
+      assert.ok(progress.every(row => row.rate === 1 && row.positionMs <= pause.positionMs));
       assert.equal(paused.pending.length,1);
       assert.equal(paused.pending[0].phase,'paused');
       await page.reload({waitUntil:'domcontentloaded'});
@@ -130,7 +143,7 @@ for (const mode of ['read_first', 'lis_first']) {
       assert.deepEqual(exam.errors,[]);
       const evidence = process.env.TERM2_EVIDENCE;
       if (evidence) await writeFile(resolve(evidence,mode+'-native-clock-readback.json'),
-        JSON.stringify({mode,demo,normalPlaybackClockRequests:0,paused,reloaded,verified,unfrozen,secondHold,final,stored,
+        JSON.stringify({mode,demo,normalPlaybackClockRequests:0,paused,pauseHistorySamples:progress,reloaded,verified,unfrozen,secondHold,final,stored,
           HTTPStatuses:requests.map(row=>row.status)},null,2));
     });
 }

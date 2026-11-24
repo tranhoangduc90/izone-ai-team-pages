@@ -7,7 +7,7 @@ import test from 'node:test';
 process.env.K56_FIXTURE_IMPORT_ONLY='1';
 const {fixture,wait}=await import('./term2-offline-browser.mjs');
 const output=process.env.TERM2_EVIDENCE;assert.ok(output);
-const workerName='offline-worker-student-cache-v2-preview-verified-v1-protected-listening-v1.js';
+const workerName='offline-worker-student-cache-v2-preview-verified-v1-protected-listening-v2.js';
 test('Term2 refreshed shell installs cold, keeps speaker continuation stable and restores Reading offline',{timeout:90000},async()=>{
  const f=await fixture('lis_first',{product:2}),p=f.page;f.controls.r2Audio=true;
  f.controls.listeningReportsEnabled=true;f.controls.preparedOverride={term2ParallelEntry:true};
@@ -51,8 +51,8 @@ test('Term2 keeps the active reading tab on the previous pinned worker while the
  const routePath=new URL(f.url).pathname;
  const entryPath='/term-tests/term-test-2-k56-computer-based/index.html';
  const fresh=await readFile(new URL('..'+entryPath,import.meta.url),'utf8');
- const legacy=workerName.replace('-protected-listening-v1','');
- const prior=fresh.replace('preview-verified-v1-protected-listening-v1.js','preview-verified-v1.js');
+ const legacy=workerName.replace('-protected-listening-v2','-protected-listening-v1');
+ const prior=fresh.replace('-protected-listening-v2.js','-protected-listening-v1.js');
  assert.notEqual(prior,fresh);
  f.controls.assetOverrides.set(routePath,prior);
  f.controls.r2Audio=true;
@@ -73,7 +73,7 @@ test('Term2 keeps the active reading tab on the previous pinned worker while the
   f.controls.assetOverrides.delete(routePath);
   const newTab=await f.context.newPage();
   await newTab.goto(f.url);
-  assert.ok(await newTab.evaluate(()=>[...document.scripts].some(script=>script.src.includes('protected-listening-v1'))));
+  assert.ok(await newTab.evaluate(()=>[...document.scripts].some(script=>script.src.includes('protected-listening-v2'))));
   await newTab.getByText('Bài đang mở ở tab khác. Hãy quay lại tab đó.',{exact:true}).waitFor();
   assert.equal(await readWorker(original),legacy);
   assert.equal(await field.inputValue(),answer);
@@ -96,12 +96,13 @@ for (const demo of [false, true]) {
     const path = `term-tests/term-test-2-k56-computer-based/${demo ? 'demo-journal-v1/' : ''}index.html`;
     const prior = execFileSync('git', ['show', `${rollbackBase}:${path}`]);
     const priorSource = prior.toString('utf8');
-    const oldBootstrap = demo ? 'bootstrap-term2-demo-journal-v1-preview-verified-v1.js' :
-      'bootstrap-log-renewal-student-cache-v2-preview-verified-v1.js';
+    const oldVariant = priorSource.includes('-protected-listening-v1.js') ? '-protected-listening-v1' : '';
+    const oldBootstrap = (demo ? 'bootstrap-term2-demo-journal-v1-preview-verified-v1' :
+      'bootstrap-log-renewal-student-cache-v2-preview-verified-v1') + oldVariant + '.js';
     assert.ok(priorSource.includes(oldBootstrap));
-    assert.ok(!priorSource.includes('protected-listening-v1'));
-    const currentWorker = demo ? 'offline-worker-preview-verified-v1-protected-listening-v1.js' : workerName;
-    const previousWorker = currentWorker.replace('-protected-listening-v1', '');
+    assert.ok(!priorSource.includes('protected-listening-v2'));
+    const currentWorker = demo ? 'offline-worker-preview-verified-v1-protected-listening-v2.js' : workerName;
+    const previousWorker = currentWorker.replace('-protected-listening-v2', oldVariant);
     const selectLearner = async (page, exam) => {
       await page.goto(exam.url);
       await page.locator(`#bootstrapStudent option[value="${exam.student}"]`).waitFor({state: 'attached'});

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {createListeningPlayer} from '../term-tests/shared/listening-player-lifecycle-v1.mjs';
+import {createListeningPlayer} from '../term-tests/shared/listening-player-lifecycle-v2.mjs';
 
 class AudioFixture extends EventTarget {
   source = true;
@@ -89,6 +89,35 @@ test('an observed pause without a web command is reported with unknown source an
   assert.equal(anomaly.source, 'unknown');
   assert.equal(anomaly.state.positionMs, 53122);
   assert.equal(anomaly.state.readyState, 4);
+  player.retire('confirmed_interruption');
+});
+
+test('an unexplained stop retains a short local playback history after the last command ages out', async () => {
+  let now = 0;
+  const {player, audio, rows, interruptions} = fixture(new AudioFixture(), {now: () => now});
+  audio.currentTime = 0;
+  audio.playbackRate = 1;
+  await player.command('play', 'exam_start', () => audio.play());
+  const loggedBefore = rows.length;
+  for (let tick = 1; tick <= 52; tick++) {
+    now = tick * 250;
+    audio.currentTime = now / 1000;
+    audio.dispatchEvent(new Event('timeupdate'));
+  }
+  assert.equal(rows.length, loggedBefore, 'ordinary progress must stay in the local buffer');
+
+  audio.pause();
+  const anomaly = rows.find(row => row.action === 'audio_anomaly');
+  assert.deepEqual(interruptions, ['pause']);
+  assert.equal(anomaly.source, 'unknown');
+  assert.equal(anomaly.commandId, null);
+  const samples = anomaly.previous.filter(row => row.action === 'audio_progress_sample');
+  assert.ok(samples.length >= 8 && samples.length <= 11);
+  assert.ok(samples.every(row => row.elapsedPageMs >= 3000 && row.elapsedPageMs <= now));
+  assert.ok(samples.every((row, index) => !index || row.positionMs > samples[index - 1].positionMs));
+  assert.equal(samples.at(-1).rate, 1);
+  assert.equal(samples.at(-1).readyState, 4);
+  assert.equal(anomaly.state.positionMs, 13000);
   player.retire('confirmed_interruption');
 });
 
