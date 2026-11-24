@@ -4508,7 +4508,7 @@
       return;
     }
     const mountContinuityStart=miniJourney.listeningRecoveryEnabled?.()
-      ? (await import('../k67-shared/continuity-player-term2-recovery-v1.mjs')).mountProtectedContinuityStart
+      ? (await import('../k67-shared/continuity-player-protected-v1.mjs')).mountProtectedContinuityStart
       : (await import('../k67-shared/offline-journey-ui-term2-audio-v2-preview-verified-v1.mjs?v=20261110-continuity-v2')).mountContinuityStart;
     await mountContinuityStart({host,start,journey:miniJourney,volume:Number(state.audioVolume??1),
       onStart:async()=>{

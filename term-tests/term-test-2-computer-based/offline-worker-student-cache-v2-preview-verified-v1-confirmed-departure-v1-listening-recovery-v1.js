@@ -1,3 +1,4 @@
+import {journalRecorderCache} from '../term-test-1-k56-computer-based/journal-recorder-cache-v1.mjs';
 import { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } from './offline-assets-student-cache-v2-preview-verified-v1-confirmed-departure-v1-listening-recovery-v1.mjs';
 
 const build='term2-k67-cbt-shell-v1';
@@ -15,10 +16,13 @@ async function verify(response,asset) {
   return response;
 }
 
+const journal=journalRecorderCache({assets:ASSETS,assetBuildId:ASSET_BUILD_ID,url,verify});
+
 self.addEventListener('install', event=>event.waitUntil((async()=>{
   const cache=await caches.open(cacheName);
-  for (let index=0;index<ASSETS.length;index+=6) {
-    await Promise.all(ASSETS.slice(index,index+6).map(async asset=>{
+  const required=journal.requiredAssets;
+  for (let index=0;index<required.length;index+=6) {
+    await Promise.all(required.slice(index,index+6).map(async asset=>{
       const request=url(asset);
       request.searchParams.set('examBuild',ASSET_BUILD_ID);
       const response=await verify(await fetch(request,{cache:'reload'}),asset);
@@ -39,7 +43,7 @@ self.addEventListener('message',event=>{
   if (event.data?.type==='PREPARE') event.waitUntil((async()=>{
     try {
       const cache=await caches.open(cacheName);
-      for (const asset of ASSETS) await verify(await cache.match(url(asset)),asset);
+      for (const asset of journal.requiredAssets) await verify(await cache.match(url(asset)),asset);
       port?.postMessage({ok:true,build,assetBuildId:ASSET_BUILD_ID});
     } catch (error) { port?.postMessage({ok:false,error:error.message}); }
   })());
@@ -60,6 +64,9 @@ self.addEventListener('fetch',event=>{
       } catch { /* A verified document is ready for offline reload. */ }
       return await cache.match(url(entry)) || Response.error();
     }
-    return await cache.match(request,{ignoreSearch:true}) || fetch(request);
+    const cached=await cache.match(request,{ignoreSearch:true});
+    if(cached)return cached;
+    if(journal.handles(target.pathname))return (await journal.get(cache)) ?? new Response(null,{status:503});
+    return fetch(request);
   })());
 });

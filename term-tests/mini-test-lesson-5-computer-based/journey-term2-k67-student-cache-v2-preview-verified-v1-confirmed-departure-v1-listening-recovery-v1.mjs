@@ -1,5 +1,6 @@
 import {drainListeningClock,queueListeningClock} from '../k56-offline-shared/listening-clock-sync-v1.mjs';
-import {prepareProtectedContinuityAudio,mountProtectedContinuityListeningPlayer} from '../k67-shared/continuity-player-term2-recovery-v1.mjs';
+import {prepareProtectedContinuityAudio,mountProtectedContinuityListeningPlayer} from '../k67-shared/continuity-player-protected-v1.mjs';
+import {createK67VerifiedExamDeparture} from '../k67-shared/exam-departure-verified-v1.mjs';
 import {recordListeningPreparationCommand} from '../shared/listening-player-lifecycle-v2.mjs';
 import {attachListeningReportChoices as attachProtectedReportChoices} from '../k67-shared/listening-report-choices-v3.mjs';
 import {createK67ExamDeparture} from '../k67-shared/exam-departure-v1.mjs';
@@ -882,7 +883,9 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
     const url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
     const link=document.createElement('a');link.href=url;link.download=title.replaceAll(' ','-')+'.html';link.click();setTimeout(()=>URL.revokeObjectURL(url),30_000);
   }
-  const departure = createK67ExamDeparture({changed,observe,
+  const createDeparture=slug===term2Slug&&!paper?createK67VerifiedExamDeparture:createK67ExamDeparture;
+  const observeDeparture=createDeparture===createK67VerifiedExamDeparture?observePlayer:observe;
+  const departure = createDeparture({changed,observe:observeDeparture,saveDraft:persist,
     state:()=>{
       const nextSkill=next(),section=record.sections[nextSkill];
       const skill=!stopped&&section?.startedAt&&!section.operationId&&!view().needsListeningAcknowledgment?nextSkill:null;
@@ -894,14 +897,14 @@ export async function openMiniJourney({scope,request,existing,prepare=false,conf
       if(stopped||savingOperation||next()!==section||!record.sections[section]?.startedAt)return false;
       const before=record.departure;
       record.departure={section,action,at:now()};
-      observe('exam_departure_confirmed',{section,action});
+      observeDeparture('exam_departure_confirmed',{section,action});
       try{
         await seal(section,record.drafts[section],record.revisions[section],false);
-        observe('exam_departure_locked_on_device',{section,action,operationId:record.sections[section].operationId});
+        observeDeparture('exam_departure_locked_on_device',{section,action,operationId:record.sections[section].operationId});
         return true;
       }catch(error){
         record.departure=before;
-        observe('exam_departure_lock_failed',{section,action,errorCode:error.code||'LOCAL_PERSIST_FAILED'});
+        observeDeparture('exam_departure_lock_failed',{section,action,errorCode:error.code||'LOCAL_PERSIST_FAILED'});
         throw error;
       }
     }

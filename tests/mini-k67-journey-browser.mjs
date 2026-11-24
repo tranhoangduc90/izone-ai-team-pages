@@ -15,11 +15,12 @@ assert.ok(backend,'Set K67_BACKEND to the isolated backend package.');
 const full=process.env.K67_JOURNEY_FULL==='1';
 const checkListeningLayout=process.env.K67_JOURNEY_CHECK_LISTENING_LAYOUT==='1';
 const eofJournal=process.env.K67_JOURNEY_EOF_JOURNAL==='1';
+const recorderOutage=process.env.K67_PREVIEW_TERM2_JOURNAL_RECORDER_DOWN==='1';
 const writingOnly=process.env.K67_JOURNEY_WRITING_ONLY==='1';
 const testDeparture=process.env.K67_JOURNEY_CONFIRMED_DEPARTURE==='1';
 const departureAction=process.env.K67_JOURNEY_DEPARTURE_ACTION||'';
 const testDepartureCache=process.env.K67_JOURNEY_DEPARTURE_CACHE==='1';
-assert.ok(['','back','close','writing','leave','final'].includes(departureAction));
+assert.ok(['','controlled','back','close','cancel_close','crash','writing','leave','final'].includes(departureAction));
 const term1=process.env.K67_JOURNEY_TERM1==='1';
 const term2=process.env.K67_JOURNEY_TERM2==='1';
 const term=term1||term2;
@@ -85,6 +86,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       K67_PREVIEW_PRETEST_CBT_JOURNEY:pretest?'on':process.env.K67_PREVIEW_PRETEST_CBT_JOURNEY,
       K67_PREVIEW_TERM1_CBT_JOURNEY:term1?'on':'off',
       K67_PREVIEW_TERM2_CBT_JOURNEY:term2?'on':'off',K67_PREVIEW_LISTENING_CONTINUITY:continuity?'true':'false',
+      K67_PREVIEW_TERM1_LISTENING_RECOVERY:recovery?'true':'false',
+      K67_PREVIEW_TERM1_DEMO_CBT:demoRecovery?'true':'false',
       K67_PREVIEW_TERM2_LISTENING_RECOVERY:recovery?'true':'false',
       K67_PREVIEW_TERM2_DEMO_CBT:demoRecovery?'true':'false',
       K67_PREVIEW_RESCUE_CLASS:rescueClass,
@@ -161,15 +164,18 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
             value:{...config,EXAM_JOURNAL_ENABLED:true}});
         }});
       });
-      await context.route(new RegExp('/api/term-tests/'+slug+'/journal-(context|events)$'),route=>{
+      await context.route(new RegExp('/api/term-tests/'+slug+'/journal-(context|events|pilot-context|collector-sealed)$'),route=>{
         const body=route.request().postDataJSON();
-        if(route.request().url().endsWith('/journal-context')){
-          const identityConfirmed=Boolean(body.examSessionToken&&body.attemptToken);
+        const path=new URL(route.request().url()).pathname;
+        if(path.endsWith('/journal-context')){
+          const identityConfirmed=Boolean(body.examSessionToken||body.attemptToken);
           return route.fulfill({json:{ok:true,identityConfirmed,ticket:'fixture',ticketId:randomUUID(),
             bindingId:identityConfirmed?learnerBinding:'a'.repeat(64),issuedAt:Date.now(),expiresAt:Date.now()+90000}});
         }
+        if(path.endsWith('/journal-pilot-context'))return route.fulfill({json:{ok:true,destination:'collector-v1'}});
         for(const event of body.events)journalRows.push({bindingId:body.bindingId,event});
-        return route.fulfill({json:{ok:true,persisted:true,scopeId:body.bindingId,acknowledgedIds:body.events.map(event=>event.id)}});
+        return route.fulfill({json:{ok:true,persisted:true,scopeId:body.bindingId,acknowledgedIds:body.events.map(event=>event.id),
+          ...(path.endsWith('/journal-collector-sealed')?{storage:'collector',batchId:body.batchId,eventPayloadSha256:body.eventPayloadSha256}:{})}});
       });
     }
     const errors=[],seals=[],rejections=[],r2Requests=[],pagesRequests=[],offers=[];
@@ -295,9 +301,12 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       }
       await page.waitForFunction(({skill,value})=>
         Object.values(window.TERM_TEST_BOOTSTRAP.miniJourney.drafts()[skill]||{}).includes(value),{skill:section,value:answer});
-      const explicitButton=action==='leave'?page.locator('#termTestChangeStudent'):page.getByRole('button',{name:'Tải lại trang',exact:true});
+      const explicitButton=action==='leave'
+        ? term2?page.getByRole('button',{name:'Rời trang',exact:true}):page.locator('#termTestChangeStudent')
+        : page.getByRole('button',{name:'Tải lại trang',exact:true});
       const modal=page.getByRole('dialog',{name:'Xác nhận rời bài thi'});
       const explicit=['controlled','writing','leave','final'].includes(action);
+      const unverifiedNative=term2&&!explicit;
       const history=action==='back'?await context.newCDPSession(page):null;
       const prior=history?await history.send('Page.getNavigationHistory'):null;
       const backEntry=prior?.entries[prior.currentIndex-1]?.id;
@@ -327,6 +336,19 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       if(explicit){
         await explicitButton.click();
         await modal.getByRole('button',{name:action==='leave'?'Rời trang và nộp phần này':'Tải lại và nộp phần này',exact:true}).click();
+      }else if(action==='cancel_close'||action==='crash'){
+        assert.ok(unverifiedNative);
+        if(action==='crash'){
+          const renderer=await context.newCDPSession(page);
+          const crashed=page.waitForEvent('crash',{timeout:10000});
+          void renderer.send('Page.crash').catch(()=>{});
+          await crashed;
+        }
+        await page.close({runBeforeUnload:false});
+        page=await openPage();
+        await page.goto(url,{waitUntil:'domcontentloaded'});
+        await page.getByLabel('Họ và tên dùng khi vào thi').fill(studentName);
+        await page.getByRole('button',{name:'Mở bài đã lưu',exact:true}).click();
       }else if(action==='close'){
         const closed=page.waitForEvent('close');
         await native(false);
@@ -342,14 +364,30 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           await page.goForward({waitUntil:'commit',timeout:12000});
         }
       }
-      await page.waitForFunction(origin=>performance.timeOrigin!==origin,before.origin);
       if(action==='leave'){
+        if(term2){
+          await page.waitForURL(new URL('../',url).href);
+          await page.goto(url,{waitUntil:'domcontentloaded'});
+        }
         await page.getByLabel('Họ và tên dùng khi vào thi').fill(studentName);
         await page.getByRole('button',{name:'Mở bài đã lưu',exact:true}).click();
       }
-      await page.waitForFunction(skill=>window.TERM_TEST_BOOTSTRAP?.miniJourney?.view().nextSection===skill,nextSkill);
+      if(!(unverifiedNative&&action==='back'))await page.waitForFunction(origin=>performance.timeOrigin!==origin,before.origin);
+      await page.waitForFunction(skill=>window.TERM_TEST_BOOTSTRAP?.miniJourney?.view().nextSection===skill,unverifiedNative?section:nextSkill);
       const after=await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.miniJourney.view());
       assert.equal(after.examSessionToken,before.view.examSessionToken);
+      if(unverifiedNative){
+        assert.equal(after.generation,before.view.generation);
+        assert.equal(after[section+'DeadlineAt'],before.view[section+'DeadlineAt']);
+        assert.equal(await page.evaluate(()=>Boolean(window.TERM_TEST_BOOTSTRAP.miniJourney.departure.state().departed)),false);
+        await page.waitForFunction(({skill,value})=>Object.values(window.TERM_TEST_BOOTSTRAP.miniJourney.drafts()[skill]||{}).includes(value),
+          {skill:section,value:answer});
+        await context.setOffline(false);
+        const snapshot=await (await context.request.get(base+'/preview/rehearsal-receipt-readback?slug='+slug)).json();
+        assert.ok(snapshot.rows.every(row=>!row[section+'_submitted']));
+        log('departure_unverified_preserved',{section,action,scopeKept:true,sqlSeals:0});
+        return;
+      }
       await page.getByText('Phần '+label+' đã khóa trên thiết bị. Đang chờ máy chủ xác nhận.',{exact:true}).waitFor();
       let lost=false,operationId;
       await context.route('**/cbt-journey/seal',async request=>{
@@ -439,11 +477,12 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         if(recovery){
           const answer=await field.inputValue();
           assert.equal(offers.find(offer=>offer.listeningRecoveryVersion)?.listeningRecoveryVersion,1);
-          const onDisk=()=>page.evaluate(()=>{
-            const saved=Object.keys(localStorage).filter(key=>key.startsWith('term2-k67-cbt-journey-v1:'))
+          const storagePrefix=term2?'term2-k67-cbt-journey-v1:':'term1-k67-cbt-journey-v1:';
+          const onDisk=()=>page.evaluate(prefix=>{
+            const saved=Object.keys(localStorage).filter(key=>key.startsWith(prefix))
               .map(key=>JSON.parse(localStorage.getItem(key))).find(record=>record?.sections?.listening);
             return saved?{checkpoint:saved.sections.listening.listeningCheckpoint,clock:saved.listeningClockSync}:null;
-          });
+          },storagePrefix);
           const readClock=async()=>{
             const reply=await fetch(base+'/preview/listening-recovery-clock');
             return (await reply.json()).rows[0];
@@ -476,8 +515,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           }
           await audio.evaluate(player=>player.pause());
           await page.getByText('Đồng hồ Listening đang tạm dừng',{exact:true}).waitFor();
-          await page.waitForFunction(()=>Object.keys(localStorage).filter(key=>key.startsWith('term2-k67-cbt-journey-v1:'))
-            .some(key=>JSON.parse(localStorage.getItem(key)).listeningClockSync?.pending?.[0]?.phase==='paused'));
+          await page.waitForFunction(prefix=>Object.keys(localStorage).filter(key=>key.startsWith(prefix))
+            .some(key=>JSON.parse(localStorage.getItem(key)).listeningClockSync?.pending?.[0]?.phase==='paused'),storagePrefix);
           const before=await onDisk();
           await page.close();
           page=await openPage();
@@ -500,15 +539,15 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           assert.equal(await page.locator('#listeningView [data-number]:visible').first().inputValue(),answer);
           assert.equal((await onDisk()).checkpoint.positionMs,before.checkpoint.positionMs);
           await resume.click();
-          await page.waitForFunction(()=>Object.keys(localStorage).filter(key=>key.startsWith('term2-k67-cbt-journey-v1:'))
-            .some(key=>JSON.parse(localStorage.getItem(key)).listeningClockSync?.pending?.[1]?.phase==='running'));
+          await page.waitForFunction(prefix=>Object.keys(localStorage).filter(key=>key.startsWith(prefix))
+            .some(key=>JSON.parse(localStorage.getItem(key)).listeningClockSync?.pending?.[1]?.phase==='running'),storagePrefix);
           assert.equal((await readClock()).operations,0);
           const after=await onDisk();
           assert.equal(after.checkpoint.resumeCount,1);
           assert.ok(after.checkpoint.positionMs>before.checkpoint.positionMs);
           await context.setOffline(false);
-          await page.waitForFunction(()=>Object.keys(localStorage).filter(key=>key.startsWith('term2-k67-cbt-journey-v1:'))
-            .some(key=>JSON.parse(localStorage.getItem(key)).listeningClockSync?.revision===2),null,{timeout:30000});
+          await page.waitForFunction(prefix=>Object.keys(localStorage).filter(key=>key.startsWith(prefix))
+            .some(key=>JSON.parse(localStorage.getItem(key)).listeningClockSync?.revision===2),storagePrefix,{timeout:30000});
           const stored=await readClock();
           assert.equal(stored.operations,2);
           assert.equal(stored.listening_submitted_at,null);
@@ -519,6 +558,9 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           assert.deepEqual(clockReplies[2],clockReplies[3]);
           const reopenedAudio=page.locator('#miniJourneyAudio');
           assert.equal(await reopenedAudio.evaluate(player=>player.playbackRate),1);
+          if(simulateOutput)await page.evaluate(()=>{
+            window.k67TestMedia.latePlay=window.k67TestMedia.actions.get('play');
+          });
           if(recoveryTail==='eof'){
             await page.getByText(/Đã nghe hết · Còn [1-9]/).waitFor({timeout:25000});
             assert.equal(await reopenedAudio.count(),0);
@@ -549,6 +591,39 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
             assert.equal(await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.miniJourney.view().nextSection),advanced);
             assert.equal((await readClock()).listening_submitted_at,null);
             log('listening_hard_stop_then_report_verified',{next:advanced});
+          }
+          if(simulateOutput&&recoveryTail){
+            await page.evaluate(()=>window.k67TestMedia.latePlay({action:'play'}));
+            assert.equal(await page.locator('#miniJourneyAudio').count(),0);
+          }
+          if(eofJournal&&recoveryTail){
+            let observations=[];
+            const expected=['audio_command','audio_anomaly','audio_player_retired',
+              ...(simulateOutput?['audio_device_change','audio_output_result','audio_media_action']:[])];
+            for(let attempt=0;attempt<30;attempt++){
+              await page.evaluate(async()=>{
+                const slug=window.TERM_TEST_CONFIG.slug;
+                const key=JSON.stringify([location.origin+'/api/term-tests/'+slug,slug]);
+                const bridge=window[Symbol.for('izone.examJournal.connections.v1')]?.get(key);
+                if(!bridge)return;
+                await bridge.recorder.idle();
+                await bridge.recorder.flush({force:true});
+              });
+              observations=journalRows.filter(row=>row.bindingId===learnerBinding&&row.event.data.cause==='k67_offline_journey')
+                .map(row=>row.event.data.checkpointState);
+              if(expected.every(action=>observations.some(row=>row?.action===action)))break;
+              await page.waitForTimeout(200);
+            }
+            for(const action of expected)assert.ok(observations.some(row=>row?.action===action),action);
+            assert.ok(observations.some(row=>row?.action==='audio_anomaly'&&row.source==='unknown'&&row.playerId));
+            assert.ok(observations.some(row=>row?.action==='audio_player_retired'&&row.playerId&&row.disposalId));
+            if(simulateOutput)assert.ok(observations.some(row=>row?.action==='audio_media_action'&&row.mediaAction==='play'&&row.disposition==='inactive'));
+            if(recorderOutage){
+              const requests=await (await fetch(base+'/preview/recorder-requests')).json();
+              assert.ok(requests.primary>0&&requests.fallback>0);
+              log('journal_static_outage_verified',requests);
+            }
+            log('recovery_journal_verified',{scopeKept:true,observations:observations.length,actions:expected});
           }
           assert.deepEqual(errors,[]);
           log('listening_recovery_clock_verified',{requests:clockReplies.length,sqlRows:stored.operations,
