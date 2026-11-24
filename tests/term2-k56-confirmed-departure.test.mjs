@@ -6,6 +6,9 @@ import {pathToFileURL} from 'node:url';
 
 process.env.K56_FIXTURE_IMPORT_ONLY = '1';
 const {fixture,wait} = await import('./term2-offline-browser.mjs');
+const product=Number(process.env.K56_DEPARTURE_TERM || 2);
+assert.ok([1,2].includes(product));
+const taskId=product===1?'task2':'task1';
 const testCases = [
   {mode:'read_first', demo:false, action:'controlled'},
   {mode:'lis_first', demo:false, action:'back'},
@@ -26,7 +29,7 @@ async function start(page,skill) {
   if (skill === 'listening') {
     await page.click('#bootstrapPreview',{timeout:45000});
     await page.click('#bootstrapStart',{timeout:45000});
-    await wait(page,()=>window.K56_TERM2_OFFLINE?.player?.currentTime > .5,'Listening playing');
+    await wait(page,()=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.player?.currentTime > .5,'Listening playing');
   } else {
     await page.getByRole('button',{name:'Bắt đầu Reading',exact:true}).click();
   }
@@ -34,14 +37,16 @@ async function start(page,skill) {
 
 function read(page,skill) {
   return page.evaluate(skill=>{
-    const runtime=window.K56_TERM2_OFFLINE;
+    const runtime=window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE;
     const run=runtime.record;
     const item=run.sections[skill];
     return {attempt:runtime.scope.attemptToken, document:window.departureTestDocument,
       active:runtime.departureSkill, next:runtime.sectionResponse().nextSection,
       draft:run.snapshot?.drafts?.[skill], content:item?.content, deadline:item?.deadlineAt,
       departure:run.departure, sealed:item?.sealed, operationId:item?.operationId,
-      receipt:run.receipts[item?.operationId]?.status, position:runtime.player?.currentTime};
+      receipt:run.receipts[item?.operationId]?.status, position:runtime.player?.currentTime,
+      queued:run.operations.map(({operationId,section,kind})=>({operationId,section,kind})),
+      receiptIds:Object.keys(run.receipts), review:run.review};
   },skill);
 }
 
@@ -54,16 +59,16 @@ function immediateNavigation(page,action) {
 
 for(const {mode,demo,action} of testCases) {
   if(process.env.TERM2_DEPARTURE_ACTION && process.env.TERM2_DEPARTURE_ACTION!==action)continue;
-  test(`Term 2 ${demo?'DEMO':'CBT'} ${mode} ${action}`,{timeout:150000},async()=>{
+  test(`Term ${product} ${demo?'DEMO':'CBT'} ${mode} ${action}`,{timeout:150000},async()=>{
     const entry=demo ? process.env.TERM2_NATIVE_DEMO_FIXTURE : process.env.TERM2_NATIVE_MAIN_FIXTURE;
     const native=entry && await (await import(pathToFileURL(entry))).createNativeRecoveryFixture();
-    const exam=await fixture(mode,{demo,native,allowBackForwardCache:true});
+    const exam=await fixture(mode,{product,demo,native,allowBackForwardCache:true});
     let page=exam.page;
     const first=mode==='read_first'?'reading':'listening';
     const second=mode==='read_first'?'listening':'reading';
     const answer='Đáp án trước khi rời '+action;
     exam.controls.r2Audio=true;
-    exam.controls.preparedOverride={term2ParallelEntry:true};
+    exam.controls.preparedOverride={[`term${product}ParallelEntry`]:true};
     exam.controls.listeningReportsEnabled=true;
     exam.controls.listeningRecoveryEnabled=true;
     exam.controls.beforeUnloadSpies=[];
@@ -73,13 +78,25 @@ for(const {mode,demo,action} of testCases) {
       await page.goto(previous);
       await page.goto(exam.url);
       await selectStudent(page,exam);
-      await wait(page,()=>window.K56_TERM2_OFFLINE?.active,'Prepared attempt');
+      await wait(page,()=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.active,'Prepared attempt');
       await start(page,first);
       const input=page.locator('#'+first+'Questions input[data-number]').first();
       await input.fill(answer);
       assert.equal(await page.locator('.exam-departure-note p').first().innerText(),warning+next);
       const before=await read(page,first);
       assert.equal(before.active,first);
+      if(product===2 && action==='controlled' && process.env.K56_DEPARTURE_SLOW_RESTORE==='1'){
+        await page.addInitScript(()=>{
+          const module=new URL('offline-term2-confirmed-departure-v1.mjs',location.href);
+          void import(module).then(({Term2Offline})=>{
+            const audio=Term2Offline.prototype.audio;
+            Term2Offline.prototype.audio=async function(){
+              if(this.record.departure)await new Promise(resolve=>setTimeout(resolve,4000));
+              return audio.call(this);
+            };
+          });
+        });
+      }
       const prompt=page.getByRole('dialog',{name:'Xác nhận rời bài thi'});
       if(action==='controlled'){
         await page.getByRole('button',{name:'Đổi người học',exact:true}).click();
@@ -113,7 +130,7 @@ for(const {mode,demo,action} of testCases) {
       await exam.context.setOffline(true);
       await page.evaluate(()=>{
         document.dispatchEvent(new Event('visibilitychange'));
-        window.K56_TERM2_OFFLINE.player?.dispatchEvent(new Event('waiting'));
+        (window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE).player?.dispatchEvent(new Event('waiting'));
       });
       assert.equal((await read(page,first)).active,first);
       assert.equal((await read(page,first)).sealed,false);
@@ -139,7 +156,7 @@ for(const {mode,demo,action} of testCases) {
         }
       }
       await page.waitForFunction(previousDocument=>window.departureTestDocument!==previousDocument,before.document);
-      await wait(page,()=>window.K56_TERM2_OFFLINE?.active,'Restored departed attempt');
+      await wait(page,()=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.active,'Restored departed attempt');
       const departed=await read(page,first);
       assert.equal(departed.attempt,before.attempt);
       assert.notEqual(departed.document,before.document);
@@ -153,14 +170,21 @@ for(const {mode,demo,action} of testCases) {
       assert.equal(await page.locator('#'+first+'Questions input[data-number]').first().isVisible(),false);
       if(second==='listening')await page.locator('#bootstrapPreview').waitFor({state:'visible'});
       else await page.getByRole('button',{name:'Bắt đầu Reading',exact:true}).waitFor();
+      const prepareCalls=()=>exam.calls.filter(call=>call.endsWith('/attempt/prepare')).length;
+      const admissionBeforeReconnect=prepareCalls();
       exam.controls.loseAck=true;
       exam.controls.pauseOperations=false;
       exam.disconnected=false;
       await exam.context.setOffline(false);
-      await page.evaluate(()=>{window.K56_TERM2_OFFLINE.retryAt=0;return window.K56_TERM2_OFFLINE.flush();});
-      await wait(page,()=>window.K56_TERM2_OFFLINE?.record.operations.length===0,'Read receipt after lost response',25000);
+      await page.evaluate(()=>{const runtime=window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE;runtime.retryAt=0;return runtime.flush();});
+      await page.waitForFunction(id=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.record.receipts[id]?.status==='accepted',
+        departed.operationId,{timeout:25000}).catch(async error=>{
+        throw new Error('Read receipt after lost response '+JSON.stringify(await read(page,first)),{cause:error});
+      });
       const acknowledged=await read(page,first);
+      assert.equal(acknowledged.operationId,departed.operationId);
       assert.equal(acknowledged.receipt,'accepted');
+      assert.equal(prepareCalls(),admissionBeforeReconnect,'Reconnect must reuse the owned sealed run');
       assert.equal(exam.controls.ackLost,true);
       const receipts=native
         ? (await native.db.query(`SELECT operation_id,payload,receipt FROM assessment.term2_offline_operation
@@ -172,7 +196,7 @@ for(const {mode,demo,action} of testCases) {
       await page.getByText(/Máy chủ đã nhận phần (Listening|Reading)/).waitFor();
       const count=exam.controls.beforeUnloadSpies.length;
       assert.equal(count,action==='controlled'?0:2);
-      if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,`confirmed-departure-${demo?'demo':'cbt'}-${mode}.json`),
+      if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,`${product===1?'term1-':''}confirmed-departure-${demo?'demo':'cbt'}-${mode}.json`),
         JSON.stringify({mode,demo,action,first,second,prompts:exam.controls.beforeUnloadSpies,stored:departed,
           answered:acknowledged.receipt,acknowledgementDropped:exam.controls.ackLost,
           api:native?'K56 HTTP + isolated SQL':'simulator',
@@ -181,33 +205,34 @@ for(const {mode,demo,action} of testCases) {
         await start(page,second);
         await page.locator('#listeningQuestions input[data-number]').first().fill('Giữ câu Listening');
         await page.click('#submitListening');
-        await wait(page,()=>window.K56_TERM2_OFFLINE?.record.operations.length===0,'Listening accepted before Writing');
+        await wait(page,()=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.record.operations.length===0,'Listening accepted before Writing');
         await page.click('#startWriting');
         const essay='Bản Writing được khóa khi tải lại.';
-        await page.locator('[data-writing-task="task1"]').fill(essay);
+        const writingField=page.locator(`[data-writing-task="${taskId}"]`);
+        await writingField.fill(essay);
         await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
         assert.equal(await prompt.locator('p').innerText(),warning+last);
         await prompt.getByRole('button',{name:'Ở lại làm bài',exact:true}).click();
-        assert.equal(await page.locator('[data-writing-task="task1"]').inputValue(),essay);
+        assert.equal(await writingField.inputValue(),essay);
         exam.disconnected=true;
         await exam.context.setOffline(true);
         const writing=await read(page,'writing');
         await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
         await prompt.getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
         await page.waitForFunction(previousDocument=>window.departureTestDocument!==previousDocument,writing.document);
-        await wait(page,()=>window.K56_TERM2_OFFLINE?.record?.sections.writing?.sealed,'Final skill restored');
+        await wait(page,()=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.record?.sections.writing?.sealed,'Final skill restored');
         const final=await read(page,'writing');
         assert.equal(final.next,'result');
         assert.equal(final.attempt,before.attempt);
-        assert.equal(JSON.parse(final.content).task1,essay);
+        assert.equal(JSON.parse(final.content)[taskId],essay);
         assert.equal(final.receipt,undefined);
-        assert.equal(await page.locator('[data-writing-task="task1"]').isVisible(),false);
+        assert.equal(await writingField.isVisible(),false);
         await page.getByText('Phần Writing đã khóa trên thiết bị. Đang chờ máy chủ xác nhận.',{exact:true}).waitFor();
         await page.locator('#resultReadyView').waitFor({state:'visible'});
         exam.controls.ackLost=false;
         exam.disconnected=false;
         await exam.context.setOffline(false);
-        await page.evaluate(()=>{window.K56_TERM2_OFFLINE.retryAt=0;return window.K56_TERM2_OFFLINE.flush();});
+        await page.evaluate(()=>{const runtime=window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE;runtime.retryAt=0;return runtime.flush();});
         await page.getByText('Máy chủ đã nhận phần Writing.',{exact:true}).waitFor({timeout:25000});
         const confirmedWriting=await read(page,'writing');
         assert.equal(confirmedWriting.receipt,'accepted');
@@ -218,8 +243,8 @@ for(const {mode,demo,action} of testCases) {
           : [...exam.receipts.values()].filter(receipt=>receipt.section==='writing'&&receipt.kind==='seal')
             .map(receipt=>({operation_id:receipt.operationId,receipt}));
         assert.deepEqual(writingRows.map(row=>row.operation_id),[final.operationId]);
-        if(native)assert.equal(writingRows[0].payload.payload.task1,essay);
-        if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,'confirmed-departure-final-writing.json'),
+        if(native)assert.equal(writingRows[0].payload.payload[taskId],essay);
+        if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,`${product===1?'term1-':''}confirmed-departure-final-writing.json`),
           JSON.stringify({before:writing,after:final,receipt:confirmedWriting.receipt,
             receiptIds:writingRows.map(row=>row.receipt.receiptId),acknowledgementDropped:exam.controls.ackLost},null,2));
       }
@@ -227,7 +252,7 @@ for(const {mode,demo,action} of testCases) {
   });
 }
 
-test('Term 2 Writing uses the final-skill Vietnamese rule',async()=>{
+test(`Term ${product} Writing uses the final-skill Vietnamese rule`,async()=>{
   const {departureWarning}=await import('../term-tests/k56-offline-shared/exam-departure-v1.mjs');
   assert.equal(departureWarning(true),warning+last);
 });

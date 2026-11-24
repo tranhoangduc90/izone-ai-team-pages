@@ -7,7 +7,7 @@ import test from 'node:test';
 process.env.K56_FIXTURE_IMPORT_ONLY='1';
 const {fixture,wait}=await import('./term2-offline-browser.mjs');
 const output=process.env.TERM2_EVIDENCE;assert.ok(output);
-const variant='-confirmed-departure-v1';
+const variant='-confirmed-departure-v2';
 const workerName='offline-worker-student-cache-v2-preview-verified-v1'+variant+'.js';
 test('Term2 refreshed shell installs cold, keeps speaker continuation stable and preserves the sealed offline answer',{timeout:90000},async()=>{
  const f=await fixture('lis_first',{product:2}),p=f.page;f.controls.r2Audio=true;
@@ -101,7 +101,7 @@ for (const demo of [false, true]) {
     const path = `term-tests/term-test-2-k56-computer-based/${demo ? 'demo-journal-v1/' : ''}index.html`;
     const prior = execFileSync('git', ['show', `${rollbackBase}:${path}`]);
     const priorSource = prior.toString('utf8');
-    const oldVariant = priorSource.match(/-protected-listening-v[12](?=\.js)/)?.[0] || '';
+    const oldVariant = priorSource.match(/-(?:protected-listening-v[12]|confirmed-departure-v1)(?=\.js)/)?.[0] || '';
     const oldBootstrap = (demo ? 'bootstrap-term2-demo-journal-v1-preview-verified-v1' :
       'bootstrap-log-renewal-student-cache-v2-preview-verified-v1') + oldVariant + '.js';
     assert.ok(priorSource.includes(oldBootstrap));
