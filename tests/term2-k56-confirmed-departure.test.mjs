@@ -6,9 +6,12 @@ import {pathToFileURL} from 'node:url';
 
 process.env.K56_FIXTURE_IMPORT_ONLY = '1';
 const {fixture,wait} = await import('./term2-offline-browser.mjs');
-const product=Number(process.env.K56_DEPARTURE_TERM || 2);
-assert.ok([1,2].includes(product));
-const taskId=product===1?'task2':'task1';
+const selected=process.env.K56_DEPARTURE_TERM;
+const product=selected==='mini'?'mini':Number(selected||2);
+assert.ok([1,2,'mini'].includes(product));
+const taskId=product===2?'task1':'task2';
+const productLabel=product==='mini'?'Mini':`Term ${product}`;
+const evidencePrefix=product===2?'':product===1?'term1-':'mini-';
 const testCases = [
   {mode:'read_first', demo:false, action:'controlled'},
   {mode:'lis_first', demo:false, action:'back'},
@@ -29,7 +32,7 @@ async function start(page,skill) {
   if (skill === 'listening') {
     await page.click('#bootstrapPreview',{timeout:45000});
     await page.click('#bootstrapStart',{timeout:45000});
-    await wait(page,()=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.player?.currentTime > .5,'Listening playing');
+    await wait(page,()=>(window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.player?.currentTime > .5,'Listening playing');
   } else {
     await page.getByRole('button',{name:'Bắt đầu Reading',exact:true}).click();
   }
@@ -37,7 +40,7 @@ async function start(page,skill) {
 
 function read(page,skill) {
   return page.evaluate(skill=>{
-    const runtime=window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE;
+    const runtime=window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE;
     const run=runtime.record;
     const item=run.sections[skill];
     return {attempt:runtime.scope.attemptToken, document:window.departureTestDocument,
@@ -59,7 +62,7 @@ function immediateNavigation(page,action) {
 
 for(const {mode,demo,action} of testCases) {
   if(process.env.TERM2_DEPARTURE_ACTION && process.env.TERM2_DEPARTURE_ACTION!==action)continue;
-  test(`Term ${product} ${demo?'DEMO':'CBT'} ${mode} ${action}`,{timeout:150000},async()=>{
+  test(`${productLabel} ${demo?'DEMO':'CBT'} ${mode} ${action}`,{timeout:150000},async()=>{
     const entry=demo ? process.env.TERM2_NATIVE_DEMO_FIXTURE : process.env.TERM2_NATIVE_MAIN_FIXTURE;
     const native=entry && await (await import(pathToFileURL(entry))).createNativeRecoveryFixture();
     const exam=await fixture(mode,{product,demo,native,allowBackForwardCache:true});
@@ -68,7 +71,8 @@ for(const {mode,demo,action} of testCases) {
     const second=mode==='read_first'?'listening':'reading';
     const answer='Đáp án trước khi rời '+action;
     exam.controls.r2Audio=true;
-    exam.controls.preparedOverride={[`term${product}ParallelEntry`]:true};
+    const parallelFlag=product==='mini'?'miniCbtParallelEntry':`term${product}ParallelEntry`;
+    exam.controls.preparedOverride={[parallelFlag]:true};
     exam.controls.listeningReportsEnabled=true;
     exam.controls.listeningRecoveryEnabled=true;
     exam.controls.beforeUnloadSpies=[];
@@ -78,7 +82,7 @@ for(const {mode,demo,action} of testCases) {
       await page.goto(previous);
       await page.goto(exam.url);
       await selectStudent(page,exam);
-      await wait(page,()=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.active,'Prepared attempt');
+      await wait(page,()=>(window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.active,'Prepared attempt');
       await start(page,first);
       const input=page.locator('#'+first+'Questions input[data-number]').first();
       await input.fill(answer);
@@ -130,7 +134,7 @@ for(const {mode,demo,action} of testCases) {
       await exam.context.setOffline(true);
       await page.evaluate(()=>{
         document.dispatchEvent(new Event('visibilitychange'));
-        (window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE).player?.dispatchEvent(new Event('waiting'));
+        (window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE).player?.dispatchEvent(new Event('waiting'));
       });
       assert.equal((await read(page,first)).active,first);
       assert.equal((await read(page,first)).sealed,false);
@@ -156,7 +160,7 @@ for(const {mode,demo,action} of testCases) {
         }
       }
       await page.waitForFunction(previousDocument=>window.departureTestDocument!==previousDocument,before.document);
-      await wait(page,()=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.active,'Restored departed attempt');
+      await wait(page,()=>(window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.active,'Restored departed attempt');
       const departed=await read(page,first);
       assert.equal(departed.attempt,before.attempt);
       assert.notEqual(departed.document,before.document);
@@ -170,14 +174,14 @@ for(const {mode,demo,action} of testCases) {
       assert.equal(await page.locator('#'+first+'Questions input[data-number]').first().isVisible(),false);
       if(second==='listening')await page.locator('#bootstrapPreview').waitFor({state:'visible'});
       else await page.getByRole('button',{name:'Bắt đầu Reading',exact:true}).waitFor();
-      const prepareCalls=()=>exam.calls.filter(call=>call.endsWith('/attempt/prepare')).length;
+      const prepareCalls=()=>exam.controls.attemptPrepareRequests.filter(call=>!call.ownerScoped).length;
       const admissionBeforeReconnect=prepareCalls();
       exam.controls.loseAck=true;
       exam.controls.pauseOperations=false;
       exam.disconnected=false;
       await exam.context.setOffline(false);
-      await page.evaluate(()=>{const runtime=window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE;runtime.retryAt=0;return runtime.flush();});
-      await page.waitForFunction(id=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.record.receipts[id]?.status==='accepted',
+      await page.evaluate(()=>{const runtime=window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE;runtime.retryAt=0;return runtime.flush();});
+      await page.waitForFunction(id=>(window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.record.receipts[id]?.status==='accepted',
         departed.operationId,{timeout:25000}).catch(async error=>{
         throw new Error('Read receipt after lost response '+JSON.stringify(await read(page,first)),{cause:error});
       });
@@ -196,7 +200,7 @@ for(const {mode,demo,action} of testCases) {
       await page.getByText(/Máy chủ đã nhận phần (Listening|Reading)/).waitFor();
       const count=exam.controls.beforeUnloadSpies.length;
       assert.equal(count,action==='controlled'?0:2);
-      if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,`${product===1?'term1-':''}confirmed-departure-${demo?'demo':'cbt'}-${mode}.json`),
+      if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,`${evidencePrefix}confirmed-departure-${demo?'demo':'cbt'}-${mode}.json`),
         JSON.stringify({mode,demo,action,first,second,prompts:exam.controls.beforeUnloadSpies,stored:departed,
           answered:acknowledged.receipt,acknowledgementDropped:exam.controls.ackLost,
           api:native?'K56 HTTP + isolated SQL':'simulator',
@@ -205,7 +209,7 @@ for(const {mode,demo,action} of testCases) {
         await start(page,second);
         await page.locator('#listeningQuestions input[data-number]').first().fill('Giữ câu Listening');
         await page.click('#submitListening');
-        await wait(page,()=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.record.operations.length===0,'Listening accepted before Writing');
+        await wait(page,()=>(window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.record.operations.length===0,'Listening accepted before Writing');
         await page.click('#startWriting');
         const essay='Bản Writing được khóa khi tải lại.';
         const writingField=page.locator(`[data-writing-task="${taskId}"]`);
@@ -220,7 +224,7 @@ for(const {mode,demo,action} of testCases) {
         await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
         await prompt.getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
         await page.waitForFunction(previousDocument=>window.departureTestDocument!==previousDocument,writing.document);
-        await wait(page,()=>(window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.record?.sections.writing?.sealed,'Final skill restored');
+        await wait(page,()=>(window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE)?.record?.sections.writing?.sealed,'Final skill restored');
         const final=await read(page,'writing');
         assert.equal(final.next,'result');
         assert.equal(final.attempt,before.attempt);
@@ -232,7 +236,7 @@ for(const {mode,demo,action} of testCases) {
         exam.controls.ackLost=false;
         exam.disconnected=false;
         await exam.context.setOffline(false);
-        await page.evaluate(()=>{const runtime=window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE;runtime.retryAt=0;return runtime.flush();});
+        await page.evaluate(()=>{const runtime=window.K56_MINI_OFFLINE||window.K56_TERM1_OFFLINE||window.K56_TERM2_OFFLINE;runtime.retryAt=0;return runtime.flush();});
         await page.getByText('Máy chủ đã nhận phần Writing.',{exact:true}).waitFor({timeout:25000});
         const confirmedWriting=await read(page,'writing');
         assert.equal(confirmedWriting.receipt,'accepted');
@@ -244,7 +248,7 @@ for(const {mode,demo,action} of testCases) {
             .map(receipt=>({operation_id:receipt.operationId,receipt}));
         assert.deepEqual(writingRows.map(row=>row.operation_id),[final.operationId]);
         if(native)assert.equal(writingRows[0].payload.payload[taskId],essay);
-        if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,`${product===1?'term1-':''}confirmed-departure-final-writing.json`),
+        if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,`${evidencePrefix}confirmed-departure-final-writing.json`),
           JSON.stringify({before:writing,after:final,receipt:confirmedWriting.receipt,
             receiptIds:writingRows.map(row=>row.receipt.receiptId),acknowledgementDropped:exam.controls.ackLost},null,2));
       }
@@ -252,7 +256,7 @@ for(const {mode,demo,action} of testCases) {
   });
 }
 
-test(`Term ${product} Writing uses the final-skill Vietnamese rule`,async()=>{
+test(`${productLabel} Writing uses the final-skill Vietnamese rule`,async()=>{
   const {departureWarning}=await import('../term-tests/k56-offline-shared/exam-departure-v1.mjs');
   assert.equal(departureWarning(true),warning+last);
 });
