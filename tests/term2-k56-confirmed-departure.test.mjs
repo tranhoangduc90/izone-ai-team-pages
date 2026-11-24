@@ -150,12 +150,13 @@ for(const {mode,demo,action} of testCases) {
       if(action==='controlled'){
         await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
         await prompt.getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
-      } else if(action==='close'||action==='cancel_then_close'){
-        if(action==='cancel_then_close')await page.close({runBeforeUnload:false});
-        else{
-          const closed=page.waitForEvent('close');
-          await Promise.all([dialog(page),closed,immediateNavigation(page,action)]);
-        }
+      } else if(action==='cancel_then_close'){
+        await page.close({runBeforeUnload:false});
+        page=await exam.context.newPage();
+        await page.goto(exam.url,{waitUntil:'domcontentloaded'});
+      } else if(action==='close'){
+        const closed=page.waitForEvent('close');
+        await Promise.all([dialog(page),closed,immediateNavigation(page,action)]);
         page=await exam.context.newPage();
         // A new tab on shared DEMO needs a confirmed identity before showing a local attempt.
         exam.controls.pauseOperations=true;
