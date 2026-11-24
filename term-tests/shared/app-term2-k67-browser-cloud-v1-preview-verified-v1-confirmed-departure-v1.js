@@ -740,7 +740,13 @@
     change.id = 'termTestChangeStudent'; change.className = 'button button-secondary'; change.textContent = 'Đổi người học';
     change.addEventListener('click', async () => {
       if (!saveSession()) { showNotice('Chưa giữ được nháp. Hãy sao chép bài hoặc thử lưu lại trước khi đổi người.', 'error'); return; }
-      if (!await window.TERM_TEST_CHANGE_STUDENT()) showNotice('Chưa đổi được lựa chọn chung. Bài hiện tại vẫn được giữ.', 'error');
+      const changeStudent = async () => {
+        const changed = await window.TERM_TEST_CHANGE_STUDENT();
+        if (!changed) showNotice('Chưa đổi được lựa chọn chung. Bài hiện tại vẫn được giữ.', 'error');
+        return changed;
+      };
+      if (miniJourney?.departure) await miniJourney.departure.request('leave', changeStudent);
+      else await changeStudent();
     });
     root.querySelector('.topbar').append(change);
   }
