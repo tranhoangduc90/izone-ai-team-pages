@@ -59,6 +59,148 @@ async function sampleAndResume(page){
   await page.waitForFunction(()=>window.K67_ACTIVE_LISTENING&&!window.K67_ACTIVE_LISTENING.isHeld());
 }
 
+async function readOnlineAudioJournal(page,context,token) {
+  if(!process.env.K67_PREVIEW_EXAM_JOURNAL)return;
+  let rows=[];
+  for(let attempt=0;attempt<20;attempt++){
+    await page.evaluate(async()=>{
+      const slug='term-test-1';
+      const key=JSON.stringify([location.origin+'/api/term-tests/'+slug,slug]);
+      const bridge=window[Symbol.for('izone.examJournal.connections.v1')]?.get(key);
+      await bridge?.recorder.idle();
+      await bridge?.recorder.flush({force:true});
+    });
+    const response=await context.request.get(base+'/preview/writing-journal?session='+token);
+    assert.equal(response.status(),200);
+    const {events}=await response.json();
+    rows=events.map(row=>row.event?.data??row.data)
+      .filter(row=>row?.cause==='k67_online_listening').map(row=>row.checkpointState);
+    if(rows.some(row=>row.phase==='audio_player_retired')&&
+       rows.some(row=>row.phase==='audio_media_action'&&row.disposition==='inactive'))return rows;
+    await page.waitForTimeout(200);
+  }
+  throw Error('Missing retirement or late media action in Collector: '+JSON.stringify(rows.map(row=>row.phase)));
+}
+
+for(const mode of ['lis_first','read_first'])test(`Media Session giữ nguyên audio online · ${mode}`,async()=>{
+  const {page,context,token,read,errors}=await open('term-test-1',mode,()=>{
+    const actions=new Map();
+    Object.defineProperty(navigator,'mediaSession',{value:{
+      setActionHandler(action,handler){if(handler)actions.set(action,handler);else actions.delete(action);}
+    }});
+    window.k67MediaFixture=actions;
+    const mediaDevices=new EventTarget();
+    let outputs=['headset','speakers'];
+    mediaDevices.enumerateDevices=async()=>outputs.map(deviceId=>({deviceId,kind:'audiooutput'}));
+    Object.defineProperty(navigator,'mediaDevices',{value:mediaDevices});
+    Object.defineProperty(HTMLMediaElement.prototype,'sinkId',{configurable:true,get(){return this.testSinkId??'headset';}});
+    HTMLMediaElement.prototype.setSinkId=async function(sink){this.testSinkId=sink;};
+    window.k67FixtureDisconnect=()=>{outputs=['speakers'];mediaDevices.dispatchEvent(new Event('devicechange'));};
+  });
+  try{
+    await page.waitForFunction(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.currentTime>.35);
+    const position=await page.evaluate(()=>{
+      const audio=window.TERM_TEST_BOOTSTRAP.officialAudioElement;
+      window.k67FixtureAudio=audio;
+      window.k67FixtureSource=audio.getAttribute('src');
+      window.k67LatePlay=window.k67MediaFixture.get('play');
+      audio.dispatchEvent(new Event('waiting'));
+      window.dispatchEvent(new Event('offline'));
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.k67FixtureDisconnect();
+      for(const action of ['pause','stop','seekbackward','seekforward','seekto','play']){
+        const handler=window.k67MediaFixture.get(action);
+        if(!handler)throw Error('Media action handler missing for '+action);
+        handler({action});
+      }
+      return audio.currentTime;
+    });
+    const observed=await page.evaluate(()=>{
+      const audio=window.TERM_TEST_BOOTSTRAP.officialAudioElement;
+      return {paused:audio.paused,held:window.K67_ACTIVE_LISTENING.isHeld(),same:audio===window.k67FixtureAudio,
+        sourceKept:audio.getAttribute('src')===window.k67FixtureSource,rate:audio.playbackRate};
+    });
+    assert.deepEqual(observed,{paused:false,held:false,same:true,sourceKept:true,rate:1});
+    await page.waitForFunction(before=>window.k67FixtureAudio.currentTime>before+.3&&window.k67FixtureAudio.sinkId==='',position);
+    assert.equal((await read()).listening_audio_incident_id,null);
+    await page.evaluate(()=>window.k67FixtureAudio.pause());
+    await page.waitForFunction(()=>window.K67_ACTIVE_LISTENING.isHeld());
+    assert.equal(await page.locator('#listeningView').isVisible(),true);
+    const first=page.locator('#listeningQuestions [data-number]').first();
+    await sampleAndResume(page);
+    assert.equal(await first.isDisabled(),false);
+    await page.locator('#submitListening').click();
+    await page.waitForFunction(()=>document.getElementById('listeningView').hidden);
+    assert.ok((await read()).listening_submitted_at);
+    const retired=await page.evaluate(()=>{
+      window.k67LatePlay({action:'play'});
+      const audio=window.k67FixtureAudio;
+      return {paused:audio.paused,sourceCleared:!audio.hasAttribute('src'),
+        connected:audio.isConnected,handlers:window.k67MediaFixture.size};
+    });
+    assert.deepEqual(retired,{paused:true,sourceCleared:true,connected:false,handlers:0});
+    const rows=await readOnlineAudioJournal(page,context,token);
+    if(rows){
+      const disposal=rows.find(row=>row.phase==='audio_player_retired'&&row.sourceCleared&&row.callbacksAborted);
+      assert.ok(disposal);
+      const official=rows.filter(row=>row.playerId===disposal.playerId);
+      assert.ok(official.some(row=>row.phase==='audio_anomaly'&&row.event==='pause'&&row.source==='unknown'&&Array.isArray(row.playerHistory)));
+      for(const command of ['set_source','load','play','clear_source']){
+        assert.ok(official.some(row=>row.phase==='audio_command'&&row.command===command&&row.commandId),command);
+      }
+      for(const action of ['pause','stop','seekbackward','seekforward','seekto','play']){
+        assert.ok(official.some(row=>row.phase==='audio_media_action'&&row.mediaAction===action&&row.disposition==='ignored'),action);
+      }
+      assert.ok(official.some(row=>row.phase==='audio_media_action'&&row.mediaAction==='play'&&row.disposition==='inactive'));
+      assert.ok(official.some(row=>row.phase==='audio_network_state'&&row.event==='offline'));
+      assert.ok(official.some(row=>row.phase==='audio_tab_state'));
+      const outputChange=official.find(row=>row.phase==='audio_device_change'&&row.sink==='specific');
+      assert.ok(outputChange?.outputChangeId);
+      assert.ok(official.some(row=>row.phase==='audio_output_result'&&row.outputChangeId===outputChange.outputChangeId&&row.outcome==='resolved'));
+      await writeFile(path.join(evidence,'online-audio-collector-'+mode+'.json'),JSON.stringify(official,null,2),'utf8');
+    }
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});
+
+for(const mode of ['lis_first','read_first'])test(`Tua hoặc đổi tốc độ thật dừng online đúng mốc · ${mode}`,async()=>{
+  const {page,context,read,errors}=await open('term-test-1',mode);
+  try{
+    const first=page.locator('#listeningQuestions [data-number]').first();
+    const number=await first.getAttribute('data-number');
+    if(await first.evaluate(n=>n.tagName)==='SELECT')await first.selectOption({index:1});else await first.fill('audio test');
+    const answer=await first.inputValue();
+    for(const fault of ['seek','rate']){
+      const before=await page.evaluate(async kind=>{
+        const audio=window.TERM_TEST_BOOTSTRAP.officialAudioElement;
+        await new Promise(resolve=>audio.addEventListener('timeupdate',resolve,{once:true}));
+        const position=audio.currentTime;
+        if(kind==='seek')audio.currentTime=position+9;
+        else audio.playbackRate=1.5;
+        return position;
+      },fault);
+      await page.waitForFunction(()=>window.K67_ACTIVE_LISTENING.getSnapshot().activeIncident);
+      const held=await read();
+      assert.equal(held.listening_draft[number],answer);
+      assert.equal(held.listening_submitted_at,null);
+      const checkpoint=Number(held.listening_audio_checkpoint_seconds);
+      assert.ok(Math.abs(checkpoint-before)<0.6,JSON.stringify({fault,checkpoint,before}));
+      assert.equal(await first.isDisabled(),true);
+      assert.equal(await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.paused),true);
+      await sampleAndResume(page);
+      const after=await page.evaluate(()=>{
+        const audio=window.TERM_TEST_BOOTSTRAP.officialAudioElement;
+        return {position:audio.currentTime,rate:audio.playbackRate,paused:audio.paused};
+      });
+      assert.ok(after.position>=checkpoint&&after.position<checkpoint+2);
+      assert.equal(after.rate,1);
+      assert.equal(after.paused,false);
+      assert.equal(await first.inputValue(),answer);
+    }
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});
+
 for(const mode of ['lis_first','read_first'])for(const fault of ['500','abort-reload'])test(`${mode}/${fault}: start mất phản hồi vẫn giữ thời gian; vào lại phát đúng mốc và bù một lần`,async()=>{
   const context=await browser.newContext(),page=await context.newPage();page.setDefaultTimeout(15000);page.on('dialog',d=>d.accept());
   await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
