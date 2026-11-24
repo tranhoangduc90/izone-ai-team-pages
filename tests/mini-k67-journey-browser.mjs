@@ -221,31 +221,33 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       });
       if(testDepartureCache){
         const previousEntry='index-student-cache-v2-preview-verified-v1.html';
-        const files=[previousEntry,'bootstrap-term2-k67-student-cache-v2-preview-verified-v1.js',
-          '../shared/app-term2-k67-browser-cloud-v1-preview-verified-v1.js',
-          '../mini-test-lesson-5-computer-based/journey-term2-k67-student-cache-v2-preview-verified-v1.mjs'];
-        const retained=await page.evaluate(async paths=>{
+        const number=term1?1:2;
+        const bootName='bootstrap-term'+number+'-k67-student-cache-v2-preview-verified-v1.js';
+        const files=[previousEntry,term1?'../term-test-2-computer-based/'+bootName:bootName,
+          term1?'../shared/app-term1-k67-parallel-v1-log-renewal-v1-preview-verified-v1.js':'../shared/app-term2-k67-browser-cloud-v1-preview-verified-v1.js',
+          '../mini-test-lesson-5-computer-based/journey-term'+number+'-k67-student-cache-v2-preview-verified-v1.mjs'];
+        const retained=await page.evaluate(async ({paths,prefix})=>{
           const worker=navigator.serviceWorker.controller.scriptURL;
           if(!worker.includes('confirmed-departure'))return false;
           const entry=new URL('index-student-cache-v2-preview-verified-v1-confirmed-departure-v1.html',worker);
           for(const name of await caches.keys()){
-            if(!name.startsWith('term2-k67-cbt-shell-v1-parallel-'))continue;
+            if(!name.startsWith(prefix))continue;
             const cache=await caches.open(name);
             if((await cache.match(entry))?.ok)
               return (await Promise.all(paths.map(path=>cache.match(new URL(path,worker))))).every(response=>response?.ok);
           }
           return false;
-        },files);
+        },{paths:files,prefix:'term'+number+'-k67-cbt-shell-v1-parallel-'});
         assert.ok(retained,'New worker cache retains all paths needed by an already-open older app');
         const restoredContext=await browser.newContext({serviceWorkers:'block'});
         try{
           await restoredContext.route('**/*',route=>new URL(route.request().url()).origin===base?route.continue():route.abort());
-          const oldHtml=await readFile(resolve(pages,'term-tests/term-test-2-computer-based',previousEntry),'utf8');
+          const oldHtml=await readFile(resolve(pages,'term-tests',slug+'-computer-based',previousEntry),'utf8');
           await restoredContext.route(url,route=>route.fulfill({contentType:'text/html; charset=utf-8',body:oldHtml}));
           const restoredPage=await restoredContext.newPage();
           await restoredPage.goto(url);
           await restoredPage.locator('#bootstrapStudent').waitFor({state:'visible'});
-          assert.equal(await restoredPage.locator(`script[src*="${files[1]}"]`).count(),1);
+          assert.equal(await restoredPage.locator(`script[src*="${bootName}"]`).count(),1);
         }finally{await restoredContext.close();}
         assert.equal(await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.miniJourney.view().examSessionToken),before.view.examSessionToken);
         log('departure_rollback_verified',{olderShellLoads:true,olderPathsCached:true,scopeKept:true});
@@ -321,14 +323,14 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       await context.setOffline(false);
       await page.getByText('Máy chủ đã nhận phần '+label+'.',{exact:true}).waitFor({timeout:25000});
       assert.equal(lost,true);
-      const snapshot=await (await context.request.get(base+'/preview/rehearsal-receipt-readback')).json();
+      const snapshot=await (await context.request.get(base+'/preview/rehearsal-receipt-readback?slug='+slug)).json();
       assert.equal(snapshot.rows.length,1);
       assert.equal(snapshot.rows[0][section[0]],operationId);
       assert.equal(snapshot.rows[0][section+'_submitted'],true);
       if(nextSkill!=='result')assert.equal(snapshot.rows[0][nextSkill+'_submitted'],false);
       if(section==='writing'){
         assert.equal(snapshot.rows[0].writing,answer);
-        assert.equal(snapshot.rows[0].writing_task_1,'Báo cáo Task 1 giả để kiểm khôi phục.');
+        if(term2)assert.equal(snapshot.rows[0].writing_task_1,'Báo cáo Task 1 giả để kiểm khôi phục.');
         assert.equal(await page.locator('#writingView').isVisible(),false);
       }else assert.ok(Object.values(snapshot.rows[0][section+'_answers']).includes(answer));
       log('departure_passed',{section,action,scopeKept:true,receiptLost:true,sqlReadback:true});
@@ -383,7 +385,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       if(await field.evaluate(node=>node.tagName)==='SELECT')await field.selectOption({index:1});
       else await field.fill('A');
       log('section_started',{section});
-      if(testDeparture&&term2&&departureAction!=='writing'&&section===order[0]){
+      if(testDeparture&&term&&departureAction!=='writing'&&section===order[0]){
         await verifyDeparture(section,field);
         return;
       }
