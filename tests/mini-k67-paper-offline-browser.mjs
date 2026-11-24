@@ -21,12 +21,12 @@ const journey = Boolean(term || pretest);
 const slug = pretest?'pretest-lesson-16':term?'term-test-'+term:'mini-test-lesson-5';
 const listenNumber = pretest?'21':'11';
 const readingNumber = pretest?'18':term==='2'?'1':'24';
-const draftPrefix=(pretest?'pretest-lesson-16-k67-paper-v1':'term'+term+'-k67-paper-journey-v1')+':';
+const draftPrefix=(pretest?'pretest-lesson-16-k67-paper-v1':term?'term'+term+'-k67-paper-journey-v1':'mini-k67-paper:run')+':';
 const testDeparture = process.env.K67_PAPER_CONFIRMED_DEPARTURE === '1';
 const testNativeDeparture = testDeparture && process.env.K67_PAPER_NATIVE_DEPARTURE === '1';
-assert.ok(!testDeparture || journey,'Confirmed departure rehearsal targets a paper journey with native receipts.');
 const testPreviousPretestShell = pretest && process.env.K67_PAPER_UPGRADE_SHELL === '1';
 const testLeaseFallback = pretest && process.env.K67_PAPER_IDB_LEASE === '1';
+const miniParallel = !journey && process.env.K67_PAPER_MINI_PARALLEL === '1';
 const paperFlagOff = journey && process.env.K67_PAPER_FLAG_OFF === '1';
 const routeName = '/term-tests/' + slug + '/';
 const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.css': 'text/css',
@@ -37,7 +37,8 @@ const close = server => new Promise(resolve => server.close(resolve));
 for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline ' + mode, { timeout: 90000 }, async () => {
   const assets = { getTiming: () => ({ readingDurationMinutes: term ? 60 : 20 }) };
   const f = await createMiniFixture({ examOrder: true, assets, ...(journey
-    ? {[pretest?'pretestPaperJourneyMode':'term'+term+'PaperJourneyMode']:paperFlagOff?'off':'on',completeSchema:true} : {miniPaperOffline:'on'}) });
+    ? {[pretest?'pretestPaperJourneyMode':'term'+term+'PaperJourneyMode']:paperFlagOff?'off':'on',completeSchema:true} : {miniPaperOffline:'on', ...(miniParallel?{completeSchema:true,miniPaperParallelEntryMode:'on',
+      miniCbtJourneyMode:'on',pretestCbtJourneyMode:'on',term2ParallelEntryMode:'on'}:{})}) });
   if(journey){
     const definition=(start,count)=>JSON.stringify({questions:Array.from({length:count},(_,i)=>({number:i+start,type:'Câu thử',accepted:['A']}))});
     const listening=pretest?definition(21,20):definition(1,40);
@@ -46,6 +47,10 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       VALUES($1,'Đề giả',1,$2,$3,true)`,[slug,listening,reading]);
     if(pretest)await f.db.query('UPDATE assessment.test_definition SET open_class_ids=$2 WHERE slug=$1',
       [slug, JSON.stringify(['1293'])]);
+  }
+  if(miniParallel){
+    for(const name of ['047-pretest-cbt-parallel-entry.sql','048-mini-k67-cbt-parallel-entry.sql','050-mini-k67-paper-parallel-entry.sql'])
+      await f.db.exec(await readFile(resolve(backend,'db',name),'utf8'));
   }
   const api = createServer(f.app);
   const journalFailures = new Set();
@@ -73,7 +78,7 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
   });
   const [apiBase, webBase] = await Promise.all([listen(api), listen(web)]);
   let browser, page;
-  let lostAck = false;
+  let lostAck = false, usedParallelPrepare = false;
   const seenOperations = new Map();
   let mediaRequests = 0;
   const errors = [], debug = [];
@@ -112,7 +117,8 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       if (index < 0) return route.abort();
       const headers = { 'Content-Type': 'application/json', Origin: 'https://tranhoangduc90.github.io',
         'x-term2-permit': req.headers()['x-term2-permit'] || '' };
-      if (testDeparture && req.method() === 'POST' && u.pathname.endsWith('/paper-journey/seal')) {
+      if (testDeparture && req.method() === 'POST' && (journey ? u.pathname.endsWith('/paper-journey/seal')
+        : u.pathname.endsWith('/offline/operation') && req.postDataJSON().kind==='seal')) {
         const {section, operationId} = req.postDataJSON();
         assert.equal(seenOperations.get(section) || operationId, operationId);
         seenOperations.set(section, operationId);
@@ -120,6 +126,7 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       const result = await fetch(apiBase + u.pathname.slice(index) + u.search, {
         method: req.method(), headers, body: req.postData() || undefined
       });
+      if(result.ok && u.pathname.endsWith('/offline/parallel-prepare'))usedParallelPrepare=true;
       const data = await result.text();
       if(!result.ok&&u.pathname.includes('journey'))debug.push([u.pathname,result.status,data]);
       if (req.method() === 'POST' && result.ok && !lostAck
@@ -172,7 +179,7 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
         const reload = page.getByRole('button', { name: 'Tải lại trang', exact: true });
         const modal = page.getByRole('dialog', { name: 'Xác nhận rời bài thi' });
         await page.waitForFunction(async ({skill, number, prefix, lease}) => {
-          const saved = value => value?.drafts?.[skill]?.[number]==='A';
+          const saved = value => (value?.drafts||value?.snapshot?.drafts)?.[skill]?.[number]==='A';
           if(!lease)return Object.keys(localStorage).filter(key=>key.startsWith(prefix))
             .some(key=>saved(JSON.parse(localStorage.getItem(key))));
           return new Promise(resolve=>{
@@ -242,7 +249,13 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
           await page.getByText('Không khớp bài lưu của bạn.',{exact:false}).waitFor();
           await name.fill('Học viên mô phỏng');await page.getByRole('button',{name:'Mở bài trên máy'}).click();
         }
-        else await page.reload();
+        else {
+          // Closing without a beforeunload prompt simulates abrupt document loss and keeps the draft.
+          await page.close();
+          page=await context.newPage();
+          observe(page);
+          await page.goto(url);
+        }
         await page.getByRole('button', { name: 'Tải bài làm về máy' }).waitFor();
         assert.equal(await page.locator(selector).inputValue(), 'A');
       }
@@ -250,7 +263,7 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
     }
     await page.locator('#resultReadyView').waitFor({ state: 'visible' });
     if(journey)assert.equal((await f.db.query('SELECT count(*)::int AS n FROM assessment.term_test_attempt WHERE completed_at IS NOT NULL')).rows[0].n,0);
-    else assert.equal((await f.db.query('SELECT count(*)::int AS n FROM assessment.mini_k67_paper_offline_operation')).rows[0].n,0);
+    else assert.equal((await f.db.query("SELECT count(*)::int AS n FROM assessment.mini_k67_paper_offline_operation WHERE receipt->>'kind'='seal'")).rows[0].n,0);
     await context.setOffline(false);
     await page.getByText(journey?'Máy chủ đã xác nhận nhận bài':'Máy chủ đã xác nhận các thao tác đã gửi.', { exact: true }).waitFor({ timeout: 25000 });
     if(journey){
@@ -273,11 +286,23 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       assert.equal(mediaRequests,0);
     }else assert.equal(rows[0].reading_deadline_at, null);
     assert.ok(lostAck, 'test must lose a committed seal response');
+    if(miniParallel)assert.ok(usedParallelPrepare,'The Mini parallel route must create the tested attempt.');
     if(testDeparture){
       assert.equal(seenOperations.size,2);
-      const {rows: journeys}=await f.db.query('SELECT sections FROM assessment.term_k67_cbt_journey');
-      assert.equal(journeys.length,1);
-      for(const section of order)assert.equal(journeys[0].sections[section].operationId,seenOperations.get(section));
+      if(journey){
+        const {rows: journeys}=await f.db.query('SELECT sections FROM assessment.term_k67_cbt_journey');
+        assert.equal(journeys.length,1);
+        for(const section of order)assert.equal(journeys[0].sections[section].operationId,seenOperations.get(section));
+      }else{
+        const {rows: receipts}=await f.db.query("SELECT operation_id,session_id,receipt FROM assessment.mini_k67_paper_offline_operation WHERE receipt->>'kind'='seal'");
+        assert.equal(receipts.length,2);
+        assert.equal(new Set(receipts.map(row=>row.session_id)).size,1);
+        for(const section of order){
+          const original=receipts.find(row=>row.receipt.section===section);
+          assert.equal(original?.operation_id,seenOperations.get(section));
+          assert.equal(original.receipt.status,'accepted');
+        }
+      }
     }else{
       const bridge = pretest?'bridge-pretest-k67-paper-cloud-v1.mjs':term?'bridge-term'+term+'-k67-paper-browser-cloud-v1.mjs':'bridge.mjs';
       assert.ok(journalFailures.has('/term-tests/shared/exam-journal/'+bridge));

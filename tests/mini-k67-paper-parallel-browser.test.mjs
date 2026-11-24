@@ -108,14 +108,19 @@ for (const first of ['listening', 'reading']) test('Mini paper keeps independent
           }
           return false;
         });
-        const page = await context.newPage();
-        pages.push(page);
-        page.setDefaultTimeout(12000);
-        page.on('dialog', dialog => dialog.accept());
-        page.on('pageerror', error => errors.push(error.message));
-        await page.goto(webBase + '/term-tests/' + slug + '/?class=IC2304&mode=' + order(section));
+        const url=webBase + '/term-tests/' + slug + '/?class=IC2304&mode=' + order(section);
+        async function openPage(){
+          const page = await context.newPage();
+          pages.push(page);
+          page.setDefaultTimeout(12000);
+          page.on('dialog', dialog => dialog.accept());
+          page.on('pageerror', error => errors.push(error.message));
+          await page.goto(url);
+          return page;
+        }
+        const page=await openPage();
         await enter(page);
-        return { context, page };
+        return { context, page, openPage };
       };
       const remaining = first === 'listening' ? 'reading' : 'listening';
       const a = await makeProfile('A', first);
@@ -128,7 +133,9 @@ for (const first of ['listening', 'reading']) test('Mini paper keeps independent
       assert.notEqual(initialA.offline.permit, initialB.offline.permit);
       await b.context.setOffline(true);
       await answer(b.page, remaining, 'B');
-      await b.page.reload();
+      // An abrupt close has no confirmed departure and must keep the draft editable.
+      await b.page.close();
+      b.page=await b.openPage();
       await b.page.getByRole('button', { name: 'Tải bài làm về máy' }).waitFor();
       assert.equal(await b.page.locator(fieldSelector(remaining)).inputValue(), 'B');
       assert.equal(await a.page.locator(fieldSelector(first)).inputValue(), 'A');
@@ -202,8 +209,8 @@ for (const first of ['listening', 'reading']) test('Mini paper keeps independent
 test('Mini paper reload keeps a legacy draft when the new worker takes control and a new profile submits first',
   { timeout: 100000, skip: !previousPages }, async () => {
     const previousRoot = resolve(previousPages);
-    const candidateId = (await import('../term-tests/mini-test-lesson-5/offline-assets.mjs')).ASSET_BUILD_ID;
-    const legacyId = (await import(pathToFileURL(resolve(previousRoot, 'term-tests/mini-test-lesson-5/offline-assets.mjs')))).ASSET_BUILD_ID;
+    const candidateId = (await import('../term-tests/mini-test-lesson-5/offline-assets-student-cache-v3-confirmed-departure-v1.mjs')).ASSET_BUILD_ID;
+    const legacyId = (await import(pathToFileURL(resolve(previousRoot, 'term-tests/mini-test-lesson-5/offline-assets-student-cache-v3.mjs')))).ASSET_BUILD_ID;
     assert.notEqual(candidateId, legacyId);
     const fixture = await createMiniFixture({ examOrder: true, completeSchema: true, miniPaperOffline: 'on',
       miniPaperParallelEntryMode: 'on', miniCbtJourneyMode: 'on', pretestCbtJourneyMode: 'on', term2ParallelEntryMode: 'on',
@@ -241,10 +248,8 @@ test('Mini paper reload keeps a legacy draft when the new worker takes control a
       checkpoint.push('legacy-draft-restored');
       await context.setOffline(false);
       switched = true;
-      await page.evaluate(async () => {
-        const registration = await navigator.serviceWorker.getRegistration();
-        await registration.update();
-      });
+      // The previous shell is cache-first. Its existing registration must be able to discover the new shell.
+      await page.evaluate(async()=>{await (await navigator.serviceWorker.getRegistration()).update();});
       const newBuild = await page.evaluate(async (expectedId) => {
         function message(worker, type) {
           const channel = new MessageChannel();
@@ -275,11 +280,15 @@ test('Mini paper reload keeps a legacy draft when the new worker takes control a
       }, candidateId);
       assert.equal(newBuild, candidateId);
       checkpoint.push('candidate-worker-active');
+      const url=page.url();
       await context.setOffline(true);
-      await page.reload();
+      await page.close();
+      page=await context.newPage();
+      page.on('dialog',dialog=>dialog.accept());
+      await page.goto(url);
       await page.getByRole('button', { name: 'Tải bài làm về máy' }).waitFor();
       assert.equal(await page.locator(fieldSelector('reading')).inputValue(), 'B');
-      assert.ok(await page.evaluate(() => Array.from(document.scripts).some(script => script.src.includes('app-mini-paper-k67-parallel-v1.js'))));
+      assert.ok(await page.evaluate(() => Array.from(document.scripts).some(script => script.src.includes('app-mini-paper-k67-browser-journal-v2-confirmed-departure-v1.js'))));
       checkpoint.push('candidate-draft-restored-offline');
 
       const freshContext = await browser.newContext({ viewport: { width: 960, height: 820 } });
@@ -314,6 +323,11 @@ test('Mini paper reload keeps a legacy draft when the new worker takes control a
       assert.equal(rows[0].exam_session_id, prepares[0].examSessionToken);
       assert.equal(rows[0].listening_answers['11'], 'A');
       assert.equal(rows[0].reading_answers['24'], 'B');
+      switched=false;
+      await page.reload();
+      assert.ok(await page.evaluate(()=>Array.from(document.scripts)
+        .some(script=>script.src.includes('/app-mini-paper-k67-browser-journal-v2.js'))));
+      checkpoint.push('rollback-index-restored');
       console.log(JSON.stringify({ legacyId, candidateId, checkpoint, sameLegacyScope: true, officialAttempts: rows.length }));
     } catch (error) {
       const notice = await page?.locator('#notice').textContent({ timeout: 1000 }).catch(() => null);
