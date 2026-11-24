@@ -24,6 +24,7 @@ const readingNumber = pretest?'18':term==='2'?'1':'24';
 const draftPrefix=(pretest?'pretest-lesson-16-k67-paper-v1':term?'term'+term+'-k67-paper-journey-v1':'mini-k67-paper:run')+':';
 const testDeparture = process.env.K67_PAPER_CONFIRMED_DEPARTURE === '1';
 const testNativeDeparture = testDeparture && process.env.K67_PAPER_NATIVE_DEPARTURE === '1';
+const orderOnly = process.env.K67_PAPER_ORDER;
 const testPreviousPretestShell = pretest && process.env.K67_PAPER_UPGRADE_SHELL === '1';
 const testLeaseFallback = pretest && process.env.K67_PAPER_IDB_LEASE === '1';
 const miniParallel = !journey && process.env.K67_PAPER_MINI_PARALLEL === '1';
@@ -34,7 +35,8 @@ const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 't
 const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve('http://127.0.0.1:' + server.address().port)));
 const close = server => new Promise(resolve => server.close(resolve));
 
-for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline ' + mode, { timeout: 90000 }, async () => {
+for (const mode of ['lis_first', 'read_first'].filter(mode=>!orderOnly||mode===orderOnly))
+test(slug + ' K67 paper offline ' + mode, { timeout: 90000 }, async () => {
   const assets = { getTiming: () => ({ readingDurationMinutes: term ? 60 : 20 }) };
   const f = await createMiniFixture({ examOrder: true, assets, ...(journey
     ? {[pretest?'pretestPaperJourneyMode':'term'+term+'PaperJourneyMode']:paperFlagOff?'off':'on',completeSchema:true} : {miniPaperOffline:'on', ...(miniParallel?{completeSchema:true,miniPaperParallelEntryMode:'on',
@@ -159,7 +161,7 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       await student.or(page.getByRole('button',{name:'Tải bài làm về máy'})).first().waitFor();
       if(await student.isVisible())await student.selectOption(ref);
       await page.getByRole('button',{name:'Tải bài làm về máy'}).waitFor();
-      assert.match(await page.evaluate(()=>navigator.serviceWorker.controller.scriptURL),/confirmed-departure-v1\.js\?/);
+      assert.match(await page.evaluate(()=>navigator.serviceWorker.controller.scriptURL),/confirmed-departure-v1(?:-verified-exit-v1)?\.js\?/);
     }
     await context.setOffline(true);
     const order = mode === 'lis_first' ? ['listening','reading'] : ['reading','listening'];
@@ -175,6 +177,11 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       const field = page.locator(selector);
       if (reading) await field.fill('A'); else await field.selectOption('A');
       if (testDeparture) {
+        if(!reading){
+          const players=await page.locator('audio').evaluateAll(elements=>elements.filter(audio=>audio.src||audio.currentSrc).length);
+          assert.equal(players,0,'The answer sheet does not own the examination audio player.');
+          console.log(JSON.stringify({testSlug:slug,mode,section,examAudioPlayers:players}));
+        }
         const key = reading ? 'Reading' : 'Listening';
         const reload = page.getByRole('button', { name: 'Tải lại trang', exact: true });
         const modal = page.getByRole('dialog', { name: 'Xác nhận rời bài thi' });
@@ -216,6 +223,21 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
             observe(page);
             await page.goto(url);
           }
+          await page.waitForFunction(at=>performance.timeOrigin!==at,origin);
+          const restored=page.locator(selector);
+          const recovery=page.locator('#termPaperRecovery');
+          await restored.or(recovery).first().waitFor();
+          if(await recovery.isVisible()){
+            await recovery.locator('input').fill('Học viên mô phỏng');
+            await page.getByRole('button',{name:'Mở bài trên máy'}).click();
+          }
+          await restored.waitFor();
+          assert.equal(await restored.inputValue(),'A');
+          assert.equal(await page.getByText('Phần '+key+' đã khóa trên thiết bị. Đang chờ máy chủ xác nhận.',{exact:true}).count(),0);
+          console.log(JSON.stringify({testSlug:slug,mode,section,nativeReloadKeptDraft:true}));
+          await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
+          await page.getByRole('dialog',{name:'Xác nhận rời bài thi'})
+            .getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
         }else{
           await reload.click();
           if(index===1)await modal.getByText(/Khi mở lại, bạn sẽ thấy màn hình kết thúc bài thi/).waitFor();
