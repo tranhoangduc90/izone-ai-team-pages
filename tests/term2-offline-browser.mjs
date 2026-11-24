@@ -239,7 +239,11 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
   return route.fulfill({status:404,json:{ok:false,error:'FIXTURE_UNEXPECTED',message:endpoint}});
  };
  await context.route('**/*',routeHandler);
- const url=base+`/term-tests/${slug}${paper?'':'-computer-based'}/${demo&&!mini?'demo-journal-v1/':''}?class=${classCode}&mode=${mode}`;
+ const destination=slug+(paper?'':'-computer-based');
+ const demoEntry=mini&&demo&&!paper
+  ? (await import('../term-tests/demo/journal-entry-v3.mjs')).demoJournalPage(destination,classCode)
+  : destination+'/'+(demo&&!mini?'demo-journal-v1/':'');
+ const url=base+`/term-tests/${demoEntry}?class=${classCode}&mode=${mode}`;
  return {get page(){return page;},get context(){return context;},get browser(){return browser;},server,url,student,calls,errors,receipts,controls,get disconnected(){return disconnected;},set disconnected(v){disconnected=v;},
   assertJournalFaultExercised(){if(blockJournalAssets)assert.ok(blockedJournalAssets.has('/term-tests/shared/exam-journal/bridge.mjs'),'Expected the exam journal bridge request to fail');},
   reopen:async({offline=false}={})=>{assert.ok(profileDir);await browser.close();context=await chromium.launchPersistentContext(profileDir,{...launchOptions,...contextOptions});browser=context.browser();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',handleDialog);await context.route('**/*',routeHandler);await context.setOffline(offline);},

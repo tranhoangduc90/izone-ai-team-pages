@@ -1,5 +1,5 @@
 import {COURSES,demoContext,loadStudents,resetStudent,resetSignal,clearStudentStorage} from './model.js?v=20261020-v2';
-import {demoJournalPage} from './journal-entry-v2.mjs';
+import {demoJournalPage} from './journal-entry-v3.mjs';
 
 // Tải danh sách thật của lớp giả, mở trang thi hiện hành và reset theo từng người.
 // Khi mạng lỗi, giữ thông tin lỗi tại học viên; không biến reset một phần thành hoàn tất.

@@ -18,7 +18,7 @@ test('Chromium desktop/mobile: giữ link lớp thật, nút DEMO luôn mở COD
     if (!target.startsWith(root + sep)) return res.writeHead(403).end();
     // Ranh giới test là điều hướng landing, không chạy lại toàn app thi ở mỗi link.
     if (/^\/term-tests\/(?:term-test-[12]-k56|mini-test-k56)\/$/.test(path) ||
-        /^\/term-tests\/(?:term-test-[12]-k56-computer-based\/demo-journal-v1\/|mini-test-k56-computer-based\/index-mini-demo-journal-v1\.html)$/.test(path)) {
+        /^\/term-tests\/(?:term-test-[12]-k56-computer-based\/demo-journal-v1\/|mini-test-k56-computer-based\/index-mini-cbt-listening-recovery-v2\.html)$/.test(path)) {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       return res.end('<!doctype html><html><body><h1>Đích bài thi giả lập</h1></body></html>');
     }
@@ -73,7 +73,7 @@ test('Chromium desktop/mobile: giữ link lớp thật, nút DEMO luôn mở COD
           await select.selectOption(code);
           await page.locator(`[data-slug="${slug}"]`).click();
           const demoPath = slug === 'mini-test-k56'
-            ? 'mini-test-k56-computer-based/index-mini-demo-journal-v1.html'
+            ? 'mini-test-k56-computer-based/index-mini-cbt-listening-recovery-v2.html'
             : slug + '-computer-based/demo-journal-v1/';
           const studentPath = code === 'CODEXDEMO56' ? demoPath : slug + '-computer-based/';
           const studentUrl = `${base}/term-tests/${studentPath}?class=${code}&mode=${mode}`;

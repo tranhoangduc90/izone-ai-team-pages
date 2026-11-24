@@ -9,7 +9,7 @@ import { createTeacherSessionClient, teacherSessionRequestOptions } from '../k56
 import { buildK56LandingClasses } from './landing-model.js?rev=20261020-demo-first-v1';
 
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup2';
-import { demoJournalPage } from '../demo/journal-entry-v2.mjs';
+import { demoJournalPage } from '../demo/journal-entry-v3.mjs';
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const demoClassCode = 'CODEXDEMO56';
 const input = document.getElementById('classCode');
