@@ -17,6 +17,7 @@ const checkListeningLayout=process.env.K67_JOURNEY_CHECK_LISTENING_LAYOUT==='1';
 const eofJournal=process.env.K67_JOURNEY_EOF_JOURNAL==='1';
 const recorderOutage=process.env.K67_PREVIEW_TERM2_JOURNAL_RECORDER_DOWN==='1';
 const loseUncommittedJournalWrites=process.env.K67_JOURNEY_LOSE_OFFLINE_JOURNAL_WRITES==='1';
+const delayRestoredAudio=process.env.K67_JOURNEY_DELAY_RESTORED_AUDIO==='1';
 const writingOnly=process.env.K67_JOURNEY_WRITING_ONLY==='1';
 const testDeparture=process.env.K67_JOURNEY_CONFIRMED_DEPARTURE==='1';
 const departureAction=process.env.K67_JOURNEY_DEPARTURE_ACTION||'';
@@ -534,6 +535,21 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           if(loseUncommittedJournalWrites)assert.equal(before.pauseLogSaved,true,'Run outbox owns the offline pause before tab close.');
           await page.close();
           page=await openPage();
+          if(delayRestoredAudio)await page.addInitScript(()=>{
+            const add=HTMLMediaElement.prototype.addEventListener;
+            const duration=Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype,'duration');
+            let ready=false;
+            Object.defineProperty(HTMLMediaElement.prototype,'duration',{...duration,get(){
+              return this.id==='miniJourneyAudio'&&!ready?NaN:duration.get.call(this);
+            }});
+            HTMLMediaElement.prototype.addEventListener=function(name,listener,options){
+              if(name!=='canplay'||typeof listener!=='function')return add.call(this,name,listener,options);
+              return add.call(this,name,event=>{
+                if(this.id!=='miniJourneyAudio'||ready)return listener.call(this,event);
+                window.k67ReleaseDelayedAudio=()=>{ready=true;listener.call(this,event);};
+              },options);
+            };
+          });
           await page.goto(url,{waitUntil:'domcontentloaded'});
           const resume=page.getByRole('button',{name:'Nghe tiếp',exact:true});
           const recover=page.getByRole('button',{name:'Mở bài đã lưu',exact:true});
@@ -552,6 +568,14 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           });
           assert.equal(await page.locator('#listeningView [data-number]:visible').first().inputValue(),answer);
           assert.equal((await onDisk()).checkpoint.positionMs,before.checkpoint.positionMs);
+          if(delayRestoredAudio){
+            await page.getByText(/Đồng hồ Listening đang tạm dừng · Đang chuẩn bị âm thanh/).waitFor({timeout:5000});
+            assert.equal(await resume.isDisabled(),true);
+            assert.equal(await page.getByRole('dialog',{name:'Báo lỗi âm thanh'}).isVisible(),false);
+            await page.waitForFunction(()=>Boolean(window.k67ReleaseDelayedAudio));
+            await page.evaluate(()=>window.k67ReleaseDelayedAudio());
+            log('restored_audio_waits_for_decode',{secondsKept:true});
+          }
           await resume.click();
           await page.waitForFunction(prefix=>Object.keys(localStorage).filter(key=>key.startsWith(prefix))
             .some(key=>JSON.parse(localStorage.getItem(key)).listeningClockSync?.pending?.[1]?.phase==='running'),storagePrefix);
