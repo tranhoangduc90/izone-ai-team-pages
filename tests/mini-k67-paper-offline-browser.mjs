@@ -28,7 +28,7 @@ const orderOnly = process.env.K67_PAPER_ORDER;
 const testPreviousPretestShell = pretest && process.env.K67_PAPER_UPGRADE_SHELL === '1';
 const testLeaseFallback = pretest && process.env.K67_PAPER_IDB_LEASE === '1';
 const miniParallel = !journey && process.env.K67_PAPER_MINI_PARALLEL === '1';
-const paperFlagOff = journey && process.env.K67_PAPER_FLAG_OFF === '1';
+const paperFlagOff = process.env.K67_PAPER_FLAG_OFF === '1';
 const routeName = '/term-tests/' + slug + '/';
 const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.css': 'text/css',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
@@ -39,7 +39,7 @@ for (const mode of ['lis_first', 'read_first'].filter(mode=>!orderOnly||mode===o
 test(slug + ' K67 paper offline ' + mode, { timeout: 90000 }, async () => {
   const assets = { getTiming: () => ({ readingDurationMinutes: term ? 60 : 20 }) };
   const f = await createMiniFixture({ examOrder: true, assets, ...(journey
-    ? {[pretest?'pretestPaperJourneyMode':'term'+term+'PaperJourneyMode']:paperFlagOff?'off':'on',completeSchema:true} : {miniPaperOffline:'on', ...(miniParallel?{completeSchema:true,miniPaperParallelEntryMode:'on',
+    ? {[pretest?'pretestPaperJourneyMode':'term'+term+'PaperJourneyMode']:paperFlagOff?'off':'on',completeSchema:true} : {miniPaperOffline:paperFlagOff?'off':'on', ...(miniParallel?{completeSchema:true,miniPaperParallelEntryMode:'on',
       miniCbtJourneyMode:'on',pretestCbtJourneyMode:'on',term2ParallelEntryMode:'on'}:{})}) });
   if(journey){
     const definition=(start,count)=>JSON.stringify({questions:Array.from({length:count},(_,i)=>({number:i+start,type:'Câu thử',accepted:['A']}))});
@@ -111,12 +111,13 @@ test(slug + ' K67 paper offline ' + mode, { timeout: 90000 }, async () => {
       });
     };
     observe(page);
+    let onlinePaperApiDown=false, onlinePaperPosts=0;
     await context.route('**/*', async route => {
       const req = route.request();
       const u = new URL(req.url());
       if (u.origin === webBase) return route.continue();
       const index = u.pathname.indexOf('/api/');
-      if (index < 0) return route.abort();
+      if (index < 0 || onlinePaperApiDown) return route.abort();
       const headers = { 'Content-Type': 'application/json', Origin: 'https://tranhoangduc90.github.io',
         'x-term2-permit': req.headers()['x-term2-permit'] || '' };
       if (testDeparture && req.method() === 'POST' && (journey ? u.pathname.endsWith('/paper-journey/seal')
@@ -130,6 +131,12 @@ test(slug + ' K67 paper offline ' + mode, { timeout: 90000 }, async () => {
       });
       if(result.ok && u.pathname.endsWith('/offline/parallel-prepare'))usedParallelPrepare=true;
       const data = await result.text();
+      const testedSection=mode==='lis_first'?'listening':'reading';
+      if(paperFlagOff&&testDeparture&&req.method()==='POST'&&
+        [`/${slug}/${testedSection}`, `/${slug}/answer-sheet/${testedSection}`].some(path=>u.pathname.endsWith(path))){
+        onlinePaperPosts++;
+        if(result.ok&&!lostAck){lostAck=true;return route.abort();}
+      }
       if(!result.ok&&u.pathname.includes('journey'))debug.push([u.pathname,result.status,data]);
       if (req.method() === 'POST' && result.ok && !lostAck
         && (journey ? u.pathname.endsWith('/paper-journey/seal')
@@ -149,6 +156,60 @@ test(slug + ' K67 paper offline ' + mode, { timeout: 90000 }, async () => {
     if(paperFlagOff){
       await page.locator(mode==='lis_first'?'#submitListening':'#startReading').waitFor({state:'visible'});
       assert.equal(await page.getByRole('button',{name:'Tải bài làm về máy'}).count(),0);
+      if(testDeparture){
+        const section=mode==='lis_first'?'listening':'reading';
+        if(section==='reading')await page.locator('#startReading').click();
+        const input=page.locator('#'+section+'Questions [data-number]').first();
+        await input.waitFor();
+        if(await input.evaluate(node=>node.tagName)==='SELECT')await input.selectOption({index:1});
+        else await input.fill('draft offline');
+        const answer=await input.inputValue();
+        await page.getByRole('button',{name:'Tải lại trang',exact:true}).click({timeout:3000});
+        await page.getByRole('button',{name:'Ở lại làm bài',exact:true}).click();
+        assert.equal(await input.inputValue(),answer);
+        const number=await input.getAttribute('data-number');
+        if(process.env.K67_PAPER_ONLINE_SUBMIT==='1'){
+          const saved=async()=>page.evaluate(()=>{
+            const key=Object.keys(localStorage).find(key=>key.startsWith('["k67-paper-departure-v1"'));
+            return key?JSON.parse(localStorage.getItem(key)):null;
+          });
+          onlinePaperApiDown=true;
+          await page.getByRole('button',{name:'Tải lại trang',exact:true}).click();
+          await page.getByRole('button',{name:'Tải lại và nộp phần này',exact:true}).click();
+          await page.waitForLoadState('domcontentloaded');
+          const local=await saved();
+          assert.equal(local?.section,section);
+          assert.equal(local?.snapshot.answers[number],answer);
+          assert.equal(local?.outcome,'pending');
+          assert.equal(onlinePaperPosts,0);
+          onlinePaperApiDown=false;
+          await page.reload();
+          const choose=page.locator('#studentSelect');
+          if(await choose.isVisible()&&await choose.isEnabled()){
+            const option=choose.locator('option[value="'+ref+'"]');
+            await option.waitFor({state:'attached'});
+            if(await choose.inputValue()!==ref) await choose.selectOption(ref);
+            const confirm=page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true});
+            if(await confirm.isVisible())await confirm.click();
+          }
+          await page.waitForFunction(()=>{
+            const key=Object.keys(localStorage).find(key=>key.startsWith('["k67-paper-departure-v1"'));
+            return key&&JSON.parse(localStorage.getItem(key)).outcome==='received';
+          });
+          assert.equal(onlinePaperPosts,1);
+          assert.equal(lostAck,true);
+          const {examSessionToken,attemptToken,clientSubmissionId,generation}=local.current;
+          const status=await fetch(apiBase+'/api/term-tests/'+slug+'/submission-status',{
+            method:'POST',headers:{'Content-Type':'application/json',Origin:'https://tranhoangduc90.github.io'},
+            body:JSON.stringify({section,generation,examSessionToken:examSessionToken||undefined,
+              attemptToken:attemptToken||undefined,clientSubmissionId:!examSessionToken&&!attemptToken?clientSubmissionId:undefined})
+          });
+          assert.equal(status.status,200);
+          const {persisted,receipt}=await status.json();
+          assert.equal(persisted,true);
+          assert.equal(receipt.answers[number],answer);
+        }
+      }
       assert.deepEqual(errors,[]);
       return;
     }
