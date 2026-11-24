@@ -501,8 +501,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
             const saved=Object.keys(localStorage).filter(key=>key.startsWith(prefix))
               .map(key=>JSON.parse(localStorage.getItem(key))).find(record=>record?.sections?.listening);
             return saved?{checkpoint:saved.sections.listening.listeningCheckpoint,clock:saved.listeningClockSync,
-              pauseLogSaved:saved.submissionDiagnostics?.some(({data})=>
-                data?.checkpointState?.action==='audio_anomaly'&&data.checkpointState.event==='pause')}:null;
+              pauseLogSaved:[...(saved.submissionDiagnostics||[]).map(({data})=>data?.checkpointState),
+                ...(saved.listeningDiagnostics||[])].some(row=>row?.action==='audio_anomaly'&&row.event==='pause')}:null;
           },storagePrefix);
           const readClock=async()=>{
             const reply=await fetch(base+'/preview/listening-recovery-clock');
@@ -646,6 +646,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
             let observations=[];
             const expected=['audio_command','audio_anomaly','audio_player_retired',
               ...(simulateOutput?['audio_device_change','audio_output_result','audio_media_action']:[])];
+            const latePlayLogged=row=>row?.action==='audio_media_action'&&row.mediaAction==='play'&&row.disposition==='inactive';
             for(let attempt=0;attempt<30;attempt++){
               await page.evaluate(async()=>{
                 const slug=window.TERM_TEST_CONFIG.slug;
@@ -657,7 +658,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
               });
               observations=journalRows.filter(row=>row.bindingId===learnerBinding&&row.event.data.cause==='k67_offline_journey')
                 .map(row=>row.event.data.checkpointState);
-              if(expected.every(action=>observations.some(row=>row?.action===action)))break;
+              if(expected.every(action=>observations.some(row=>row?.action===action))&&
+                (!simulateOutput||observations.some(latePlayLogged)))break;
               await page.waitForTimeout(200);
             }
             for(const action of expected)assert.ok(observations.some(row=>row?.action===action),action);
@@ -665,7 +667,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
               row.source==='unknown'&&row.playerId&&Math.abs(row.positionMs-before.checkpoint.positionMs)<500),
               'The first offline pause stays in the journal after closing and reopening the tab.');
             assert.ok(observations.some(row=>row?.action==='audio_player_retired'&&row.playerId&&row.disposalId));
-            if(simulateOutput)assert.ok(observations.some(row=>row?.action==='audio_media_action'&&row.mediaAction==='play'&&row.disposition==='inactive'));
+            if(simulateOutput)assert.ok(observations.some(latePlayLogged));
             if(recorderOutage){
               const requests=await (await fetch(base+'/preview/recorder-requests')).json();
               assert.ok(requests.primary>0&&requests.fallback>0);
