@@ -146,8 +146,21 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
    :product===2?{listeningDurationSeconds:1824,listeningReviewSeconds:0,readingDurationMinutes:60,writingDurationMinutes:30}:{listeningDurationSeconds:1848,listeningReviewSeconds:0,readingDurationMinutes:40,writingDurationMinutes:55};
   const prepared={ok:true,attemptToken:id,examSessionToken:session,studentRef:student,studentName:'Học viên giả Term 2',generation:native?.generation??0,examMode:mode,nextSection:mode==='read_first'&&!onlineReadingSubmitted?'reading':'listening',serverNow:new Date().toISOString(),
    listeningSubmitted:false,readingSubmitted:false,content,timing,attemptMode:paper?'answer_sheet':'cbt',policy:{timed:!paper,autoSubmit:!paper},...controls.preparedOverride};
-  if(controls.onlineTerm2){
+  if(controls.onlineTerm2||controls.onlineTerm1||controls.onlineMini){
    Object.assign(prepared,{readingStartedAt:onlineReadingStartedAt,readingSubmitted:onlineReadingSubmitted});
+   function accepted(section,fields){
+    const proof=body.recovery;
+    const response={...prepared,...fields};
+    if(!proof)return response;
+    assert.equal(proof.attemptToken,id);
+    assert.equal(proof.examSessionToken,session);
+    const payload={operationId:proof.operationId,attemptToken:proof.attemptToken,generation:proof.generation,
+     section,revision:body.draftRevision??null,capturedAt:proof.capturedAt,automatic:proof.automatic,answers:canonical(body.answers||{})};
+    const receipt={version:1,receiptId:randomUUID(),operationId:proof.operationId,testSlug:slug,section,
+     attemptToken:id,examSessionToken:session,generation:proof.generation,revision:payload.revision,
+     submittedAt:new Date().toISOString(),payloadHash:createHash('sha256').update(JSON.stringify(payload)).digest('hex')};
+    return {...response,receipt};
+   }
    if(endpoint.endsWith('/attempt/active'))return route.fulfill({json:{...prepared,found:onlineReadingStartedAt!==null||onlineListeningStartedAt!==null}});
    if(endpoint.endsWith('/offline/prepare'))return route.fulfill({status:503,json:{ok:false,error:'OFFLINE_NEW_DISABLED'}});
    if(endpoint.endsWith('/reading/start')){
@@ -156,9 +169,9 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
    }
    if(endpoint.endsWith('/reading')){
     onlineReadingSubmitted=true;
-    return route.fulfill({json:{...prepared,readingSubmitted:true,nextSection:'listening',completed:false}});
+    return route.fulfill({json:accepted('reading',{readingSubmitted:true,nextSection:'listening',completed:false})});
    }
-   if(endpoint.endsWith('/session/start')||endpoint.endsWith('/session/audio-progress')){
+   if(!controls.onlineMini&&(endpoint.endsWith('/session/start')||endpoint.endsWith('/session/audio-progress'))){
     onlineListeningStartedAt??=prepared.serverNow;
     return route.fulfill({json:{...prepared,audioRecoveryVersion:2,audioStateRevision:++onlineRevision,
      listeningResumeAtSeconds:Number(body.heardSeconds)||0,listeningStartedAt:onlineListeningStartedAt,
@@ -167,14 +180,14 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
    if(endpoint.endsWith('/listening')){
     controls.onlineListeningSeals??=[];
     controls.onlineListeningSeals.push({answers:body.answers,studentRef:body.studentRef});
-    return route.fulfill({json:{...prepared,listeningSubmitted:true,completed:onlineReadingSubmitted,
-     nextSection:onlineReadingSubmitted?'writing':'reading',portalSyncStatus:'pending'}});
+    return route.fulfill({json:accepted('listening',{listeningSubmitted:true,completed:onlineReadingSubmitted,
+     nextSection:onlineReadingSubmitted?(mini?'result':'writing'):'reading',portalSyncStatus:'pending'})});
    }
    if(endpoint.endsWith('/draft')||endpoint.endsWith('/client-event'))return route.fulfill({json:{ok:true,revision:1}});
   }
   if(endpoint.endsWith('/attempt/prepare')){
    if(controls.redactListening)prepared.content={...content,listening:{...content.listening,sections:[]}};
-   if(mini&&controls.onlineMini){
+   if(mini&&controls.onlineMini||product===1&&controls.onlineTerm1){
     const chunkSize=1_048_576,chunks=[];
     for(let start=0;start<audio.byteLength;start+=chunkSize){
      const bytes=audio.subarray(start,start+chunkSize);
@@ -202,7 +215,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,demo=fa
   }
   if(endpoint.endsWith('/offline/prepare')){
    controls.clockOwner=body.ownerId;
-   if(mini&&controls.onlineMini)return route.fulfill({status:503,json:{ok:false,error:'OFFLINE_NEW_DISABLED'}});
+   if(mini&&controls.onlineMini||product===1&&controls.onlineTerm1)return route.fulfill({status:503,json:{ok:false,error:'OFFLINE_NEW_DISABLED'}});
    if(controls.denyOfflinePrepare)return route.fulfill({status:403,json:{ok:false,error:'FIXTURE_ACCESS_DENIED',message:'Fixture từ chối quyền thi.'}});
    const audioDownload=controls.r2Audio&&body.audioTransport==='r2-direct-v1'
     ? {version:1,policy:'r2-direct-v1',method:'GET',url:`https://e340869dcc6ff285504947407d148104.r2.cloudflarestorage.com/izone-audio-r2-lab-20261023/${asset.key}?X-Amz-Signature=fixture`,sha256:asset.sha256,byteLength:asset.byteLength,validForSeconds:600,fallback:'public-pages'}
