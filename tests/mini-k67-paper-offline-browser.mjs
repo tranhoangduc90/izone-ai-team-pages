@@ -16,6 +16,9 @@ const ref = '11111111-1111-4111-8111-111111111111';
 const term = process.env.K67_PAPER_TERM || (process.env.K67_PAPER_TERM1 === '1' ? '1' : '');
 assert.ok(['','1','2'].includes(term),'K67_PAPER_TERM must be 1, 2 or empty for Mini.');
 const slug = term ? 'term-test-' + term : 'mini-test-lesson-5';
+const testDeparture = process.env.K67_PAPER_CONFIRMED_DEPARTURE === '1';
+const testNativeDeparture = testDeparture && process.env.K67_PAPER_NATIVE_DEPARTURE === '1';
+assert.ok(!testDeparture || term === '2','Confirmed departure rehearsal starts on Term 2.');
 const paperFlagOff = term && process.env.K67_PAPER_FLAG_OFF === '1';
 const routeName = '/term-tests/' + slug + '/';
 const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.css': 'text/css',
@@ -35,8 +38,10 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
   const api = createServer(f.app);
   const journalFailures = new Set();
   const web = createServer(async (req, res) => {
-    const pathname = new URL(req.url, 'http://localhost').pathname;
-    if (pathname.startsWith('/term-tests/shared/exam-journal/')) {
+    const url = new URL(req.url, 'http://localhost');
+    const pathname = url.pathname;
+    // Keep the journal request failure separate from the worker's verified asset fetch.
+    if (pathname.startsWith('/term-tests/shared/exam-journal/') && !url.searchParams.has('examBuild')) {
       journalFailures.add(pathname);
       return res.writeHead(503).end();
     }
@@ -54,16 +59,18 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
   const [apiBase, webBase] = await Promise.all([listen(api), listen(web)]);
   let browser, page;
   let lostAck = false;
+  const seenOperations = new Map();
   let mediaRequests = 0;
   const errors = [], debug = [];
   try {
     browser = await chromium.launch({ headless: true, channel: process.env.TERM2_BROWSER_CHANNEL || 'msedge' });
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
     page = await context.newPage();
+    let stayAtNativePrompt=false;
     const observe = page => {
       page.setDefaultTimeout(18000);
       page.on('pageerror', error => errors.push(error.message));
-      page.on('dialog', dialog => dialog.accept());
+      page.on('dialog', dialog => stayAtNativePrompt && dialog.type()==='beforeunload'?dialog.dismiss():dialog.accept());
       page.on('request', req => { if (req.resourceType() === 'media') mediaRequests++; });
       page.on('response', response => {
         const path=new URL(response.url()).pathname;
@@ -79,6 +86,11 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       if (index < 0) return route.abort();
       const headers = { 'Content-Type': 'application/json', Origin: 'https://tranhoangduc90.github.io',
         'x-term2-permit': req.headers()['x-term2-permit'] || '' };
+      if (testDeparture && req.method() === 'POST' && u.pathname.endsWith('/paper-journey/seal')) {
+        const {section, operationId} = req.postDataJSON();
+        assert.equal(seenOperations.get(section) || operationId, operationId);
+        seenOperations.set(section, operationId);
+      }
       const result = await fetch(apiBase + u.pathname.slice(index) + u.search, {
         method: req.method(), headers, body: req.postData() || undefined
       });
@@ -111,10 +123,65 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
     for (const [index, section] of order.entries()) {
       const reading = section === 'reading';
       if (reading) await page.locator('#startReading').click();
+      if(testDeparture&&!reading&&index>0){
+        await page.getByRole('heading',{name:'Sẵn sàng làm Listening'}).waitFor();
+        assert.equal(await page.locator('#listeningView').isVisible(),false);
+        await page.getByRole('button',{name:'Bắt đầu Listening',exact:true}).click();
+      }
       const readingNumber=term==='2'?'1':'24';
       const selector = reading ? `#readingQuestions [data-number="${readingNumber}"]` : '#listeningQuestions [data-number="11"]';
       const field = page.locator(selector);
       if (reading) await field.fill('A'); else await field.selectOption('A');
+      if (testDeparture) {
+        const key = reading ? 'Reading' : 'Listening';
+        const reload = page.getByRole('button', { name: 'Tải lại trang', exact: true });
+        const modal = page.getByRole('dialog', { name: 'Xác nhận rời bài thi' });
+        await page.waitForFunction(({skill, number}) => Object.keys(localStorage)
+          .filter(key=>key.startsWith('term2-k67-paper-journey-v1:'))
+          .some(key=>JSON.parse(localStorage.getItem(key))?.drafts?.[skill]?.[number]==='A'),
+          {skill:section, number:reading?readingNumber:'11'});
+        const origin=await page.evaluate(()=>performance.timeOrigin);
+        const native = testNativeDeparture && index===0;
+        if(native){
+          const closeTab=mode==='lis_first';
+          const leave=async stay=>{
+            stayAtNativePrompt=stay;
+            const prompt=page.waitForEvent('dialog',{predicate:dialog=>dialog.type()==='beforeunload',timeout:8000});
+            const navigate=closeTab?page.close({runBeforeUnload:true}):page.reload({waitUntil:'commit'});
+            await Promise.all([prompt,navigate.catch(error=>{
+              if(!stay||!/ERR_ABORTED|Timeout/.test(error.message))throw error;
+            })]);
+          };
+          await leave(true);
+          assert.equal(await field.inputValue(),'A');
+          assert.equal(await page.evaluate(()=>performance.timeOrigin),origin);
+          const closed=closeTab?page.waitForEvent('close'):null;
+          await leave(false);
+          if(closed){
+            await closed;
+            page=await context.newPage();
+            observe(page);
+            await page.goto(url);
+          }
+        }else{
+          await reload.click();
+          if(index===1)await modal.getByText(/Khi mở lại, bạn sẽ thấy màn hình kết thúc bài thi/).waitFor();
+          await modal.getByRole('button', { name: 'Ở lại làm bài', exact: true }).click();
+          assert.equal(await field.inputValue(),'A');
+          await reload.click();
+          await modal.getByRole('button', {name: 'Tải lại và nộp phần này', exact: true}).click();
+        }
+        await page.waitForFunction(at=>performance.timeOrigin!==at,origin);
+        const prompt = page.getByText('Phần '+key+' đã khóa trên thiết bị. Đang chờ máy chủ xác nhận.',{exact:true});
+        await prompt.or(page.locator('#termPaperRecovery')).waitFor();
+        if(await page.locator('#termPaperRecovery').isVisible()){
+          await page.locator('#termPaperRecovery input').fill('Học viên mô phỏng');
+          await page.getByRole('button',{name:'Mở bài trên máy'}).click();
+        }
+        await prompt.waitFor();
+        assert.equal(await page.locator(selector).isVisible(),false);
+        continue;
+      }
       if (index === 0) {
         const download = page.waitForEvent('download');
         await page.getByRole('button', { name: 'Tải bài làm về máy' }).click();
@@ -160,7 +227,15 @@ for (const mode of ['lis_first', 'read_first']) test(slug + ' K67 paper offline 
       assert.equal(mediaRequests,0);
     }else assert.equal(rows[0].reading_deadline_at, null);
     assert.ok(lostAck, 'test must lose a committed seal response');
-    assert.ok(journalFailures.has('/term-tests/shared/exam-journal/bridge.mjs'));
+    if(testDeparture){
+      assert.equal(seenOperations.size,2);
+      const {rows: journeys}=await f.db.query('SELECT sections FROM assessment.term_k67_cbt_journey');
+      assert.equal(journeys.length,1);
+      for(const section of order)assert.equal(journeys[0].sections[section].operationId,seenOperations.get(section));
+    }else{
+      const bridge = term==='2'?'bridge-term2-k67-paper-browser-cloud-v1.mjs':'bridge.mjs';
+      assert.ok(journalFailures.has('/term-tests/shared/exam-journal/'+bridge));
+    }
     assert.deepEqual(errors, []);
   } catch (error) {
     const notice=await page?.locator('#notice').textContent({timeout:1500}).catch(()=>null);
