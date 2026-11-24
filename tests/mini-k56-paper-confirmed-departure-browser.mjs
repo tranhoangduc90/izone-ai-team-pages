@@ -17,6 +17,7 @@ const route='/term-tests/'+slug+'/';
 const apiOrigin='https://ducizone.ddns.net';
 const type={'.js':'text/javascript','.mjs':'text/javascript','.html':'text/html','.css':'text/css','.svg':'image/svg+xml'};
 const previousRoot=process.env.MINI_PAPER_UPGRADE_ROOT;
+const previousApp=process.env.MINI_PAPER_UPGRADE_APP||'app-mini-paper-browser-cloud-v1.js';
 const orders=previousRoot?['read_first']:['read_first','lis_first'];
 
 for(const order of orders)test('Mini K56 paper '+order,{timeout:170000},async()=>{
@@ -117,13 +118,13 @@ for(const order of orders)test('Mini K56 paper '+order,{timeout:170000},async()=
     const answer=await field.inputValue(), question=await field.getAttribute('data-number');
     let upgraded=false;
     if(previous){
-      await active.page.getByRole('button',{name:'Tải lại trang',exact:true}).waitFor({state:'hidden'});
+      await active.page.waitForFunction(app=>Array.from(document.scripts).some(script=>script.src.endsWith('/'+app)),previousApp);
       previous=false;
       await active.page.evaluate(async()=>{
         const registration=await navigator.serviceWorker.getRegistration();
         await registration.update();
       });
-      const {ASSET_BUILD_ID}=await import('../term-tests/mini-test-k56/offline-assets-paper-shell-confirmed-departure-v1.mjs');
+      const {ASSET_BUILD_ID}=await import('../term-tests/mini-test-k56/offline-assets-paper-shell-confirmed-departure-v2.mjs');
       await active.page.waitForFunction(expected=>new Promise(resolve=>{
         const worker=navigator.serviceWorker.controller;
         if(!worker){resolve(false);return;}
@@ -240,7 +241,7 @@ for(const order of orders)test('Mini K56 paper '+order,{timeout:170000},async()=
       if(upgraded){
         previous=true;
         await active.page.reload();
-        await active.page.waitForFunction(()=>Array.from(document.scripts).some(script=>script.src.endsWith('/app-mini-paper-browser-cloud-v1.js')));
+        await active.page.waitForFunction(app=>Array.from(document.scripts).some(script=>script.src.endsWith('/'+app)),previousApp);
         await active.page.locator('#resultReadyView').waitFor();
         assert.equal((await stored()).length,1);
         console.log(JSON.stringify({rollback:true,retainedOfficialReceipt:true}));
