@@ -25,7 +25,12 @@ const term2=process.env.K67_JOURNEY_TERM2==='1';
 const term=term1||term2;
 const pretest=process.env.K67_JOURNEY_PRETEST==='1';
 const continuity=process.env.K67_JOURNEY_CONTINUITY||'';
-assert.ok(!continuity||['eof','manual','interrupt','reload','upgrade'].includes(continuity));
+assert.ok(!continuity||['eof','manual','interrupt','reload','upgrade','recovery'].includes(continuity));
+const recovery=continuity==='recovery';
+const demoRecovery=recovery&&process.env.K67_JOURNEY_DEMO_CBT==='1';
+const recoveryTail=process.env.K67_JOURNEY_RECOVERY_TAIL||'';
+const simulateOutput=recovery&&process.env.K67_JOURNEY_SIMULATE_OUTPUT==='1';
+assert.ok(['','eof','report'].includes(recoveryTail));
 const interrupted=['interrupt','reload'].includes(continuity);
 const upgrade=continuity==='upgrade';
 const studentShellRepair=process.env.K67_JOURNEY_MINI_STUDENT_SHELL==='1';
@@ -80,6 +85,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       K67_PREVIEW_PRETEST_CBT_JOURNEY:pretest?'on':process.env.K67_PREVIEW_PRETEST_CBT_JOURNEY,
       K67_PREVIEW_TERM1_CBT_JOURNEY:term1?'on':'off',
       K67_PREVIEW_TERM2_CBT_JOURNEY:term2?'on':'off',K67_PREVIEW_LISTENING_CONTINUITY:continuity?'true':'false',
+      K67_PREVIEW_TERM1_LISTENING_RECOVERY:recovery?'true':'false',
+      K67_PREVIEW_TERM1_DEMO_CBT:demoRecovery?'true':'false',
       K67_PREVIEW_RESCUE_CLASS:rescueClass,
       K67_PREVIEW_AUDIO_PROTECTION:'true',K67_PREVIEW_REAL_MINI_AUDIO:full&&!term?'true':'false',
       K67_PREVIEW_REAL_TERM1_AUDIO:(full||r2Smoke)&&term1?'true':'false',K67_PREVIEW_AUDIO_SECONDS:'18',
@@ -106,6 +113,24 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     assert.ok(ready);
     browser=await chromium.launch({channel:'msedge',headless:true});
     const context=await browser.newContext();
+    if(simulateOutput)await context.addInitScript(()=>{
+      const actions=new Map(),devices=new EventTarget();
+      const lab=window.k67TestMedia={actions,devices,outputs:['default','stereo','speaker'],sink:'',switches:[],permissions:[]};
+      devices.enumerateDevices=async()=>lab.outputs.map(deviceId=>({deviceId,kind:'audiooutput'}));
+      for(const method of ['getUserMedia','selectAudioOutput'])devices[method]=()=>{
+        lab.permissions.push(method);
+        return Promise.reject(new DOMException('Unexpected prompt','NotAllowedError'));
+      };
+      Object.defineProperty(navigator,'mediaDevices',{value:devices});
+      Object.defineProperty(navigator,'mediaSession',{value:{setActionHandler(action,handler){
+        if(handler)actions.set(action,handler);else actions.delete(action);
+      }}});
+      Object.defineProperty(HTMLMediaElement.prototype,'sinkId',{get:()=>lab.sink,configurable:true});
+      Object.defineProperty(HTMLMediaElement.prototype,'setSinkId',{configurable:true,value:async function(sink){
+        lab.switches.push({same:this===lab.audio,sink});
+        lab.sink=sink;
+      }});
+    });
     await context.route('**/*',route=>{
       const url=new URL(route.request().url());
       if(r2Fail&&url.hostname.endsWith('.r2.cloudflarestorage.com'))return route.abort();
@@ -113,6 +138,17 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       return (url.origin===base&&(eofJournal||!journalRequest))
         ||(r2Smoke&&(url.hostname.endsWith('.r2.cloudflarestorage.com')||url.hostname==='tranhoangduc90.github.io'))
         ?route.continue():route.abort();
+    });
+    const clockReplies=[];
+    const missAck=new Set(['paused','running']);
+    if(recovery)await context.route('**/cbt-journey/listening-clock',async route=>{
+      const phase=route.request().postDataJSON().phase;
+      const response=await route.fetch({maxRetries:0});
+      if(response.ok()){
+        clockReplies.push(await response.json());
+        if(missAck.delete(phase))return route.abort('failed');
+      }
+      return route.fulfill({response});
     });
     let blockQueue=upgrade;
     if(upgrade)await context.route(/\/cbt-journey\/(status|seal|interrupt)$/,route=>blockQueue?route.abort():route.continue());
@@ -157,7 +193,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     };
     page=await openPage();
     const entry=rescueClass?'term-test-2-rescue':`${slug}-computer-based`;
-    const url=base+`/term-tests/${entry}/?class=${rescueClass||'IC2304'}&mode=${mode}`;
+    const url=base+`/term-tests/${entry}/?class=${demoRecovery?'CODEXDEMO806':rescueClass||'IC2304'}&mode=${mode}`;
     if(rescueClass){
       await page.goto(url.replace(rescueClass,'OTHER'));
       await page.getByText('Hãy mở đường dẫn chính do giảng viên gửi.',{exact:false}).waitFor();
@@ -165,7 +201,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     }
     if(departureAction==='back')await page.goto('data:text/html,<title>Trang truoc bai thi</title>');
     await page.goto(url);
-    await page.locator('#bootstrapStudent').selectOption('11111111-1111-4111-8111-111111111111');
+    await page.locator('#bootstrapStudent').selectOption(demoRecovery
+      ?'66666666-6666-4666-8666-666666666666':'11111111-1111-4111-8111-111111111111');
     const studentName=(await page.locator('#bootstrapStudent option:checked').textContent()).trim();
     await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
     if(r2Smoke){
@@ -399,6 +436,125 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         assert.equal(await audio.evaluate(player=>player.controls),false);
         assert.equal(await page.getByRole('button',{name:'Nghe tiếp',exact:true}).isVisible(),false);
         const submit=form.getByRole('button',{name:'Nộp bài Listening',exact:true});
+        if(recovery){
+          const answer=await field.inputValue();
+          assert.equal(offers.find(offer=>offer.listeningRecoveryVersion)?.listeningRecoveryVersion,1);
+          const onDisk=()=>page.evaluate(()=>{
+            const saved=Object.keys(localStorage).filter(key=>key.startsWith('term1-k67-cbt-journey-v1:'))
+              .map(key=>JSON.parse(localStorage.getItem(key))).find(record=>record?.sections?.listening);
+            return saved?{checkpoint:saved.sections.listening.listeningCheckpoint,clock:saved.listeningClockSync}:null;
+          });
+          const readClock=async()=>{
+            const reply=await fetch(base+'/preview/listening-recovery-clock');
+            return (await reply.json()).rows[0];
+          };
+          assert.equal((await readClock()).revision,0);
+          if(simulateOutput){
+            const initial=await audio.evaluate(player=>{
+              const lab=window.k67TestMedia;
+              lab.audio=player;
+              lab.source=player.getAttribute('src');
+              lab.sink='stereo';
+              lab.devices.dispatchEvent(new Event('devicechange'));
+              for(const action of ['pause','stop','play','seekbackward','seekforward','seekto'])lab.actions.get(action)({action});
+              return player.currentTime;
+            });
+            await page.waitForFunction(position=>window.k67TestMedia.audio.currentTime>position+0.2,initial);
+            await page.evaluate(()=>{
+              const lab=window.k67TestMedia;
+              lab.outputs=['default','speaker','handsfree'];
+              lab.devices.dispatchEvent(new Event('devicechange'));
+              lab.actions.get('pause')({action:'pause'});
+            });
+            await page.waitForFunction(()=>window.k67TestMedia.switches.length===1);
+            assert.deepEqual(await audio.evaluate(player=>{
+              const lab=window.k67TestMedia;
+              return {same:player===lab.audio,source:player.getAttribute('src')===lab.source,rate:player.playbackRate,
+                paused:player.paused,switches:lab.switches,permissions:lab.permissions};
+            }),{same:true,source:true,rate:1,paused:false,switches:[{same:true,sink:''}],permissions:[]});
+            log('simulated_output_continued',{physicalSignalMeasured:false});
+          }
+          await audio.evaluate(player=>player.pause());
+          await page.getByText('Đồng hồ Listening đang tạm dừng',{exact:true}).waitFor();
+          await page.waitForFunction(()=>Object.keys(localStorage).filter(key=>key.startsWith('term1-k67-cbt-journey-v1:'))
+            .some(key=>JSON.parse(localStorage.getItem(key)).listeningClockSync?.pending?.[0]?.phase==='paused'));
+          const before=await onDisk();
+          await page.close();
+          page=await openPage();
+          await page.goto(url,{waitUntil:'domcontentloaded'});
+          const resume=page.getByRole('button',{name:'Nghe tiếp',exact:true});
+          const recover=page.getByRole('button',{name:'Mở bài đã lưu',exact:true});
+          await resume.or(recover).first().waitFor();
+          if(await recover.isVisible()){
+            await page.getByLabel('Họ và tên dùng khi vào thi').fill(studentName);
+            await recover.click();
+          }
+          await resume.waitFor({timeout:12000}).catch(async error=>{
+            const reopen=await page.evaluate(()=>({
+              text:document.body.innerText.slice(0,1300),registered:navigator.serviceWorker.controller?.scriptURL,
+              run:window.TERM_TEST_BOOTSTRAP?.miniJourney?.view()?.nextSection,
+              player:document.getElementById('miniJourneyAudio')?.readyState
+            }));
+            throw Error('Offline Listening resume did not reopen: '+JSON.stringify({reopen,errors}),{cause:error});
+          });
+          assert.equal(await page.locator('#listeningView [data-number]:visible').first().inputValue(),answer);
+          assert.equal((await onDisk()).checkpoint.positionMs,before.checkpoint.positionMs);
+          await resume.click();
+          await page.waitForFunction(()=>Object.keys(localStorage).filter(key=>key.startsWith('term1-k67-cbt-journey-v1:'))
+            .some(key=>JSON.parse(localStorage.getItem(key)).listeningClockSync?.pending?.[1]?.phase==='running'));
+          assert.equal((await readClock()).operations,0);
+          const after=await onDisk();
+          assert.equal(after.checkpoint.resumeCount,1);
+          assert.ok(after.checkpoint.positionMs>before.checkpoint.positionMs);
+          await context.setOffline(false);
+          await page.waitForFunction(()=>Object.keys(localStorage).filter(key=>key.startsWith('term1-k67-cbt-journey-v1:'))
+            .some(key=>JSON.parse(localStorage.getItem(key)).listeningClockSync?.revision===2),null,{timeout:30000});
+          const stored=await readClock();
+          assert.equal(stored.operations,2);
+          assert.equal(stored.listening_submitted_at,null);
+          assert.equal(stored.listening_eof_at,null);
+          assert.equal(stored.snapshot.phase,'running');
+          assert.equal(clockReplies.length,4);
+          assert.deepEqual(clockReplies[0],clockReplies[1]);
+          assert.deepEqual(clockReplies[2],clockReplies[3]);
+          const reopenedAudio=page.locator('#miniJourneyAudio');
+          assert.equal(await reopenedAudio.evaluate(player=>player.playbackRate),1);
+          if(recoveryTail==='eof'){
+            await page.getByText(/Đã nghe hết · Còn [1-9]/).waitFor({timeout:25000});
+            assert.equal(await reopenedAudio.count(),0);
+            assert.equal(await page.locator('#listeningView').isVisible(),true);
+            assert.equal((await readClock()).listening_submitted_at,null);
+            await page.waitForFunction(()=>window.TERM_TEST_BOOTSTRAP.miniJourney.view().nextSection!=='listening');
+            await page.waitForTimeout(1000);
+            const ended=await readClock();
+            assert.ok(ended.listening_submitted_at&&ended.listening_eof_at);
+            assert.equal(ended.operations,2);
+            log('listening_review_then_seal_verified',{clockOperations:ended.operations});
+          }else if(recoveryTail==='report'){
+            await reopenedAudio.evaluate(player=>{
+              player.src=URL.createObjectURL(new Blob(['fixture cannot decode'],{type:'audio/mpeg'}));
+              player.load();
+            });
+            const reportDialog=page.getByRole('dialog',{name:'Báo lỗi âm thanh'});
+            await reportDialog.waitFor({timeout:12000});
+            assert.match(await reportDialog.innerText(),/không thể nghe tiếp/);
+            assert.equal(await resume.isVisible(),false);
+            assert.equal(await page.locator('#listeningView [data-number]:visible').first().inputValue(),answer);
+            await reportDialog.getByRole('button',{name:'Tôi không nghe thấy âm thanh',exact:true}).click();
+            const next=page.getByRole('dialog',{name:'Listening gián đoạn'});
+            await next.waitFor();
+            assert.equal(await reopenedAudio.count(),0);
+            await next.getByRole('button',{name:'Tôi đã hiểu. Đến phần thi tiếp theo.',exact:true}).click();
+            const advanced=mode==='lis_first'?'reading':'writing';
+            assert.equal(await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.miniJourney.view().nextSection),advanced);
+            assert.equal((await readClock()).listening_submitted_at,null);
+            log('listening_hard_stop_then_report_verified',{next:advanced});
+          }
+          assert.deepEqual(errors,[]);
+          log('listening_recovery_clock_verified',{requests:clockReplies.length,sqlRows:stored.operations,
+            frozenMs:before.checkpoint.positionMs,remainingMs:stored.snapshot.remainingMs,atRate:1});
+          return;
+        }
         if(continuity==='manual'||upgrade){
           dismissNextDialog=true;
           await submit.click();
