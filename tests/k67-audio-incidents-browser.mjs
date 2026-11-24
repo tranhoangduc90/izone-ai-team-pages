@@ -15,12 +15,13 @@ const {chromium}=require('playwright');
 const pages=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const backend=process.env.K67_BACKEND_FIXTURE_ROOT||path.resolve(pages,'../classroom-mapping-review/products/term-mini-k67');
 const evidence=process.env.K67_SLICE1_EVIDENCE||path.join(pages,'output/playwright/k67-audio-incidents');
+const onlineSlug=process.env.K67_ONLINE_COMPAT_SLUG||'term-test-1';
 let fixture,browser,base;let fixtureLog='';
 before(async()=>{
   await mkdir(evidence,{recursive:true});await access(path.join(backend,'tools/preview-exam-order.mjs'));
   const portServer=createServer();portServer.listen(0,'127.0.0.1');await once(portServer,'listening');
   const port=portServer.address().port;await new Promise(resolve=>portServer.close(resolve));base=`http://127.0.0.1:${port}`;
-  fixture=spawn(process.execPath,['tools/preview-exam-order.mjs',pages],{cwd:backend,windowsHide:true,
+  fixture=spawn(process.execPath,[process.env.K67_ONLINE_PREVIEW_TOOL||'tools/preview-exam-order.mjs',pages],{cwd:backend,windowsHide:true,
     env:{...process.env,K67_ORDER_NATIVE_URL:'',K67_PREVIEW_PORT:String(port),K67_PREVIEW_AUDIO_SECONDS:'90',K67_PREVIEW_AUDIO_PROTECTION:'true'},stdio:['ignore','pipe','pipe']});
   fixture.stdout.on('data',data=>fixtureLog+=data);fixture.stderr.on('data',data=>fixtureLog+=data);
   const deadline=Date.now()+20000;
@@ -36,15 +37,36 @@ after(async()=>{await browser?.close();fixture?.kill();await writeFile(path.join
 async function open(slug='term-test-1',mode='lis_first',init){
   const context=await browser.newContext();
   await context.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
-  const page=await context.newPage();page.setDefaultTimeout(15000);const errors=[];
+  if(process.env.K67_PREVIEW_EXAM_JOURNAL){
+    await context.route(url=>url.origin===base&&url.pathname==='/term-tests/'+slug+'-computer-based/',async route=>{
+      const response=await route.fetch();
+      const source=await response.text();
+      const body=source.replace(/<meta\s+name="izone-(?:mini-k67|term2-k67|pretest-cbt|pretest-content)-journal-ingress"[^>]*>/g,'');
+      await route.fulfill({response,body});
+    });
+  }
+  const page=await context.newPage();page.setDefaultTimeout(15000);const errors=[],requests=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+  page.on('response',response=>{
+    const url=new URL(response.url());
+    if(url.origin!==base||!url.pathname.startsWith('/api/term-tests/'))return;
+    requests.push({route:url.pathname.split('/').filter(x=>!(/^[0-9a-f-]{36}$/.test(x))).join('/'),
+      status:response.status()});
+  });
   if(init)await page.addInitScript(init);
   assert.equal((await context.request.post(base+'/preview/reset',{data:{}})).status(),200);
-  await page.goto(base+`/term-tests/${slug}-computer-based/?class=IC2304&mode=${mode}`);
-  await page.locator('#bootstrapStudent').selectOption('11111111-1111-4111-8111-111111111111');
+  const isPretest=slug==='pretest-lesson-16';
+  await page.goto(base+`/term-tests/${slug}-computer-based/?class=${isPretest?'CODEXDEMO806':'IC2304'}&mode=${mode}`);
+  await page.locator('#bootstrapStudent').selectOption(isPretest?'66666666-6666-4666-8666-666666666666':'11111111-1111-4111-8111-111111111111');
   await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
   if(mode==='read_first'){
-    await page.locator('#startReading').click();await page.locator('#readingView').waitFor({state:'visible'});
+    await page.locator('#startReading').click();
+    try{await page.locator('#readingView').waitFor({state:'visible'});}
+    catch(error){
+      const messages=await page.locator('[role="alert"], #notice, #bootstrapNotice').allTextContents();
+      await writeFile(path.join(evidence,slug+'-reading-entry.json'),JSON.stringify({requests,messages,errors},null,2),'utf8');
+      throw error;
+    }
     await page.locator('#submitReading').click();
   }
   await page.locator('#bootstrapPreview').click();await page.locator('#bootstrapStart').click();
@@ -61,29 +83,31 @@ async function sampleAndResume(page){
 
 async function readOnlineAudioJournal(page,context,token) {
   if(!process.env.K67_PREVIEW_EXAM_JOURNAL)return;
-  let rows=[];
+  let rows=[],allCauses=[],bridges=[];
   for(let attempt=0;attempt<20;attempt++){
-    await page.evaluate(async()=>{
-      const slug='term-test-1';
+    bridges=await page.evaluate(async slug=>{
       const key=JSON.stringify([location.origin+'/api/term-tests/'+slug,slug]);
       const bridge=window[Symbol.for('izone.examJournal.connections.v1')]?.get(key);
       await bridge?.recorder.idle();
-      await bridge?.recorder.flush({force:true});
-    });
+      const result=await bridge?.recorder.flush({force:true});
+      return {onlineCheckpointVersion:bridge?.recordPretestCheckpoint?.toString().includes('cause='),status:result?.status,
+        readers:[...window[Symbol.for('izone.examJournal.connections.v1')]?.values()||[]].map(x=>Object.keys(x))};
+    },onlineSlug);
     const response=await context.request.get(base+'/preview/writing-journal?session='+token);
     assert.equal(response.status(),200);
     const {events}=await response.json();
+    allCauses=[...new Set(events.map(row=>(row.event?.data??row.data)?.cause).filter(Boolean))];
     rows=events.map(row=>row.event?.data??row.data)
-      .filter(row=>row?.cause==='k67_online_listening').map(row=>row.checkpointState);
+      .filter(row=>['k67_online_listening','term2_k67_online'].includes(row?.cause)).map(row=>row.checkpointState);
     if(rows.some(row=>row.phase==='audio_player_retired')&&
        rows.some(row=>row.phase==='audio_media_action'&&row.disposition==='inactive'))return rows;
     await page.waitForTimeout(200);
   }
-  throw Error('Missing retirement or late media action in Collector: '+JSON.stringify(rows.map(row=>row.phase)));
+  throw Error('Missing retirement or late media action in Collector: '+JSON.stringify({phases:rows.map(row=>row.phase),allCauses,bridges}));
 }
 
 for(const mode of ['lis_first','read_first'])test(`Media Session giữ nguyên audio online · ${mode}`,async()=>{
-  const {page,context,token,read,errors}=await open('term-test-1',mode,()=>{
+  const {page,context,token,read,errors}=await open(onlineSlug,mode,()=>{
     const actions=new Map();
     Object.defineProperty(navigator,'mediaSession',{value:{
       setActionHandler(action,handler){if(handler)actions.set(action,handler);else actions.delete(action);}
@@ -164,7 +188,7 @@ for(const mode of ['lis_first','read_first'])test(`Media Session giữ nguyên a
 });
 
 for(const mode of ['lis_first','read_first'])test(`Tua hoặc đổi tốc độ thật dừng online đúng mốc · ${mode}`,async()=>{
-  const {page,context,read,errors}=await open('term-test-1',mode);
+  const {page,context,read,errors}=await open(onlineSlug,mode);
   try{
     const first=page.locator('#listeningQuestions [data-number]').first();
     const number=await first.getAttribute('data-number');
