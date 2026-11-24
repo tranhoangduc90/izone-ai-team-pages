@@ -1,0 +1,49 @@
+.exam-departure-note {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .4rem 1rem;
+  margin-block: .5rem;
+}
+.exam-departure-note[hidden],
+.exam-departure-note [hidden] {
+  display: none;
+}
+.exam-departure-note p {
+  margin: 0;
+}
+.exam-departure-note [role="status"] {
+  grid-column: 1 / -1;
+}
+.exam-departure-note .button {
+  grid-column: 2;
+  grid-row: 1;
+}
+.exam-departure-dialog {
+  width: min(37rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  margin: auto;
+  padding: 1.25rem;
+}
+.exam-departure-dialog::backdrop {
+  background: rgba(15, 23, 42, .6);
+}
+.exam-departure-dialog h2 {
+  margin-top: 0;
+}
+.exam-departure-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .5rem;
+  margin-top: 1rem;
+}
+@media (max-width: 600px) {
+  .exam-departure-note {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .exam-departure-note .button {
+    grid-area: auto;
+    justify-self: start;
+  }
+}

@@ -7,8 +7,9 @@ import test from 'node:test';
 process.env.K56_FIXTURE_IMPORT_ONLY='1';
 const {fixture,wait}=await import('./term2-offline-browser.mjs');
 const output=process.env.TERM2_EVIDENCE;assert.ok(output);
-const workerName='offline-worker-student-cache-v2-preview-verified-v1-protected-listening-v2.js';
-test('Term2 refreshed shell installs cold, keeps speaker continuation stable and restores Reading offline',{timeout:90000},async()=>{
+const variant='-confirmed-departure-v1';
+const workerName='offline-worker-student-cache-v2-preview-verified-v1'+variant+'.js';
+test('Term2 refreshed shell installs cold, keeps speaker continuation stable and preserves the sealed offline answer',{timeout:90000},async()=>{
  const f=await fixture('lis_first',{product:2}),p=f.page;f.controls.r2Audio=true;
  f.controls.listeningReportsEnabled=true;f.controls.preparedOverride={term2ParallelEntry:true};
  try{
@@ -34,9 +35,13 @@ test('Term2 refreshed shell installs cold, keeps speaker continuation stable and
   const before=await p.evaluate(()=>({scope:window.K56_TERM2_OFFLINE.scope,section:window.K56_TERM2_OFFLINE.record.sections.reading}));
   f.disconnected=true;await f.context.setOffline(true);await p.reload();
   await wait(p,()=>window.K56_TERM2_APP_READY,'Refreshed Term2 Reading offline');
-  assert.equal(await p.locator('#readingQuestions input[data-number]').first().inputValue(),'Term2 draft after refreshed cold cache');
-  const after=await p.evaluate(()=>({scope:window.K56_TERM2_OFFLINE.scope,section:window.K56_TERM2_OFFLINE.record.sections.reading}));
-  assert.deepEqual(after,before);
+  const after=await p.evaluate(()=>({scope:window.K56_TERM2_OFFLINE.scope,section:window.K56_TERM2_OFFLINE.record.sections.reading,
+    next:window.K56_TERM2_OFFLINE.sectionResponse().nextSection}));
+  assert.deepEqual(after.scope,before.scope);
+  assert.equal(after.section.deadlineAt,before.section.deadlineAt);
+  assert.equal(after.section.sealed,true);
+  assert.ok(Object.values(JSON.parse(after.section.content).answers).includes('Term2 draft after refreshed cold cache'));
+  assert.equal(after.next,'writing');
   assert.equal([...f.receipts.values()].filter(row=>row.kind==='interrupt').length,1);
   assert.deepEqual(f.errors,[]);
   await writeFile(resolve(output,'TERM2_K56_SHELL_REFRESH_BROWSER_PROOF.json'),JSON.stringify({
@@ -51,8 +56,8 @@ test('Term2 keeps the active reading tab on the previous pinned worker while the
  const routePath=new URL(f.url).pathname;
  const entryPath='/term-tests/term-test-2-k56-computer-based/index.html';
  const fresh=await readFile(new URL('..'+entryPath,import.meta.url),'utf8');
- const legacy=workerName.replace('-protected-listening-v2','-protected-listening-v1');
- const prior=fresh.replace('-protected-listening-v2.js','-protected-listening-v1.js');
+ const legacy=workerName.replace(variant,'-protected-listening-v2');
+ const prior=await readFile(new URL('..'+entryPath.replace('index.html','index-student-cache-v2-preview-verified-v1-protected-listening-v2.html'),import.meta.url),'utf8');
  assert.notEqual(prior,fresh);
  f.controls.assetOverrides.set(routePath,prior);
  f.controls.r2Audio=true;
@@ -73,7 +78,7 @@ test('Term2 keeps the active reading tab on the previous pinned worker while the
   f.controls.assetOverrides.delete(routePath);
   const newTab=await f.context.newPage();
   await newTab.goto(f.url);
-  assert.ok(await newTab.evaluate(()=>[...document.scripts].some(script=>script.src.includes('protected-listening-v2'))));
+  assert.ok(await newTab.evaluate(name=>[...document.scripts].some(script=>script.src.includes(name)),variant));
   await newTab.getByText('Bài đang mở ở tab khác. Hãy quay lại tab đó.',{exact:true}).waitFor();
   assert.equal(await readWorker(original),legacy);
   assert.equal(await field.inputValue(),answer);
@@ -96,13 +101,13 @@ for (const demo of [false, true]) {
     const path = `term-tests/term-test-2-k56-computer-based/${demo ? 'demo-journal-v1/' : ''}index.html`;
     const prior = execFileSync('git', ['show', `${rollbackBase}:${path}`]);
     const priorSource = prior.toString('utf8');
-    const oldVariant = priorSource.includes('-protected-listening-v1.js') ? '-protected-listening-v1' : '';
+    const oldVariant = priorSource.match(/-protected-listening-v[12](?=\.js)/)?.[0] || '';
     const oldBootstrap = (demo ? 'bootstrap-term2-demo-journal-v1-preview-verified-v1' :
       'bootstrap-log-renewal-student-cache-v2-preview-verified-v1') + oldVariant + '.js';
     assert.ok(priorSource.includes(oldBootstrap));
-    assert.ok(!priorSource.includes('protected-listening-v2'));
-    const currentWorker = demo ? 'offline-worker-preview-verified-v1-protected-listening-v2.js' : workerName;
-    const previousWorker = currentWorker.replace('-protected-listening-v2', oldVariant);
+    assert.ok(!priorSource.includes(variant));
+    const currentWorker = demo ? 'offline-worker-preview-verified-v1'+variant+'.js' : workerName;
+    const previousWorker = currentWorker.replace(variant, oldVariant);
     const selectLearner = async (page, exam) => {
       await page.goto(exam.url);
       await page.locator(`#bootstrapStudent option[value="${exam.student}"]`).waitFor({state: 'attached'});
@@ -147,10 +152,13 @@ for (const demo of [false, true]) {
       original.disconnected = true;
       await original.context.setOffline(true);
       await page.reload();
-      await wait(page, () => window.K56_TERM2_APP_READY, 'Pinned protected package reopened offline');
+      await wait(page, () => window.K56_TERM2_OFFLINE?.record?.sections.reading?.sealed, 'Pinned package restored the offline seal');
+      await page.locator('#bootstrapPreview').waitFor({state:'visible'});
       assert.equal(await readWorker(page), currentWorker);
       assert.deepEqual(await before(), scope);
-      assert.equal(await field.inputValue(), answer);
+      const sealedContent=await page.evaluate(()=>window.K56_TERM2_OFFLINE.record.sections.reading.sealed&&
+        window.K56_TERM2_OFFLINE.record.sections.reading.content);
+      assert.ok(Object.values(JSON.parse(sealedContent).answers).includes(answer));
       assert.deepEqual(original.errors, []);
     } finally {
       await original.close();
