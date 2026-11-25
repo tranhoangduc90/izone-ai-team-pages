@@ -812,6 +812,19 @@
       const deviceId=state.annotationRunId||crypto.randomUUID();
       const {clientRunId}=await intake.bindFullAdmission({api:intake.assignmentApi,session,deviceId});
       if(elements.bootstrapStudent.value!==ref||(state.classCode||classCode)!==current)throw Error('ASSIGNMENT_SELECTION_CHANGED');
+      if(!isUuid(clientRunId))throw Error('ASSIGNMENT_RUN_INVALID');
+      if(parallelEntry()&&clientRunId!==state.clientRunId){
+        // Ca thi thay mã lượt tạm bằng mã máy chủ cấp trước khi chuẩn bị audio.
+        releaseListeningLease();
+        if(!await acquireListeningLease(ref,current,clientRunId)){
+          showNotice('Lượt thi đang mở ở tab khác. Hãy quay lại tab đó để tiếp tục.',true);
+          throw Error('ASSIGNMENT_RUN_IN_ANOTHER_TAB');
+        }
+        if(elements.bootstrapStudent.value!==ref||(state.classCode||classCode)!==current){
+          releaseListeningLease();
+          throw Error('ASSIGNMENT_SELECTION_CHANGED');
+        }
+      }
       saveState({clientRunId,annotationRunId:deviceId});
       await prepareSelectedStudent(retry);
     }});
