@@ -1,6 +1,7 @@
 import {createCheckFeedback,missingCheckFields} from '../../shared/writing-check-feedback.mjs?v=20261101-v1';
 import {createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs?v=20261109-l3-v1';
-import {createClient} from './client.mjs?v=20261115-lesson4-progress';
+import {createClient} from './client.mjs?v=20261125-lesson7';
+import {mountLesson7Transfer} from '../shared/lesson7-transfer-ui.mjs?v=20261125-lesson7';
 import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261109-l3-v1';
 import {savedContent,threadsView,approvalLabel,installStyles} from './features.mjs?v=20261007-1';
 import {workflowFor,isWhole,isMulti,isPrepared,isOpinion,isDiscussion,planFields,solutionsFor,AGREEMENT_LEVELS,requiredFields,preparationError,bodyView,bodyKey,bodyIndexOf,localKey} from '../shared/workflow.mjs?v=20261120-lesson6-writing';
@@ -38,6 +39,7 @@ if(isDiscussion(lesson)){labels.chosenSolution='Phương án bạn ủng hộ';d
 if(isOpinion(lesson)){labels.agreementLevel='Mức độ đồng ý với nhận định của đề bài';labels.chosenSolution='Phương án bạn ủng hộ';labels.positionLimit='Giới hạn hoặc điều kiện · Bắt buộc khi đồng ý một phần';descriptions.outline.instruction='Chọn mức độ đồng ý và phương án bạn ủng hộ. Thân bài 1 bàn phương án không ủng hộ; thân bài 2 bảo vệ phương án ủng hộ. Nếu đồng ý một phần, chỉ rõ điều kiện và phía bạn nghiêng về. Chốt hai idea mỗi đoạn; chưa viết Topic hoặc A/X/B.';}
 const outline=isBodyOutline(lesson);
 const lesson6=lesson.activity==='lesson6';
+const lesson7=lesson.activity==='lesson7';
 const sharePractice=lesson.activity==='lesson4'||lesson6;
 const lesson5=lesson.activity==='lesson5';
 const homeworkTransferKey='izone-handout67:lesson5-homework-transfer';
@@ -114,8 +116,8 @@ function vocabulary(n){
 }
 
 // Chỉ biến thể mới vá vùng thay đổi; giữ node đang đọc khi kết quả nền cập nhật.
-function renderRegion(id,html){const node=$(id);if(!outline&&!isOpinion(lesson)&&!isDiscussion(lesson)){node.innerHTML=html;return;}const template=document.createElement('template');template.innerHTML=html;patchReadingView(node,template.content);}
-let docsProgress, docsRead;
+function renderRegion(id,html){const node=$(id);if(!outline&&!isOpinion(lesson)&&!isDiscussion(lesson)&&!lesson7){node.innerHTML=html;return;}const template=document.createElement('template');template.innerHTML=html;patchReadingView(node,template.content);}
+let docsProgress, docsRead, showLesson7Bridge;
 function render(){
   const replyDrafts=new Map([...document.querySelectorAll('[data-thread-reply]')].map(f=>[f.dataset.threadReply,{body:f.elements.body.value,id:f.dataset.replyId,sentBody:f.dataset.replyBody}]));
   const openSteps=[...document.querySelectorAll('details.prior-step[open]')].map(d=>d.id);
@@ -130,7 +132,7 @@ function render(){
    const done=[1,2].every(n=>ideaPassed(bodyView(state,n),2));
    $('completion').hidden=!done;renderRegion('completion',done?'<section class="completed"><span class="badge passed">✓ Cả hai thân bài đã hoàn thiện</span><h2>Handout Lesson '+lesson.number+' đã hoàn tất</h2><p>Bạn có thể xem lại nội dung và từ vựng trong bảng cuối của từng thân bài.</p></section>':'');
   }else{
-  $('sections').innerHTML=isWhole(lesson)?wholeSections(state,{field,comments,stepCard}):`<section class="section-group" id="topic"><div class="group-header"><div><span class="group-number" aria-hidden="true">1</span><h2>Ý tưởng & Topic sentence</h2><p>Chốt cả hai idea trước khi phát triển từng ý.</p></div></div>${stepCard('topic')}</section><section class="section-group" id="idea1"><div class="group-header"><div><span class="group-number" aria-hidden="true">2</span><h2>Hoàn thiện ý 1</h2><p>Chốt B → kiểm A → xây X → mở từ vựng.</p></div><span class="badge ${ideaPassed(state,1)?'passed':''}">${ideaPassed(state,1)?'✓ Đã đạt':'Làm từng bước'}</span></div>${['b1','a1','x1'].map(stepCard).join('')}${vocabulary(1)}${ideaPassed(state,1)&&!state.idea2Open?'<div class="next-idea"><div><strong>Ý 1 đã hoàn thiện.</strong><p>Giữ nguyên ba điểm đã đạt và bắt đầu ý tiếp theo.</p></div><button class="primary" id="next-idea">Tiếp tục với ý 2 →</button></div>':''}</section>${state.idea2Open?`<section class="section-group" id="idea2"><div class="group-header"><div><span class="group-number" aria-hidden="true">3</span><h2>Hoàn thiện ý 2</h2><p>Tiếp tục quy trình B → A → X với idea thứ hai.</p></div></div>${['b2','a2','x2'].map(stepCard).join('')}${vocabulary(2)}</section>`:'<div id="idea2" class="lock-note">◌ &nbsp; Ý 2 sẽ mở sau khi bạn hoàn thiện ý 1 và nhấn tiếp tục.</div>'}`;
+  renderRegion('sections',isWhole(lesson)?wholeSections(state,{field,comments,stepCard}):`<section class="section-group" id="topic"><div class="group-header"><div><span class="group-number" aria-hidden="true">1</span><h2>Ý tưởng & Topic sentence</h2><p>Chốt cả hai idea trước khi phát triển từng ý.</p></div></div>${stepCard('topic')}</section><section class="section-group" id="idea1"><div class="group-header"><div><span class="group-number" aria-hidden="true">2</span><h2>Hoàn thiện ý 1</h2><p>Chốt B → kiểm A → xây X → mở từ vựng.</p></div><span class="badge ${ideaPassed(state,1)?'passed':''}">${ideaPassed(state,1)?'✓ Đã đạt':'Làm từng bước'}</span></div>${['b1','a1','x1'].map(stepCard).join('')}${vocabulary(1)}${ideaPassed(state,1)&&!state.idea2Open?'<div class="next-idea"><div><strong>Ý 1 đã hoàn thiện.</strong><p>Giữ nguyên ba điểm đã đạt và bắt đầu ý tiếp theo.</p></div><button class="primary" id="next-idea">Tiếp tục với ý 2 →</button></div>':''}</section>${state.idea2Open?`<section class="section-group" id="idea2"><div class="group-header"><div><span class="group-number" aria-hidden="true">3</span><h2>Hoàn thiện ý 2</h2><p>Tiếp tục quy trình B → A → X với idea thứ hai.</p></div></div>${['b2','a2','x2'].map(stepCard).join('')}${vocabulary(2)}</section>`:'<div id="idea2" class="lock-note">◌ &nbsp; Ý 2 sẽ mở sau khi bạn hoàn thiện ý 1 và nhấn tiếp tục.</div>'}`);
   const topicDone=state.steps.topic.status==='passed',oneDone=ideaPassed(state,1),twoDone=ideaPassed(state,2);
   $('journey-nav').innerHTML=[['prompt','Đề bài','Đọc đề','?',false,true],['topic','Ý tưởng & Topic','Chốt cả hai idea','1',topicDone,true],['idea1','Lập luận ý 1',isWhole(lesson)?'Check cả chuỗi':'B → A → X','2',oneDone,topicDone],['idea2','Lập luận ý 2',isWhole(lesson)?'Check cả chuỗi':'B → A → X','3',twoDone,state.idea2Open]].map(([id,title,sub,num,done,enabled])=>`<button class="nav-item ${done?'done':''} ${id==='topic'&&!topicDone||id==='idea1'&&topicDone&&!oneDone||id==='idea2'&&state.idea2Open?'active':''}" data-target="${id}" ${enabled?'':'disabled'}><span>${done?'✓':num}</span><span>${title}<small>${sub}</small></span></button>`).join('');
   $('completion').hidden=!twoDone;
@@ -150,8 +152,36 @@ function render(){
   syncLesson5Writing();
   renderLesson4Progress();
   renderHomeworkIdeas();
+  renderLesson7Transfer();
+}
+function renderLesson7Transfer(){
+ if(!lesson6||!state.ref||!writingHandoff?.prepareLesson7)return;
+ if(!showLesson7Bridge&&!state.lesson7Transfer)return;
+ showLesson7Bridge||=mountLesson7Transfer($('prompt'),async()=>{
+  const ref=state.ref,epoch=generation,offer=state.lesson7Transfer;
+  if(!offer?.eligible||!await flush()||epoch!==generation||ref!==state.ref)throw Error('LESSON7_SOURCE_CHANGED');
+  if(state.version!==offer.version)throw Error('LESSON7_SOURCE_CHANGED');
+  const url=writingHandoff.prepareLesson7();
+  await api.transferLesson7(ref,{sourceVersion:offer.version,requestId:crypto.randomUUID()});
+  if(epoch===generation&&ref===state.ref)location.assign(url);
+ },async()=>{
+  const ref=state.ref,epoch=generation;
+  if(!await flush()||epoch!==generation||ref!==state.ref)throw Error('DRAFT_UNSAVED');
+  location.assign(writingHandoff.prepareLesson7());
+ });
+ showLesson7Bridge(state.lesson7Transfer,['body1_topic','body2_topic'].filter(key=>state.steps[key]?.status==='passed').length);
+}
+function renderLesson7Ideas(){
+ let region=$('lesson7-ideas-source');
+ if(!region){region=document.createElement('p');region.id='lesson7-ideas-source';region.className='fine-print';$('prompt').after(region);}
+ const source=state.lesson7IdeaSource;
+ const stance={agree:'Đồng ý',disagree:'Không đồng ý',partly_agree:'Đồng ý một phần'}[source?.stance];
+ const text=source?`Đã điền ${source.fields.map(key=>labels[key]).join(' và ')} từ Thân bài 2 của Homework Lesson 6.${stance?' Lập trường ở Homework · '+stance+'.':''}${state.responses.idea2?'':' Bạn có thể bổ sung Idea 2 ở dưới.'}`:
+  'Bạn có thể nhập ý trực tiếp. Để lấy ý đã chốt, hãy mở Homework Lesson 6 từ Docs cá nhân.';
+ if(region.textContent!==text)region.textContent=text;
 }
 function renderHomeworkIdeas(){
+ if(lesson7&&state.ref){renderLesson7Ideas();return;}
  if(!state.ref||!(lesson5||sharePractice))return;
  let region=$('homework-ideas-transfer');
  if(!region){
@@ -541,6 +571,8 @@ async function enter({selection=null,pinned=false,transfer=null}={}){
    clearTab(homeworkResumeKey);
    if(await startLesson5Verified(classRef,selectedStudent,isCurrent)||!isCurrent())return;
    message('Chưa xác minh được bài Lesson 4. '+homeworkHelp);
+  }else if(lesson7&&error.message==='LESSON7_HOMEWORK_AUTH_REQUIRED'){
+   message('Bài đã nhận ý từ Homework. Hãy mở Lesson 6 từ Docs cá nhân rồi bấm chuyển để đọc lại.');
   }else message('Chưa mở được bài. Hãy thử lại; bài đã lưu vẫn được giữ.');
  }
  finally{button.disabled=false;}
@@ -558,6 +590,7 @@ async function openVerifiedHandout(){
   const result=await openHandout(room.classRef,owner.studentRef,()=>epoch===generation);
   if(!result)return;
   student=owner.studentRef;names[student]=owner.displayName;
+  if(lesson7)document.querySelector('[data-lesson-text="classLesson"]').textContent=room.classRef+' · Lesson 7';
   displayHandout(result);
   if(writingHandoff.finishOpening)writingHandoff.finishOpening();
   else verifiedOpening.hidden=true;

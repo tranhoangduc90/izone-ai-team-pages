@@ -17,8 +17,8 @@ export function frontendConfiguration(config,location=globalThis.location){
   if((api.protocol!=='https:'&&!(api.protocol==='http:'&&api.hostname==='127.0.0.1'&&location.hostname==='127.0.0.1'))||api.username||api.password||api.search||api.hash||!api.pathname.endsWith('/api'))throw Error('API Homework online chưa đúng phạm vi.');
   return {mode:'online',studentEntry:config.studentEntry===true,studentEntryMemory:config.studentEntryMemory,apiBase:api.href.replace(/\/$/,''),ssoScript:new URL(config.ssoScript||'../shared/teacher-single-sign-on.js',location.href).href};
 }
-export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=>{},onReady=()=>{},showOpening,compactStudentEntry=false}={}){
-  const query=new URLSearchParams(location.search);let context=query.has('documentId')?{documentId:query.get('documentId'),assignmentId:query.get('assignment')}:null;
+export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=>{},onReady=()=>{},showOpening,compactStudentEntry=false,docsContext=null}={}){
+  const query=new URLSearchParams(location.search);let context=query.has('documentId')?{documentId:query.get('documentId'),assignmentId:query.get('assignment')}:docsContext;
   const lesson5Selection=(()=>{
     if(context||query.get('lesson5')!=='entry')return null;
     try{return JSON.parse(sessionStorage.getItem('izone:lesson5-entry-selection')||'null');}catch{return null;}
@@ -65,7 +65,7 @@ export function createOnlineAccess(config,{onWarning=()=>{},onTeacherChanged=()=
     const u=new URL(location.href),fresh=u.searchParams.has('fresh'),workspace=u.searchParams.get('workspace');u.search='';u.hash='';if(fresh)u.searchParams.set('fresh','1');for(const [key,value]of Object.entries(params))if(value!==undefined&&value!==null)u.searchParams.set(key,value);
     if(workspace==='k67')u.searchParams.set('workspace',workspace);
     if(teacherIntent())u.searchParams.set('mode',intent);
-    else {u.searchParams.set('mode','student');if(context){u.searchParams.set('documentId',context.documentId);u.searchParams.set('assignment',context.assignmentId);if(!params.assignment&&!params.submission&&!params.view)u.searchParams.set('view','assignments');}}
+    else {u.searchParams.set('mode','student');if(context){if(docsContext){u.searchParams.set('from','lesson6');u.searchParams.set('workspace','k67');}else u.searchParams.set('documentId',context.documentId);u.searchParams.set('assignment',context.assignmentId);if(!params.assignment&&!params.submission&&!params.view)u.searchParams.set('view','assignments');}}
     return u;
   }
   function cached(){try{return JSON.parse(sessionStorage.getItem(storageKey)||'null');}catch{return null;}}

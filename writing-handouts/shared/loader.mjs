@@ -2,7 +2,7 @@
 // Chỉ sau khi đủ cấu hình mới mở app. Thiếu bài hoặc lỗi mạng hiện cách tải lại, không mở nhầm bài.
 // Chỉ máy xem thử tại loopback dùng API cùng origin; trang phát hành giữ API HTTPS.
 const localPreview=['127.0.0.1','localhost'].includes(location.hostname)&&['3199','3211'].includes(location.port);
-import {lessonEntryClass} from './test-class-entry.mjs?v=20261117-lesson5-k67-entry';
+import {lessonEntryClass} from './test-class-entry.mjs?v=20261125-lesson7';
 import {installTeacherEntry} from '../../shared/teacher-entry.js?v=20261019-v1';
 const handoff=globalThis.handout67WritingHandoff;
 const apiBase=handoff?.apiBase||(localPreview?location.origin+'/api/handout67/v1':'https://ducizone.ddns.net/api/handout67/v1');
@@ -10,7 +10,7 @@ if(localPreview)globalThis.handout67ApiBase=apiBase;
 async function boot(){
  const activity=document.body.dataset.activity,view=document.body.dataset.view;
  const shareHomework=['lesson4','lesson6'].includes(activity);
- const fromVerifiedDocs=['lesson3','lesson4','lesson5','lesson6'].includes(activity)&&view==='student'&&!!handoff?.verifiedDocsStudent;
+ const fromVerifiedDocs=['lesson3','lesson4','lesson5','lesson6','lesson7'].includes(activity)&&view==='student'&&!!handoff?.verifiedDocsStudent;
  try{
   if(!/^lesson[1-9]\d*$/.test(activity)||!['student','teacher'].includes(view))throw new Error('ROUTE_INVALID');
   const [response,template]=await Promise.all([(handoff?.request||fetch)(apiBase+'/lessons/'+encodeURIComponent(activity),{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)}),fetch(new URL('./'+view+'.html?v=20261026-startup2',import.meta.url),{redirect:'error',signal:AbortSignal.timeout(15000)})]);
@@ -81,14 +81,14 @@ async function boot(){
    document.querySelector('.work-content>.page-title [data-lesson-text="writingLesson"]').removeAttribute('data-lesson-text');
   }
   if(localPreview){const banner=document.createElement('aside');banner.className='preview-banner';banner.innerHTML='<b>Bản xem thử riêng · Dữ liệu mẫu</b><p>Không ghi vào bài học viên thật. Check dùng Cổng AI thật; bài và góp ý lưu trong kho thử trên máy này.</p><a href="/writing-handouts/'+activity+'/">Trang học viên</a> · <a href="/writing-handouts/'+activity+'/teacher.html">Trang giảng viên</a>';document.body.prepend(banner);}
-  const classLabel=entryClass||(activity==='lesson5'&&lesson.classes.length>1?'Khóa 67':lesson.classes.join(', '));
+  const classLabel=entryClass||(['lesson5','lesson7'].includes(activity)&&lesson.classes.length>1?'Khóa 67':lesson.classes.join(', '));
   const texts={...lesson,classLesson:classLabel+' · Lesson '+lesson.number,courseLesson:'Khóa 6–7 · Writing lesson '+lesson.number,writingLesson:'Writing · Lesson '+lesson.number,contextLesson:'Khóa 67 · Lesson '+lesson.number,teacherTopic:lesson.title+(lesson.handoutMode==='two-bodies-v1'?' · Hai thân bài':' · Thân bài '+lesson.body),teacherTitle:'Theo dõi Lesson '+lesson.number,promptTitle:'Đề bài · '+lesson.title};
   for(const el of document.querySelectorAll('[data-lesson-text]'))el.textContent=texts[el.dataset.lessonText];
   document.querySelector('[data-lesson-brand]')?.setAttribute('aria-label','IZONE Writing Lesson '+lesson.number);
   document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':shareHomework?lesson.title:'Lesson '+lesson.number+' · Writing · IZONE';
-  const editorVersion=shareHomework?'20261120-lesson6-writing':activity==='lesson5'?'20261118-lesson5-writing':lesson.outlineOnly||['opinion-v1','discussion-v1'].includes(lesson.preparationKind)
+  const editorVersion=(shareHomework||activity==='lesson7')?'20261125-lesson7':activity==='lesson5'?'20261118-lesson5-writing':lesson.outlineOnly||['opinion-v1','discussion-v1'].includes(lesson.preparationKind)
    ?'20261113-save-log-v1':'20261109-l3-v1&check=20261101-v1&poll=20261104-v1';
-  const teacherVersion=activity==='lesson5'?'20261118-lesson5-writing':activity==='lesson4'?'20261117-teacher-library67':'20261109-l3-v1';
+  const teacherVersion=activity==='lesson7'?'20261125-lesson7':activity==='lesson5'?'20261118-lesson5-writing':activity==='lesson4'?'20261117-teacher-library67':'20261109-l3-v1';
   await import(view==='teacher'?'../lesson5/teacher.js?v='+teacherVersion+'&startup=20261026-v2':'../lesson5-thu/app.js?v='+editorVersion);
  }catch(error){
   if(fromVerifiedDocs){

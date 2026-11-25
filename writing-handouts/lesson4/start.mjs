@@ -1,5 +1,6 @@
 import runtime from '../../homework-writing/runtime-config.js?v=20261111-ic2363';
-import { frontendConfiguration, createOnlineAccess } from '../../homework-writing/online-access.js?v=20261118-lesson5';
+import { frontendConfiguration, createOnlineAccess } from '../../homework-writing/online-access.js?v=20261125-lesson7';
+import { lesson7Entry, rememberLesson7Entry } from '../shared/lesson7-context.mjs?v=20261125-lesson7';
 
 const card = document.getElementById('lesson-access');
 const root = document.getElementById('lesson-access-body');
@@ -7,8 +8,9 @@ const openingStatus = root.querySelector('[role="status"]');
 const config = frontendConfiguration(runtime);
 const query = new URLSearchParams(location.search);
 const assignment = query.get('assignment');
-const documentId = query.get('documentId');
 const activity = document.body.dataset.activity;
+const docsContext = activity === 'lesson7' ? lesson7Entry() : null;
+const documentId = docsContext?.documentId || query.get('documentId');
 
 function showOpeningError(host, error, retry) {
   if (error.stale) return;
@@ -38,17 +40,25 @@ function showOpening() {
 
 async function start() {
   if (query.get('mode') !== 'student' || query.get('workspace') !== 'k67' ||
-      !['lesson4','lesson6'].includes(activity) || !/^hw-k67-writing-lesson[46]-\d+$/.test(assignment || '') ||
-      !assignment.startsWith('hw-k67-writing-'+activity+'-') || !/^[\w-]{20,200}$/.test(documentId || '')) {
+      !['lesson4','lesson6','lesson7'].includes(activity) || !/^hw-k67-writing-lesson[46]-\d+$/.test(assignment || '') ||
+      !(activity==='lesson7' ? docsContext : assignment.startsWith('hw-k67-writing-'+activity+'-')) || !/^[\w-]{20,200}$/.test(documentId || '')) {
     throw Object.assign(Error('WRITING_ENTRY_REQUIRED'), { status: 403 });
   }
-  const access = createOnlineAccess(config, { onReady: enter, showOpening, compactStudentEntry: true });
+  const access = createOnlineAccess(config, { onReady: enter, showOpening, compactStudentEntry: true, docsContext });
   async function enter(session) {
     const studentRef = access.verifiedDocsOwner();
     const stamp = access.stamp();
     if (session.person?.role !== 'student' || !studentRef) throw Object.assign(Error('WRITING_ENTRY_REQUIRED'), { status: 403 });
     showOpening();
-    const apiBase = config.apiBase + '/student/assignments/' + encodeURIComponent(assignment) + '/handout-editor';
+    const apiBase = config.apiBase + '/student/assignments/' + encodeURIComponent(assignment) + '/handout-editor' + (activity==='lesson7'?'/lesson7':'');
+    const sourceUrl = new URL('../lesson6/',location.href);
+    sourceUrl.search = new URLSearchParams({mode:'student',workspace:'k67',assignment,documentId});
+    function prepareLesson7(){
+      rememberLesson7Entry({assignmentId:assignment,documentId});
+      const url=new URL('../lesson7/',location.href);
+      url.search=new URLSearchParams({from:'lesson6',mode:'student',workspace:'k67',assignment});
+      return url.href;
+    }
     function request(input, options = {}) {
       const url = new URL(input);
       if (!url.href.startsWith(apiBase + '/')) throw Error('HANDOUT_PATH_MISMATCH');
@@ -63,13 +73,15 @@ async function start() {
     globalThis.handout67WritingHandoff = Object.freeze({
       apiBase, request, verifiedDocsStudent: studentRef, showOpeningError,
       lesson5Entry:selection=>access.lesson5Entry(selection),
+      ...(activity==='lesson6'?{prepareLesson7}:{}),
+      ...(activity==='lesson7'?{writingUrl:sourceUrl.href}:{}),
       openingHost: root,
       finishOpening() {
         card.hidden = true;
         document.getElementById('lesson-access-style')?.remove();
       },
     });
-    await import('../shared/loader.mjs?v=20261120-lesson6-writing');
+    await import('../shared/loader.mjs?v=20261125-lesson7');
   }
   await enter(await access.open(root));
 }
