@@ -1,4 +1,4 @@
-import { mountAssignmentWaiting } from './assignment-browser.mjs?v=sitting-release-20261122';
+import { mountAssignmentWaiting } from './assignment-browser.mjs?v=preparation-recovery-20261125';
 
 // A lost start response must not turn a persisted running attempt into a new
 // admission. The server validates this token and exact identity before resume.
@@ -22,7 +22,7 @@ export async function recoverAssignmentSession({api,testId,classCode,studentRef,
 
 // Native callers supply immutable testId and the roster selection they already
 // use. The server independently checks class, registration and attempt.
-export function createStudentEntry({api,testId,target,enabledForClass,onError=()=>{}}) {
+export function createStudentEntry({api,testId,target,enabledForClass,onError=()=>{},onPreparationError,requirePrepared=false}) {
   let stop, retry, generation=0;
   const keyFor=(c,r)=>JSON.stringify([testId,c,r]);
   const admitted=new Map();
@@ -58,12 +58,12 @@ export function createStudentEntry({api,testId,target,enabledForClass,onError=()
         admitted.delete(key);
         states.delete(key);
         controls.replaceChildren(node);
-        const cancel=await mountAssignmentWaiting(node,{api,scope,label,keepMonitoring:true,onState:state=>{
+        const cancel=await mountAssignmentWaiting(node,{api,scope,label,keepMonitoring:true,requirePrepared,onPreparationError,onState:state=>{
           if(selection===generation)states.set(key,state);
         },start:async session=>{
           if(selection!==generation) throw new Error('ASSIGNMENT_SELECTION_CHANGED');
           admitted.set(key,session);
-          try {await onReady(session);} catch(error) {admitted.delete(key);throw error;}
+          try {return await onReady(session);} catch(error) {admitted.delete(key);throw error;}
         }});
         if(selection===generation)stop=cancel;else cancel();
       }
@@ -105,4 +105,19 @@ export const assignmentSessionHeaders = session => session ? {'X-Izone-Assignmen
 
 export function bindFullAdmission({api,session,deviceId}) {
   return api('student/full-preparation',{body:{...session.scope,deviceId},token:session.token});
+}
+
+// Chuyển khóa của lượt tạm sang mã chính thức trước khi lưu trạng thái mới.
+export async function adoptFullAdmissionRun({clientRunId,currentRunId,parallel,isCurrent,release,acquire}) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientRunId ?? '')) {
+    throw Error('ASSIGNMENT_RUN_INVALID');
+  }
+  if (!isCurrent()) throw Error('ASSIGNMENT_SELECTION_CHANGED');
+  if (!parallel || clientRunId === currentRunId) return;
+  release(currentRunId);
+  if (!await acquire(clientRunId)) throw Error('ASSIGNMENT_RUN_IN_ANOTHER_TAB');
+  if (!isCurrent()) {
+    release(clientRunId);
+    throw Error('ASSIGNMENT_SELECTION_CHANGED');
+  }
 }

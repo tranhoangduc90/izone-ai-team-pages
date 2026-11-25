@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-1-k56-reading-makeup",
-  "build": "issue611-ead81b9dc2b33b28",
+  "build": "issue611-f29aaf61b6dd00b4",
   "scopePath": "/term-tests/ic2311-reading-retake-substitute1-k56/",
   "assets": [
     {
@@ -105,7 +105,7 @@
     },
     {
       "path": "../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122",
-      "sha256": "cfab1d2998a5543b9adbc6f0a6cd4bca9c8cfbdec1f2521e33f9e321f9143d11"
+      "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea"
     },
     {
       "path": "../substitute-assignment-full/assignment-catalog.mjs",
@@ -113,7 +113,7 @@
     },
     {
       "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122",
-      "sha256": "d54091d35143d792591ccb900885d4a9835e14e581c42d4477db70638977ff54"
+      "sha256": "9796c964f609be780e441c87d81ffd571cc2feae3cec261930165f29c7c5a2ae"
     },
     {
       "path": "../substitute-assignment-full/public-sitting-status.mjs?v=sitting-release-20261122",
@@ -217,11 +217,11 @@
     },
     {
       "path": "../substitute-skill-shared/objective-controller-listening-report-v1.mjs?v=roster-picker-20261122",
-      "sha256": "912a36e2d386ec571434e9332e587c8063cdd49268275fcca976af32ec2129c7"
+      "sha256": "e6bb4ce0179fd42d29172e0c5993e59c30c7619df05846ae8d4d87323f61a037"
     },
     {
       "path": "../substitute-skill-shared/objective-controller.mjs?v=roster-picker-20261122",
-      "sha256": "4ee1b19dc986d17f75ab0b9af0a782fa9f1bfcfeb076cf25c3b45b055e0897b7"
+      "sha256": "c6212e8b06ec470911e3b72233bfb1c6a76e26542e61aa14496bc63359966497"
     },
     {
       "path": "../substitute-skill-shared/offline.mjs",
@@ -277,7 +277,7 @@
     },
     {
       "path": "app.mjs",
-      "sha256": "21b273a85066c342e42bcf091bbf33124ae77eddc064371a61dba916fcf1f088"
+      "sha256": "f4db33eb280b11d80a3e7e94c985c6c9094a4a14c3c28e391f070dfa3918aacc"
     },
     {
       "path": "boot.js?v=roster-picker-20261122",
@@ -346,6 +346,14 @@
     {
       "path": "vendor/term-tests/substitute-shared/izone-logo-color.png",
       "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-browser.mjs?v=preparation-recovery-20261125",
+      "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=preparation-recovery-20261125",
+      "sha256": "9796c964f609be780e441c87d81ffd571cc2feae3cec261930165f29c7c5a2ae"
     }
   ]
 }

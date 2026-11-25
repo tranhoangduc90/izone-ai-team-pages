@@ -272,7 +272,7 @@ async function prepareOfflineShell(){
 const managedAssignmentClasses=({known:new Map(),has(code){return this.known.get(code)===true;},async check(code){
     if(!/^IC\d{3,8}$/.test(String(code)))return false;
     if(this.known.has(code))return this.has(code);
-    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122');
+    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=preparation-recovery-20261125');
     const result=await assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/')('student/entry',{query:{testId:"substitute-test-1-k56-listening-makeup",classCode:code}});
     if(typeof result.managed!=='boolean')throw Error('ASSIGNMENT_SCOPE_UNAVAILABLE');
     this.known.set(code,result.managed);return result.managed;
@@ -282,15 +282,16 @@ async function assignmentWait(classCode,studentRef){
  if(!(managedAssignmentClasses.check?await managedAssignmentClasses.check(classCode):managedAssignmentClasses.has(classCode)))return false;
  if(!assignmentEntry){
   const [{createStudentEntry},{assignmentClient}]=await Promise.all([
-    import('../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122'),import('../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122')]);
+    import('../substitute-assignment-full/assignment-student-entry.mjs?v=preparation-recovery-20261125'),import('../substitute-assignment-full/assignment-browser.mjs?v=preparation-recovery-20261125')]);
   const target=document.createElement('div');target.className='assignment-entry';$('student').parentElement.after(target);
-  assignmentEntry=createStudentEntry({api:assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/'),testId:"substitute-test-1-k56-listening-makeup",target,
+  assignmentEntry=createStudentEntry({requirePrepared:true,api:assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/'),testId:"substitute-test-1-k56-listening-makeup",target,
     enabledForClass:code=>managedAssignmentClasses.has(code)});
  }
  if(assignmentEntry.session({classCode,studentRef}))return false;
  return assignmentEntry.select({classCode,studentRef,onReady:async()=>{
    if(($('student').value||state?.identity?.studentRef)!==studentRef)throw Error('ASSIGNMENT_SELECTION_CHANGED');
    await prepare();
+   return prepared;
  }});
 }
 const lookupAssignmentSession=(classCode,studentRef)=>assignmentEntry?.session({classCode,studentRef})?.token;

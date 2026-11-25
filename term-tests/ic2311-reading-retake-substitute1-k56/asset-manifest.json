@@ -1,5 +1,5 @@
 {
-  "build": "reading-retake-20261122-roster-picker",
+  "build": "preparation-4e7c6b67fca6e087",
   "assets": [
     {
       "id": "parity12_29",
@@ -128,7 +128,7 @@
     },
     {
       "path": "../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122",
-      "sha256": "cfab1d2998a5543b9adbc6f0a6cd4bca9c8cfbdec1f2521e33f9e321f9143d11",
+      "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea",
       "id": "assignment-browser"
     },
     {
@@ -138,7 +138,7 @@
     },
     {
       "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122",
-      "sha256": "d54091d35143d792591ccb900885d4a9835e14e581c42d4477db70638977ff54",
+      "sha256": "9796c964f609be780e441c87d81ffd571cc2feae3cec261930165f29c7c5a2ae",
       "id": "assignment-student-entry"
     },
     {
@@ -264,12 +264,12 @@
     {
       "id": "parity12_73",
       "path": "../substitute-skill-shared/objective-controller-listening-report-v1.mjs?v=roster-picker-20261122",
-      "sha256": "912a36e2d386ec571434e9332e587c8063cdd49268275fcca976af32ec2129c7"
+      "sha256": "e6bb4ce0179fd42d29172e0c5993e59c30c7619df05846ae8d4d87323f61a037"
     },
     {
       "id": "parity12_74",
       "path": "../substitute-skill-shared/objective-controller.mjs?v=roster-picker-20261122",
-      "sha256": "4ee1b19dc986d17f75ab0b9af0a782fa9f1bfcfeb076cf25c3b45b055e0897b7"
+      "sha256": "c6212e8b06ec470911e3b72233bfb1c6a76e26542e61aa14496bc63359966497"
     },
     {
       "id": "parity12_75",
@@ -334,7 +334,7 @@
     {
       "id": "asset_1",
       "path": "app.mjs?v=roster-picker-20261122",
-      "sha256": "21b273a85066c342e42bcf091bbf33124ae77eddc064371a61dba916fcf1f088"
+      "sha256": "f4db33eb280b11d80a3e7e94c985c6c9094a4a14c3c28e391f070dfa3918aacc"
     },
     {
       "id": "asset_2",
@@ -495,6 +495,16 @@
       "id": "asset_25",
       "path": "vendor/term-tests/substitute-test-1-k56-computer-based/styles.css",
       "sha256": "0111d675e284bc779e0940a129a6f392cca66b352ce598b5b5ed92c5ac2134ef"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-browser.mjs?v=preparation-recovery-20261125",
+      "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea",
+      "id": "assignment-browser"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=preparation-recovery-20261125",
+      "sha256": "9796c964f609be780e441c87d81ffd571cc2feae3cec261930165f29c7c5a2ae",
+      "id": "assignment-student-entry"
     }
   ]
 }

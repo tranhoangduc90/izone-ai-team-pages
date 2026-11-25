@@ -17,6 +17,17 @@ const blockedText = {
   PART_REQUIRED:'Chưa chọn phần thi',
 };
 
+const preparationMessages = {
+  SITTING_CLOSED:'Ca thi đã đóng. Hãy liên hệ giảng viên để được hướng dẫn.',
+  DEVICE_MISMATCH:'Lượt thi đã được chuẩn bị trên thiết bị khác. Hãy quay lại thiết bị đó.',
+  RETAKE_ALREADY_USED:'Bạn đã dùng lượt thi cho bài này.',
+  ALREADY_SUBMITTED:'Bài này đã được nộp.',
+  ATTEMPT_ALREADY_STARTED:'Lượt thi đã bắt đầu. Hãy tiếp tục trên thiết bị đã mở lượt.',
+  ASSIGNMENT_RUN_IN_ANOTHER_TAB:'Lượt thi đang mở ở tab khác. Hãy quay lại tab đó để tiếp tục.',
+  ASSIGNMENT_ONLINE_REQUIRED:'Hãy kết nối mạng rồi thử chuẩn bị lại.',
+};
+const preparationBlocked = new Set(['SITTING_CLOSED','DEVICE_MISMATCH','RETAKE_ALREADY_USED','ALREADY_SUBMITTED','ATTEMPT_ALREADY_STARTED']);
+
 export function assignmentClient(baseUrl) {
   return async (route, { query, body, token, signal } = {}) => {
     const url = new URL(route, baseUrl);
@@ -32,7 +43,10 @@ export function assignmentClient(baseUrl) {
       cache:'no-store', headers, signal:signal ?? AbortSignal.timeout(10000),
       body:body === undefined ? undefined : JSON.stringify(body) });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.code ?? 'ASSIGNMENT_UNAVAILABLE');
+    if (!response.ok) {
+      const code = result.code ?? 'ASSIGNMENT_UNAVAILABLE';
+      throw Object.assign(new Error(code), {code,status:response.status});
+    }
     return result;
   };
 }
@@ -299,12 +313,12 @@ export async function mountAssignmentSelector(target, { api, testId, start }) {
 }
 
 export async function mountAssignmentWaiting(target, { api, scope, start, storage=sessionStorage,
-  label='Bắt đầu',onState=()=>{},keepMonitoring=false }) {
+  label='Bắt đầu',onState=()=>{},onPreparationError=()=>{},keepMonitoring=false,requirePrepared=false }) {
   const key = 'substitute-assignment:'+[scope.sittingId,scope.testId,scope.classCode,scope.studentRef].join(':');
   const message = element('p','Đang mở phiên chờ…'); message.setAttribute('aria-live','polite');
   const button = element('button',label,{type:'button',disabled:true});
   target.replaceChildren(message,button);
-  let token=storage.getItem(key),timer,closed=false,failures=0,busy=false,ready=false,lastState;
+  let token=storage.getItem(key),timer,closed=false,failures=0,busy=false,ready=false,lastState,preparationError;
   const stop = () => { closed = true; clearTimeout(timer); };
   async function refresh() {
     if (closed || busy) return;
@@ -319,8 +333,13 @@ export async function mountAssignmentWaiting(target, { api, scope, start, storag
         'Ngoài giờ thi' : scope.sittingId.startsWith('window-') && status.canStart && status.state==='assigned' ?
           'Ca thi đang mở' : statusText[status.state] ?? 'Chờ giao';
       if (!status.sittingClosed && status.state==='assigned' && !status.canStart) message.textContent='Đã giao · Chờ đến giờ bắt đầu';
-      button.disabled = ready || status.canStart!==true;
-      button.textContent = status.state === 'running' ? 'Tiếp tục' : label;
+      if (status.canStart && preparationError) {
+        message.textContent = preparationMessages[preparationError] ?? 'Chưa chuẩn bị được bài. Hãy thử lại cùng lượt thi.';
+      } else if (ready && status.canStart && status.state === 'assigned') {
+        message.textContent = 'Đã chuẩn bị bài';
+      }
+      button.disabled = ready || status.canStart!==true || preparationBlocked.has(preparationError);
+      button.textContent = status.state === 'running' ? 'Tiếp tục' : preparationError ? 'Thử chuẩn bị lại' : label;
       if (status.state === 'submitted') { stop(); return; }
     } catch (error) {
       if (closed) return;
@@ -338,7 +357,9 @@ export async function mountAssignmentWaiting(target, { api, scope, start, storag
       }
       failures++;
       button.disabled = true;
-      message.textContent = error.message==='SITTING_CLOSED'?'Ngoài giờ thi':'Chưa kiểm tra được quyền bắt đầu. Đang thử lại…';
+      message.textContent = error.message==='SITTING_CLOSED' ? 'Ngoài giờ thi' :
+        preparationMessages[preparationError] ?? (preparationError ? 'Chưa chuẩn bị được bài. Đang kiểm tra lại quyền thi…' :
+          'Chưa kiểm tra được quyền bắt đầu. Đang thử lại…');
     }
     timer = setTimeout(refresh, Math.min(30000,5000 * 2 ** Math.min(failures,3)));
   }
@@ -346,12 +367,19 @@ export async function mountAssignmentWaiting(target, { api, scope, start, storag
     if (busy || button.disabled || closed) return;
     busy = true; button.disabled = true; clearTimeout(timer);
     try {
+      message.textContent = 'Đang chuẩn bị bài…';
       if (navigator.onLine===false && lastState!=='running') throw new Error('ASSIGNMENT_ONLINE_REQUIRED');
-      await start({scope,token});
-      if(keepMonitoring){ready=true;busy=false;await refresh();}
+      const result = await start({scope,token});
+      if(keepMonitoring){
+        if(requirePrepared && result!==true) throw Error('ASSIGNMENT_PREPARATION_INCOMPLETE');
+        preparationError=undefined;ready=true;busy=false;await refresh();
+      }
       else stop();
-    } catch {
-      message.textContent = 'Chưa xác nhận được lượt thi. Đang kiểm tra lại…';
+    } catch (error) {
+      preparationError=error?.code ?? error?.message;
+      if(!/^[A-Z][A-Z0-9_]{2,64}$/.test(preparationError ?? '')) preparationError='ASSIGNMENT_PREPARATION_INCOMPLETE';
+      message.textContent = preparationMessages[preparationError] ?? 'Chưa chuẩn bị được bài. Hãy thử lại cùng lượt thi.';
+      try { onPreparationError(preparationError); } catch { /* Nhật ký không chặn việc thử lại. */ }
       busy = false;
       await refresh();
     }

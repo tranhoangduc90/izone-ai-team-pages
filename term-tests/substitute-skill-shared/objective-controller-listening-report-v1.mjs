@@ -119,7 +119,7 @@ function fail(e){text('notice',({CLASS_NOT_ELIGIBLE:'Lớp này chưa được c
 const managedAssignmentClasses=({known:new Map(),has(code){return this.known.get(code)===true;},async check(code){
     if(!/^IC\d{3,8}$/.test(String(code)))return false;
     if(this.known.has(code))return this.has(code);
-    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122');
+    const {assignmentClient}=await import('../substitute-assignment-full/assignment-browser.mjs?v=preparation-recovery-20261125');
     const result=await assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/')('student/entry',{query:{testId:testId,classCode:code}});
     if(typeof result.managed!=='boolean')throw Error('ASSIGNMENT_SCOPE_UNAVAILABLE');
     this.known.set(code,result.managed);return result.managed;
@@ -133,10 +133,10 @@ async function checkAssignmentEntry(studentRef){
  if(!(managedAssignmentClasses.check?await managedAssignmentClasses.check(classCode):managedAssignmentClasses.has(classCode)))return false;
  if(!assignmentEntry){
   const [{createStudentEntry,assignmentSessionHeaders:forSession},{assignmentClient}]=await Promise.all([
-    import('../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122'),import('../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122')]);
+    import('../substitute-assignment-full/assignment-student-entry.mjs?v=preparation-recovery-20261125'),import('../substitute-assignment-full/assignment-browser.mjs?v=preparation-recovery-20261125')]);
   assignmentSessionHeaders=forSession;
   const target=document.createElement('div');target.className='assignment-entry';$('student').parentElement.after(target);
-  assignmentEntry=createStudentEntry({api:assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/'),testId,target,
+  assignmentEntry=createStudentEntry({requirePrepared:true,api:assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/'),testId,target,
     enabledForClass:code=>managedAssignmentClasses.has(code)});
  }
  const identity={classCode,studentRef};
@@ -144,6 +144,7 @@ async function checkAssignmentEntry(studentRef){
  return assignmentEntry.select({...identity,onReady:async()=>{
   if($('class').value!==classCode||$('student').value!==studentRef)throw Error('ASSIGNMENT_SELECTION_CHANGED');
   await prepare();
+  return isListening ? !$('preview').disabled : !$('start').disabled;
  }});
 }
 async function api(action,body,method='POST',keepalive=false){const r=await fetch(((state?.identity?.classCode||state?.classCode||$('class').value)==='DEMO'?REAL_API.replace('/v1/tests/','/v1/demo/tests/'):REAL_API)+'/'+action,{method,cache:'no-store',credentials:'omit',headers:method==='POST'?{'Content-Type':'application/json',

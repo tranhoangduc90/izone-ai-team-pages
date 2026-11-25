@@ -637,6 +637,7 @@
       elements.bootstrapPreview.textContent=previewLabel();
       if (resuming) elements.bootstrapStartStep.dataset.state = 'active';
       setStartAvailability();
+      return true;
     } catch (error) {
       if (signal.aborted) return;
       elements.bootstrapDownloadStep.dataset.state = 'error';
@@ -700,6 +701,7 @@
         elements.bootstrapPreviewStatus.textContent = 'Bấm nút để nghe thử và chỉnh âm lượng.';
       }
       setStartAvailability();
+      return true;
     } catch (error) {
       if (signal.aborted) return;
       elements.bootstrapDownloadStep.dataset.state = 'error';
@@ -764,24 +766,29 @@
     if(state.examSessionId||state.listeningStartedAt||state.attemptToken)return false;
     if(!(assignmentClasses.check?await assignmentClasses.check(current):assignmentClasses.has(current)))return false;
     if(!intake){
-      const [{createStudentEntry,bindFullAdmission},{assignmentClient}]=await Promise.all([
-        import('../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122'),import('../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122')]);
+      const [{createStudentEntry,bindFullAdmission,adoptFullAdmissionRun},{assignmentClient}]=await Promise.all([
+        import('../substitute-assignment-full/assignment-student-entry.mjs?v=preparation-recovery-20261125'),import('../substitute-assignment-full/assignment-browser.mjs?v=preparation-recovery-20261125')]);
       const assignmentApi=assignmentClient('https://ducizone.ddns.net/substitute-teacher-api/assignments/v1/');
       const target=document.createElement('div');target.className='assignment-entry';
       elements.bootstrapStudent.parentElement.after(target);
-      const entry=createStudentEntry({api:assignmentApi,testId:"substitute-test-1-k67",target,
-        enabledForClass:code=>assignmentClasses.has(code)});
-      intake={entry,bindFullAdmission,assignmentApi,target};
+      const entry=createStudentEntry({requirePrepared:true,api:assignmentApi,testId:"substitute-test-1-k67",target,
+        enabledForClass:code=>assignmentClasses.has(code),
+        onPreparationError:code=>observeLobbyDecision('substitute_full_preparation',code,state.classCode||classCode)});
+      intake={entry,bindFullAdmission,adoptFullAdmissionRun,assignmentApi,target};
     }
     const identity={classCode:current,studentRef:ref};
     if(intake.entry.session(identity))return false;
     return intake.entry.select({...identity,onReady:async session=>{
       if(elements.bootstrapStudent.value!==ref||(state.classCode||classCode)!==current)throw Error('ASSIGNMENT_SELECTION_CHANGED');
+      const selectionGeneration=classLoadGeneration;
       const deviceId=state.annotationRunId||crypto.randomUUID();
       const {clientRunId}=await intake.bindFullAdmission({api:intake.assignmentApi,session,deviceId});
-      if(elements.bootstrapStudent.value!==ref||(state.classCode||classCode)!==current)throw Error('ASSIGNMENT_SELECTION_CHANGED');
+      await intake.adoptFullAdmissionRun({clientRunId,currentRunId:state.clientRunId,parallel:false,
+        isCurrent:()=>classLoadGeneration===selectionGeneration&&state.studentRef===ref&&
+          elements.bootstrapStudent.value===ref&&(state.classCode||classCode)===current});
+      observeLobbyDecision('substitute_full_preparation','run_bound',current);
       saveState({clientRunId,annotationRunId:deviceId});
-      await prepareSelectedStudent(retry);
+      return (await prepareSelectedStudent(retry)) === true;
     }});
   }
   async function prepareSelectedStudent(retry = false) {
@@ -797,7 +804,7 @@
       await acquireListeningLease(studentRef, state.classCode || classCode);
       saveState({ studentRef, studentName: student.name, annotationRunId: state.annotationRunId || crypto.randomUUID() });
       if (localDemo) {
-        if(await openRecoveredListening())return;
+        if(await openRecoveredListening())return true;
         if (state.attemptToken || hasSavedGradedProgress()) {
           const serverNow = new Date().toISOString();
           await enterExam({
@@ -807,7 +814,7 @@
             listeningDeadlineAt: state.listeningDeadlineAt || serverNow,
             listeningSubmitted: true
           });
-          return;
+          return true;
         }
         if (!state.listeningStartedAt) {
           saveState({
@@ -817,12 +824,11 @@
             listeningDeadlineAt: ''
           });
         }
-        await downloadLocalDemoAudio(retry);
-        return;
+        return await downloadLocalDemoAudio(retry);
       }
       if (state.attemptToken) {
         await resumeAfterListening();
-        return;
+        return true;
       }
       const prepared = await apiRequest(`/api/term-tests/${testConfig.slug}/session/prepare`, {
         method: 'POST',
@@ -842,9 +848,9 @@
       });
       if (state.attemptToken || prepared.listeningSubmitted) {
         await resumeAfterListening();
-        return;
+        return true;
       }
-      await downloadForSession(prepared,retry);
+      return await downloadForSession(prepared,retry);
     } catch (error) {
       elements.bootstrapStudent.disabled = false;
       if (localDemo && !state.listeningStartedAt) elements.bootstrapClass.disabled = false;

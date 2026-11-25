@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-2-k67-listening-makeup",
-  "build": "issue611-e72d5422009495ad",
+  "build": "issue611-39b59db3acc993b1",
   "assets": [
     {
       "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
@@ -100,7 +100,7 @@
     },
     {
       "path": "../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122",
-      "sha256": "cfab1d2998a5543b9adbc6f0a6cd4bca9c8cfbdec1f2521e33f9e321f9143d11"
+      "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea"
     },
     {
       "path": "../substitute-assignment-full/assignment-catalog.mjs",
@@ -108,7 +108,7 @@
     },
     {
       "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122",
-      "sha256": "d54091d35143d792591ccb900885d4a9835e14e581c42d4477db70638977ff54"
+      "sha256": "9796c964f609be780e441c87d81ffd571cc2feae3cec261930165f29c7c5a2ae"
     },
     {
       "path": "../substitute-assignment-full/public-sitting-status.mjs?v=sitting-release-20261122",
@@ -200,7 +200,7 @@
     },
     {
       "path": "../substitute-skill-shared/objective-controller-listening-report-v1.mjs?v=roster-picker-20261122",
-      "sha256": "912a36e2d386ec571434e9332e587c8063cdd49268275fcca976af32ec2129c7"
+      "sha256": "e6bb4ce0179fd42d29172e0c5993e59c30c7619df05846ae8d4d87323f61a037"
     },
     {
       "path": "../substitute-skill-shared/objective-listening-report-v1.mjs?v=roster-picker-20261122",
@@ -265,6 +265,14 @@
     {
       "path": "sw.js",
       "sha256": "e68ca9c30de8ddf77715fcf0a86025f2400ef0b37d1d28f82d6ba3f35dabe3cb"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-browser.mjs?v=preparation-recovery-20261125",
+      "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=preparation-recovery-20261125",
+      "sha256": "9796c964f609be780e441c87d81ffd571cc2feae3cec261930165f29c7c5a2ae"
     }
   ]
 }
