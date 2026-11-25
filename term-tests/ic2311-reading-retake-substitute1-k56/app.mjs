@@ -1,10 +1,10 @@
 import {connectLegacyDirectory} from '../substitute-skill-shared/class-directory.mjs?v=roster-picker-20261122';
 import {createRosterFeedback} from '../substitute-skill-shared/identity-selection.mjs?v=roster-picker-20261122';
 import {connectLegacyPresentation} from '../substitute-skill-shared/legacy-presentation.mjs';
-import {API,BUILD,PRODUCT,SLUG,CONTENT_VERSION,CONTENT_HASH,DURATION_MS} from './config.mjs?v=roster-picker-20261122';
+import {API,BUILD,PRODUCT,SLUG,CONTENT_VERSION,CONTENT_HASH,DURATION_MS} from './config.mjs?v=preparation-recovery-20261125';
 import {DurableStore} from './storage.mjs';
 import {Telemetry} from './telemetry.mjs?v=sitting-release-20261122';
-import {prepareOffline} from './offline.mjs?v=roster-picker-20261122';
+import {prepareOffline} from './offline.mjs?v=preparation-recovery-20261125';
 import {mountNativeReading,nativeLayout,nativeAnnotations} from './native-ui.mjs';
 const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value,show=(id,v=true)=>{const result=$(id).hidden=!v;queueMicrotask(()=>legacyUi?.refresh());return result;};
 const storage=await new DurableStore().open();let state=await storage.get('current'),preparation=await storage.get('preparation'),roster,content,layoutReady=false,ready=false,busy=false,syncing=false,retryAt=0,failures=0,releaseOwner,ownerHeld=false,baseElapsed=0,baseMono=performance.now(),sealing=false;

@@ -1,4 +1,4 @@
-import {BUILD} from './config.mjs?v=roster-picker-20261122';
+import {BUILD} from './config.mjs?v=preparation-recovery-20261125';
 export async function prepareOffline({onProgress=()=>{},journal}){
  if(!('serviceWorker' in navigator)||!('caches' in window))throw Object.assign(Error(),{code:'CACHE_UNAVAILABLE'});
  const workerUrl=new URL('sw.js?v='+BUILD,location.href);
