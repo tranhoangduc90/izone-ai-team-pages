@@ -60,3 +60,5 @@ body:is([data-activity="lesson4"],[data-activity="lesson6"]) .reading-practice-g
   .lesson5-bridge-dock-open #workspace { padding-block-end: calc(84px + env(safe-area-inset-bottom)); }
   .lesson5-bridge-dock-open .lesson5-bridge > .primary { visibility: hidden; }
 }
+
+.lesson7-dock-status { margin: 0 0 6px; font-size: .9rem; }

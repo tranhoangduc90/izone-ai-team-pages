@@ -2,7 +2,7 @@
 // Lớp thử chưa mở hoặc lớp ngoài phạm vi thì dừng, không tự mở nhầm lớp khác.
 export function lessonEntryClass(lesson, search = '') {
   const requested = new URLSearchParams(search).get('class');
-  const courseWideLesson5=lesson.activity==='lesson5'&&lesson.classes?.length>1;
+  const courseWideLesson5=['lesson5','lesson7'].includes(lesson.activity)&&lesson.classes?.length>1;
   if((lesson.rosterScope==='lesson'||courseWideLesson5)&&requested&&requested!=='CODEXID261018'){
     const matches=(lesson.classes||[]).filter(c=>c.toLowerCase()===requested.trim().toLowerCase());
     if(matches.length!==1)throw new Error('CLASS_NOT_OPEN');

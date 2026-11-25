@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#152B4E">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; frame-src https://accounts.google.com/gsi/; style-src 'self' https://accounts.google.com/gsi/style; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com/gsi/; img-src 'self' data: https://*.googleusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Lesson 7 · Writing · IZONE</title>
   <link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg?v=20261105">
   <!-- Tải sớm mã giao diện; chỉ chạy sau khi cấu hình bài đã hợp lệ. -->
@@ -19,7 +19,12 @@
 <script defer src="../../shared/red-focus-glow.js?v=20261102-r1"></script>
 </head>
 <body data-m170-product="handout" data-activity="lesson7" data-view="student" data-handout-theme="reading">
-  <p id="lesson-loading" role="status">Đang mở bài học…</p>
-  <script type="module" src="../shared/loader.mjs?v=20261102-l13-v1&startup=20261026-v2&check=20261101-v1&poll=20261104-v1"></script>
+  <main id="lesson-access" class="login-shell" aria-labelledby="lesson-access-title">
+    <div class="login-card">
+      <h1 id="lesson-access-title">Handout Writing Lesson 7</h1>
+      <div id="lesson-access-body"><p role="status">Đang mở bài của bạn…</p></div>
+    </div>
+  </main>
+  <script type="module" src="./start.mjs?v=20261125-lesson7"></script>
 </body>
 </html>

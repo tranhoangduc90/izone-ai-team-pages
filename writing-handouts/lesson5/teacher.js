@@ -19,8 +19,8 @@ installStyles();
 const base=(globalThis.handout67ApiBase||'https://ducizone.ddns.net/api/handout67/v1')+'/teacher';
 const lessonActivity=globalThis.handout67Lesson?.activity||'lesson5';
 const $=id=>document.getElementById(id);
-const pinnedRefresh=lessonActivity==='lesson5'&&document.body?.dataset.pinnedRefresh!==undefined;
-const refreshPreview=pinnedRefresh&&new URLSearchParams(globalThis.location?.search).get('preview')==='refresh';
+const pinnedRefresh=['lesson5','lesson7'].includes(lessonActivity)&&document.body?.dataset.pinnedRefresh!==undefined;
+const refreshPreview=lessonActivity==='lesson5'&&pinnedRefresh&&new URLSearchParams(globalThis.location?.search).get('preview')==='refresh';
 const readOnly=refreshPreview||lessonActivity==='lesson4';
 if(readOnly)document.body.dataset.handoutReadOnly='true';
 if(pinnedRefresh){
@@ -74,6 +74,7 @@ let readGeneration=0;
 let pendingManualRefresh=false;
 let writingProgress=new Map(),writingClass='',writingReadAt=0,writingRead=null;
 function showWritingProgress(){
+ if(lessonActivity!=='lesson5')return;
  const students=$('students');
  const render=()=>{
   for(const button of students.querySelectorAll('[data-student]')){
@@ -95,7 +96,7 @@ function showWritingProgress(){
  if(link.href!==url.href)link.href=url.href;
 }
 async function refreshWritingProgress(classRef,current,force){
- if(!pinnedRefresh||refreshPreview||!globalThis.IzoneTeacherSso||!/^IC[0-9]+$/.test(classRef))return;
+ if(lessonActivity!=='lesson5'||!pinnedRefresh||refreshPreview||!globalThis.IzoneTeacherSso||!/^IC[0-9]+$/.test(classRef))return;
  if(writingClass!==classRef){writingClass=classRef;writingProgress=new Map();writingReadAt=0;showWritingProgress();}
  if(writingRead?.classRef===classRef||!force&&Date.now()-writingReadAt<15000)return;
  const attempt={classRef};writingRead=attempt;writingReadAt=Date.now();
