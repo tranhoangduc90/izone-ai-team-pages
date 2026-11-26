@@ -7,7 +7,7 @@ import { createSpeakingIdentity } from './speaking-identity.js?v=20261104-self-m
 import { createSpeakingLivePoller as createPendingPoller } from './live-tracking.js?v=20261102-speaking1';
 import { createAutoSubmit } from './auto-submit.js?v=20261019-auto-submit-v1';
 import { parseShareUrl } from './logic.mjs';
-import { resolveSpeakingCta } from './speaking-cta-code.js';
+import { resolveSpeakingCta } from './speaking-cta-code.js?v=20261126-1';
 import { freestyleInstructions } from './assignment-instructions.js';
 import { lesson5Code, lesson5Parts } from './lesson-5-parts.js';
 import { lesson6Code, lesson6Parts } from './lesson-6-parts.js';

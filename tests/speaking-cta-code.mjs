@@ -3,6 +3,8 @@ import test from 'node:test';
 import { resolveSpeakingCta } from '../speaking-homework/speaking-cta-code.js';
 
 const lesson5 = '67-speaking-on_tap_lam_ro_diem_giua';
+const lesson6 = '67-speaking-ly_do_hanh_vi';
+const lesson7 = '67-speaking-cach_lam_mot_viec';
 const lesson9 = '67-speaking-freestyle_on_tap';
 
 test('the full CTA code determines the route and remains the assignment key', () => {
@@ -31,4 +33,22 @@ test('ambiguous, unknown and incomplete document CTAs are rejected', () => {
 test('direct and unrelated entries keep their established routes', () => {
   assert.deepEqual(resolveSpeakingCta('', 5), { status: 'legacy' });
   assert.deepEqual(resolveSpeakingCta('?assignmentCode=67-speaking-lam_ro&documentId=Docs3', 3), { status: 'legacy' });
+});
+
+test('Lesson 6 and 7 keep each full CTA code on its canonical page', () => {
+  for (const [lesson, base] of [[6, lesson6], [7, lesson7]]) {
+    for (const code of [base, `${base}-clone`]) {
+      assert.deepEqual(resolveSpeakingCta(`?assignmentCode=${code}&lesson=5&documentId=OtherLesson`, 5), {
+        status: 'valid', lesson, code
+      });
+    }
+    for (const search of [
+      '?documentId=Fixture',
+      `?assignmentCode=${base}-clone-extra`,
+      `?assignmentCode=${base}&assignmentCode=${base}-clone`
+    ]) {
+      assert.deepEqual(resolveSpeakingCta(search, lesson), { status: 'invalid' });
+    }
+    assert.deepEqual(resolveSpeakingCta('', lesson), { status: 'legacy' });
+  }
 });

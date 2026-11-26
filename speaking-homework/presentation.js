@@ -1,7 +1,7 @@
 // Nhận các node của renderer thật; thay cách trình bày, giữ sự kiện và nghiệp vụ.
 // Không tạo kết quả, biên nhận hoặc dữ liệu học viên mẫu trên trang phát hành.
 import { installTeacherEntry } from '../shared/teacher-entry.js?v=20261019-v1';
-import { resolveSpeakingCta } from './speaking-cta-code.js';
+import { resolveSpeakingCta } from './speaking-cta-code.js?v=20261126-1';
 const lesson=Number(document.body.dataset.speakingLesson);
 const cta = resolveSpeakingCta(location.search, lesson);
 if (cta.status === 'invalid') {
@@ -12,7 +12,7 @@ if (cta.status === 'invalid') {
 } else if (cta.status === 'valid' && cta.lesson !== lesson) {
   location.replace(`./lesson-${cta.lesson}.html${location.search}${location.hash}`);
 } else {
-await import(lesson===2?'./lesson-2-live.js?v=20261104-verified-doc-entry1&tsto=20261103-1&docsSync=20261105-1&gradeProgress=1&journal=20261117-cloud-r1':lesson===3?'./lesson-3-live.js?v=20261104-self-match1&tsto=20261103-1&docsSync=20261105-1&gradeProgress=1&journal=20261117-cloud-r1':'./lesson-4-live.js?v=20261104-self-match1&tsto=20261103-1&docsSync=20261105-1&gradeProgress=1&journal=20261117-cloud-r1&cta=20261119-1');
+await import(lesson===2?'./lesson-2-live.js?v=20261104-verified-doc-entry1&tsto=20261103-1&docsSync=20261105-1&gradeProgress=1&journal=20261117-cloud-r1':lesson===3?'./lesson-3-live.js?v=20261104-self-match1&tsto=20261103-1&docsSync=20261105-1&gradeProgress=1&journal=20261117-cloud-r1':'./lesson-4-live.js?v=20261104-self-match1&tsto=20261103-1&docsSync=20261105-1&gradeProgress=1&journal=20261117-cloud-r1&cta=20261126-1');
 const $=id=>document.getElementById(id);
 document.body.classList.add('speaking-design');
 const topics={2:'Diễn đạt theo cách của bạn',3:'Làm rõ điều muốn nói',4:'Nối ý, mở rộng câu trả lời',5:'Ôn tập Làm rõ và Chèn điểm giữa',6:'Lý do đằng sau hành động',7:'Cách làm một việc',8:'Ôn tập So sánh',9:'Full câu với ChatGPT · Freestyle',10:'Kể chuyện: Bối cảnh và Trình tự',11:'Kể chuyện: Diễn biến chi tiết',15:'Tả người: Giới thiệu, Đặc điểm và Kết thúc',12:'Kể chuyện: Kết cục và ý nghĩa',13:'Mở bài và miêu tả chi tiết một vật',14:'Tả vật: Miêu tả, Chức năng và What if'};
