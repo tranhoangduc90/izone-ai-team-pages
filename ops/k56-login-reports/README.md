@@ -6,3 +6,7 @@ Link hỗ trợ theo vụ việc dùng capability chỉ ghi ở fragment, đúng
 Worker riêng chỉ nhận POST đã xác thực ở /v1/reports. D1 riêng chứa mã vụ việc, mã báo cáo, thời gian nhận và nội dung giới hạn. Thiếu ACK có thể gửi lại với cùng mã; D1 giữ một bản. Job riêng dọn báo cáo đã quá bảy ngày mỗi ngày. Worker không cần quyền đọc dữ liệu thi, bảng giảng viên hoặc thông tin phiên Google.
 
 Đọc qua quyền quản trị D1 và lọc theo mã vụ việc. Kiểm quyền từ chối khi gọi đọc hoặc gửi thiếu capability. Ghim cấu hình worker và phiên bản Pages khi đọc lại. Để dừng một vụ việc, bỏ hash tương ứng khỏi REPORT_CASES. Hoàn tác thay đổi Pages tắt gửi tự động; dữ liệu đã nhận vẫn theo thời hạn dọn của Worker.
+
+Bản r3 ghi một sự kiện `page_open` nếu người mở link chưa dừng gửi. Cloudflare thêm `country` từ `request.cf.country` vào mỗi sự kiện và báo cáo r3 ngay tại Worker. Kho không lưu IP hoặc thông tin vị trí chi tiết. Mã phản ánh đầu ra mạng, có thể là quốc gia của VPN hay proxy. Giá trị `null` là chưa xác định, còn bản r2 không có trường này.
+
+Để kiểm số lượt mở theo quốc gia, lọc D1 theo mã vụ việc và `json_extract(payload, '$.event') = 'page_open'`, rồi nhóm theo `json_extract(payload, '$.country')`. Chỉ so sánh mã quốc gia có giá trị với `VN`.

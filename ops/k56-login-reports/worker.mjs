@@ -1,4 +1,6 @@
 const origin = 'https://tranhoangduc90.github.io';
+const countryBuild = 'k56-login-check-20261126-r3';
+const supportedBuilds = new Set(['k56-login-check-20261126-r2', countryBuild]);
 const cors = {
   'Access-Control-Allow-Origin': origin,
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -53,9 +55,10 @@ function httpStatus(value) {
 }
 
 function normalize(body) {
-  if (!body || typeof body.reportId !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(body.reportId)
-      || body.build !== 'k56-login-check-20261126-r2' || body.classCode !== 'IC2367') return null;
+  if (!body || !supportedBuilds.has(body.build) || typeof body.reportId !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(body.reportId)
+      || body.classCode !== 'IC2367') return null;
   const result = { reportId: body.reportId, build: body.build, classCode: 'IC2367' };
+  if (body.event === 'page_open' && body.build === countryBuild) return { ...result, event: 'page_open' };
   if (['RENDER_REQUESTED', 'LOAD_FAILED', 'INIT_FAILED'].includes(body.googleButton)) result.googleButton = body.googleButton;
   if (Array.isArray(body.browserPolicy)) {
     result.browserPolicy = [...new Set(body.browserPolicy.filter(code => typeof code === 'string' && /^(?:frame-src|script-src-elem|connect-src):(?:k56_api|google)$/.test(code)))];
@@ -104,6 +107,10 @@ export default {
     try { report = normalize(await readJson(request)); }
     catch { return new Response(null, { status: 400, headers: cors }); }
     if (!report) return new Response(null, { status: 400, headers: cors });
+    if (report.build === countryBuild) {
+      const country = request.cf?.country;
+      report.country = typeof country === 'string' && /^[A-Z]{2}$/.test(country) && country !== 'XX' ? country : null;
+    }
     try {
       const stored = await env.DB.prepare(
         'INSERT INTO reports (case_id, report_id, payload) VALUES (?, ?, ?) ON CONFLICT (case_id, report_id) DO NOTHING'

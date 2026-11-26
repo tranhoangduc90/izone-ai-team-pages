@@ -180,7 +180,14 @@ test('Google SDK bị chặn và báo cáo vẫn tải được', async t => {
 test('Link hỗ trợ tự gửi lỗi trước đăng nhập, rồi tự gửi kết quả sau khi đăng nhập', async t => {
   const { page, state } = await fixture(t);
   state.blocked.add(reading);
+  const uploaded = page.waitForResponse(response =>
+    response.url() === reportHost + '/v1/reports' &&
+    response.request().postDataJSON()?.run?.outcome === 'SESSION_UNVERIFIED');
   await page.goto(base + checkPath + '#case=' + fixtureCase);
+  assert.equal((await uploaded).status(), 204);
+  const opens = state.sent.filter(report => report.event === 'page_open');
+  assert.equal(opens.length, 1);
+  assert.equal(Object.hasOwn(opens[0], 'country'), false);
   await page.getByText('Đã gửi báo cáo kỹ thuật.').waitFor();
   const first = state.sent.find(item => item.run?.outcome === 'SESSION_UNVERIFIED');
   assert.ok(first?.run.requests.some(row => row.step === 'Tìm phiên ở reading' && row.error === 'FETCH_FAILED'));
