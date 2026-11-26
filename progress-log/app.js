@@ -1,4 +1,5 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
+import {applyCalendarToJourney,renderPortalCalendar,watchPortalCalendar} from './portal-calendar.js';
 import {createReadCoordinator} from './read-coordinator.js';
 import {pilotEntry} from './pilot-entry.js?rev=20261022-official-v2';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
@@ -251,6 +252,7 @@ function installStudentMemory() {
 }
 
 let commentPoller=null;
+let integratedCalendarWatcher=null;
 let studentDashboard=null;
 if(THUY_UI&&!config.DEMO_COMPACT_PREVIEW){
   const before=document.createElement('div'),after=document.createElement('div');before.id='studentDashboardLatest';after.id='studentDashboardSessions';after.hidden=true;
@@ -312,7 +314,8 @@ async function openDashboardSession(session,status){
   if(THUY_UI){
     state.dashboardOpening=true;
     try{
-      const fresh=await apiRequest('/assignments/open',{body:{publicToken:session.publicToken},signal:AbortSignal.timeout(15000)});
+      const fresh=await apiRequest('/assignments/open',{body:{publicToken:session.publicToken,
+        ...(session.portalSessionNumber!=null?{verifyPortalSchedule:true}:{})},signal:AbortSignal.timeout(15000)});
       if(!stillHere())return;
       if(!assignmentAllowsEntry(fresh.assignment,session,{studentRef,classId:assignment.class.id})){
         state.dashboardStale=true;renderDashboardViews();
@@ -347,6 +350,7 @@ function showView(id) {
   if(THUY_UI){const nav=document.querySelector('#thuyJourneyNav');if(nav)nav.hidden=['identityView','journeyView','journeyLoadingView'].includes(id);}
   if(THUY_UI&&id==='formView'){elements.reflectionForm.hidden=Boolean(state.dashboardDenied)||!state.attempt&&!state.thuyReadOnly;if(!state.dashboardStarting)void loadStudentDashboard();}
   commentPoller?.refresh();
+  integratedCalendarWatcher?.resume();
   if(THUY_UI){
     const name=document.querySelector('#progressLogStudentName');
     if(name)name.textContent=['identityView','confirmView'].includes(id)?''
@@ -1523,9 +1527,33 @@ function journeyPortalMessage(status) {
 }
 
 let integratedSessionOwner='',integratedSessionCards=new Map();
+const integratedCalendar=document.createElement('details');
+integratedCalendar.hidden=true;
+elements.journeySessions.before(integratedCalendar);
+integratedCalendarWatcher=watchPortalCalendar({
+  visible:()=>!elements.journeyView.hidden,
+  async read(owner,signal){
+    const response=await apiRequest('/student/course-calendar',{body:{
+      publicToken:owner.publicToken,studentRef:owner.studentRef,identityConfirmed:true},signal});
+    return String(response.classId)===owner.classId&&response.studentRef===owner.studentRef?response.portalSchedule:null;
+  },
+  apply(calendar,owner){
+    const current=state.journeyData;
+    if(!current||String(current.class.classId)!==owner.classId||current.student.studentRef!==owner.studentRef)return;
+    renderPortalCalendar(integratedCalendar,calendar);
+    const updated=applyCalendarToJourney(current,calendar);
+    if(updated!==current)renderIntegratedJourney(updated);
+  },
+  onError(){
+    if(state.journeyData?.portalSchedule)
+      renderPortalCalendar(integratedCalendar,{...state.journeyData.portalSchedule,stale:true});
+  }
+});
 function renderIntegratedJourney(journey) {
   state.journeyData=journey;
-  const now=Date.now(),visible=THUY_UI?visibleStudentSessions(journey.sessions,now):journey.sessions;
+  const now=Date.now(),history=journey.portalSchedule?journey.sessions.filter(session=>session.erpSessionId||session.assignmentId
+    ||session.sessionKind==='test'||session.sessionComment||session.attendanceStatus||session.completeness):journey.sessions;
+  const visible=THUY_UI?visibleStudentSessions(history,now):history;
   const latest=THUY_UI?latestAssignedSession(visible,now):null;
   const activeSessionNumber=state.attempt||state.thuyReadOnly?state.assignment.sessionNumber:null;
   const statusFor=session=>THUY_UI?studentEntryState(session,now,!state.dashboardStale):dashboardSessionState(session,now);
@@ -1534,7 +1562,8 @@ function renderIntegratedJourney(journey) {
     if(!host){host=document.createElement('section');host.id='studentUpcoming';elements.journeyView.prepend(host);}
     renderLatestSession(host,visible,{now,onOpen:openDashboardSession,available:!state.dashboardStale});
   }
-  const signature=JSON.stringify({journey,states:visible.map(statusFor),latest:latest?.sessionNumber,activeSessionNumber},(key,value)=>['serverNow','generatedAt','capturedAt','scheduleCheckedAt'].includes(key)?undefined:value);
+  const signature=JSON.stringify({journey,states:visible.map(statusFor),latest:latest?.sessionNumber,activeSessionNumber},(key,value)=>
+    ['serverNow','generatedAt','capturedAt','scheduleCheckedAt','checkedAt','refreshInMs'].includes(key)?undefined:value);
   if(elements.journeySessions.dataset.signature===signature)return;
   elements.journeySessions.dataset.signature=signature;
   elements.journeyStudentName.textContent = THUY_UI?'':'Chào '+journey.student.name+', đây là hành trình học của em';
@@ -1571,7 +1600,8 @@ function renderIntegratedJourney(journey) {
     }
     if (completed) {item.type='button';item.addEventListener('click',()=>void openStudentJourneyDetail(session));}
     const heading = document.createElement('div'); heading.className='studentSessionTop';
-    const number=THUY_UI?'Buổi '+session.sessionNumber:'BUỔI '+String(session.sessionNumber).padStart(2,'0');
+    const displayNumber=session.portalSessionNumber??session.sessionNumber;
+    const number=session.scheduleStatus==='cancelled'?'Buổi đã nghỉ':THUY_UI?'Buổi '+displayNumber:'BUỔI '+String(displayNumber).padStart(2,'0');
     const date=/^\d{4}-\d{2}-\d{2}$/u.test(session.sessionDate||'')?session.sessionDate.split('-').reverse().join('/'):'Chưa xác nhận ngày';
     heading.append(journeyText('b',number),journeyText('span',date));
     const title=contentTitle(session,{title:session.title});
@@ -1616,6 +1646,7 @@ function renderIntegratedJourney(journey) {
   elements.journeyStatus.textContent = journey.coverage?.planOutdated
     ? 'Kế hoạch ' + journey.coverage.plannedSessions + ' buổi cần được giảng viên kiểm lại: '
       + 'đã có dữ liệu đến buổi ' + journey.coverage.knownThroughSession + '.'
+    : journey.coverage?.schedule==='portal'?'Lịch học được cập nhật từ Portal.'
     : journey.coverage?.schedule === 'teacher_confirmed'
       ? 'Giảng viên đã xác nhận kế hoạch ' + journey.coverage.plannedSessions
         + ' buổi. Ngày học chỉ hiện ở buổi đã được xác nhận. '
@@ -1756,6 +1787,8 @@ async function openIntegratedJourney(returnView) {
     if(THUY_UI){state.dashboardStale=false;state.dashboardReadAt=Date.now();}
     renderIntegratedJourney(journey);
     showView('journeyView');
+    integratedCalendarWatcher.set({key:publicToken+':'+studentRef,publicToken,studentRef,classId:String(journey.class.classId)},journey.portalSchedule);
+    if(!journey.portalSchedule)renderPortalCalendar(integratedCalendar,null);
     scheduleJourneyClock();
     setNotice('Hành trình của bạn đã được cập nhật.');
     if(THUY_UI){

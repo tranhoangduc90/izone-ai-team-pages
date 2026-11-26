@@ -26,6 +26,7 @@ import {clearThuyAnalytics,refreshThuyResponses,renderThuyAnalytics} from './thu
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261030-the22-23-v1';
 import {COPY_STUDENT_LINK_LABEL,decorateCopyStudentLinkButton,studentAssignmentLink} from './student-assignment-link.js';
+import {applyCalendarToJourney,renderPortalCalendar,watchPortalCalendar} from './portal-calendar.js';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 // Link chung luôn dùng preset đã duyệt; giữ tham số cũ chỉ cho đường tương thích được chỉ định rõ.
@@ -221,6 +222,26 @@ function fillSelect(select, items, valueKey, labelBuilder) {
   select.replaceChildren(...options);
 }
 
+const overviewCalendar=document.createElement('details');
+overviewCalendar.hidden=true;
+elements.overviewStatus.after(overviewCalendar);
+const teacherCalendarWatcher=watchPortalCalendar({
+  visible:()=>state.authenticated&&state.activePanel==='overview'&&!elements.overviewPanel.hidden,
+  async read(owner,signal){
+    const response=await apiRequest('/teacher/course-calendar?classId='+encodeURIComponent(owner.classId),{signal});
+    return String(response.classId)===owner.classId?response.portalSchedule:null;
+  },
+  apply(calendar,owner){
+    if(String(state.overview?.classId)!==owner.classId)return;
+    state.overview=applyCalendarToJourney(state.overview,calendar);
+    renderPortalCalendar(overviewCalendar,calendar);
+  },
+  onError(_error,owner){
+    if(String(state.overview?.classId)===owner.classId&&state.overview.portalSchedule)
+      renderPortalCalendar(overviewCalendar,{...state.overview.portalSchedule,stale:true});
+  }
+});
+
 function switchPanel(panel,{returning=false}={}) {
   const previous=state.activePanel;state.panelScroll??=new Map();if(previous)state.panelScroll.set(previous,window.scrollY);
   if(THUY_UI&&panel==='create'&&previous!=='create'){
@@ -238,6 +259,7 @@ function switchPanel(panel,{returning=false}={}) {
   elements.createPanel.hidden = !creating;
   elements.dashboardPanel.hidden = panel !== 'dashboard';
   elements.overviewPanel.hidden = panel !== 'overview';
+  teacherCalendarWatcher.resume();
   elements.createTab.classList.toggle('active', creating);
   elements.dashboardTab.classList.toggle('active', panel === 'dashboard');
   elements.overviewTab.classList.toggle('active', panel === 'overview');
@@ -319,6 +341,7 @@ async function loadCourseOverview({preserve=true}={}) {
   const generation=++state.overviewGeneration;
   const keeping=preserve&&String(state.overview?.classId)===String(classId);
   if(!keeping){if(THUY_UI&&elements.journeyDetailDialog.open)elements.journeyDetailDialog.close();state.overview=null;if(THUY_UI)state.thuyCourse=null;
+    teacherCalendarWatcher.set(null,null);renderPortalCalendar(overviewCalendar,null);
     elements.courseOverview.replaceChildren();elements.courseAnalytics.replaceChildren();elements.courseAnalyticsStatus.textContent='';}
   if (!classId) { elements.overviewStatus.textContent='Chưa có lớp được cấp quyền.';return; }
   const controller=new AbortController();state.overviewController=controller;
@@ -330,6 +353,8 @@ async function loadCourseOverview({preserve=true}={}) {
     if (generation!==state.overviewGeneration || classId!==elements.overviewClassSelect.value) return;
     if (String(payload.overview.classId)!==classId) throw new Error('Dữ liệu trả về không khớp lớp đã chọn.');
     state.overview=payload.overview;
+    teacherCalendarWatcher.set({key:classId,classId},state.overview.portalSchedule);
+    if(!state.overview.portalSchedule)renderPortalCalendar(overviewCalendar,null);
     if(state.overview.progressLogMapped===false){
       elements.overviewStatus.textContent='Lớp này chưa có dữ liệu Progress Log.';
       elements.courseOverview.replaceChildren();elements.courseAnalytics.replaceChildren();

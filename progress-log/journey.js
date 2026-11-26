@@ -1,4 +1,5 @@
 import {contentTitle,sessionHeading,sessionState,skillsLabel} from './session-presentation.js';
+import {applyCalendarToJourney,renderPortalCalendar,watchPortalCalendar} from './portal-calendar.js';
 import {renderSessionReview} from './session-review.js?rev=20261104-the25-v1';
 import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261102-the24-v1';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
@@ -18,6 +19,24 @@ const elements = Object.fromEntries([
 
 let accessToken = '';
 let startGeneration=0,studentSkillView=null;
+const portalCalendarHost=document.createElement('details');portalCalendarHost.hidden=true;
+elements.timeline.before(portalCalendarHost);
+const calendarWatcher=watchPortalCalendar({
+  visible:()=>Boolean(accessToken)&&!elements.journeyView.hidden,
+  async read(owner,signal){
+    const response=await fetch(config.API_BASE_URL+'/api/learning/student/course-calendar',{method:'POST',
+      headers:{'content-type':'application/json'},body:JSON.stringify({accessToken:owner.token}),cache:'no-store',referrerPolicy:'no-referrer',signal});
+    if(!response.ok)throw Error('Chưa đọc được lịch Portal.');
+    const data=await response.json();
+    return String(data.classId)===owner.classId&&data.studentRef===owner.studentRef?data.portalSchedule:null;
+  },
+  apply(calendar,owner){
+    if(owner.token!==accessToken||journeyData?.student.studentRef!==owner.studentRef)return;
+    renderPortalCalendar(portalCalendarHost,calendar);
+    const updated=applyCalendarToJourney(journeyData,calendar);
+    if(updated!==journeyData){journeyData=updated;repaintSessionCards();}
+  }
+});
 
 function setNotice(message = '', kind = '') {
   elements.journeyNotice.textContent = message;
@@ -113,7 +132,7 @@ function buildSession(session,view,highlight) {
   else if(learn)item.href='./thuy.html#'+new URLSearchParams({assignment:session.publicToken,student:journeyData.student.studentRef});
   if(read){item.type='button';item.addEventListener('click',()=>void openHistory(session));}
   const top=document.createElement('div');top.className='studentSessionTop';
-  const b=document.createElement('b');b.textContent='Buổi '+session.sessionNumber;
+  const b=document.createElement('b');b.textContent=session.scheduleStatus==='cancelled'?'Buổi đã nghỉ':'Buổi '+(session.portalSessionNumber??session.sessionNumber);
   const d=document.createElement('span');d.textContent=session.sessionDate?.split('-').reverse().join('/')||'Chưa xác nhận ngày';top.append(b,d);
   const title=document.createElement('strong');title.textContent=contentTitle(session,{title:session.title});
   const skills=document.createElement('small');skills.textContent=skillsLabel(title.textContent)||'Trong kế hoạch khóa học';
@@ -160,7 +179,8 @@ async function openLatest(session,state){
   openingLatest=true;
   try{
     const response=await fetch(config.API_BASE_URL+'/api/learning/assignments/open',{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({publicToken:session.publicToken}),cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});
+      body:JSON.stringify({publicToken:session.publicToken,...(session.portalSessionNumber!=null?{verifyPortalSchedule:true}:{})}),
+      cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});
     const payload=await response.json();
     if(!current())return;
     if(!response.ok||!assignmentAllowsEntry(payload.assignment,session,{studentRef,classId}))throw Error('Phiếu hoặc phần đầu hiện không mở.');
@@ -244,6 +264,7 @@ function renderJourney(journey) {
   elements.reportHistory.hidden = !journey.reports.length;
   elements.reportList.replaceChildren(...journey.reports.map(buildReport));
   elements.journeyView.hidden = false;
+  calendarWatcher.set({key:accessToken,token:accessToken,classId:String(journey.class.classId),studentRef:journey.student.studentRef},journey.portalSchedule);
 }
 
 async function start() {
@@ -305,6 +326,7 @@ async function refreshSessionAccess(){
     if([401,403,404].includes(error.status)){
       historyGeneration++;historyController?.abort();historyDialog.close();journeyData=null;accessToken='';
       elements.journeyView.hidden=true;elements.journeyError.hidden=false;elements.journeyErrorMessage.textContent=error.message;
+      calendarWatcher.set(null,null);
       document.querySelector('#journeyAccountName').textContent='';commentPoller.stop();return;
     }
     accessStale=true;setNotice('Chưa cập nhật được quyền mở phiếu. Em có thể xem lại bài đã nộp.','error');
@@ -319,6 +341,7 @@ document.getElementById('journeyLogout')?.addEventListener('click',async()=>{
  const identity=createCourseStudentIdentity({product:'progress-log',entry:'private-journey',requestIdentity:input=>requestMappingStudentIdentity(input,config.API_BASE_URL)});
  const result=await identity.forget();if(result.status!=='empty'){setNotice('Chưa xóa được ghi nhớ. Em hãy thử lại.','error');return;}
  markProgressLogout();startGeneration++;historyGeneration++;historyController?.abort();commentPoller.stop();accessToken='';journeyData=null;
+ calendarWatcher.set(null,null);
  document.querySelector('#journeyAccountName').textContent='';elements.journeyView.hidden=true;
  try{history.replaceState({},'',location.pathname+location.search);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}location.replace(new URL('./student.html',location.href));
 });

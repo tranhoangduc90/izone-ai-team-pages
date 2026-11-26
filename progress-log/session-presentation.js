@@ -13,7 +13,11 @@ export function contentTitle(slot,form){
   return title|| (slot?.sessionKind==='test'?'Buổi Test':'Nội dung chưa được xác nhận');
 }
 export function skillsLabel(title){return [...title.matchAll(/\b(Listening|Reading|Writing|Speaking)\b/gi)].map(m=>m[1][0].toUpperCase()+m[1].slice(1).toLowerCase()).filter((v,i,a)=>a.indexOf(v)===i).join(' · ');}
-export function sessionHeading(slot,form){return 'Buổi '+String(slot?.sessionNumber??form?.sessionNumber??'').padStart(2,'0')+' · '+contentTitle(slot,form);}
+export function sessionHeading(slot,form){
+  const number=slot?.portalSessionNumber??slot?.sessionNumber??form?.sessionNumber??'';
+  const prefix=slot?.scheduleStatus==='cancelled'?'Buổi đã nghỉ':'Buổi '+String(number).padStart(2,'0');
+  return prefix+' · '+contentTitle(slot,form);
+}
 export function vietnamDate(now=Date.now()){return new Date(now+7*3600_000).toISOString().slice(0,10);}
 export function startsAt(date){
   if(!/^\d{4}-\d{2}-\d{2}$/u.test(String(date)))return null;
@@ -27,9 +31,11 @@ export function sessionState(slot,cell,form,now=Date.now()){
   if(cell?.status==='not_assigned')return {kind:'locked',label:'Chưa được gán phiếu',canLearn:false};
   if(cell?.status==='complete')return {kind:'complete',label:'✓ Đã hoàn thành',canLearn:false};
   if(cell?.status==='test_result')return {kind:'complete',label:'Đã có kết quả Test',canLearn:false};
+  if(slot?.scheduleStatus==='cancelled')return {kind:'review',label:'Buổi học đã nghỉ trên Portal',canLearn:false};
   if(!form||!cell?.assignmentId)return {kind:'empty',label:slot?.sessionKind==='test'?'Buổi Test · chưa có kết quả':'Chưa tạo Progress Log',canLearn:false};
   if(form.status!=='published')return {kind:'locked',label:'Phiếu đã đóng · xem lại',canLearn:false};
-  const start=startsAt(slot?.sessionDate);
+  const liveStart=slot?.portalSessionNumber!=null?Date.parse(slot.sessionDate+'T'+slot.sessionStartTime+'+07:00')-300000:NaN;
+  const start=Number.isFinite(liveStart)?liveStart:startsAt(slot?.sessionDate);
   if(start===null)return {kind:'locked',label:'Chưa xác nhận lịch học',canLearn:false};
   if(now<start)return {kind:'locked',label:'Chưa đến buổi học',canLearn:false};
   if(vietnamDate(now)===slot.sessionDate)return {kind:'active',label:'Nhấn để học buổi hôm nay',canLearn:true};

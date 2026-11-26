@@ -41,6 +41,7 @@ export function studentEntryState(session,now=Date.now(),available=true){
   const submissionWindow=session.submissionWindow;
   const closesAt=Date.parse(submissionWindow?.effectiveClosesAt);
   const canLearn=available&&state.kind!=='review'&&session.attemptStatus!=='not_assigned'
+    &&(session.portalSessionNumber==null||state.kind==='active')
     &&session.assignmentStatus==='published'&&session.firstBlockStatus==='open'
     &&submissionWindow?.canSubmit===true&&(!Number.isFinite(closesAt)||now<closesAt)
     &&/^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
@@ -65,13 +66,14 @@ export function renderLatestSession(host,sessions,{now=Date.now(),onOpen,availab
   host.hidden=!session;
   if(!session){delete host.dataset.sessionNumber;latestViews.delete(host);if(host.childElementCount)host.replaceChildren();return;}
   const state=studentEntryState(session,now,available);
-  const fingerprint=JSON.stringify([session.assignmentId,session.publicToken,session.sessionNumber,session.title,state.canLearn]);
+  const displayNumber=session.portalSessionNumber??session.sessionNumber;
+  const fingerprint=JSON.stringify([session.assignmentId,session.publicToken,displayNumber,session.title,state.canLearn,session.scheduleStatus]);
   if(latestViews.get(host)===fingerprint)return;
   latestViews.set(host,fingerprint);host.classList.add('student-upcoming');
   const copy=node('div','','student-upcoming-copy');copy.append(node('p','BUỔI HỌC GẦN NHẤT','eyebrow'));
   host.dataset.sessionNumber=String(session.sessionNumber);
   const title=contentTitle(session,{title:session.title});
-  copy.append(node('h2','Buổi '+session.sessionNumber+' · '+title));
+  copy.append(node('h2',(session.scheduleStatus==='cancelled'?'Buổi đã nghỉ':'Buổi '+displayNumber)+' · '+title));
   const button=node('button','Nhấn vào đây để làm bài','button primary');button.type='button';
   button.disabled=!state.canLearn;
   button.addEventListener('click',()=>onOpen?.(session,state));host.replaceChildren(copy,button);

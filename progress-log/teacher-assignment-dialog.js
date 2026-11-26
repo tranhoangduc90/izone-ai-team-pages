@@ -30,7 +30,25 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
       body.append(summary,classNotice,targets,add);
       footer.append(status,receipts,back,submit);dialog.append(head,body,footer);bindDialogDismiss(dialog);
       const rows=[],reads=new Map(),operationId=crypto.randomUUID();let busy=false,opener=null,sourceUnavailable=false;
-      const canSend=row=>Boolean(row.classes.value&&row.sessions.value&&!row.loading&&!row.sessions.selectedOptions[0]?.disabled);
+      let scheduleTimer;
+      function schedulePoll(){
+        clearTimeout(scheduleTimer);
+        if(!dialog.open||document.hidden||busy)return;
+        const due=rows.filter(row=>!row.done&&row.classes.value&&!row.loading&&Number.isFinite(row.nextCheckAt));
+        if(!due.length)return;
+        const delay=Math.max(50,Math.min(...due.map(row=>row.nextCheckAt))-Date.now());
+        scheduleTimer=setTimeout(()=>{
+          if(document.hidden||!dialog.open||busy)return;
+          for(const row of due)if(row.nextCheckAt<=Date.now())void row.refresh(row.sessions.value,true);
+          schedulePoll();
+        },delay);
+      }
+      function resumeSchedule(){
+        if(!dialog.open||document.hidden||busy)return;
+        for(const row of rows)if(row.classes.value&&!row.loading&&!row.done)void row.refresh(row.sessions.value,true);
+        schedulePoll();
+      }
+      const canSend=row=>Boolean(row.classes.value&&row.sessions.value&&!row.loading&&!row.sessions.disabled&&!row.sessions.selectedOptions[0]?.disabled);
       function syncSubmit(){
         const active=rows.filter(row=>!row.done);
         submit.disabled=sourceUnavailable||busy||!active.length||active.some(row=>!canSend(row));
@@ -72,23 +90,36 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
         classes.setAttribute('aria-label','Chọn lớp nhận bài '+(rows.length+1));sessions.setAttribute('aria-label','Chọn buổi học '+(rows.length+1));
         fillClassChoices(classes,String(preferred||''));
         classLabel.append(classes);sessionLabel.append(sessions);row.append(classLabel,sessionLabel,controls,message);targets.append(row);
-        const state={classes,sessions,message,retry,portalTargets:new Map(),generation:0,done:false,loading:false,refresh:readPlan};rows.push(state);
-        async function readPlan(preferredSession=''){
+        const state={classes,sessions,message,retry,portalTargets:new Map(),generation:0,done:false,loading:false,refresh:readPlan,
+          nextCheckAt:Infinity,renderKey:null};rows.push(state);
+        async function readPlan(preferredSession='',background=false){
           const generation=++state.generation,classId=classes.value;
-          const current=()=>run===lifecycle&&state.generation===generation&&classes.value===classId&&!state.done;
+          const current=()=>run===lifecycle&&state.generation===generation&&classes.value===classId&&!state.done&&(!background||dialog.open);
           const prior=state.portalTargets.get(preferredSession);
-          state.portalTargets.clear();state.loading=Boolean(classId);
-          sessions.replaceChildren(new Option(classId?'Đang đọc lịch…':'Chọn lớp trước',''));sessions.disabled=true;
-          availabilityNote.textContent='';retry.hidden=true;syncSubmit();
+          state.nextCheckAt=Infinity;
+          if(!background){
+            state.portalTargets.clear();state.renderKey=null;state.loading=Boolean(classId);
+            sessions.replaceChildren(new Option(classId?'Đang đọc lịch…':'Chọn lớp trước',''));sessions.disabled=true;
+            availabilityNote.textContent='';retry.hidden=true;syncSubmit();
+          }
           if(!classId)return;
           try{
             const {availability}=await getAvailability(classId);
             if(!current())return;
             if(String(availability?.classId)!==classId||!Array.isArray(availability.sessions))throw Error('Lịch trả về chưa khớp lớp.');
+            state.nextCheckAt=Date.now()+(Number.isFinite(availability.scheduleRefreshInMs)?availability.scheduleRefreshInMs:30000);
+            if(busy&&background)return;
+            const renderKey=JSON.stringify([availability.scheduleStatus,availability.scheduleStale,availability.rosterStatus,availability.sessions]);
+            if(state.renderKey===renderKey)return;
+            state.renderKey=renderKey;
+            const currentSelection=background?sessions.value:preferredSession;
+            const currentTarget=background?state.portalTargets.get(currentSelection):prior;
+            state.portalTargets.clear();
             const options=availability.sessions.map(slot=>{
-              const option=new Option('Buổi '+slot.sessionNumber+displayDate(slot.date),String(slot.sessionNumber));
-              option.disabled=slot.status!=='available'||!slot.portalTarget?.id||availability.rosterStatus!=='verified';
-              if(!option.disabled)state.portalTargets.set(option.value,slot.portalTarget);
+              const time=slot.portalTarget?.startsAt?.slice(11,16);
+              const option=new Option('Buổi '+slot.sessionNumber+displayDate(slot.date)+(time?' · '+time:''),String(slot.sessionNumber));
+              option.disabled=availability.scheduleStale===true||slot.status!=='available'||!slot.portalTarget?.id||availability.rosterStatus!=='verified';
+              if(slot.portalTarget?.id)state.portalTargets.set(option.value,slot.portalTarget);
               return option;
             });
             const selectable=options.some(option=>!option.disabled);
@@ -98,15 +129,21 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
             const emptyLabel=availability.scheduleStatus==='ready'?'Không còn buổi để giao':'Chưa có buổi chọn được';
             sessions.replaceChildren(new Option(options.length?'Chọn buổi học':emptyLabel,''),...options);
             sessions.disabled=sessions.options.length<=1;
-            const selected=state.portalTargets.get(preferredSession);
-            if(selected&&(!prior||(prior.id===selected.id&&prior.startsAt===selected.startsAt)))sessions.value=preferredSession;
+            const selection=currentTarget?[...state.portalTargets].find(([,target])=>currentTarget.id===target.id&&currentTarget.startsAt===target.startsAt)?.[0]:currentSelection;
+            if(state.portalTargets.has(selection))sessions.value=selection;
             retry.hidden=availability.scheduleStatus!=='unavailable'&&!rosterLabels[availability.rosterStatus];
           }catch(error){
             if(!current())return;
-            sessions.replaceChildren(new Option('Chưa đọc được lịch',''));
+            state.nextCheckAt=Date.now()+30000;
+            if(busy&&background)return;
+            state.renderKey=null;
+            if(!background||sessions.options.length<=1){
+              state.portalTargets.clear();sessions.replaceChildren(new Option('Chưa đọc được lịch',''));
+            }
+            sessions.disabled=true;
             availabilityNote.textContent=['READ_ABORTED','READ_TIMEOUT'].includes(error.code)?'Đọc lịch quá lâu. Hãy thử lại.':error.message;retry.hidden=error.status===403;
           }finally{
-            if(current()){state.loading=false;syncSubmit();}
+            if(current()){state.loading=false;syncSubmit();schedulePoll();}
           }
         }
         classes.addEventListener('change',()=>{message.textContent='';void readPlan();});
@@ -189,12 +226,15 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
             row.classes.disabled=row.done;row.sessions.disabled=row.done||row.loading||row.sessions.options.length<=1;
             row.retry.disabled=row.done;
           }
-          syncSubmit();
+          syncSubmit();schedulePoll();
         }
       }
       dialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
-      dialog.addEventListener('close',()=>{if(dialog.open)return;dialog.remove();if(opener?.isConnected)opener.focus({preventScroll:true});});
-      view={dialog,show(){if(dialog.open)return;opener=document.activeElement;document.body.append(dialog);dialog.showModal();},
+      dialog.addEventListener('close',()=>{if(dialog.open)return;clearTimeout(scheduleTimer);
+        document.removeEventListener('visibilitychange',resumeSchedule);window.removeEventListener('focus',resumeSchedule);
+        dialog.remove();if(opener?.isConnected)opener.focus({preventScroll:true});});
+      view={dialog,show(){if(dialog.open)return;opener=document.activeElement;document.body.append(dialog);dialog.showModal();
+        document.addEventListener('visibilitychange',resumeSchedule);window.addEventListener('focus',resumeSchedule);schedulePoll();},
         refresh(){if(!busy)for(const row of rows)if(!row.done){
           const previous=row.classes.value;
           fillClassChoices(row.classes,previous);
