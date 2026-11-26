@@ -60,7 +60,8 @@ export function renderPortalCalendar(root,calendar){
     list=document.createElement('ol');root.append(header,notice,list);
   }
   const notice=root.querySelector('[role="status"]');
-  const message=calendar.stale?'Chưa kiểm được lịch mới. Đang hiển thị lịch Portal đã đọc gần nhất.':'';
+  const checked=calendar.checkedAt?new Date(calendar.checkedAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'';
+  const message=calendar.stale?(checked?'Chưa kiểm được lịch mới. Lần đọc thành công gần nhất lúc '+checked+'.':'Chưa đọc được lịch Portal.'):'';
   if(notice.textContent!==message)notice.textContent=message;
   const old=new Map([...list.children].map(row=>[row.dataset.portalId,row]));
   const rows=calendar.entries.map(entry=>{
@@ -73,19 +74,23 @@ export function renderPortalCalendar(root,calendar){
     return row;
   });
   const keep=new Set(rows);
-  for(const existing of list.children)if(!keep.has(existing))existing.remove();
+  for(const existing of [...list.children])if(!keep.has(existing))existing.remove();
   for(const [index,row]of rows.entries())if(list.children[index]!==row)list.insertBefore(row,list.children[index]||null);
 }
 
 export function applyCalendarToJourney(journey,calendar){
   const old=journey.portalSchedule;
-  if(old?.version===calendar.version&&old?.stale===calendar.stale)return journey;
+  if(old?.checkedAt&&calendar.checkedAt&&Date.parse(old.checkedAt)>Date.parse(calendar.checkedAt))return journey;
+  if(old?.version===calendar.version&&old?.stale===calendar.stale&&JSON.stringify(old?.links)===JSON.stringify(calendar.links))return journey;
   const entries=new Map(calendar.entries.map(entry=>[entry.id,entry]));
+  const links=new Map((calendar.links||[]).map(entry=>[entry.storageSessionNumber,entry.id]));
   const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Ho_Chi_Minh'}).format();
   const sessions=journey.sessions.map(session=>{
-    if(!session.erpSessionId)return session;
-    const slot=entries.get(session.erpSessionId);
+    const id=links.get(session.sessionNumber)||session.erpSessionId;
+    if(!id)return session;
+    const slot=entries.get(id);
     const changes={
+      erpSessionId:id,
       portalSessionNumber:slot?.sessionNumber??null,
       sessionDate:slot?.date??session.sessionDate,
       sessionStartTime:slot?.startsAt?.slice(11)??session.sessionStartTime,

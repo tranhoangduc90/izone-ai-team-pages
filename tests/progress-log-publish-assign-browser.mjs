@@ -159,6 +159,7 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     const selectNode=await sessionAt(1).elementHandle();
     const selectedOption=await sessionAt(1).locator('option[value="2"]').elementHandle();
     const initialCalls=portalReads.get('1294');
+    const otherClassCalls=portalReads.get('1295')||0;
     for(let tick=1;tick<=3;tick++){
       if(tick===3)laterStart='2026-11-07T19:15:00';
       t.mock.timers.setTime(Date.now()+30100);
@@ -171,6 +172,7 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     }
     await sessionAt(1).getByRole('option',{name:/Buổi 4.*19:15/}).waitFor({state:'attached'});
     assert.equal(portalReads.get('1294')-initialCalls,3);
+    assert.equal(portalReads.get('1295')||0,otherClassCalls);
     laterStart=undefined;
     await send.click();
     assert.equal(await sessionAt(1).locator('option[value="1"]').count(),0);

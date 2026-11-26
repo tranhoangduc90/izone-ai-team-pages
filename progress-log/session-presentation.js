@@ -32,6 +32,8 @@ export function sessionState(slot,cell,form,now=Date.now()){
   if(cell?.status==='complete')return {kind:'complete',label:'✓ Đã hoàn thành',canLearn:false};
   if(cell?.status==='test_result')return {kind:'complete',label:'Đã có kết quả Test',canLearn:false};
   if(slot?.scheduleStatus==='cancelled')return {kind:'review',label:'Buổi học đã nghỉ trên Portal',canLearn:false};
+  if(slot?.scheduleStatus==='needs_review'&&slot.portalSessionNumber===null)
+    return {kind:'review',label:'Lịch buổi học trên Portal cần đối chiếu',canLearn:false};
   if(!form||!cell?.assignmentId)return {kind:'empty',label:slot?.sessionKind==='test'?'Buổi Test · chưa có kết quả':'Chưa tạo Progress Log',canLearn:false};
   if(form.status!=='published')return {kind:'locked',label:'Phiếu đã đóng · xem lại',canLearn:false};
   const liveStart=slot?.portalSessionNumber!=null?Date.parse(slot.sessionDate+'T'+slot.sessionStartTime+'+07:00')-300000:NaN;

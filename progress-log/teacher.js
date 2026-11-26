@@ -17,7 +17,7 @@ import {observeSubmissionWindow, submissionWindowMessage, windowCanSubmit} from 
 import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherAuthState } from '../shared/teacher-auth-state.js?v=20261026-startup1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2';
-import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261030-the20-v2';
+import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail, updateCourseOverviewSchedule } from './teacher-course-overview.js?rev=20261030-the20-v2';
 import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261105-ic-order-v1';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
 import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261104-the25-v1';
@@ -233,8 +233,12 @@ const teacherCalendarWatcher=watchPortalCalendar({
   },
   apply(calendar,owner){
     if(String(state.overview?.classId)!==owner.classId)return;
-    state.overview=applyCalendarToJourney(state.overview,calendar);
-    renderPortalCalendar(overviewCalendar,calendar);
+    const refreshed=applyCalendarToJourney(state.overview,calendar);
+    if(refreshed!==state.overview){
+      state.overview=refreshed;
+      updateCourseOverviewSchedule(elements.courseOverview,refreshed);
+    }
+    renderPortalCalendar(overviewCalendar,refreshed.portalSchedule);
   },
   onError(_error,owner){
     if(String(state.overview?.classId)===owner.classId&&state.overview.portalSchedule)
@@ -1387,6 +1391,7 @@ function journeyContextBody(context) {
 }
 
 async function loadJourneyErpSchedule() {
+  if(state.journeyPlan?.portalManaged)return;
   const assignmentId = currentJourneyContext();
   if (!assignmentId || !state.journeyPlan || state.journeyPlanAssignmentId !== assignmentId) return;
   const generation = ++state.journeyErpScheduleGeneration;
@@ -1486,6 +1491,9 @@ function renderJourneyPlan(plan) {
   state.journeyPlanDirty = false;
   state.journeyPlanConflict=null;elements.journeyPlanConflict.hidden=true;elements.journeyPlanConflict.replaceChildren();
   elements.journeyPlanTotal.value = plan.totalSessions || Math.max(plan.highestKnownSession, 1);
+  elements.journeyPlanTotal.readOnly=plan.portalManaged===true;
+  elements.journeyPlanDatesDetails.hidden=plan.portalManaged===true;
+  elements.saveJourneyPlanButton.textContent=plan.portalManaged?'Lưu cấu hình Test':'Xác nhận kế hoạch lớp';
   elements.journeyPlanTests.value = plan.testSessionNumbers.join(', ');
   state.journeyPlanDateDraft = new Map((plan.sessionDates || []).map(item => [item.sessionNumber, item]));
   state.journeyTestSourceDraft = new Map((plan.testSources || []).map(item => [item.sessionNumber, item.testSlug]));
@@ -1494,7 +1502,8 @@ function renderJourneyPlan(plan) {
   elements.journeyErpScheduleStatus.textContent = 'Chưa đối chiếu lại lịch ERP.';
   elements.journeyTestSourcesStatus.textContent = 'Chưa đọc nguồn Test.';
   elements.journeyPlanForm.hidden = false;
-  elements.journeyPlanStatus.textContent = plan.revision
+  elements.journeyPlanStatus.textContent = plan.portalManaged?'Ngày học và thứ tự buổi cập nhật từ Portal.'
+    :plan.revision
     ? 'Đã xác nhận ' + plan.totalSessions + ' buổi · sửa lần ' + plan.revision
     : 'Chưa xác nhận; Journey chỉ hiện các mốc đã có bằng chứng.';
 }
@@ -1584,7 +1593,7 @@ async function saveJourneyPlan(event) {
   const testSessionNumbers = raw ? [...new Set(raw.split(/[\s,;]+/).map(Number))]
     .sort((a, b) => a - b) : [];
   const totalSessions = Number(elements.journeyPlanTotal.value);
-  if (!Number.isInteger(totalSessions) || totalSessions < plan.highestKnownSession
+  if (!Number.isInteger(totalSessions) || !plan.portalManaged&&totalSessions < plan.highestKnownSession
     || testSessionNumbers.some(number => number < 1 || number > totalSessions)) {
     elements.journeyPlanStatus.textContent = 'Tổng số buổi phải bao gồm mọi mốc đã có dữ liệu và mọi buổi Test.';
     return;
@@ -1592,11 +1601,11 @@ async function saveJourneyPlan(event) {
   const sessionDates = currentJourneyPlanDates();
   const testSources = currentJourneyTestSources()
     .filter(item => testSessionNumbers.includes(item.sessionNumber));
-  if (!state.journeyErpSchedule?.fingerprint || state.journeyErpScheduleAssignmentId !== currentJourneyContext()) {
+  if (!plan.portalManaged&&(!state.journeyErpSchedule?.fingerprint || state.journeyErpScheduleAssignmentId !== currentJourneyContext())) {
     elements.journeyPlanStatus.textContent = 'Hãy đọc lịch ERP trước khi xác nhận; bản chỉnh vẫn được giữ.';
     return;
   }
-  if (state.journeyErpScheduleAssignmentId === currentJourneyContext()) {
+  if (!plan.portalManaged&&state.journeyErpScheduleAssignmentId === currentJourneyContext()) {
     const byId = new Map((state.journeyErpSchedule?.sessions || [])
       .map(item => [item.erpSessionId, item.date]));
     if (sessionDates.some(item => {
@@ -1615,7 +1624,7 @@ async function saveJourneyPlan(event) {
   const assignmentId = state.journeyPlanAssignmentId;
   const body = { ...journeyContextBody(assignmentId), totalSessions,
     testSessionNumbers, testSources, sessionDates, expectedRevision: plan.revision,
-    expectedScheduleFingerprint: state.journeyErpSchedule.fingerprint };
+    ...(plan.portalManaged?{}:{expectedScheduleFingerprint:state.journeyErpSchedule.fingerprint}) };
   const operationKey = JSON.stringify(body);
   if (state.journeyPlanOperation?.key !== operationKey)
     state.journeyPlanOperation = {key:operationKey,id:crypto.randomUUID()};
@@ -1629,7 +1638,7 @@ async function saveJourneyPlan(event) {
     if (currentJourneyContext() !== assignmentId) return;
     state.journeyPlanDrafts.delete(String(plan.classId));
     renderJourneyPlan(payload.plan);
-    setNotice('Đã xác nhận kế hoạch buổi học cho cả lớp.');
+    setNotice(plan.portalManaged?'Đã lưu cấu hình Test.':'Đã xác nhận kế hoạch buổi học cho cả lớp.');
   } catch (error) {
     if (currentJourneyContext() !== assignmentId) return;
     elements.journeyPlanStatus.textContent = 'Chưa lưu: ' + error.message;

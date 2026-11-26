@@ -32,9 +32,12 @@ const calendarWatcher=watchPortalCalendar({
   },
   apply(calendar,owner){
     if(owner.token!==accessToken||journeyData?.student.studentRef!==owner.studentRef)return;
-    renderPortalCalendar(portalCalendarHost,calendar);
     const updated=applyCalendarToJourney(journeyData,calendar);
+    renderPortalCalendar(portalCalendarHost,updated.portalSchedule);
     if(updated!==journeyData){journeyData=updated;repaintSessionCards();}
+  },
+  onError(){
+    if(journeyData?.portalSchedule)renderPortalCalendar(portalCalendarHost,{...journeyData.portalSchedule,stale:true});
   }
 });
 
@@ -133,7 +136,9 @@ function buildSession(session,view,highlight) {
   if(read){item.type='button';item.addEventListener('click',()=>void openHistory(session));}
   const top=document.createElement('div');top.className='studentSessionTop';
   const b=document.createElement('b');b.textContent=session.scheduleStatus==='cancelled'?'Buổi đã nghỉ':'Buổi '+(session.portalSessionNumber??session.sessionNumber);
-  const d=document.createElement('span');d.textContent=session.sessionDate?.split('-').reverse().join('/')||'Chưa xác nhận ngày';top.append(b,d);
+  const d=document.createElement('span');
+  const date=session.sessionDate?.split('-').reverse().join('/')||'Chưa xác nhận ngày';
+  d.textContent=session.sessionStartTime?date+' · '+session.sessionStartTime.slice(0,5):date;top.append(b,d);
   const title=document.createElement('strong');title.textContent=contentTitle(session,{title:session.title});
   const skills=document.createElement('small');skills.textContent=skillsLabel(title.textContent)||'Trong kế hoạch khóa học';
   const bottom=document.createElement('div');bottom.className='studentSessionBottom';const status=document.createElement('i');status.textContent=view.label;bottom.append(status);
@@ -145,7 +150,11 @@ function buildSession(session,view,highlight) {
 }
 let historyGeneration=0,historyController=null,journeyData=null,sessionOwner='',sessionCards=new Map();
 const isThuy=()=>document.body.classList.contains('thuy-student');
-const displayedSessions=()=>isThuy()?visibleStudentSessions(journeyData.sessions):journeyData.sessions;
+const displayedSessions=()=>{
+  const sessions=journeyData.portalSchedule?journeyData.sessions.filter(session=>session.erpSessionId||session.assignmentId
+    ||session.sessionKind==='test'||session.sessionComment||session.attendanceStatus||session.completeness):journeyData.sessions;
+  return isThuy()?visibleStudentSessions(sessions):sessions;
+};
 let accessStale=false,refreshingAccess=false,openingLatest=false;
 const emptySessions=document.createElement('p');emptySessions.textContent='Chưa có buổi học để hiển thị.';emptySessions.className='muted';
 emptySessions.hidden=true;elements.sessionList.before(emptySessions);
@@ -319,7 +328,10 @@ async function refreshSessionAccess(){
     const latest=await apiRequest(token);
     if(!current())return;
     if(latest.student?.studentRef!==studentRef||String(latest.class?.classId)!==String(classId))throw Error('Dữ liệu chưa khớp học viên và lớp.');
-    journeyData=preserveSessionComments(journeyData,latest);
+    const calendar=journeyData.portalSchedule;
+    const fresherCalendar=calendar?.checkedAt&&latest.portalSchedule?.checkedAt
+      &&Date.parse(calendar.checkedAt)>Date.parse(latest.portalSchedule.checkedAt);
+    journeyData=preserveSessionComments(journeyData,fresherCalendar?applyCalendarToJourney(latest,calendar):latest);
     accessStale=false;
   }catch(error){
     if(!current())return;
