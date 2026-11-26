@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+    <title>Kiểm tra đăng nhập · Khóa 56</title>
+    <link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg?v=20261105">
+    <link rel="stylesheet" href="../shared/styles.css?rev=20261003-writing-save-cas-v1">
+    <link rel="stylesheet" href="../k56-demo/landing.css?rev=20261109-guided-v1&amp;share=20261109-v1&amp;demo=20261111-v1">
+    <link rel="preload" href="../k56-design/assets/SourceSans3-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="../k56-design/theme.css?v=20261023-master170-v3">
+    <link rel="stylesheet" href="diagnostics.css?v=20261126-r1">
+    <script defer src="../../shared/red-focus-glow.js?v=20261102-r1"></script>
+  </head>
+  <body data-k56-design>
+    <header class="topbar">
+      <span class="k56-brand"><img src="../k56-design/assets/izone-logo-color.png" alt="IZONE · IELTS Chiến lược"></span>
+      <span class="k56-product-label">Bài thi khóa 56</span>
+    </header>
+    <main class="landing-shell">
+      <section class="panel landing-card">
+        <p class="eyebrow">IZONE · IELTS 5–6 · Hệ thống bài thi</p>
+        <h1>Kiểm tra đăng nhập · Khóa 56</h1>
+        <p>Kiểm tra đường đăng nhập và quyền lớp IC2367 trên trình duyệt này.</p>
+        <section class="landing-auth" aria-label="Đăng nhập giảng viên">
+          <div>
+            <strong id="loginBadge">Chưa bắt đầu kiểm tra</strong>
+            <p id="loginStatus" role="status">Báo cáo chỉ ghi phiên bản trình duyệt, kết quả kết nối và mã lỗi. Bạn có thể xem trước và tự chọn gửi báo cáo.</p>
+            <p id="signedInAccount" hidden></p>
+          </div>
+          <div id="googleSignInButton" hidden></div>
+          <button class="button button-secondary" id="showGoogle" type="button" hidden>Thử đăng nhập Google</button>
+        </section>
+        <div class="main-test-action">
+          <button class="button button-primary" id="check" type="button" disabled>Bắt đầu kiểm tra</button>
+        </div>
+        <details class="rescue" id="reportPanel" hidden>
+          <summary>Xem báo cáo kỹ thuật</summary>
+          <div class="rescue-body">
+            <label for="report">Nội dung bạn có thể gửi cho người hỗ trợ</label>
+            <textarea id="report" rows="9" readonly spellcheck="false"></textarea>
+            <div class="landing-actions">
+              <button class="button button-secondary" id="copy" type="button">Sao chép báo cáo</button>
+              <button class="button button-secondary" id="download" type="button">Tải báo cáo</button>
+            </div>
+            <p id="copyStatus" role="status"></p>
+          </div>
+        </details>
+      </section>
+    </main>
+    <script src="../k56-shared/config.js?rev=20261020-demo-v1&amp;ej=20261024-production-r1"></script>
+    <script src="../k56-design/presentation.js?v=20261023-master170-v3"></script>
+    <script type="module" src="diagnostics.mjs?v=20261126-r1"></script>
+  </body>
+</html>

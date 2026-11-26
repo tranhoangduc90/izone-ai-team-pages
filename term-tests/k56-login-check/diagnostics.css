@@ -1,0 +1,10 @@
+#report {
+  display: block;
+  width: 100%;
+  min-height: 9rem;
+  margin: 6px 0 12px;
+  padding: 10px;
+  resize: vertical;
+  font: 14px/1.45 ui-monospace, Consolas, monospace;
+}
+#copyStatus:empty { display: none; }
