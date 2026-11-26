@@ -1,6 +1,8 @@
 const origin = 'https://tranhoangduc90.github.io';
-const countryBuild = 'k56-login-check-20261126-r3';
-const supportedBuilds = new Set(['k56-login-check-20261126-r2', countryBuild]);
+const emailBuild = 'k56-login-check-20261126-r4';
+const countryBuilds = new Set(['k56-login-check-20261126-r3', emailBuild]);
+const supportedBuilds = new Set(['k56-login-check-20261126-r2', ...countryBuilds]);
+const verifiedOutcomes = new Set(['CLASS_ACCESS_OK', 'CLASS_NOT_GRANTED', 'CLASS_LOOKUP_FAILED']);
 const cors = {
   'Access-Control-Allow-Origin': origin,
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -54,11 +56,26 @@ function httpStatus(value) {
   return Number.isInteger(value) && value >= 100 && value <= 599;
 }
 
+function isEmail(email) {
+  return typeof email === 'string' && email.length <= 254 && /^[^\s@\p{C}]+@[^\s@\p{C}]+\.[^\s@\p{C}]+$/u.test(email);
+}
+
+function isUuid(value) {
+  return typeof value === 'string' && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value);
+}
+
 function normalize(body) {
-  if (!body || !supportedBuilds.has(body.build) || typeof body.reportId !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(body.reportId)
+  if (!body || !supportedBuilds.has(body.build) || !isUuid(body.reportId)
       || body.classCode !== 'IC2367') return null;
   const result = { reportId: body.reportId, build: body.build, classCode: 'IC2367' };
-  if (body.event === 'page_open' && body.build === countryBuild) return { ...result, event: 'page_open' };
+  if (body.build === emailBuild && isUuid(body.visitId)) result.visitId = body.visitId;
+  if (body.event === 'page_open' && countryBuilds.has(body.build)) return { ...result, event: 'page_open' };
+  if (body.event === 'email_entered' && body.build === emailBuild) {
+    return isEmail(body.enteredEmail) ? { ...result, event: 'email_entered', enteredEmail: body.enteredEmail } : null;
+  }
+  if (body.event === 'google_account_selected' && body.build === emailBuild) {
+    return isEmail(body.googleEmail) ? { ...result, event: 'google_account_selected', googleEmail: body.googleEmail } : null;
+  }
   if (['RENDER_REQUESTED', 'LOAD_FAILED', 'INIT_FAILED'].includes(body.googleButton)) result.googleButton = body.googleButton;
   if (Array.isArray(body.browserPolicy)) {
     result.browserPolicy = [...new Set(body.browserPolicy.filter(code => typeof code === 'string' && /^(?:frame-src|script-src-elem|connect-src):(?:k56_api|google)$/.test(code)))];
@@ -77,6 +94,9 @@ function normalize(body) {
     },
     requests: []
   };
+  if (body.build === emailBuild && verifiedOutcomes.has(run.outcome) && isEmail(run.reviewerEmail)) {
+    result.run.reviewerEmail = run.reviewerEmail;
+  }
   const utc = typeof run.utc === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(run.utc) ? Date.parse(run.utc) : NaN;
   if (Number.isFinite(utc)) result.run.utc = new Date(utc).toISOString();
   for (const key of ['online', 'cookiesEnabled', 'secureContext']) {
@@ -107,7 +127,7 @@ export default {
     try { report = normalize(await readJson(request)); }
     catch { return new Response(null, { status: 400, headers: cors }); }
     if (!report) return new Response(null, { status: 400, headers: cors });
-    if (report.build === countryBuild) {
+    if (countryBuilds.has(report.build)) {
       const country = request.cf?.country;
       report.country = typeof country === 'string' && /^[A-Z]{2}$/.test(country) && country !== 'XX' ? country : null;
     }

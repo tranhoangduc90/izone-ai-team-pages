@@ -26,14 +26,19 @@
         <h1>Kiểm tra đăng nhập · Khóa 56</h1>
         <p>Kiểm tra đường đăng nhập và quyền lớp IC2367 trên trình duyệt này.</p>
         <div class="rescue-detail" id="autoNotice" hidden>
-          <p>Link hỗ trợ này tự ghi lượt mở trang và gửi kết quả kỹ thuật cho đội hỗ trợ IZONE, kể cả khi không hiện được nút Google. Kho chỉ lưu mã quốc gia theo kết nối mạng, không lưu địa chỉ IP, email, mật khẩu, cookie hay mã đăng nhập.</p>
+          <p>Link hỗ trợ này tự ghi lượt mở trang và gửi kết quả kỹ thuật cho đội hỗ trợ IZONE, kể cả khi không hiện được nút Google. Báo cáo có mã quốc gia theo kết nối mạng, email bạn nhập bên dưới, email Google trả về khi bạn chọn tài khoản và email phiên K56 xác minh được. Kho không lưu địa chỉ IP, mật khẩu, cookie hay mã đăng nhập.</p>
+          <div class="landing-class-field">
+            <label for="diagnosticEmail">Email bạn định dùng</label>
+            <input id="diagnosticEmail" type="email" autocomplete="off" maxlength="254" aria-describedby="diagnosticEmailHelp">
+            <p id="diagnosticEmailHelp">Chỉ nhập email. Địa chỉ hợp lệ tự gửi để đội hỗ trợ đối chiếu, kể cả khi đăng nhập lỗi.</p>
+          </div>
           <button class="button button-secondary" id="stopReporting" type="button">Dừng tự gửi</button>
           <p id="reportDelivery" role="status"></p>
         </div>
         <section class="landing-auth" aria-label="Đăng nhập giảng viên">
           <div>
             <strong id="loginBadge">Chưa bắt đầu kiểm tra</strong>
-            <p id="loginStatus" role="status">Báo cáo chỉ ghi phiên bản trình duyệt, kết quả kết nối và mã lỗi. Bạn có thể xem trước và tự chọn gửi báo cáo.</p>
+            <p id="loginStatus" role="status">Báo cáo ghi phiên bản trình duyệt, kết quả kết nối, mã lỗi và email nếu K56 xác minh được tài khoản. Bạn có thể xem nội dung báo cáo bên dưới.</p>
             <p id="signedInAccount" hidden></p>
           </div>
           <div id="googleSignInButton" hidden></div>
@@ -58,6 +63,6 @@
     </main>
     <script src="../k56-shared/config.js?rev=20261020-demo-v1&amp;ej=20261024-production-r1"></script>
     <script src="../k56-design/presentation.js?v=20261023-master170-v3"></script>
-    <script type="module" src="diagnostics.mjs?v=20261126-r3"></script>
+    <script type="module" src="diagnostics.mjs?v=20261126-r4"></script>
   </body>
 </html>
