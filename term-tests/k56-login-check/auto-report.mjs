@@ -7,6 +7,7 @@ export function createAutoReport({ status, stop, notice, build, classCode }) {
   let enabled = true;
   let revision = 0;
   const stopSignal = new AbortController();
+  const visitId = crypto.randomUUID();
   notice.hidden = false;
   stop.addEventListener('click', () => {
     enabled = false;
@@ -18,7 +19,7 @@ export function createAutoReport({ status, stop, notice, build, classCode }) {
   async function send(data) {
     if (!enabled) return;
     const current = ++revision;
-    const payload = JSON.stringify({ reportId: crypto.randomUUID(), build, classCode, ...data });
+    const payload = JSON.stringify({ reportId: crypto.randomUUID(), visitId, build, classCode, ...data });
     status.textContent = 'Đang gửi báo cáo kỹ thuật…';
     for (const delay of [0, 1200, 3600]) {
       if (delay) await new Promise(resolve => setTimeout(resolve, delay));

@@ -1,8 +1,8 @@
 /* Trang chẩn đoán tái dùng phiên K56. Báo cáo chỉ giữ nhãn tuyến, trạng thái và thời lượng.
    Không đọc header, body, cookie hay URL query trong phần ghi yêu cầu. */
-import { createAutoReport } from './auto-report.mjs?v=20261126-r2';
+import { createAutoReport } from './auto-report.mjs?v=20261126-r4';
 
-const BUILD = 'k56-login-check-20261126-r3';
+const BUILD = 'k56-login-check-20261126-r4';
 const TARGET_CLASS = 'IC2367';
 const $ = id => document.getElementById(id);
 const apiUrls = window.TERM_TEST_APP_CONFIG.API_BASE_URLS;
@@ -90,6 +90,14 @@ function publishReport() {
   $('report').value = JSON.stringify(report, null, 2);
 }
 
+function sendDiagnosticEmail(entry) {
+  report.emailEvents ||= [];
+  report.emailEvents.push(entry);
+  if (report.emailEvents.length > 8) report.emailEvents.shift();
+  publishReport();
+  void automatic.send(entry);
+}
+
 async function runCheck(action, operation) {
   if (busy) return;
   busy = true;
@@ -145,6 +153,8 @@ function setupGoogle() {
         auto_select: false,
         callback: ({ credential }) => {
           if (typeof credential === 'string' && credential) {
+            const googleEmail = automatic.active() ? emailFromGoogleCallback(credential) : null;
+            if (googleEmail) sendDiagnosticEmail({ event: 'google_account_selected', googleEmail });
             void runCheck('google_sign_in', run => authenticate(run, credential));
           }
         }
@@ -165,6 +175,34 @@ function setupGoogle() {
 
 let authView;
 const restore = () => runCheck('restore_session', run => authenticate(run));
+
+function isEmail(email) {
+  return typeof email === 'string' && email.length <= 254 && /^[^\s@\p{C}]+@[^\s@\p{C}]+\.[^\s@\p{C}]+$/u.test(email);
+}
+
+function emailFromGoogleCallback(credential) {
+  if (credential.length > 8192) return null;
+  const parts = credential.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    // Chỉ lấy gợi ý chẩn đoán. API K56 vẫn xác minh mã và quyền như trước.
+    const decoded = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+    const claims = JSON.parse(new TextDecoder().decode(Uint8Array.from(decoded, char => char.charCodeAt(0))));
+    if (!['https://accounts.google.com', 'accounts.google.com'].includes(claims.iss)
+        || claims.aud !== window.TERM_TEST_APP_CONFIG.GOOGLE_CLIENT_ID
+        || claims.email_verified !== true || !isEmail(claims.email)) return null;
+    return claims.email;
+  } catch {
+    return null;
+  }
+}
+
+function recordReviewer(run, email) {
+  if (!isEmail(email)) return;
+  run.reviewerEmail = email;
+  $('signedInAccount').textContent = 'Tài khoản trên màn hình này: ' + email;
+  $('signedInAccount').hidden = false;
+}
 
 async function authenticate(run, credential) {
   $('loginBadge').textContent = 'Đang xác minh đăng nhập…';
@@ -187,7 +225,8 @@ async function authenticate(run, credential) {
   try {
     const sessions = await Promise.allSettled(apiUrls.map(async base => {
       const client = createTeacherSessionClient({ apiBaseUrl: base, sessionPath: '/api/auth/session' });
-      return (credential === undefined ? await client.restore() : await client.login(credential)) ? base : null;
+      const session = credential === undefined ? await client.restore() : await client.login(credential);
+      return session ? { base, reviewerEmail: session.reviewer?.email } : null;
     }));
     const accepted = sessions.filter(result => result.status === 'fulfilled' && result.value);
     if (!accepted.length) {
@@ -210,13 +249,15 @@ async function authenticate(run, credential) {
     }
 
     // Chỉ đọc quyền trên API lớp thật. Kết quả demo không quyết định quyền IC2367.
-    if (!accepted.some(result => result.value === apiUrls[0])) {
+    const realSession = accepted.find(result => result.value.base === apiUrls[0]);
+    if (!realSession) {
       run.outcome = 'REAL_SESSION_UNVERIFIED';
       authView.failed(new Error('Khôi phục được phiên demo. Phiên lớp thật vẫn chưa xác minh được.'));
       if (automatic.active()) setupGoogle();
       else $('showGoogle').hidden = false;
       return;
     }
+    recordReviewer(run, realSession.value.reviewerEmail);
     try {
       const response = await fetch(apiUrls[0] + '/api/term-tests/teacher/options',
         teacherSessionRequestOptions({ cache: 'no-store', signal: AbortSignal.timeout(12000) }));
@@ -229,10 +270,7 @@ async function authenticate(run, credential) {
       $('loginStatus').textContent = run.outcome === 'CLASS_ACCESS_OK'
         ? 'Tài khoản này có quyền giảng viên với lớp IC2367.'
         : 'Tài khoản này chưa có quyền giảng viên với lớp IC2367.';
-      if (typeof result.reviewer?.email === 'string') {
-        $('signedInAccount').textContent = 'Tài khoản trên màn hình này: ' + result.reviewer.email;
-        $('signedInAccount').hidden = false;
-      }
+      recordReviewer(run, result.reviewer?.email);
       $('showGoogle').hidden = run.outcome === 'CLASS_ACCESS_OK';
     } catch (error) {
       run.outcome = 'CLASS_LOOKUP_FAILED';
@@ -281,6 +319,30 @@ document.addEventListener('securitypolicyviolation', event => {
   }
   publishReport();
 });
+
+if (automatic.active()) {
+  const field = $('diagnosticEmail');
+  let timer;
+  let lastEmail;
+  const sendEnteredEmail = () => {
+    clearTimeout(timer);
+    const email = field.value.trim();
+    if (!automatic.active() || !field.validity.valid || !isEmail(email) || email === lastEmail) return;
+    lastEmail = email;
+    sendDiagnosticEmail({ event: 'email_entered', enteredEmail: email });
+  };
+  field.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(sendEnteredEmail, 1200);
+  });
+  stopReporting.addEventListener('click', () => {
+    clearTimeout(timer);
+    field.disabled = true;
+  });
+  field.addEventListener('keydown', event => {
+    if (event.key === 'Enter') sendEnteredEmail();
+  });
+}
 
 if (automatic.active()) setTimeout(() => {
   if (!automatic.active()) return;
