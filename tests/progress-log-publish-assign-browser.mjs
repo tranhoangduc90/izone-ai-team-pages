@@ -1,7 +1,8 @@
 // UI thật + API thật với hai PGlite riêng. Toàn bộ tên/lớp/bài là fixture, không gọi production.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile,mkdir} from 'node:fs/promises';
+import {readFile,mkdir,mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {createRequire} from 'node:module';
 import {fileURLToPath,pathToFileURL} from 'node:url';
@@ -41,12 +42,21 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
       const date=`2026-11-${String((classId==='1294'?3:13)+sessionNumber).padStart(2,'0')}`;
       return {classId,sessionNumber,portalTarget:{id:String(Number(classId)*10+sessionNumber-1),startsAt:date+' 18:30:00'}};
     };
-    const portalAssignmentScheduleReader=createPortalAssignmentScheduleReader({fetchImpl:async url=>{
+    const fixtureDirectory=await mkdtemp(resolve(tmpdir(),'progress-log-assign-'));
+    t.after(()=>rm(fixtureDirectory,{recursive:true,force:true}));
+    const credentialsFile=resolve(fixtureDirectory,'portal.json');
+    await writeFile(credentialsFile,JSON.stringify({username:'portal@example.test',password:'fixture'}));
+    let laterStart;
+    const portalReads=new Map();
+    const portalAssignmentScheduleReader=createPortalAssignmentScheduleReader({credentialsFile,fetchImpl:async url=>{
+      if(url.endsWith('/openid-connect/token'))return Response.json({access_token:'fixture.token.signature',expires_in:300});
       const classId=new URL(url).pathname.split('/').at(-2);
+      portalReads.set(classId,(portalReads.get(classId)||0)+1);
       if(classId==='1298')return new Response('',{status:503});
       const rows=Array.from({length:classId==='1296'?0:6},(_,index)=>{
         const slot=target(classId,index+1).portalTarget;
-        return {course_class_id:Number(classId),class_session_id:Number(slot.id),session_start_datetime:slot.startsAt.replace(' ','T'),
+        return {course_class_id:Number(classId),class_session_id:Number(slot.id),
+          session_start_datetime:classId==='1294'&&index===3&&laterStart||slot.startsAt.replace(' ','T'),
           session_end_datetime:classId==='1294'&&index===1?'2026-10-29T21:00:00':slot.startsAt.slice(0,10)+'T21:00:00',
           status:classId==='1299'&&index===0?4:0};
       });
@@ -60,7 +70,7 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
       ['1299','Lớp mẫu cần đối chiếu','5','on_going','2026-09-02'],
       ['1300','Lớp mẫu đã kết thúc','4','completed','2026-10-12'],
       ['1301','Lớp mẫu chưa bắt đầu','5','on_going','2026-11-09'],
-      ['1302','Lớp mẫu chưa nối Progress Log','4','pending','2026-11-18']
+      ['1302','Lớp mẫu chưa nối Progress Log','4','on_going','2026-11-01']
     ].map(([class_id,class_name,course_id,class_status,class_started_at])=>({class_id,class_name,course_id,class_status,class_started_at}));
     let classPolicyNow=Date.parse('2026-11-05T05:00:00Z');
     const classPolicy=createLearningClassPolicy({pool,directoryReader:async()=>structuredClone(catalog),now:()=>new Date(classPolicyNow)});
@@ -129,6 +139,7 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.submission')).rows[0].n,0);
     const sent=[];
     page.on('request',request=>{if(request.method()==='POST'&&new URL(request.url()).pathname.endsWith('/assign'))sent.push(request.postDataJSON());});
+    await page.clock.install({time:new Date(Date.now())});
     await detail.getByRole('button',{name:'Giao bài',exact:true}).click();const dialog=page.locator('.thuy-assignment-dialog');await dialog.waitFor();
     const classAt=index=>dialog.getByLabel('Chọn lớp nhận bài '+index,{exact:true});
     const sessionAt=index=>dialog.getByLabel('Chọn buổi học '+index,{exact:true});
@@ -144,7 +155,26 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     assert.equal(await font('.thuy-assignment-summary h2'),'16px');
     assert.equal(await font('.thuy-assignment-target select'),'14px');
     assert.equal(await font('.thuy-assignment-footer .button'),'14px');
-    await sessionAt(1).selectOption('2');await send.click();
+    await sessionAt(1).selectOption('2');await sessionAt(1).focus();
+    const selectNode=await sessionAt(1).elementHandle();
+    const selectedOption=await sessionAt(1).locator('option[value="2"]').elementHandle();
+    const initialCalls=portalReads.get('1294');
+    const otherClassCalls=portalReads.get('1295')||0;
+    for(let tick=1;tick<=3;tick++){
+      if(tick===3)laterStart='2026-11-07T19:15:00';
+      t.mock.timers.setTime(Date.now()+30100);
+      const response=page.waitForResponse(response=>response.url().includes('assignment-sessions?classId=1294&source=portal'));
+      await page.clock.fastForward(30100);
+      assert.equal((await response).status(),200);
+      assert.equal(await sessionAt(1).inputValue(),'2');
+      assert.ok(await selectNode.evaluate(node=>node===document.activeElement));
+      if(tick<3)assert.ok(await selectedOption.evaluate(node=>node.isConnected));
+    }
+    await sessionAt(1).getByRole('option',{name:/Buổi 4.*19:15/}).waitFor({state:'attached'});
+    assert.equal(portalReads.get('1294')-initialCalls,3);
+    assert.equal(portalReads.get('1295')||0,otherClassCalls);
+    laterStart=undefined;
+    await send.click();
     assert.equal(await sessionAt(1).locator('option[value="1"]').count(),0);
     await statuses.filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
     assert.deepEqual(sent.map(call=>call.targets),[[target('1294',2)]]);

@@ -4,10 +4,12 @@ import {commentPanel,node} from './session-comments.js';
 // Chỉ dùng ngày đã xác nhận và phiếu thuộc roster của học viên.
 export function visibleStudentSessions(sessions,now=Date.now()){
   const today=vietnamDate(now);
-  return sessions.filter(s=>s.assignmentId&&s.attemptStatus!=='not_assigned'&&startsAt(s.sessionDate)!==null&&s.sessionDate<=today);
+  return sessions.filter(s=>s.assignmentId&&s.attemptStatus!=='not_assigned'&&(
+    startsAt(s.sessionDate)!==null&&s.sessionDate<=today
+    ||s.portalSessionNumber===null&&['complete','incomplete'].includes(s.completeness)));
 }
 export function latestAssignedSession(sessions,now=Date.now()){
-  const visible=visibleStudentSessions(sessions,now);
+  const visible=visibleStudentSessions(sessions,now).filter(s=>startsAt(s.sessionDate)!==null&&s.scheduleStatus!=='cancelled');
   const latestDate=visible.reduce((date,session)=>session.sessionDate>date?session.sessionDate:date,'');
   const latest=visible.filter(session=>session.sessionDate===latestDate);
   const knownTimes=latest.every(session=>/^\d{2}:\d{2}:\d{2}$/u.test(session.sessionStartTime||''));
@@ -41,6 +43,7 @@ export function studentEntryState(session,now=Date.now(),available=true){
   const submissionWindow=session.submissionWindow;
   const closesAt=Date.parse(submissionWindow?.effectiveClosesAt);
   const canLearn=available&&state.kind!=='review'&&session.attemptStatus!=='not_assigned'
+    &&(session.portalSessionNumber==null||state.kind==='active')
     &&session.assignmentStatus==='published'&&session.firstBlockStatus==='open'
     &&submissionWindow?.canSubmit===true&&(!Number.isFinite(closesAt)||now<closesAt)
     &&/^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
@@ -65,13 +68,14 @@ export function renderLatestSession(host,sessions,{now=Date.now(),onOpen,availab
   host.hidden=!session;
   if(!session){delete host.dataset.sessionNumber;latestViews.delete(host);if(host.childElementCount)host.replaceChildren();return;}
   const state=studentEntryState(session,now,available);
-  const fingerprint=JSON.stringify([session.assignmentId,session.publicToken,session.sessionNumber,session.title,state.canLearn]);
+  const displayNumber=session.portalSessionNumber??session.sessionNumber;
+  const fingerprint=JSON.stringify([session.assignmentId,session.publicToken,displayNumber,session.title,state.canLearn,session.scheduleStatus]);
   if(latestViews.get(host)===fingerprint)return;
   latestViews.set(host,fingerprint);host.classList.add('student-upcoming');
   const copy=node('div','','student-upcoming-copy');copy.append(node('p','BUỔI HỌC GẦN NHẤT','eyebrow'));
   host.dataset.sessionNumber=String(session.sessionNumber);
   const title=contentTitle(session,{title:session.title});
-  copy.append(node('h2','Buổi '+session.sessionNumber+' · '+title));
+  copy.append(node('h2',(session.scheduleStatus==='cancelled'?'Buổi đã nghỉ':'Buổi '+displayNumber)+' · '+title));
   const button=node('button','Nhấn vào đây để làm bài','button primary');button.type='button';
   button.disabled=!state.canLearn;
   button.addEventListener('click',()=>onOpen?.(session,state));host.replaceChildren(copy,button);
@@ -91,7 +95,9 @@ export function createStudentSessionDashboard({before,after,onOpen,onJourney,onR
   function card(session,currentId,state){
     const box=node('article','','studentSessionCard session-'+state.kind);box.dataset.sessionNumber=String(session.sessionNumber);
     const top=node('div','','studentSessionTop'),date=startsAt(session.sessionDate)!==null?session.sessionDate.split('-').reverse().join('/'):'Chưa xác nhận ngày';
-    top.append(node('b','BUỔI '+String(session.sessionNumber).padStart(2,'0')),node('span',date));
+    const label=session.scheduleStatus==='cancelled'?'Buổi đã nghỉ':'BUỔI '+String(session.portalSessionNumber??session.sessionNumber).padStart(2,'0');
+    const time=session.sessionStartTime?.slice(0,5);
+    top.append(node('b',label),node('span',time?date+' · '+time:date));
     box.append(top,node('h3',contentTitle(session,{title:session.assignmentId||session.sessionKind==='test'?session.title:''})),node('p',state.label));
     if(session.submissionWindow?.effectiveClosesAt){const time=Date.parse(session.submissionWindow.effectiveClosesAt);if(Number.isFinite(time))box.append(node('small','Hạn: '+new Date(time).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})));}
     if(session.assignmentId===currentId)box.append(node('small','Đang xem','badge blue'));

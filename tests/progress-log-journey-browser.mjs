@@ -18,7 +18,13 @@ test('J01–J03: Chrome báo chờ tức thì, deadline thật/retry/back, khôn
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({channel:'chrome',headless:true});
-  let release=null,mode='hold';const reads=[],unexpected=[],errors=[];
+  let release=null,mode='hold',showCalendar=false;
+  const reads=[],calendarReads=[],unexpected=[],errors=[];
+  const makeCalendar=(version,hour='18:30')=>({version,stale:false,refreshInMs:30000,entries:[
+    {id:'891',status:'active',sessionNumber:1,date:'2026-11-26',startsAt:'2026-11-26 18:30:00'},
+    {id:'892',status:'active',sessionNumber:2,date:'2026-11-28',startsAt:'2026-11-28 '+hour+':00'}
+  ]});
+  let calendar=makeCalendar('first');
   try{
     const page=await browser.newPage({viewport:{width:390,height:844}});page.setDefaultTimeout(5000);page.on('pageerror',error=>errors.push(error.message));
     const studentRef='11111111-1111-4111-8111-111111111111';
@@ -32,7 +38,11 @@ test('J01–J03: Chrome báo chờ tức thì, deadline thật/retry/back, khôn
         if(mode==='hold')await new Promise(resolve=>{release=resolve;});
         if(mode==='fail')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({ok:false,message:'Nguồn tạm lỗi.'})});
         return json({ok:true,journey:{student:{studentRef,name:'Học viên giả'},class:{classId:'1294',name:'IC2305 · Lớp thử'},
-          summary:{attendedSessions:0,submittedComplete:0,availableReports:0},sessions:[],reports:[],coverage:{}}});
+          summary:{attendedSessions:0,submittedComplete:0,availableReports:0},sessions:[],reports:[],coverage:{},
+          ...(showCalendar?{portalSchedule:calendar}:{})}});
+      }
+      if(url.pathname.endsWith('/student/course-calendar')){
+        calendarReads.push(req.postDataJSON());return json({ok:true,classId:'1294',studentRef,portalSchedule:calendar});
       }
       if(url.pathname.endsWith('/student/session-comments'))return json({ok:true,classId:'1294',studentRef,comments:[]});
       if(url.origin===origin&&req.method()==='GET')return route.continue();
@@ -55,6 +65,26 @@ test('J01–J03: Chrome báo chờ tức thì, deadline thật/retry/back, khôn
     assert.equal(await page.locator('#journeyRetryButton').isVisible(),true);mode='ready';release?.();
     await page.locator('#journeyRetryButton').click();await page.locator('#journeyView').waitFor({state:'visible'});
     await page.locator('#journeyBackButton').click();assert.equal(await page.locator('#confirmView').isVisible(),true);
+    showCalendar=true;
+    await page.clock.install({time:new Date('2026-11-26T11:00:00.000Z')});
+    await page.locator('#journeyButton').click();await page.locator('#journeyView').waitFor({state:'visible'});
+    const schedule=page.locator('details').filter({has:page.getByText('Lịch học trên Portal',{exact:true})});
+    await schedule.locator('summary').click();
+    await schedule.locator('[data-portal-id="891"]').evaluate(row=>{row.dataset.preserved='true';});
+    const active=await page.evaluate(()=>document.activeElement.textContent);
+    for(let tick=1;tick<=3;tick++){
+      if(tick===3)calendar=makeCalendar('changed','19:15');
+      const next=page.waitForResponse(response=>response.url().endsWith('/student/course-calendar'));
+      await page.clock.runFor(30100);await next;
+      await schedule.locator('[data-portal-id="892"]').filter({hasText:tick===3?'19:15':'18:30'}).waitFor();
+      assert.equal(calendarReads.length,tick);
+      assert.equal(await schedule.locator('[data-portal-id="891"]').getAttribute('data-preserved'),'true');
+      assert.equal(await page.evaluate(()=>document.activeElement.textContent),active);
+    }
+    await page.locator('#journeyBackButton').click();
+    await page.clock.runFor(62000);
+    assert.equal(calendarReads.length,3);
+    assert.ok(calendarReads.every(body=>body.studentRef===studentRef&&body.identityConfirmed===true));
     assert.ok(reads.every(body=>body.studentRef===studentRef&&body.identityConfirmed===true));
     assert.deepEqual(unexpected,[]);assert.deepEqual(errors,[]);
   }finally{release?.();await browser.close();await new Promise(resolve=>server.close(resolve));}

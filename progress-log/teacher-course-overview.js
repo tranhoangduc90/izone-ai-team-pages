@@ -15,6 +15,25 @@ function dateLabel(value) {
   const weekday=new Date(Date.UTC(Number(year),Number(month)-1,Number(day))).getUTCDay();
   return (weekday?'T'+(weekday+1):'CN')+' '+day+'/'+month+'/'+year;
 }
+function scheduleDateLabel(session) {
+  return dateLabel(session.sessionDate)+(session.sessionStartTime?' · '+session.sessionStartTime.slice(0,5):'');
+}
+export function updateCourseOverviewSchedule(root,overview) {
+  const sessions=new Map(overview.sessions.map(session=>[String(session.sessionNumber),session]));
+  for(const element of root.querySelectorAll('[data-schedule-key]')){
+    const session=sessions.get(element.dataset.scheduleKey);
+    if(!session)continue;
+    const heading=sessionHeading(session,session.assignments?.[0]);
+    const text=element.dataset.schedulePart==='time'?scheduleDateLabel(session):
+      element.dataset.schedulePart==='combined'?heading+' · '+scheduleDateLabel(session):heading;
+    if(element.textContent!==text)element.textContent=text;
+  }
+}
+function scheduleLabel(tag,part,session) {
+  const node=text(tag,'');
+  node.dataset.scheduleKey=String(session.sessionNumber);node.dataset.schedulePart=part;
+  return node;
+}
 function cellButton(student,cell,onOpen,session={sessionNumber:cell.sessionNumber}) {
   const button=text('button',labels[cell.status]||'Chưa xác nhận','overview-cell '+cell.status);
   button.type='button';
@@ -25,12 +44,16 @@ function cellButton(student,cell,onOpen,session={sessionNumber:cell.sessionNumbe
 export function renderCourseOverview(root,overview,{filter='',onOpen,onComment,onJourney}) {
   root.classList.add('referenceRegion');
   const students=overview.students.filter(s=>!filter||s.cells.some(c=>c.status===filter));
+  const withNotes=overview.portalSchedule?new Set(students.flatMap(student=>student.cells.filter(cell=>cell.sessionComment).map(cell=>cell.sessionNumber))):null;
+  const sessions=overview.portalSchedule?overview.sessions.filter(session=>session.erpSessionId||session.assignments?.length
+    ||session.sessionKind==='test'||withNotes.has(session.sessionNumber)):overview.sessions;
+  const sessionByNumber=new Map(sessions.map(session=>[session.sessionNumber,session]));
   const table=document.createElement('table');table.className='overview-table';
   const head=document.createElement('thead'),headRow=document.createElement('tr');
   headRow.append(text('th','Học viên'));
-  for (const session of overview.sessions) {
-    const cell=text('th',sessionHeading(session,session.assignments?.[0]));
-    cell.append(text('small',dateLabel(session.sessionDate)));headRow.append(cell);
+  for (const session of sessions) {
+    const cell=text('th','');
+    cell.append(scheduleLabel('span','heading',session),scheduleLabel('small','time',session));headRow.append(cell);
   }
   head.append(headRow);table.append(head);
   const body=document.createElement('tbody');
@@ -39,7 +62,9 @@ export function renderCourseOverview(root,overview,{filter='',onOpen,onComment,o
     const name=text('th',student.name+(student.discriminator?' · '+student.discriminator:'')+(student.current?'':' · roster lịch sử'));
     if(onJourney){const button=text('button','Hành trình riêng ↗','mini-action');button.type='button';button.addEventListener('click',()=>onJourney(student));name.append(button);}row.append(name);
     for (const cell of student.cells) {
-      const td=document.createElement('td');td.append(cellButton(student,cell,onOpen,overview.sessions.find(s=>s.sessionNumber===cell.sessionNumber)));
+      const session=sessionByNumber.get(cell.sessionNumber);
+      if(!session)continue;
+      const td=document.createElement('td');td.append(cellButton(student,cell,onOpen,session));
       const preview=commentPanel(cell.sessionComment,{compact:true});if(preview)td.append(preview);
       if(onComment){const button=text('button',preview?'Nhận xét':'Thêm nhận xét','mini-action');button.type='button';button.addEventListener('click',()=>onComment(student,cell));td.append(button);}row.append(td);
     }
@@ -51,9 +76,11 @@ export function renderCourseOverview(root,overview,{filter='',onOpen,onComment,o
   for (const student of students) {
     const card=document.createElement('details');card.append(text('summary',student.name+(student.discriminator?' · '+student.discriminator:'')+' · '+student.completeCount+' phiếu hoàn tất'));
     if(onJourney){const button=text('button','Hành trình riêng ↗','mini-action');button.type='button';button.addEventListener('click',()=>onJourney(student));card.append(button);}
-    for (const [index,cell] of student.cells.entries()) {
+    for (const cell of student.cells) {
+      const session=sessionByNumber.get(cell.sessionNumber);
+      if(!session)continue;
       const row=document.createElement('div');row.className='overview-mobile-session';
-      row.append(text('b',sessionHeading(overview.sessions[index],overview.sessions[index].assignments?.[0])+' · '+dateLabel(overview.sessions[index].sessionDate)),cellButton(student,cell,onOpen,overview.sessions[index]));
+      row.append(scheduleLabel('b','combined',session),cellButton(student,cell,onOpen,session));
       const preview=commentPanel(cell.sessionComment,{compact:true});if(preview)row.append(preview);
       if(onComment){const button=text('button',preview?'Nhận xét':'Thêm nhận xét','mini-action');button.type='button';button.addEventListener('click',()=>onComment(student,cell));row.append(button);}
       card.append(row);
@@ -61,6 +88,7 @@ export function renderCourseOverview(root,overview,{filter='',onOpen,onComment,o
     mobile.append(card);
   }
   root.replaceChildren(...(students.length?[scroll,mobile]:[text('p','Chưa có học viên phù hợp bộ lọc.')]));
+  updateCourseOverviewSchedule(root,overview);
 }
 
 export function renderQuestionAnalytics(root,analytics,{onStudent}) {

@@ -38,7 +38,7 @@ function contextFor(journey) {
   const calls = [];
   const context = { THUY_UI:false,
     contentTitle,skillsLabel,sessionHeading,sessionState,dashboardSessionState,commentPanel:()=>null,paintJourneyComments:()=>{}, AbortController, setTimeout, clearTimeout,
-    document: { createElement: () => new Node() }, elements, state,
+    document: { createElement: () => new Node() }, elements, state,loadJourneyStyle:()=>{},
     apiRequest: async (path, options) => { calls.push({ path, options }); return { journey }; },
     showView: view => calls.push({ view }),
     setNotice: (message, kind) => calls.push({ message, kind })
@@ -132,7 +132,7 @@ test('link phiếu đã đóng vẫn chọn tên để xem Journey và không m�
     title: 'Phiếu buổi 2', roster: [{ studentRef: 'student-1', name: 'Học viên giả' }]
   };
   const context = {
-    contentTitle,sessionHeading,state, elements, config: {},courseIdentity:null,
+    contentTitle,sessionHeading,state, elements, config: {},courseIdentity:null,window:{},
     readPublicToken: () => '11111111-1111-4111-8111-111111111111',
     apiRequest: async path => {
       calls.push(path);
