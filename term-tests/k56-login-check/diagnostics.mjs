@@ -2,7 +2,7 @@
    Không đọc header, body, cookie hay URL query trong phần ghi yêu cầu. */
 import { createAutoReport } from './auto-report.mjs?v=20261126-r2';
 
-const BUILD = 'k56-login-check-20261126-r2';
+const BUILD = 'k56-login-check-20261126-r3';
 const TARGET_CLASS = 'IC2367';
 const $ = id => document.getElementById(id);
 const apiUrls = window.TERM_TEST_APP_CONFIG.API_BASE_URLS;
@@ -282,4 +282,8 @@ document.addEventListener('securitypolicyviolation', event => {
   publishReport();
 });
 
-if (automatic.active()) setTimeout(() => { if (automatic.active()) void restore(); }, 900);
+if (automatic.active()) setTimeout(() => {
+  if (!automatic.active()) return;
+  void automatic.send({ event: 'page_open' });
+  void restore();
+}, 900);
