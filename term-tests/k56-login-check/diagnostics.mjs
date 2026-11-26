@@ -1,11 +1,16 @@
 /* Trang chẩn đoán tái dùng phiên K56. Báo cáo chỉ giữ nhãn tuyến, trạng thái và thời lượng.
    Không đọc header, body, cookie hay URL query trong phần ghi yêu cầu. */
-const BUILD = 'k56-login-check-20261126-r1';
+import { createAutoReport } from './auto-report.mjs?v=20261126-r2';
+
+const BUILD = 'k56-login-check-20261126-r2';
 const TARGET_CLASS = 'IC2367';
 const $ = id => document.getElementById(id);
 const apiUrls = window.TERM_TEST_APP_CONFIG.API_BASE_URLS;
 const apiOrigin = new URL(apiUrls[0]).origin;
 const report = { build: BUILD, classCode: TARGET_CLASS, runs: [] };
+const automatic = createAutoReport({
+  status: $('reportDelivery'), stop: $('stopReporting'), notice: $('autoNotice'), build: BUILD, classCode: TARGET_CLASS
+});
 const browserFetch = window.fetch.bind(window);
 let currentRun;
 let busy = false;
@@ -111,6 +116,7 @@ async function runCheck(action, operation) {
     $('check').disabled = false;
     $('check').textContent = 'Kiểm tra lại';
     publishReport();
+    void automatic.send({ run });
   }
 }
 
@@ -126,6 +132,7 @@ function setupGoogle() {
     googleLoaded = false;
     script.remove();
     report.googleButton = result;
+    void automatic.send({ googleButton: result });
     $('googleSignInButton').hidden = true;
     $('showGoogle').hidden = false;
     $('loginStatus').textContent = 'Không tải được nút Google. Bạn có thể thử lại hoặc sao chép báo cáo.';
@@ -146,6 +153,7 @@ function setupGoogle() {
         type: 'standard', theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular'
       });
       report.googleButton = 'RENDER_REQUESTED';
+      void automatic.send({ googleButton: report.googleButton });
       publishReport();
     } catch {
       googleUnavailable('INIT_FAILED');
@@ -195,7 +203,8 @@ async function authenticate(run, credential) {
         authView.failed(Object.assign(new Error(safeError(error) === 'FETCH_FAILED'
           ? 'Trình duyệt không nhận được phản hồi khi xác minh phiên.'
           : 'Hãy xem mã phản hồi trong báo cáo.'), { status: error?.status }));
-        $('showGoogle').hidden = false;
+        if (automatic.active()) setupGoogle();
+        else $('showGoogle').hidden = false;
       }
       return;
     }
@@ -204,7 +213,8 @@ async function authenticate(run, credential) {
     if (!accepted.some(result => result.value === apiUrls[0])) {
       run.outcome = 'REAL_SESSION_UNVERIFIED';
       authView.failed(new Error('Khôi phục được phiên demo. Phiên lớp thật vẫn chưa xác minh được.'));
-      $('showGoogle').hidden = false;
+      if (automatic.active()) setupGoogle();
+      else $('showGoogle').hidden = false;
       return;
     }
     try {
@@ -265,6 +275,11 @@ document.addEventListener('securitypolicyviolation', event => {
   const target = origin === apiOrigin ? 'k56_api' : 'google';
   const code = event.effectiveDirective + ':' + target;
   report.browserPolicy ||= [];
-  if (!report.browserPolicy.includes(code)) report.browserPolicy.push(code);
+  if (!report.browserPolicy.includes(code)) {
+    report.browserPolicy.push(code);
+    void automatic.send({ browserPolicy: report.browserPolicy });
+  }
   publishReport();
 });
+
+if (automatic.active()) setTimeout(() => { if (automatic.active()) void restore(); }, 900);

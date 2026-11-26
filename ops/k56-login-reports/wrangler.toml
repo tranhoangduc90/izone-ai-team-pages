@@ -1,0 +1,16 @@
+name = "izone-k56-login-reports"
+main = "worker.mjs"
+compatibility_date = "2026-10-24"
+workers_dev = true
+preview_urls = false
+
+[observability]
+enabled = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "izone-k56-login-diagnostics"
+database_id = "b1ebfe19-959e-4521-9a70-f61547cdb438"
+
+[triggers]
+crons = ["10 20 * * *"]

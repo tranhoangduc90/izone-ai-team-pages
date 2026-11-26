@@ -13,6 +13,8 @@ const prefix = '/izone-ai-team-pages/';
 const base = origin + prefix;
 const api = 'https://ducizone.ddns.net';
 const checkPath = 'term-tests/k56-login-check/';
+const reportHost = 'https://izone-k56-login-reports.tranhoangduc90.workers.dev';
+const fixtureCase = 'f'.repeat(43);
 const account = 'test-staff@example.test';
 const fixtureToken = 'fixture-google-token';
 const loginSdk = "window.google={accounts:{id:{initialize(o){this.callback=o.callback},renderButton(el){const b=document.createElement('button');b.textContent='Google thử';b.onclick=()=>this.callback({credential:'fixture-google-token'});el.append(b)}}}};";
@@ -28,7 +30,7 @@ async function fixture(t, width = 1280) {
   const context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: 'block' });
   t.after(() => context.close());
   const page = await context.newPage();
-  const state = { authenticated: false, blocked: new Set(), classes: ['IC2367'], optionsStatus: 200, calls: [], unexpected: [] };
+  const state = { authenticated: false, blocked: new Set(), classes: ['IC2367'], optionsStatus: 200, calls: [], sent: [], unexpected: [] };
   const headers = {
     'access-control-allow-origin': origin, 'access-control-allow-credentials': 'true',
     'access-control-allow-headers': 'content-type,x-izone-csrf', 'access-control-allow-methods': 'GET,POST,OPTIONS'
@@ -51,6 +53,13 @@ async function fixture(t, width = 1280) {
       state.calls.push([method, p]);
       if (state.blocked.has(p)) return route.abort('connectionreset');
       return route.fulfill({ contentType: 'text/javascript', body: loginSdk });
+    }
+    if (url.origin === reportHost && p === '/v1/reports') {
+      if (method === 'OPTIONS') return route.fulfill({ status: 204, headers, body: '' });
+      assert.equal(method, 'POST');
+      assert.equal(req.headers().authorization, 'Bearer ' + fixtureCase);
+      state.sent.push(req.postDataJSON());
+      return route.fulfill({ status: 204, headers, body: '' });
     }
     if (url.origin !== api) {
       state.unexpected.push([method, url.origin, p]);
@@ -166,4 +175,30 @@ test('Google SDK bị chặn và báo cáo vẫn tải được', async t => {
   assert.ok(state.calls.some(([, path]) => path === restoreK56));
   assert.ok(!state.calls.some(([, path]) => path === options));
   assert.deepEqual(state.unexpected, []);
+});
+
+test('Link hỗ trợ tự gửi lỗi trước đăng nhập, rồi tự gửi kết quả sau khi đăng nhập', async t => {
+  const { page, state } = await fixture(t);
+  state.blocked.add(reading);
+  await page.goto(base + checkPath + '#case=' + fixtureCase);
+  await page.getByText('Đã gửi báo cáo kỹ thuật.').waitFor();
+  const first = state.sent.find(item => item.run?.outcome === 'SESSION_UNVERIFIED');
+  assert.ok(first?.run.requests.some(row => row.step === 'Tìm phiên ở reading' && row.error === 'FETCH_FAILED'));
+  state.blocked.clear();
+  await fixtureGoogle(page).click();
+  await page.getByText('Tài khoản này có quyền giảng viên với lớp IC2367.').waitFor();
+  await page.waitForFunction(() => document.querySelector('#reportDelivery').textContent === 'Đã gửi báo cáo kỹ thuật.');
+  assert.equal(state.sent.at(-1).run.outcome, 'CLASS_ACCESS_OK');
+  const sent = JSON.stringify(state.sent);
+  assert.ok(!sent.includes(account) && !sent.includes(fixtureToken) && !sent.includes(fixtureCase));
+  assert.deepEqual(state.unexpected, []);
+});
+
+test('Người dùng có thể dừng trước khi gửi', async t => {
+  const { page, state } = await fixture(t);
+  await page.goto(base + checkPath + '#case=' + fixtureCase);
+  await page.getByRole('button', { name: 'Dừng tự gửi' }).click();
+  await run(page);
+  assert.deepEqual(state.sent, []);
+  assert.equal(new URL(page.url()).hash, '');
 });
