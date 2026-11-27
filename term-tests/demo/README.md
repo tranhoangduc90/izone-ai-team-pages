@@ -1,5 +1,11 @@
 # Lớp demo Term Test và Mini Test
 
+Bản hiện hành dùng cổng `term-tests/demo/` để mở Term 1, Term 2 và Mini của K56/K67. Các link trực tiếp từng sinh từ cổng này cũng mở đúng bài trên bản demo HTTPS khi có mã demo đúng khóa. Cả hai thứ tự và định dạng bài được giữ lại. Mở lại hoặc F5 cấp lượt mới. Các mã lớp thật tiếp tục mở bài ở đường thi hiện hành.
+
+Kiểm cổng vào và link trực tiếp bằng `node --test tests/term-demo-bookmarks.test.mjs`.
+
+## Hồ sơ lịch sử ngày 20/10/2026
+
 Yêu cầu phục hồi ngày 20/10/2026: dùng luồng lưu bài/chấm AI thật, không gửi điểm demo sang Portal. Không nhập lại bài demo lịch sử đã dọn ngày 19/10.
 
 - Khóa 56: `CODEXDEMO56`, dịch vụ/kho riêng `mapping-api-demo`.
