@@ -1,0 +1,17 @@
+.preview-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+#steps { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 18px 0; list-style: none; }
+#steps li { border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; color: var(--muted); }
+#steps li[aria-current] { color: var(--navy); background: var(--selected-bg); border-color: var(--action); font-weight: 700; }
+#work audio { display: block; width: min(100%, 480px); margin: 14px 0; }
+#work fieldset { border: 1px solid var(--line); border-radius: 10px; margin: 14px 0; padding: 8px 12px 12px; }
+#work legend { font-weight: 700; padding: 0 5px; }
+#work fieldset label { display: flex; gap: 10px; align-items: center; min-height: 42px; cursor: pointer; }
+#work input[type='radio'] { width: 18px; height: 18px; margin: 0; accent-color: var(--action); }
+.sample-passage { padding: 14px; background: var(--surface-soft); border-radius: 8px; color: var(--ink); line-height: 1.6; }
+#sampleWriting { display: block; width: 100%; margin-top: 6px; padding: 10px; font: inherit; resize: vertical; }
+#finish dl div { display: grid; grid-template-columns: 100px 1fr; gap: 10px; border-bottom: 1px solid var(--line); padding: 8px 0; }
+#finish dt { font-weight: 700; }
+#finish dd { margin: 0; }
+@media (max-width: 560px) {
+  .preview-actions .button { flex: 1 1 150px; }
+}
