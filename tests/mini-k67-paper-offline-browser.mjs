@@ -222,7 +222,9 @@ test(slug + ' K67 paper offline ' + mode, { timeout: 90000 }, async () => {
       await student.or(page.getByRole('button',{name:'Tải bài làm về máy'})).first().waitFor();
       if(await student.isVisible())await student.selectOption(ref);
       await page.getByRole('button',{name:'Tải bài làm về máy'}).waitFor();
-      assert.match(await page.evaluate(()=>navigator.serviceWorker.controller.scriptURL),/confirmed-departure-v1(?:-verified-exit-v1)?\.js\?/);
+      const updatedWorker=await page.evaluate(()=>navigator.serviceWorker.controller.scriptURL);
+      assert.equal(new URL(updatedWorker).pathname,
+        routeName+'offline-worker-audio-status-v2-confirmed-departure-v1-verified-exit-v1-online-exit-v1.js');
     }
     await context.setOffline(true);
     const order = mode === 'lis_first' ? ['listening','reading'] : ['reading','listening'];
