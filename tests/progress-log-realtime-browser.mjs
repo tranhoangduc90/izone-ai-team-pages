@@ -12,8 +12,8 @@ const uid=n=>`b0000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const assignmentId=uid(3),block=uid(4),item=uid(5);
 async function until(check,message,timeout=3000){const start=performance.now();while(performance.now()-start<timeout){if(await check())return;await new Promise(done=>setTimeout(done,40));}assert.fail(message);}
 
-async function fixture({libraryUnavailable=false,liveAllowed=true,questionResponses=false}={}){
-  let count=14,revision=1,unavailable=false,breakNextRead=false,writeCount=0,draftText='Bản đầu';const streams=new Set(),requests=[];
+async function fixture({libraryUnavailable=false,liveAllowed=true,questionResponses=false,liveParts=false}={}){
+  let count=liveParts?0:14,gradedCount=liveParts?0:14,revision=1,unavailable=false,breakNextRead=false,writeCount=0,draftText='Bản đầu';const streams=new Set(),requests=[];
   const readViews=[];let responseReads=0,laggingSummary=null;
   const students=()=>Array.from({length:17},(_,i)=>({studentRef:uid(100+i),name:`Học viên ${String(i+1).padStart(2,'0')}`,
     submissionId:i<count?uid(200+i):null,checkpoints:i<count?[{blockId:block}]:[],sessionComment:null,portalSync:null}));
@@ -24,8 +24,15 @@ async function fixture({libraryUnavailable=false,liveAllowed=true,questionRespon
     definition,journeyCommentsEnabled:true,students:students(),blockReleases:[{blockId:block,checkpoint:1,status:'open'}],classInsights:[]});
   const live=()=>({assignmentId,generatedAt:new Date().toISOString(),students:students().map((s,i)=>({studentRef:s.studentRef,attemptId:uid(400+i),draftRevision:revision,
     draftUpdatedAt:new Date().toISOString(),draftResponses:{[item]:'A',[uid(6)]:draftText},finalResponses:{[item]:'A',[uid(6)]:draftText},submissionId:s.submissionId,sessionComment:null}))});
-  const analytics=()=>({assignmentId,formVersionId:uid(300),submittedCount:count,rosterCount:17,items:definition.blocks[0].items.map((question,i)=>({
-    ...question,responseVersion:'item-'+i+'-count-'+count,objective:i===0,counts:{roster:17,submitted:count,visible:count,hidden:0,unanswered:0,answered:count,graded:i===0?count:0,correct:i===0?count-2:0,incorrect:i===0?2:0},choices:[],students:[]}))});
+  const analytics=()=>{
+    const graded=liveParts?gradedCount:count,wrong=Math.min(graded,2);
+    return {assignmentId,formVersionId:uid(300),submittedCount:count,rosterCount:17,
+      ...(liveParts?{parts:[{blockId:block,submittedCount:count}]}:{}),
+      items:definition.blocks[0].items.map((question,i)=>({
+        ...question,responseVersion:'item-'+i+'-count-'+count+'-graded-'+graded,objective:i===0,
+        counts:{roster:17,submitted:count,visible:count,hidden:0,unanswered:0,answered:count,
+          graded:i===0?graded:0,correct:i===0?graded-wrong:0,incorrect:i===0?wrong:0,pending:i===0?count-graded:0},choices:[],students:[]}))};
+  };
   const server=createServer(async(req,res)=>{
     const u=new URL(req.url,'http://localhost');
     const json=(data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
@@ -47,7 +54,7 @@ async function fixture({libraryUnavailable=false,liveAllowed=true,questionRespon
           }
           return unavailable?json({ok:false,message:'Nguồn cập nhật tạm lỗi'},503):json({ok:true,update:{assignmentId,revision:String(revision),generatedAt:new Date().toISOString(),full:true,changes:[],dashboard:dashboard(),...(view!=='overview'?{live:live()}:{}),...(view!=='roster'?{analytics:laggingSummary||analytics()}: {})}});
         }
-        if(path==='/teacher/options')return json({ok:true,reviewer:{name:'Giảng viên mẫu',email:'teacher@example.test'},capabilities:{liveUpdates:true,questionResponses},
+        if(path==='/teacher/options')return json({ok:true,reviewer:{name:'Giảng viên mẫu',email:'teacher@example.test'},capabilities:{liveUpdates:true,questionResponses,submittedPartAnalytics:liveParts},
           classes:[{class_id:'1294',class_name:'IC2305',class_status:'on_going'},{class_id:'1252',class_name:'IC2264',class_status:'on_going'},{class_id:'1001',class_name:'Lớp cũ',class_status:'completed'}],
           assignments:[{assignment_id:assignmentId,public_token:assignmentId,class_id:'1294',class_name:'IC2305',session_number:11,title:definition.title,status:'published',live_updates_enabled:liveAllowed}]});
         if(path==='/teacher/dashboard')return json({ok:true,dashboard:dashboard()});
@@ -80,12 +87,39 @@ async function fixture({libraryUnavailable=false,liveAllowed=true,questionRespon
   const browser=await chromium.launch({channel:'chrome',headless:true}).catch(error=>{server.close();throw error;}),context=await browser.newContext({viewport:{width:1440,height:1000},serviceWorkers:'block'}),page=await context.newPage(),errors=[];
   page.setDefaultTimeout(8000);page.on('pageerror',error=>errors.push(error.message));
   await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
-  return {page,origin,requests,readViews,errors,get responseReads(){return responseReads;},get writes(){return writeCount;},advance(value){count=value;revision++;draftText='Bản mới '+value;for(const stream of streams)stream.write(`event: change\ndata: ${JSON.stringify({assignmentId,revision:String(revision)})}\n\n`);},
+  return {page,origin,requests,readViews,errors,get responseReads(){return responseReads;},get writes(){return writeCount;},advance(value,graded=gradedCount){count=value;gradedCount=graded;revision++;draftText='Bản mới '+value;for(const stream of streams)stream.write(`event: change\ndata: ${JSON.stringify({assignmentId,revision:String(revision)})}\n\n`);},
     fail(value){unavailable=value;if(value)for(const stream of streams)stream.destroy();},
     commitWhileSummaryIsOpen(){laggingSummary=analytics();count++;revision++;},
     breakNextRead(mode='truncated'){breakNextRead=mode;},
     async close(){await context.close();await browser.close();for(const stream of streams)stream.destroy();server.closeAllConnections();await new Promise(done=>server.close(done));}};
 }
+
+test('Nộp phần: thấy 1 → 2 → 3 lượt, chấm đến sau và giữ phần đang đọc',{timeout:25000},async()=>{
+  const f=await fixture({questionResponses:true,liveParts:true});
+  try{
+    await f.page.goto(f.origin+'/progress-log/teacher-thuy.html#assignment='+assignmentId);
+    await f.page.locator('.thuy-roster tbody tr').first().waitFor();
+    await f.page.locator('[data-thuy-mode=results]').click();
+    const analytics=f.page.locator('#questionAnalytics');
+    const row=analytics.locator('.thuy-question-select').first();
+    const card=analytics.locator('.thuy-question-card');
+    await row.focus();
+    await row.evaluate(el=>{window.currentQuestion=el;window.currentCard=document.querySelector('.thuy-question-card');});
+    for(let index=1;index<=3;index++){
+      f.advance(index);
+      await until(async()=> (await card.textContent()).includes(index+' đã trả lời'),'Số lượt chưa hiện');
+      assert.match(await analytics.locator('.thuy-question-group').first().textContent(),new RegExp(index+'/17 đã nộp phần'));
+      assert.match(await card.textContent(),new RegExp('0 đúng · 0 sai · '+index+' chờ chấm'));
+      assert.equal(await row.evaluate(el=>el===window.currentQuestion&&el===document.activeElement
+        &&window.currentCard===document.querySelector('.thuy-question-card')),true);
+    }
+    f.advance(3,3);
+    await until(async()=>(await card.textContent()).includes('1 đúng · 2 sai'),'Đã chấm xong nhưng chưa hiện');
+    assert.match(await card.textContent(),/3 đã trả lời/);
+    assert.equal(f.writes,0);
+    assert.deepEqual(f.errors,[]);
+  }finally{await f.close();}
+});
 
 test('Tổng quan cũ hơn API chi tiết: đối chiếu lại câu đang mở mà không đợi sự kiện mới',{timeout:35000},async()=>{
   const f=await fixture({questionResponses:true,liveAllowed:false});

@@ -18,11 +18,15 @@ export function renderThuyAnalytics(root,analytics,{definition,readResponses,syn
     header.append(node('h2','Tổng quan lớp'),summary);workspace.append(navigation,detail);root.replaceChildren(header,workspace);
     view={header,summary,navigation,review,responses,assignmentId:analytics.assignmentId,rows:new Map(),groups:new Map(),selected:null};views.set(root,view);
   }
-  const summary=`${analytics.submittedCount}/${analytics.rosterCount} học viên có bài nộp hiện hành`;
+  const liveParts=Array.isArray(analytics.parts);
+  const summary=`${analytics.submittedCount}/${analytics.rosterCount} học viên ${liveParts?'đã nộp ít nhất một phần':'có bài nộp hiện hành'}`;
   if(view.summary.textContent!==summary)view.summary.textContent=summary;
-  const sourceItems=new Map((definition?.blocks||[]).flatMap(b=>b.items).map(item=>[item.itemVersionId,item]));
+  const blocks=definition?.blocks||[];
+  const sourceItems=new Map(blocks.flatMap(part=>part.items.map(item=>[item.itemVersionId,{item,part}])));
+  const partCounts=new Map(analytics.parts?.map(part=>[part.blockId,part.submittedCount]));
   const group=item=>!item.objective?3:item.counts.incorrect>0?0:item.counts.graded>0?1:2;
-  const items=[...analytics.items].sort((a,b)=>group(a)-group(b)||(b.counts.incorrect||0)-(a.counts.incorrect||0)||a.position-b.position);
+  const items=[...analytics.items].sort((a,b)=>liveParts?a.position-b.position:
+    group(a)-group(b)||(b.counts.incorrect||0)-(a.counts.incorrect||0)||a.position-b.position);
   const ids=new Set(items.map(item=>item.itemVersionId));
   for(const [id,row]of view.rows)if(!ids.has(id)){row.choose.remove();row.card.remove();view.rows.delete(id);}
   if(!ids.has(view.selected))view.selected=items[0]?.itemVersionId||null;
@@ -37,7 +41,8 @@ export function renderThuyAnalytics(root,analytics,{definition,readResponses,syn
     }
   };
   for(const [index,item]of items.entries()){
-    const source=sourceItems.get(item.itemVersionId)||item,display=questionPresentation(source),number=source.displayNumber||item.position;
+    const {item:source=item,part}=sourceItems.get(item.itemVersionId)||{};
+    const display=questionPresentation(source),number=source.displayNumber||item.position;
     let row=view.rows.get(item.itemVersionId);
     if(!row){const select=node('button','','thuy-question-select');select.type='button';select.dataset.itemId=item.itemVersionId;
       select.addEventListener('click',()=>view.choose(item.itemVersionId,true));row={choose:select,card:node('section','','thuy-question-card')};view.rows.set(item.itemVersionId,row);}
@@ -45,30 +50,50 @@ export function renderThuyAnalytics(root,analytics,{definition,readResponses,syn
     const count=item.counts,wrong=count.incorrect||0,graded=count.graded||0;
     const label=`Câu ${number} · ${display.title}`;
     const state=!item.objective?'Không chấm điểm':wrong?`${wrong}/${graded} học viên đã chấm sai`:graded?'Chưa có học viên trả lời sai':'Chưa có kết quả chấm';
-    const part=(definition?.blocks||[]).find(block=>block.items.some(question=>question.itemVersionId===item.itemVersionId));
     const skills=(source.skillCodes||[]).map(skill=>({general:'Chung',listening:'Listening',reading:'Reading',writing:'Writing',speaking:'Speaking'})[skill]||skill).join(', ');
     const type=source.layoutType==='matching_heading_dropdown'?'Dropdown':source.interactionType==='single_choice'?'Trắc nghiệm':source.interactionType==='multi_choice_group'?'Chọn nhiều đáp án':source.interactionType==='number_score'?'Tự báo điểm':source.interactionType==='long_text'?'Trả lời mở':'Điền từ';
     const percent=graded?new Intl.NumberFormat('vi-VN',{maximumFractionDigits:1}).format(wrong/graded*100)+'%':null;
-    const metadata=[part?.title,skills,type].filter(Boolean).join(' · '),result=state+(item.objective&&percent?' · '+percent:'');
-    const navLabel=JSON.stringify([label,metadata,result]);
-    if(row.navLabel!==navLabel){const copy=node('span','','thuy-question-copy'),stats=node('span','','thuy-question-stats');copy.append(node('span',label),node('small',metadata));stats.append(node('strong',item.objective&&graded?wrong+'/'+graded+' sai':state),node('small',item.objective&&percent?percent+' sai':''));row.choose.replaceChildren(copy,stats);row.navLabel=navLabel;}
-    const {responseVersion,students,...reviewItem}=item;
-    const fingerprint=JSON.stringify([reviewItem,source]);
+    const metadata=[part?.title,skills,type].filter(Boolean).join(' · ');
+    const submittedLabel=`${count.answered} đã trả lời`;
+    const gradeLabel=item.objective?`${count.correct||0} đúng · ${wrong} sai${count.pending?` · ${count.pending} chờ chấm`:''}`:'Không chấm điểm';
+    const primary=liveParts?submittedLabel:item.objective&&graded?wrong+'/'+graded+' sai':state;
+    const secondary=liveParts?gradeLabel:item.objective&&percent?percent+' sai':'';
+    const navLabel=JSON.stringify([label,metadata]);
+    if(row.navLabel!==navLabel){
+      const copy=node('span','','thuy-question-copy'),stats=node('span','','thuy-question-stats');
+      copy.append(node('span',label),node('small',metadata));
+      row.primary=node('strong');row.secondary=node('small');
+      stats.append(row.primary,row.secondary);row.choose.replaceChildren(copy,stats);row.navLabel=navLabel;
+    }
+    if(row.primary.textContent!==primary)row.primary.textContent=primary;
+    if(row.secondary.textContent!==secondary)row.secondary.textContent=secondary;
+    const fingerprint=JSON.stringify([item.correctAnswer,item.referenceAnswer,item.correctOptionIds,item.explanation,item.objective,source]);
     if(row.fingerprint!==fingerprint){
       const card=node('section','','thuy-question-card');
       const expectedIds=item.correctOptionIds||[];
       card.append(questionReview(source,{correctAnswer:item.correctAnswer??item.referenceAnswer,expectedIds,explanation:item.explanation,reference:!item.objective}));
-      const percent=graded?new Intl.NumberFormat('vi-VN',{maximumFractionDigits:1}).format(wrong/graded*100)+'%':'Chưa có mẫu số';
-      card.append(node('p',item.objective?`${wrong}/${graded} học viên đã chấm trả lời sai · ${percent}`:
-        `${count.answered}/${count.visible} đã trả lời · Không chấm đúng/sai`));
+      row.totals=node('p');
+      card.append(row.totals);
       row.card=card;row.fingerprint=fingerprint;
     }
+    const totals=liveParts?`${submittedLabel} · ${count.submitted} đã nộp phần · ${gradeLabel}`:
+      item.objective?`${wrong}/${graded} học viên đã chấm trả lời sai · ${percent||'Chưa có mẫu số'}`:
+        `${count.answered}/${count.visible} đã trả lời · Không chấm đúng/sai`;
+    if(row.totals.textContent!==totals)row.totals.textContent=totals;
   }
   const desired=[];
-  for(const [index,label]of ['Thống kê theo câu hỏi','Chưa có học viên trả lời sai','Chưa có kết quả chấm','Không chấm điểm'].entries()){
-    const members=items.filter(item=>group(item)===index);if(!members.length)continue;
-    let heading=view.groups.get(index);if(!heading){heading=node('h3','','thuy-question-group');view.groups.set(index,heading);}
-    const text=label+' · '+members.length;if(heading.textContent!==text)heading.textContent=text;
+  const groups=liveParts&&blocks.length?blocks.map(part=>({key:part.blockId,
+    text:`${part.title} · ${partCounts.get(part.blockId)||0}/${analytics.rosterCount} đã nộp phần`,
+    members:items.filter(item=>sourceItems.get(item.itemVersionId)?.part===part)})):
+    ['Thống kê theo câu hỏi','Chưa có học viên trả lời sai','Chưa có kết quả chấm','Không chấm điểm']
+      .map((label,key)=>{
+        const members=items.filter(item=>group(item)===key);
+        return {key,text:label+' · '+members.length,members};
+      });
+  for(const {key,text,members} of groups){
+    if(!members.length)continue;
+    let heading=view.groups.get(key);if(!heading){heading=node('h3','','thuy-question-group');view.groups.set(key,heading);}
+    if(heading.textContent!==text)heading.textContent=text;
     desired.push(heading,...members.map(item=>view.rows.get(item.itemVersionId).choose));
   }
   for(const child of [...view.navigation.children])if(!desired.includes(child))child.remove();

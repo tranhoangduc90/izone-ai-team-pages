@@ -1,0 +1,11 @@
+.student-dashboard-latest,.student-dashboard-sessions{margin:24px 0;padding:24px;border:1px solid #e0e5eb;border-radius:14px;background:#fff;color:#174266}
+.student-dashboard-latest{background:#edf5fa}.student-dashboard-latest>.eyebrow{color:#174266}.student-dashboard-latest .studentSessionCard{background:#fff}
+.student-dashboard-latest .studentSessionCard h3,.student-dashboard-sessions .studentSessionCard h3{font-size:20px;line-height:1.45;margin:12px 0}
+.student-dashboard-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.student-dashboard-heading h2{margin:0}
+.student-dashboard-latest .studentSessionCard,.student-dashboard-sessions .studentSessionCard{display:flex;flex-direction:column;gap:10px;text-align:left;height:auto;padding:20px;min-width:0}
+.student-dashboard-latest .studentSessionTop,.student-dashboard-sessions .studentSessionTop{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:14px;line-height:22px}
+.student-dashboard-latest .studentSessionCard,.student-dashboard-sessions .studentSessionCard{border:1px solid #e0e5eb;border-radius:12px;background:#fff}
+.student-dashboard-sessions .studentSessionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.student-dashboard-latest .badge,.student-dashboard-sessions .badge{align-self:flex-start}
+.student-dashboard-latest .studentSessionCard p,.student-dashboard-sessions .studentSessionCard p{margin:0}.student-dashboard-sessions .studentSessionGrid{margin-top:20px}
+.student-dashboard-latest .button,.student-dashboard-sessions .button{align-self:flex-start;font-size:16px;line-height:24px;white-space:normal}
+@media(max-width:600px){.student-dashboard-latest,.student-dashboard-sessions{padding:16px;margin:16px 0}.student-dashboard-sessions .studentSessionGrid{grid-template-columns:minmax(0,1fr)}}
