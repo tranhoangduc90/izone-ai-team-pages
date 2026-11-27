@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-2-k67-listening-makeup",
-  "build": "issue611-a77b1ae8e3c4acf3",
+  "build": "issue611-940d30124d2c13f2",
   "assets": [
     {
       "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
@@ -211,12 +211,12 @@
       "sha256": "cd79a1720b290f7818edb4a640854f9b96e8e60dbef7fefd9ce29d87824985af"
     },
     {
-      "path": "../substitute-skill-shared/listening-controller-journey-20261127-v1.mjs?v=20261125-preview-v1",
-      "sha256": "463d1fe172b558977f6eaa71e5973552c5df6848f4a050d4b32b447351752f7a"
+      "path": "../substitute-skill-shared/listening-controller-journey-20261127-v2.mjs?v=20261125-preview-v1",
+      "sha256": "7566e1f5900d0f1c9c6b843550e408291aecc93daf8f781e6e23dd78e85a38a0"
     },
     {
-      "path": "../substitute-skill-shared/listening-journey-20261127-v1.mjs?v=20261125-preview-v1",
-      "sha256": "22bb2a2ceca793b01d5390051eb7fb9648c721c89e5db61b95ca16988c8796a1"
+      "path": "../substitute-skill-shared/listening-journey-20261127-v2.mjs?v=20261125-preview-v1",
+      "sha256": "80c141379a5ecc1bda41363a691bce85c7884b946736102f5721d7b390714882"
     },
     {
       "path": "../substitute-skill-shared/offline-worker-scoped-navigation-v1.js",
@@ -272,7 +272,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "5e9f2acc1cabd0984b04ebe1caba07eba6796f15f58579becb6fce80495ea5d0"
+      "sha256": "64fdab510601ff41e3603dcf5ec5a3c8e328c72b1817db99d69028e9dae2b8a4"
     },
     {
       "path": "sw.js",
