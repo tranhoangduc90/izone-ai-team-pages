@@ -16,16 +16,39 @@ export function directAsset(manifest,termSlug){
  if(!asset||manifest.envelopeVersion!=='MP3')throw Error('AUDIO_MANIFEST_DENIED');
  return asset;
 }
+function matchesManifest(asset,manifest){
+ return manifest?.envelopeVersion==='MP3'&&asset.sha256===manifest.sha256&&
+  asset.byteLength===manifest.byteLength&&asset.url===manifest.url;
+}
+// Only Listening Practice opts in using its own authenticated audio metadata.
+function registeredPracticeAsset(manifest,grant){
+ const {sha256,byteLength,url}=manifest||{},size=524288;
+ if(manifest?.envelopeVersion!=='MP3'||!/^[a-f0-9]{64}$/.test(sha256||'')||
+   !Number.isSafeInteger(byteLength)||byteLength<=0||grant?.chunkSize!==size||
+   !Array.isArray(grant.chunks)||grant.chunks.length!==Math.ceil(byteLength/size))return;
+ if(typeof url!=='string'||!/^https:\/\/tranhoangduc90\.github\.io\/izone-ai-team-pages\/listening-practice\/audio-assets\/[a-z0-9-]+\.mp3$/.test(url)||
+   !url.endsWith('-'+sha256.slice(0,16)+'.mp3'))return;
+ if(!grant.chunks.every((chunk,i)=>chunk?.byteLength===Math.min(size,byteLength-i*size)&&/^[a-f0-9]{64}$/.test(chunk.sha256||'')))return;
+ return {sha256,byteLength,url,key:'public-audio/'+sha256+'.mp3',chunks:grant.chunks};
+}
+function assetForGrant(manifest,grant,{termSlug,practiceCatalog}={}){
+ try{return directAsset(manifest,termSlug);}
+ catch(error){
+  const registered=practiceCatalog&&termSlug===undefined?registeredPracticeAsset(manifest,grant):undefined;
+  if(!registered)throw error;
+  return registered;
+ }
+}
 function validate(grant,asset){
  if(grant?.version!==1||grant.policy!==DIRECT_POLICY||grant.method!=='GET'||grant.sha256!==asset.sha256||grant.byteLength!==asset.byteLength||grant.validForSeconds!==600||grant.fallback!=='public-pages')throw Error('AUDIO_GRANT_DENIED');
  let u;try{u=new URL(grant.url);}catch{throw Error('AUDIO_GRANT_DENIED');}
  if(u.origin!==ORIGIN||u.pathname!==PREFIX+asset.key||u.hash||u.username||u.password||u.href.length>4096)throw Error('AUDIO_GRANT_DENIED');
 }
-export function validateDirectGrant(manifest,grant){validate(grant,directAsset(manifest));}
+export function validateDirectGrant(manifest,grant,options){validate(grant,assetForGrant(manifest,grant,options));}
 // Receives a native-authorized immutable manifest and ephemeral GET descriptor.
 // Never starts/changes an attempt; every renewal goes through the caller's native API.
 export async function downloadDirect(manifest,initialGrant,options={}){
- const asset=directAsset(manifest,options.termSlug);
+ const asset=assetForGrant(manifest,initialGrant,options);
  if(initialGrant||options.preferFallback!==true)validate(initialGrant,asset);
  const cache=options.cache||createDirectCache(),fetcher=options.fetchImpl||fetch;
  const outer=options.signal,overall=new AbortController(),overallTimer=setTimeout(()=>overall.abort(),options.totalTimeoutMs??120000);
@@ -41,9 +64,9 @@ export async function downloadDirect(manifest,initialGrant,options={}){
    fallback=true;return true;
   }
   signal.throwIfAborted();
-  if(value?.manifest&&value?.download){const fresh=directAsset(value.manifest,options.termSlug);if(fresh.sha256!==asset.sha256)throw denied();grant=value.download;validate(grant,asset);receivedAt=performance.now();return true;}
+  if(value?.manifest&&value?.download){if(!matchesManifest(asset,value.manifest))throw denied();grant=value.download;validate(grant,asset);receivedAt=performance.now();return true;}
   // A valid native response may turn the direct flag off. Only same-file public fallback is allowed.
-  if(value?.manifest&&directAsset(value.manifest,options.termSlug).sha256===asset.sha256&&!value.download){fallback=true;return true;}
+  if(matchesManifest(asset,value?.manifest)&&!value.download){fallback=true;return true;}
   throw denied();
  }
  try{

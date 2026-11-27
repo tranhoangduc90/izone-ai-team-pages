@@ -1,5 +1,5 @@
 import {createPublicAudio} from '../shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-audio-v1&audio=20261028-part-rescue-v1';
-import {downloadDirect,supportsDirect,validateDirectGrant} from '../shared/audio/direct.mjs?v=20261107-r2-direct1';
+import {downloadDirect,supportsDirect,validateDirectGrant} from '../shared/audio/direct.mjs?v=20261107-r2-direct1&practice-r2-catalog=20261127-1';
 
 const store = createPublicAudio({
   database: 'izone-listening-public-audio-v1',
@@ -23,7 +23,7 @@ export async function fetchListeningAudio(url, options = {}) {
   options.signal?.throwIfAborted();
   const headers = new Headers(requestOptions.headers);
   headers.set('Accept', AUDIO_MANIFEST_TYPE);
-  if(supportsDirect())headers.set('X-Izone-Audio-Transport','r2-direct-v1');
+  if(supportsDirect())headers.set('X-Izone-Audio-Transport','r2-direct-v1-practice-catalog');
   const response = await fetch(url, {...requestOptions, headers, cache:'no-store'});
   if (!response.ok) throw Object.assign(new Error('Chưa tải được audio. Nhấn Tiếp tục để thử lại.'), {httpStatus:response.status});
   options.signal?.throwIfAborted();
@@ -31,7 +31,7 @@ export async function fetchListeningAudio(url, options = {}) {
     const {audioManifest,audioDownload} = await response.json();
     if (!store.validManifest(audioManifest)) throw new Error('Định danh audio Pages không hợp lệ.');
     if (expectedSha256 && audioManifest.sha256 !== expectedSha256) throw new Error('AUDIO_VERSION_MISMATCH');
-    if(audioDownload&&supportsDirect())validateDirectGrant(audioManifest,audioDownload);
+    if(audioDownload&&supportsDirect())validateDirectGrant(audioManifest,audioDownload,{practiceCatalog:true});
     current();
     const key = audioManifest.assetVersion + ':' + audioManifest.byteLength;
     if (completeAudio?.key === key) return completeAudio.blob;
@@ -42,7 +42,7 @@ export async function fetchListeningAudio(url, options = {}) {
       if(generation!==memoryGeneration)throw new DOMException('Identity changed','AbortError');
       return {manifest:value.audioManifest,download:value.audioDownload};
     };
-    const blob = audioDownload&&supportsDirect()?await downloadDirect(audioManifest,audioDownload,{signal:options.signal,refresh}):await store.download(audioManifest, {signal:options.signal});
+    const blob = audioDownload&&supportsDirect()?await downloadDirect(audioManifest,audioDownload,{signal:options.signal,refresh,practiceCatalog:true}):await store.download(audioManifest, {signal:options.signal});
     current();
     if (generation === memoryGeneration) completeAudio = {key, blob};
     return blob;
