@@ -8,13 +8,16 @@ import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {randomUUID} from 'node:crypto';
+import {installListeningEofRecorder, waitForListeningEof} from './helpers/k67-listening-eof.mjs';
 
 const pages=fileURLToPath(new URL('../',import.meta.url));
 const backend=process.env.K67_BACKEND;
 assert.ok(backend,'Set K67_BACKEND to the isolated backend package.');
 const full=process.env.K67_JOURNEY_FULL==='1';
+const realAudio=full||process.env.K67_JOURNEY_REAL_AUDIO==='1';
 const checkListeningLayout=process.env.K67_JOURNEY_CHECK_LISTENING_LAYOUT==='1';
 const eofJournal=process.env.K67_JOURNEY_EOF_JOURNAL==='1';
+const loseListeningAck=process.env.K67_JOURNEY_DROP_LISTENING_ACK==='1';
 const recorderOutage=process.env.K67_PREVIEW_TERM2_JOURNAL_RECORDER_DOWN==='1';
 const loseUncommittedJournalWrites=process.env.K67_JOURNEY_LOSE_OFFLINE_JOURNAL_WRITES==='1';
 const delayRestoredAudio=process.env.K67_JOURNEY_DELAY_RESTORED_AUDIO==='1';
@@ -76,7 +79,7 @@ async function verifyListeningLayout(page) {
   }
 }
 
-for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_000:term1?8_300_000:2_650_000):writingOnly?4_200_000:upgrade?180_000:120_000},async()=>{
+for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_000:term1?8_300_000:2_650_000):realAudio?2_650_000:writingOnly?4_200_000:upgrade?180_000:120_000},async()=>{
   assert.ok(['lis_first','read_first'].includes(mode));
   const listener=createServer().listen(0,'127.0.0.1');
   await once(listener,'listening');
@@ -96,32 +99,36 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       K67_PREVIEW_MINI_DEMO_CBT:demoRecovery&&!term&&!pretest?'true':'false',
       K67_PREVIEW_PRETEST_LISTENING_RECOVERY:recovery&&pretest?'true':'false',
       K67_PREVIEW_RESCUE_CLASS:rescueClass,
-      K67_PREVIEW_AUDIO_PROTECTION:'true',K67_PREVIEW_REAL_MINI_AUDIO:full&&!term?'true':'false',
-      K67_PREVIEW_REAL_TERM1_AUDIO:(full||r2Smoke)&&term1?'true':'false',K67_PREVIEW_AUDIO_SECONDS:'18',
-      K67_PREVIEW_REAL_TERM2_AUDIO:(full||r2Smoke)&&term2?'true':'false',
+      K67_PREVIEW_AUDIO_PROTECTION:'true',K67_PREVIEW_REAL_MINI_AUDIO:realAudio&&!term&&!pretest?'true':'false',
+      K67_PREVIEW_REAL_TERM1_AUDIO:(realAudio||r2Smoke)&&term1?'true':'false',K67_PREVIEW_AUDIO_SECONDS:'18',
+      K67_PREVIEW_REAL_TERM2_AUDIO:(realAudio||r2Smoke)&&term2?'true':'false',
       K67_PREVIEW_TERM2_R2_CONFIG:process.env.K67_JOURNEY_TERM2_R2_CONFIG||'',
       K67_PREVIEW_TERM1_R2_CONFIG:process.env.K67_JOURNEY_TERM1_R2_CONFIG||'',
-      K67_PREVIEW_MINI_REVIEW_SECONDS:full?'120':'3',
+      K67_PREVIEW_MINI_REVIEW_SECONDS:realAudio?'120':'3',
       K67_PREVIEW_MINI_READING_MINUTES:full?'20':process.env.K67_PREVIEW_MINI_READING_MINUTES||'.12'},stdio:['ignore','ignore','pipe']});
   let browser,page,fixtureError='';
   let sectionInProgress,dismissNextDialog=false;
   fixture.stderr.on('data',chunk=>{fixtureError=(fixtureError+String(chunk)).slice(-3_000);});
   const log=(phase,details={})=>console.log(JSON.stringify({at:new Date().toISOString(),mode,full,writingOnly,phase,...details}));
-  const heartbeat=(full||writingOnly)?setInterval(async()=>{
+  const heartbeat=(realAudio||writingOnly)?setInterval(async()=>{
     const media=await page?.evaluate(()=>({position:document.getElementById('miniJourneyAudio')?.currentTime,
       review:document.getElementById('miniJourneyPlayer')?.innerText})).catch(()=>null);
     log('heartbeat',{section:sectionInProgress,...media});
   },60_000).unref():null;
   try{
-    let ready=false;
-    for(let count=0;count<100&&!ready;count+=1){
+    let examTiming;
+    for(let count=0;count<100&&!examTiming;count+=1){
       if(fixture.exitCode!==null)throw new Error(fixtureError);
-      try{ready=(await fetch(base+'/preview/status')).ok;}catch{}
-      if(!ready)await new Promise(resolve=>setTimeout(resolve,250));
+      try{
+        const status=await fetch(base+'/preview/status');
+        if(status.ok)examTiming=(await status.json()).examTiming?.[slug];
+      }catch{}
+      if(!examTiming)await new Promise(resolve=>setTimeout(resolve,250));
     }
-    assert.ok(ready);
+    assert.ok(examTiming,`Missing fixture timing for ${slug}: ${fixtureError}`);
     browser=await chromium.launch({channel:'msedge',headless:true});
     const context=await browser.newContext();
+    await installListeningEofRecorder(context);
     if(simulateOutput)await context.addInitScript(()=>{
       const actions=new Map(),devices=new EventTarget();
       const lab=window.k67TestMedia={actions,devices,outputs:['default','stereo','speaker'],sink:'',switches:[],permissions:[]};
@@ -195,6 +202,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       });
     }
     const errors=[],seals=[],rejections=[],r2Requests=[],pagesRequests=[],offers=[];
+    const submitted=new Map();
     const openPage=async()=>{
       const target=await context.newPage();
       target.on('pageerror',error=>errors.push(error.message));
@@ -207,8 +215,12 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       target.on('response',async response=>{
         if(response.url().endsWith('/cbt-journey/prepare'))offers.push(await response.json().catch(()=>({})));
         if(!/\/cbt-journey\/(seal|interrupt)$/.test(response.url()))return;
-        const section=response.request().postDataJSON().section;
-        if(response.ok())seals.push(section);
+        const payload=response.request().postDataJSON();
+        const {section}=payload;
+        if(response.ok()){
+          seals.push(section);
+          submitted.set(section,payload);
+        }
         else rejections.push({section,status:response.status(),code:(await response.json().catch(()=>({}))).error});
       });
       return target;
@@ -719,11 +731,13 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
             const player=document.getElementById('miniJourneyAudio');
             return !player.paused&&player.currentTime>before+5.1;
           },before);
-          await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.ended,null,{timeout:25_000});
+          const eof=await waitForListeningEof(page, examTiming.listeningDurationSeconds*1000+7_000);
+          assert.equal(eof.playbackRate,1);
+          log('native_eof',eof);
           await page.getByText(/Đã nghe hết · Còn [1-9]/).waitFor();
           assert.equal(await form.isVisible(),true);
         }
-        await form.waitFor({state:'hidden',timeout:25_000});
+        await form.waitFor({state:'hidden',timeout:Math.max(25_000,examTiming.listeningReviewSeconds*1000+10_000)});
         assert.deepEqual(seals,[]);
         if(upgrade){
           const savedSeal=()=>page.evaluate(()=>Object.keys(localStorage)
@@ -838,13 +852,13 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           log('offline_audio_resumed');
           if(checkListeningLayout) await verifyListeningLayout(page);
         }
-        await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.ended,
-          null,{timeout:full?(term?2_000_000:1_100_000):20_000});
+        const eof=await waitForListeningEof(page,examTiming.listeningDurationSeconds*1000+15_000);
+        assert.equal(eof.playbackRate,1);
         assert.equal(await form.isVisible(),true);
-        const duration=await page.evaluate(()=>document.getElementById('miniJourneyAudio').duration);
-        log('native_eof',{duration});
+        log('native_eof',eof);
       }
-      const timeout=full?(section==='listening'?180_000:term?3_700_000:1_250_000):25_000;
+      const seconds=section==='listening'?examTiming.listeningReviewSeconds:examTiming.readingDurationMinutes*60;
+      const timeout=Math.max(25_000,seconds*1000+10_000);
       await form.waitFor({state:'hidden',timeout});
       assert.deepEqual(seals,[]);
       log('section_sealed_offline',{section});
@@ -853,7 +867,9 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     const exported=page.waitForEvent('download');
     await page.getByRole('button',{name:'Tải bài làm về máy'}).click();
     const download=await exported;
-    assert.equal(download.suggestedFilename(),term?'Term-'+(term1?'1':'2')+'-K67.html':'Mini-K67.html');
+    const filenames={'term-test-1':'Term-1-K67.html','term-test-2':'Term-2-K67.html',
+      'mini-test-lesson-5':'Mini-K67.html','pretest-lesson-16':'Pretest-Buổi-16.html'};
+    assert.equal(download.suggestedFilename(),filenames[slug]);
     const html=await readFile(await download.path(),'utf8');
     for(const skill of order.filter(section=>section!=='writing'))assert.match(html,new RegExp(`<h2>${skill}</h2><dl><dt>\\d+</dt><dd>[^<]+</dd>`));
     if(term)assert.match(html,/Bài luận giả &lt;để kiểm xuất file&gt;\./);
@@ -861,6 +877,18 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     assert.doesNotMatch(html,/deviceProof|examSessionToken|permit/);
     let droppedReceipt;
     const recoveredReceipts=[];
+    let lostListeningOperation;
+    if(loseListeningAck)await context.route('**/cbt-journey/seal',async route=>{
+      const request=route.request().postDataJSON();
+      if(request.section!=='listening')return route.continue();
+      if(lostListeningOperation)assert.equal(request.operationId,lostListeningOperation.operationId);
+      const response=await route.fetch();
+      if(!lostListeningOperation&&response.ok()){
+        lostListeningOperation=request;
+        return route.abort('failed');
+      }
+      return route.fulfill({response});
+    });
     if(continuity==='interrupt'){
       await context.route('**/cbt-journey/interrupt',async route=>{
         if(droppedReceipt)return route.continue();
@@ -882,7 +910,27 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     await page.getByText('Máy chủ đã xác nhận nhận bài',{exact:true}).waitFor({timeout:30_000}).catch(error=>{
       throw new Error(`${error.message}\n${JSON.stringify({seals,rejections})}`);
     });
-    assert.deepEqual(seals,order);
+    if(loseListeningAck){
+      assert.ok(lostListeningOperation?.operationId,'The Listening response must be dropped after server commit');
+      assert.deepEqual(seals.filter(section=>section!=='listening'),order.filter(section=>section!=='listening'));
+      assert.ok(seals.filter(section=>section==='listening').length<=1);
+    }else assert.deepEqual(seals,order);
+    if(!['interrupt','recovery'].includes(continuity)){
+      const response=await context.request.get(base+'/preview/rehearsal-receipt-readback');
+      assert.equal(response.status(),200);
+      const {rows}=await response.json();
+      assert.equal(rows.length,1,'Exactly one synthetic attempt should be stored');
+      const [row]=rows;
+      for(const section of order){
+        const payload=section==='listening'&&loseListeningAck?lostListeningOperation:submitted.get(section);
+        assert.ok(payload?.operationId,`Missing operation for ${section}`);
+        assert.equal(row.session_id,payload.examSessionToken);
+        assert.equal(row.generation,payload.generation);
+        assert.equal(row[section[0]],payload.operationId);
+        assert.equal(row[section+'_submitted'],true);
+      }
+      log('receipt_sql_verified',{sections:order,droppedListeningAck:loseListeningAck});
+    }
     if(continuity==='interrupt'){
       assert.equal(droppedReceipt?.outcome,'interrupted');
       assert.deepEqual(recoveredReceipts,[droppedReceipt]);

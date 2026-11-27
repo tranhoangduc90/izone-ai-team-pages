@@ -16,13 +16,14 @@ const pages=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const backend=process.env.K67_BACKEND_FIXTURE_ROOT||path.resolve(pages,'../classroom-mapping-review/products/term-mini-k67');
 const evidence=process.env.K67_SLICE1_EVIDENCE||path.join(pages,'output/playwright/k67-audio-incidents');
 const onlineSlug=process.env.K67_ONLINE_COMPAT_SLUG||'term-test-1';
+const audioSeconds=Number(process.env.K67_ONLINE_AUDIO_SECONDS||90);
 let fixture,browser,base;let fixtureLog='';
 before(async()=>{
   await mkdir(evidence,{recursive:true});await access(path.join(backend,'tools/preview-exam-order.mjs'));
   const portServer=createServer();portServer.listen(0,'127.0.0.1');await once(portServer,'listening');
   const port=portServer.address().port;await new Promise(resolve=>portServer.close(resolve));base=`http://127.0.0.1:${port}`;
   fixture=spawn(process.execPath,[process.env.K67_ONLINE_PREVIEW_TOOL||'tools/preview-exam-order.mjs',pages],{cwd:backend,windowsHide:true,
-    env:{...process.env,K67_ORDER_NATIVE_URL:'',K67_PREVIEW_PORT:String(port),K67_PREVIEW_AUDIO_SECONDS:'90',K67_PREVIEW_AUDIO_PROTECTION:'true'},stdio:['ignore','pipe','pipe']});
+    env:{...process.env,K67_ORDER_NATIVE_URL:'',K67_PREVIEW_PORT:String(port),K67_PREVIEW_AUDIO_SECONDS:String(audioSeconds),K67_PREVIEW_AUDIO_PROTECTION:'true'},stdio:['ignore','pipe','pipe']});
   fixture.stdout.on('data',data=>fixtureLog+=data);fixture.stderr.on('data',data=>fixtureLog+=data);
   const deadline=Date.now()+20000;
   while(Date.now()<deadline){
@@ -415,16 +416,34 @@ test('Đóng tab đang phát rồi mở trang mới: cache bền, cùng phiên �
 test('Reload sau audio ended: giữ giai đoạn xem lại, không phát lại hoặc mở giữ bài/đòi giáo viên',async()=>{
   const{page,context,read,clock,errors}=await open();
   try{
-    await clock({startedSecondsAgo:91,deadlineSeconds:120});
-    await page.evaluate(async()=>{const a=window.TERM_TEST_BOOTSTRAP.officialAudioElement;a.currentTime=a.duration-0.1;await a.play();});
-    await page.waitForFunction(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.ended);
-    await page.waitForTimeout(150);const before=await read();assert.equal(Number(before.listening_audio_checkpoint_seconds),90);
+    await clock({startedSecondsAgo:audioSeconds+1,deadlineSeconds:120});
+    await page.evaluate(()=>{
+      const runtime=window.TERM_TEST_BOOTSTRAP;
+      const audio=runtime.officialAudioElement;
+      window.k67TestListeningEof=null;
+      audio.addEventListener('ended',event=>{
+        if(event.isTrusted&&audio.ended&&runtime.officialAudioElement===audio){
+          window.k67TestListeningEof={position:audio.currentTime,duration:audio.duration};
+        }
+      },{capture:true});
+    });
+    // The current player protects the seek position. Wait for natural EOF rather than seeking.
+    const eof=await page.waitForFunction(()=>window.k67TestListeningEof,null,{timeout:(audioSeconds+15)*1000});
+    const {position,duration}=await eof.jsonValue();
+    await eof.dispose();
+    assert.ok(Math.abs(position-duration)<0.15);
+    await page.waitForTimeout(150);const before=await read();assert.equal(Number(before.listening_audio_checkpoint_seconds),audioSeconds);
     await page.addInitScript(()=>{window.testPlayCalls=0;const play=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(...a){window.testPlayCalls++;return play.apply(this,a);};});
     await page.reload();await page.locator('#bootstrapStart').click();await page.locator('#listeningView').waitFor({state:'visible'});
     await page.waitForTimeout(2300);
     const after=await read();assert.equal(after.listening_audio_incident_id,null);assert.equal(after.listening_recovery_seconds,before.listening_recovery_seconds);
     assert.equal(after.listening_deadline_at,before.listening_deadline_at);assert.equal(await page.evaluate(()=>window.testPlayCalls),0);
-    assert.equal(await page.locator('#submitListening').isEnabled(),true);assert.deepEqual(errors,[]);
+    await page.waitForFunction(()=>document.querySelector('#submitListening')?.disabled===false).catch(async error=>{
+      const state=await page.evaluate(()=>({locked:document.querySelector('#listeningView')?.classList.contains('is-answer-locked'),
+        held:window.K67_ACTIVE_LISTENING?.isHeld(),notice:document.querySelector('#bootstrapNotice')?.textContent}));
+      throw new Error(`${error.message}\n${JSON.stringify(state)}`);
+    });
+    assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
 
