@@ -82,6 +82,7 @@ export const ASSETS = [
   "../../speaking-homework/fonts/font-8.woff2",
   "../../speaking-homework/fonts/font-9.woff2",
   "../../speaking-homework/fonts/nunito.css",
+  "../demo/bookmark-v1.js",
   "../demo/model.js",
   "../demo/reset-listener.js",
   "../k56-audio-recovery-mini-report-v1.js",
@@ -325,6 +326,7 @@ export const ASSET_HASHES = {
   "../../speaking-homework/fonts/font-8.woff2": "8a8e11bad67c3ae75ba03c969fbe5742b8bf088f1b2ca2dd04610a352475ee37",
   "../../speaking-homework/fonts/font-9.woff2": "d3fe75d4c86f6df84f37c76ad44fa21c45778d7e14160b0294f92ec248fa144a",
   "../../speaking-homework/fonts/nunito.css": "a6b6f9ccb2e3105406b58fec8d7bd865b8642548b334c04892492d3320820b7c",
+  "../demo/bookmark-v1.js": "eacffeef618c6ff9ad0b3853418e91978089df12d3875414586546b864c7a2e7",
   "../demo/model.js": "fcf87b5a54be6e5a3cdcbc477c1b7a7b2198bd35a579e264498550fbb63fbe76",
   "../demo/reset-listener.js": "739a3b589d8a34419c6b31b55e35d1f9a0f5f394cc81a92a65ed75d08800e18e",
   "../k56-audio-recovery-mini-report-v1.js": "feb7fbe5bca8dca59cb3474096689f4c952814757a8a9e8432c7dc22efd581a5",
@@ -446,7 +448,7 @@ export const ASSET_HASHES = {
   "enhance-mini-journal-v1.js": "abf337efcae067a3ff67ad0810277162af6e239aeb785b6e9c2d04122225a58c",
   "enhance.js": "3e6129e21ef1558e4bc987e656bd63a3540bc7fad66995107f939d696a091076",
   "exam.css": "12a46e66c5cce7095e5bb41c0cc8166c99e10fa74036fd176ecd87b231cd2939",
-  "index-mini-cbt-listening-recovery-v2-verified-exit-v1.html": "5a1c126c6dc586db2e8119c1d85814451fa48f14c8af2f8badbabfcfc1551283",
+  "index-mini-cbt-listening-recovery-v2-verified-exit-v1.html": "7af7345b8a009363fb61e4cce9aff3c47f74e986c034b21727d2bc1f93e95a6e",
   "index-mini-cbt-listening-recovery-v2.html": "027d09e9658a12785052f33e73a60433b76524af6cf74f78910a02ab33b0a62b",
   "index-mini-parallel-entry-v1.html": "69f0eb844ff573680fa6afe00f5bc411b339f9542ebec1d75fa2cd41f3b1589d",
   "index-mini-sso-repair-v1.html": "f4901381dd636d2cf8415f933ad1d80f43dd34072820fd2a1c5fc7efbfcd105e",
@@ -484,4 +486,4 @@ export const ASSET_HASHES = {
   "worker-mini-student-cache-v2.mjs": "fe9ffdd0b41d50c2cd7f2a67970e7e1a4c6f55670a91d02066e938fb873b4551",
   "worker-shell-v3.mjs": "2fcf27265779afb0e342830072870cdb48890c683027ee04e901059b06c3d6b0"
 };
-export const ASSET_BUILD_ID="743b0cde3fe9b501e2940f7d51c67c963200b9a5c8071c3a6f158d575211d3f0";
+export const ASSET_BUILD_ID="108897ebfd31a040ef3a46cf6141469a070fe9fd21b133351271fa765657aabd";
