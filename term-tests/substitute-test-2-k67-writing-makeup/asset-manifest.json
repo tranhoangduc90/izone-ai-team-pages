@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-2-k67-writing-makeup",
-  "build": "issue611-1d813bb54396f71f",
+  "build": "issue611-8a1eddf232ece129",
   "assets": [
     {
       "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
@@ -95,24 +95,24 @@
       "sha256": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76"
     },
     {
-      "path": "../substitute-assignment-full/assignment-browser.mjs?v=preparation-recovery-20261125",
-      "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea"
+      "path": "../substitute-assignment-full/assignment-browser-journey-v2.mjs?v=preparation-recovery-20261125",
+      "sha256": "9a20e33ac444c78758f16bca8fc7e5aad881ff7002e3d2727ffe66d7dd7609c4"
     },
     {
-      "path": "../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122",
-      "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea"
+      "path": "../substitute-assignment-full/assignment-browser-journey-v2.mjs?v=sitting-release-20261122",
+      "sha256": "9a20e33ac444c78758f16bca8fc7e5aad881ff7002e3d2727ffe66d7dd7609c4"
     },
     {
       "path": "../substitute-assignment-full/assignment-catalog.mjs",
       "sha256": "b7f5016b6b9c21414de6b08d60a3eef8b4f0c1d4e2c7a0d42e0ee5449b882a56"
     },
     {
-      "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=preparation-recovery-20261125",
-      "sha256": "9796c964f609be780e441c87d81ffd571cc2feae3cec261930165f29c7c5a2ae"
+      "path": "../substitute-assignment-full/assignment-student-entry-journey-v2.mjs?v=preparation-recovery-20261125",
+      "sha256": "4067fcf09edbd76e99c3173d6e1ead29629127babce2110a52678bc283a92782"
     },
     {
-      "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122",
-      "sha256": "9796c964f609be780e441c87d81ffd571cc2feae3cec261930165f29c7c5a2ae"
+      "path": "../substitute-assignment-full/assignment-student-entry-journey-v2.mjs?v=sitting-release-20261122",
+      "sha256": "4067fcf09edbd76e99c3173d6e1ead29629127babce2110a52678bc283a92782"
     },
     {
       "path": "../substitute-assignment-full/public-sitting-status.mjs?v=sitting-release-20261122",
@@ -191,8 +191,8 @@
       "sha256": "0ee25a5464a24c1311b85930de7384a7781eb3bbffcd0d406bbe453b1cea2938"
     },
     {
-      "path": "../substitute-skill-shared/offline.mjs",
-      "sha256": "70b507be6e25120ee66cf16525788a7e34b8958a44b84bf558a70199192ee9a7"
+      "path": "../substitute-skill-shared/offline-journey-20261127-v1.mjs",
+      "sha256": "9b3dd445d028348dcf7d222151b04aa11a5a06d4cc6096ea2af8abdf94d802fa"
     },
     {
       "path": "../substitute-skill-shared/portal-status.mjs",
@@ -207,12 +207,12 @@
       "sha256": "d047605cd8a0c988885f7818aac8e03141e2ce76eb66054913fe8512f021fa2b"
     },
     {
-      "path": "../substitute-skill-shared/writing-controller-departure-v4.mjs?v=20261126-v3",
-      "sha256": "215a33d6ab89564d0a03dd65bf90220df0fe8c977f9504d39e5e52a02973af39"
+      "path": "../substitute-skill-shared/writing-controller-journey-20261127-v1.mjs?v=20261126-v3",
+      "sha256": "dc3934d486fe7a59224cb161f967918adde0075b0dffc3cfba6729d54078f1eb"
     },
     {
-      "path": "../substitute-skill-shared/writing-departure-v4.mjs?v=20261126-v3",
-      "sha256": "82e0a5922f43443c58c566d8c4c5c133e6218c39a6cafe8625485af48d5ba31e"
+      "path": "../substitute-skill-shared/writing-journey-20261127-v1.mjs?v=20261126-v3",
+      "sha256": "beedad7cbc8cf2318359cdd7a674fb918d112b223caaf812f1ae4c4cbf5a5c7c"
     },
     {
       "path": "../substitute-skill-shared/writing-feedback.mjs",
@@ -264,11 +264,24 @@
     },
     {
       "path": "index.html",
-      "sha256": "b8d59ef9246ffcd80fa0a5fdec0a606844eb2371d79d8e84c9229b5eeaf738f9"
+      "sha256": "6cc32078998a0e398bb6170de3f1e61c8a298b93f2b6926c07e0c1349836fed7"
     },
     {
       "path": "sw.js",
       "sha256": "e17d8c395bc5eb5793cdb71bc10461d28a6c6a4708d24e614667b5582ccd7551"
+    },
+    {
+      "path": "../substitute-skill-shared/offline-asset-pool-20261127-v1.mjs",
+      "sha256": "90c3cd9139aac7a53c8546c76b3997d38a017e41a902222f747bf8e41be86b18"
+    },
+    {
+      "path": "../substitute-skill-shared/preparation-budget-20261127-v1.mjs",
+      "sha256": "d782861f9ccc4ea5f08119b46bc1507b04eb4c9ba47420f8c6eb123f63c0fa5a"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122",
+      "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea"
     }
-  ]
+  ],
+  "preparationRelease": "skills-journey-20261127-v1"
 }
