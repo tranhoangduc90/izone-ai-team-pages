@@ -3,13 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
-  <title>Mini Test K56 · Demo thao tác</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; script-src 'none'; style-src 'self'; img-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
+  <title>Mini Test K56 · Demo</title>
   <link rel="icon" href="../../shared/izone-favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../shared/styles.css?rev=20261003-writing-save-cas-v1">
+  <link rel="stylesheet" href="../k56-demo/landing.css">
   <link rel="stylesheet" href="../k56-design/theme.css?v=20261023-master170-v3">
-  <link rel="stylesheet" href="preview.css?v=1">
-  <script defer src="preview.js?v=1"></script>
 </head>
 <body data-k56-design>
   <header class="topbar">
@@ -18,61 +17,12 @@
   </header>
   <main class="landing-shell">
     <section class="panel landing-card">
-      <h1>Mini Test K56 · Demo thao tác</h1>
-      <p>Câu hỏi mẫu để thử các bước làm bài. Câu trả lời chỉ nằm trong tab này.</p>
-      <div id="start">
-        <h2>Chọn kỹ năng làm trước</h2>
-        <div class="preview-actions">
-          <button type="button" class="button button-primary" data-order="lis_first">Listening trước</button>
-          <button type="button" class="button button-secondary" data-order="read_first">Reading trước</button>
-        </div>
+      <h1>Mini Test K56 · Demo</h1>
+      <p>Chọn thứ tự để mở một lượt làm thử bằng lớp demo.</p>
+      <div class="landing-actions">
+        <a class="button button-primary" href="https://izone-mini-k56-demo.tranhoangduc90.workers.dev/?mode=lis_first">Listening trước</a>
+        <a class="button button-secondary" href="https://izone-mini-k56-demo.tranhoangduc90.workers.dev/?mode=read_first">Reading trước</a>
       </div>
-      <section id="work" aria-labelledby="sectionTitle" hidden>
-        <ol id="steps" aria-label="Thứ tự làm bài"></ol>
-        <h2 id="sectionTitle" tabindex="-1"></h2>
-        <div id="listening" hidden>
-          <p>Nghe đoạn thông báo ngắn và chọn câu trả lời.</p>
-          <audio controls preload="none" src="sample.wav" aria-label="Đoạn nghe mẫu"></audio>
-          <fieldset>
-            <legend lang="en">When does the tour start?</legend>
-            <label><input type="radio" name="listening" value="nine" lang="en"> 9:30 a.m.</label>
-            <label><input type="radio" name="listening" value="ten" lang="en"> 10:30 a.m.</label>
-            <label><input type="radio" name="listening" value="eleven" lang="en"> 11:30 a.m.</label>
-          </fieldset>
-        </div>
-        <div id="reading" hidden>
-          <p>Đọc đoạn văn ngắn và chọn câu trả lời.</p>
-          <p class="sample-passage" lang="en">The Riverside Library lends gardening tools as well as books. Members can borrow up to two tools for one week. New members must show a library card before borrowing tools for the first time.</p>
-          <fieldset>
-            <legend lang="en">How long can members keep the tools?</legend>
-            <label><input type="radio" name="reading" value="day" lang="en"> One day</label>
-            <label><input type="radio" name="reading" value="week" lang="en"> One week</label>
-            <label><input type="radio" name="reading" value="month" lang="en"> One month</label>
-          </fieldset>
-        </div>
-        <div id="writing" hidden>
-          <p lang="en">In a short paragraph, explain one benefit of sharing tools in a neighbourhood.</p>
-          <label for="sampleWriting">Đoạn viết thử</label>
-          <textarea id="sampleWriting" rows="5" lang="en"></textarea>
-          <p>Số từ <output id="wordCount" for="sampleWriting">0</output></p>
-        </div>
-        <div class="preview-actions">
-          <button type="button" id="back" class="button button-secondary">Quay lại</button>
-          <button type="button" id="next" class="button button-primary">Tiếp tục</button>
-        </div>
-      </section>
-      <section id="finish" aria-labelledby="finishTitle" hidden>
-        <h2 id="finishTitle" tabindex="-1">Kết quả bài làm mẫu</h2>
-        <dl>
-          <div><dt>Listening</dt><dd id="listeningResult"></dd></div>
-          <div><dt>Reading</dt><dd id="readingResult"></dd></div>
-          <div><dt>Writing</dt><dd id="writingResult"></dd></div>
-        </dl>
-        <div class="preview-actions">
-          <button type="button" id="review" class="button button-secondary">Xem lại bài thử</button>
-          <button type="button" id="restart" class="button button-primary">Làm demo mới</button>
-        </div>
-      </section>
     </section>
   </main>
 </body>
