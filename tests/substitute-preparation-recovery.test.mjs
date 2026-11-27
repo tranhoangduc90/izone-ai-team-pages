@@ -1,10 +1,90 @@
 import assert from 'node:assert/strict';
+import { createHash, webcrypto } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
+import { createContext, runInContext } from 'node:vm';
 import { mountAssignmentWaiting } from '../term-tests/substitute-assignment-full/assignment-browser.mjs';
 import { adoptFullAdmissionRun } from '../term-tests/substitute-assignment-full/assignment-student-entry.mjs';
 
 const provisional = '11111111-1111-4111-8111-111111111111';
 const official = '22222222-2222-4222-8222-222222222222';
+const oldRun = '33333333-3333-4333-8333-333333333333';
+const slug = 'substitute-test-1-k56';
+
+async function fullPreparationFixture(bootstrapName, { assignedRun = official, onDigest } = {}) {
+  const directory = new URL('../term-tests/' + slug + '-computer-based/', import.meta.url);
+  const source = await readFile(new URL(bootstrapName, directory), 'utf8');
+  const stateSource = await readFile(new URL('../substitute-shared/state.js', directory), 'utf8');
+  const scope = { classCode: 'IC99001', studentRef: 'fixture-student' };
+  const actions = [];
+  const revokedHash = createHash('sha256').update(JSON.stringify('substitute-run:' + slug + ':' + oldRun)).digest('hex');
+  const window = {
+    crypto: onDigest ? { subtle: { async digest(...args) { onDigest(); return webcrypto.subtle.digest(...args); } } } : webcrypto,
+    addEventListener() {},
+  };
+  const ctx = createContext({
+    window, AbortController, setTimeout, clearTimeout, TextEncoder,
+    location: { search: '' },
+    fetch: async () => ({ ok: true, json: async () => ({
+      testSlug: slug, historyEpoch: oldRun, stateVersion: 2, invalidatedRunHashes: [revokedHash],
+    }) }),
+    state: { ...scope, clientRunId: provisional, annotationRunId: oldRun },
+    classCode: scope.classCode,
+    classLoadGeneration: 1,
+    elements: { bootstrapStudent: { value: scope.studentRef } },
+    assignmentClasses: { has: () => true },
+    intake: {
+      entry: { session: () => undefined, select: ({ onReady }) => onReady({ scope }) },
+      bindFullAdmission: async () => ({ clientRunId: assignedRun }),
+      adoptFullAdmissionRun,
+    },
+    parallelEntry: () => true,
+    studentPointer: () => 'fixture',
+    listeningLease: { key: 'fixture:' + provisional },
+    releaseListeningLease: () => actions.push(['release', provisional]),
+    acquireListeningLease: async (_ref, _class, run) => { actions.push(['acquire', run]); return true; },
+    observeLobbyDecision() {},
+    saveState(patch) {
+      const state = { ...ctx.state, ...patch };
+      window.SUBSTITUTE_STATE.bind(state);
+      ctx.state = window.SUBSTITUTE_STATE.stamp(state);
+    },
+    prepareSelectedStudent: () => { actions.push(['audio', ctx.state.clientRunId]); return true; },
+  });
+  runInContext(stateSource, ctx);
+  await window.SUBSTITUTE_STATE.initialize({ slug }, { API_BASE_URL: 'https://fixture.invalid/' });
+  ctx.saveState({});
+  const uuidStart = source.indexOf('  function isUuid(');
+  const entryStart = source.indexOf('  async function openAssignmentIntake(');
+  runInContext(source.slice(uuidStart, source.indexOf('  async function readState(', uuidStart)), ctx);
+  runInContext(source.slice(entryStart, source.indexOf('  async function prepareSelectedStudent(', entryStart)), ctx);
+  return { ctx, actions, prepare: () => ctx.openAssignmentIntake(scope.studentRef, false) };
+}
+
+const entry = await readFile(new URL('../term-tests/' + slug + '-computer-based/index.html', import.meta.url), 'utf8');
+for (const attribute of ['data-bootstrap', 'data-prior-bootstrap']) {
+  const bootstrapName = entry.match(new RegExp(attribute + '="([^"?]+)'))[1];
+  test(attribute + ': mã mới hợp lệ đi tới audio khi danh sách có mã cũ bị vô hiệu hóa', async () => {
+    const { ctx, actions, prepare } = await fullPreparationFixture(bootstrapName);
+    assert.equal(await prepare(), true);
+    assert.equal(ctx.state.clientRunId, official);
+    assert.deepEqual(actions, [['release', provisional], ['acquire', official], ['audio', official]]);
+  });
+  test(attribute + ': mã bị vô hiệu hóa giữ khóa tạm và không đi tới audio', async () => {
+    const { ctx, actions, prepare } = await fullPreparationFixture(bootstrapName, { assignedRun: oldRun });
+    await assert.rejects(prepare, /ASSIGNMENT_RUN_REVOKED/);
+    assert.equal(ctx.state.clientRunId, provisional);
+    assert.deepEqual(actions, []);
+  });
+  test(attribute + ': phản hồi về sau khi đổi người không được chuyển khóa', async () => {
+    const fixture = await fullPreparationFixture(bootstrapName, {
+      onDigest: () => { fixture.ctx.elements.bootstrapStudent.value = 'other-student'; },
+    });
+    await assert.rejects(fixture.prepare, /ASSIGNMENT_SELECTION_CHANGED/);
+    assert.equal(fixture.ctx.state.clientRunId, provisional);
+    assert.deepEqual(fixture.actions, []);
+  });
+}
 
 test('chỉ chuyển khóa sang mã chính thức khi đang chuẩn bị đúng lượt', async () => {
   const actions = [];
