@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-2-k67-listening-makeup",
-  "build": "issue611-39b59db3acc993b1",
+  "build": "issue611-592c5ad0a9fb8f62",
   "assets": [
     {
       "path": "../../recordings/assets/fonts/SourceSansPro-Bold.ttf",
@@ -79,6 +79,10 @@
       "sha256": "4d62a08d3c3f93439ce977312feedecc3cfdaf5315fd9212bae7a6ca90a4a493"
     },
     {
+      "path": "../shared/cbt-audio-preview-sync-v1.js?rev=20261123-verified-preview-v1",
+      "sha256": "68c08c919c1430178bd6d8cea131f19eb668354a566388590df2db01f1fb5776"
+    },
+    {
       "path": "../shared/cbt-audio-start-label.js",
       "sha256": "f62890142ebc075664342c4dd321071754ad59c4fffc716019f14ad1a1944304"
     },
@@ -99,12 +103,20 @@
       "sha256": "75fc5eb478535e39dd919006b4b1f3e33fb47db659b932f547a7013d2cb9dd76"
     },
     {
+      "path": "../substitute-assignment-full/assignment-browser.mjs?v=preparation-recovery-20261125",
+      "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea"
+    },
+    {
       "path": "../substitute-assignment-full/assignment-browser.mjs?v=sitting-release-20261122",
       "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea"
     },
     {
       "path": "../substitute-assignment-full/assignment-catalog.mjs",
       "sha256": "b7f5016b6b9c21414de6b08d60a3eef8b4f0c1d4e2c7a0d42e0ee5449b882a56"
+    },
+    {
+      "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=preparation-recovery-20261125",
+      "sha256": "9796c964f609be780e441c87d81ffd571cc2feae3cec261930165f29c7c5a2ae"
     },
     {
       "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=sitting-release-20261122",
@@ -163,8 +175,8 @@
       "sha256": "da67852bcc8d52b39f40166bc6aa73b18a4bd7ead0ee7763a697754b80799aa3"
     },
     {
-      "path": "../substitute-skill-shared/audio.mjs",
-      "sha256": "45160e724036d14f16c2f40304b88b14e4fa654db956e86d1d319b9edb3d191a"
+      "path": "../substitute-skill-shared/audio-departure-preview-v1.mjs",
+      "sha256": "ecdfc848284ffd8f79d10888e001c4d6506fee247166015b74b19a7c99dfb2f9"
     },
     {
       "path": "../substitute-skill-shared/class-directory.mjs?v=roster-picker-20261122",
@@ -199,16 +211,16 @@
       "sha256": "cd79a1720b290f7818edb4a640854f9b96e8e60dbef7fefd9ce29d87824985af"
     },
     {
-      "path": "../substitute-skill-shared/objective-controller-listening-report-v1.mjs?v=roster-picker-20261122",
-      "sha256": "e6bb4ce0179fd42d29172e0c5993e59c30c7619df05846ae8d4d87323f61a037"
+      "path": "../substitute-skill-shared/objective-controller-listening-departure-preview-v1.mjs?v=20261125-preview-v1",
+      "sha256": "51c5ea842060a4a3e5fd42253dc2d6d3bbf6feee2bf04d0e436aa30f80a10fc9"
     },
     {
-      "path": "../substitute-skill-shared/objective-listening-report-v1.mjs?v=roster-picker-20261122",
-      "sha256": "a7a11a39c4f292b888b7237125515ca233f083bf0bb0ac77f8bd48cdd2590784"
+      "path": "../substitute-skill-shared/objective-listening-departure-preview-v1.mjs?v=20261125-preview-v1",
+      "sha256": "430337f08b902754403dcf3d85045fada5c9546e6bc51d071d0c557e7d961875"
     },
     {
-      "path": "../substitute-skill-shared/offline-worker.js",
-      "sha256": "454ae6856478457e7b73ea18d5bbbfd6234ab6caf1324882261f85168805e09b"
+      "path": "../substitute-skill-shared/offline-worker-scoped-navigation-v1.js",
+      "sha256": "0ee25a5464a24c1311b85930de7384a7781eb3bbffcd0d406bbe453b1cea2938"
     },
     {
       "path": "../substitute-skill-shared/offline.mjs",
@@ -260,19 +272,11 @@
     },
     {
       "path": "index.html",
-      "sha256": "df407a61f6fe6d814ec80a51fdc6be7012ae9913883c21b9b50cb0673a40cc03"
+      "sha256": "a155cdc323791180517ff1602a4bf419805011e440d131fc5a0ce7c99bed794c"
     },
     {
       "path": "sw.js",
-      "sha256": "e68ca9c30de8ddf77715fcf0a86025f2400ef0b37d1d28f82d6ba3f35dabe3cb"
-    },
-    {
-      "path": "../substitute-assignment-full/assignment-browser.mjs?v=preparation-recovery-20261125",
-      "sha256": "850b360adf4d79796906df68d84ce048dd2325df7f718834d9158a431c482aea"
-    },
-    {
-      "path": "../substitute-assignment-full/assignment-student-entry.mjs?v=preparation-recovery-20261125",
-      "sha256": "9796c964f609be780e441c87d81ffd571cc2feae3cec261930165f29c7c5a2ae"
+      "sha256": "e17d8c395bc5eb5793cdb71bc10461d28a6c6a4708d24e614667b5582ccd7551"
     }
   ]
 }
