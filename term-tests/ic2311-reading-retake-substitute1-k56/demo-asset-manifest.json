@@ -1,6 +1,6 @@
 {
   "testId": "substitute-test-1-k56-reading-makeup",
-  "build": "issue611-8ca96da30cc0db9a",
+  "build": "issue611-74ab0eafc6e35527",
   "scopePath": "/term-tests/ic2311-reading-retake-substitute1-k56/",
   "assets": [
     {
@@ -273,15 +273,15 @@
     },
     {
       "path": "./",
-      "sha256": "a11668969d09c01f145a2a2ce1146181382a236751d4091b819c276b800fe6ae"
+      "sha256": "f37132d0d176374c8aa6cc9ad9e94f96717c1f76490992e44c944e58b49460bb"
     },
     {
       "path": "app.mjs",
       "sha256": "c10429580ac511e893ffae84353ac11d64995f0391d0511f432fc9a3f9db7365"
     },
     {
-      "path": "boot.js?v=preparation-recovery-20261125",
-      "sha256": "bacda1a12cdbe5c199060c3e850a5d12fd0521c40721a88594793eac98a32789"
+      "path": "boot-departure-v1.js?v=departure-20261125-v2",
+      "sha256": "6dfe784b1fa3849389f41e1e4d1f7cc23c84ebc18965840eb7d3d7dd3389888f"
     },
     {
       "path": "config.mjs",
@@ -289,7 +289,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "2231c4f5eee796469c1a5ddf780cddfb24c0752ec6d8119683af030cdae67382"
+      "sha256": "f37132d0d176374c8aa6cc9ad9e94f96717c1f76490992e44c944e58b49460bb"
     },
     {
       "path": "log-contract.mjs",
