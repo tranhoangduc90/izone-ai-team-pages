@@ -1,7 +1,7 @@
 import {createCheckFeedback,missingCheckFields} from '../../shared/writing-check-feedback.mjs?v=20261101-v1';
 import {createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs?v=20261109-l3-v1';
 import {createClient} from './client.mjs?v=20261125-lesson7';
-import {mountLesson7Transfer} from '../shared/lesson7-transfer-ui.mjs?v=20261125-lesson7';
+import {lesson6CompletionConfirmed,lesson7TransferEligible,mountLesson6Completion,mountLesson7Transfer} from '../shared/lesson7-transfer-ui.mjs?v=20261128-lesson6-completion';
 import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261109-l3-v1';
 import {savedContent,threadsView,approvalLabel,installStyles} from './features.mjs?v=20261007-1';
 import {workflowFor,isWhole,isMulti,isPrepared,isOpinion,isDiscussion,planFields,solutionsFor,AGREEMENT_LEVELS,requiredFields,preparationError,bodyView,bodyKey,bodyIndexOf,localKey} from '../shared/workflow.mjs?v=20261120-lesson6-writing';
@@ -125,7 +125,7 @@ function render(){
   if(outline){
    renderRegion('sections',outlineSections(state,{field,comments,statusLabels,canContinueWriting:!!writingHandoff&&!sharePractice}));
    renderRegion('journey-nav',outlineJourney(state));
-   $('completion').hidden=true;
+   if(!lesson6)$('completion').hidden=true;
   }else if(isMulti(lesson)){
    renderRegion('sections',renderMultiBodies(state,lesson,{field,comments,stepCard}));
    renderRegion('journey-nav',multiJourney(state,lesson));
@@ -155,21 +155,23 @@ function render(){
   renderLesson7Transfer();
 }
 function renderLesson7Transfer(){
- if(!lesson6||!state.ref||!writingHandoff?.prepareLesson7)return;
- if(!showLesson7Bridge&&!state.lesson7Transfer)return;
+ if(!lesson6||!state.ref)return;
+ const complete=lesson6CompletionConfirmed(state,conflict||Object.keys(dirty).length>0);
+ const completion=$('completion');
+ if(complete&&!completion.firstChild)mountLesson6Completion(completion);
+ completion.hidden=!complete;
+ if(!writingHandoff?.prepareLesson7)return;
+ const offer=state.lesson7Transfer;
+ if(!showLesson7Bridge&&!lesson7TransferEligible(offer,complete,state.version))return;
  showLesson7Bridge||=mountLesson7Transfer($('prompt'),async()=>{
   const ref=state.ref,epoch=generation,offer=state.lesson7Transfer;
-  if(!offer?.eligible||!await flush()||epoch!==generation||ref!==state.ref)throw Error('LESSON7_SOURCE_CHANGED');
-  if(state.version!==offer.version)throw Error('LESSON7_SOURCE_CHANGED');
-  const url=writingHandoff.prepareLesson7();
+  const canTransfer=()=>epoch===generation&&ref===state.ref&&
+   lesson7TransferEligible(offer,lesson6CompletionConfirmed(state,conflict||Object.keys(dirty).length>0),state.version);
+  if(!canTransfer()||!await flush()||!canTransfer())throw Error('LESSON7_SOURCE_CHANGED');
   await api.transferLesson7(ref,{sourceVersion:offer.version,requestId:crypto.randomUUID()});
-  if(epoch===generation&&ref===state.ref)location.assign(url);
- },async()=>{
-  const ref=state.ref,epoch=generation;
-  if(!await flush()||epoch!==generation||ref!==state.ref)throw Error('DRAFT_UNSAVED');
-  location.assign(writingHandoff.prepareLesson7());
+  if(canTransfer())location.assign(writingHandoff.prepareLesson7());
  });
- showLesson7Bridge(state.lesson7Transfer,['body1_topic','body2_topic'].filter(key=>state.steps[key]?.status==='passed').length);
+ showLesson7Bridge(offer,complete,state.version);
 }
 function renderLesson7Ideas(){
  let region=$('lesson7-ideas-source');
@@ -278,14 +280,14 @@ function renderLesson4Progress() {
  const current=docsProgress?.ref===state.ref&&docsProgress.version===state.version&&(!lesson6||docsProgress.completed===complete)&&
   passed.every((value,n)=>docsProgress.passed?.[n]===value&&docsProgress.jobs?.[n]===(steps[n]?.history?.at(-1)?.jobRef||null));
  const synced=current&&docsProgress.state==='applied';
- const message=complete?'Bạn đã hoàn thành Writing Lesson '+lesson.number+'. Cả hai thân bài đều đạt.':
+ const message=complete?(lesson6?'':'Bạn đã hoàn thành Writing Lesson '+lesson.number+'. Cả hai thân bài đều đạt.'):
    count===2?'Đã Check 2 thân · Cần bổ sung dàn ý.':
    count===1?'1/2 thân bài đạt.':'';
  const detail=!count?'':synced?' Đã cập nhật Homework Docs.':
    current&&docsProgress.state==='blocked'?' Homework Docs cần được kiểm tra trước khi cập nhật.':
    current&&docsProgress.state==='retry'?' Homework Docs chưa cập nhật được. Hệ thống đang thử lại.':
    docsProgress?.state==='unavailable'?' Chưa xác nhận được trạng thái Homework Docs.':
-   count===2?' Hệ thống sẽ tự cập nhật Homework Docs. Bạn có thể đóng trang.':'';
+   count===2?' Hệ thống sẽ tự cập nhật Homework Docs.'+(lesson6?'':' Bạn có thể đóng trang.'):'';
  const status=region.querySelector('[role="status"]');
  const text=message+detail;
  if(status.textContent!==text)status.textContent=text;
@@ -426,6 +428,7 @@ function handoutAccessLost(){
  if(sharePractice){
   generation++;clearTimeout(pollTimer);clearTimeout(saveTimer);api.setToken('');
   window.dispatchEvent(new Event('reading67:access-revoked'));
+  if(lesson6){$('completion').hidden=true;showLesson7Bridge?.(null,false);}
   const workspace=$('workspace');
   workspace.querySelector('.share-practice')?.setAttribute('hidden','');
   workspace.querySelector('.reading-practice-gate')?.setAttribute('hidden','');
@@ -672,6 +675,7 @@ $('restore-draft').addEventListener('click',()=>{if(busy||editingLocked)return;t
 $('workspace').addEventListener('input',event=>{
  const field=event.target.dataset.field,key=ORDER.find(k=>FIELDS[k].includes(field));if(!field||editingLocked||conflict||!canChangeField(field))return;
  state.responses[field]=event.target.value;dirty[field]=event.target.value;keepDraft();checkFeedback.sync(state.responses,state.ref);$('save-state').textContent='Đang lưu…';clearTimeout(saveTimer);saveTimer=setTimeout(()=>void flush(),600);
+ if(lesson6)renderLesson7Transfer();
  const count=document.querySelector(`[data-count="${key}"]`);if(count)count.textContent=FIELDS[key].reduce((total,f)=>total+state.responses[f].trim().split(/\s+/).filter(Boolean).length,0)+' từ';
 });
 $('workspace').addEventListener('click',async event=>{
