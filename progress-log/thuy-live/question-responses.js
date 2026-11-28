@@ -97,15 +97,20 @@ export function createQuestionResponses() {
   function showTable(detail, keepPosition = false) {
     const previous = result.querySelector('.thuy-responses-table');
     const scroll = keepPosition ? previous?.scrollTop ?? 0 : 0;
+    const focused = keepPosition ? document.activeElement : null;
+    const focusedFilter = focused && controls.contains(focused) ? focused.dataset.responseFilter : null;
     const optionLabels = new Map(detail.options.map(option => [option.id, option.label]));
-    const rows = detail.students.filter(row => filter === 'all' || row.verdict === filter);
+    const rows = detail.students.filter(row => filter === 'all' ||
+      (row.responseStatus === 'draft' ? filter === 'draft' : row.verdict === filter));
     const filters = node('div', null, 'thuy-responses-filters');
-    if (detail.objective) {
-      const totals = {all:detail.students.length, incorrect:detail.counts.incorrect, correct:detail.counts.correct,
-        pending:detail.counts.pending, manual_review:detail.counts.manual, ungraded:detail.counts.ungraded};
+    const showStatus = Object.hasOwn(detail.counts, 'draftAnswered');
+    if (detail.objective || showStatus) {
+      const totals = {all:detail.students.length, ...(showStatus ? {draft:detail.counts.draftAnswered} : {}),
+        ...(detail.objective ? {incorrect:detail.counts.incorrect, correct:detail.counts.correct,
+          pending:detail.counts.pending, manual_review:detail.counts.manual, ungraded:detail.counts.ungraded} : {})};
       for (const [key, total] of Object.entries(totals)) {
         if (!total && !['all','incorrect','correct'].includes(key) && key !== filter) continue;
-        const button = node('button', (key === 'all' ? 'Tất cả' : labels[key]) + ' ' + total, 'button secondary');
+        const button = node('button', (key === 'all' ? 'Tất cả' : key === 'draft' ? 'Đang làm' : labels[key]) + ' ' + total, 'button secondary');
         button.type = 'button';
         button.dataset.responseFilter = key;
         button.setAttribute('aria-pressed', String(key === filter));
@@ -122,7 +127,7 @@ export function createQuestionResponses() {
     wrap.setAttribute('aria-label', 'Danh sách câu trả lời');
     const table = node('table');
     const header = table.createTHead().insertRow();
-    for (const label of ['Học viên','Câu trả lời',...(detail.objective ? ['Kết quả'] : [])]) {
+    for (const label of ['Học viên','Câu trả lời',...(showStatus ? ['Trạng thái'] : []),...(detail.objective ? ['Kết quả'] : [])]) {
       const cell = node('th', label);
       cell.scope = 'col';
       header.append(cell);
@@ -133,16 +138,22 @@ export function createQuestionResponses() {
       const person = node('td', row.name, 'thuy-response-name');
       if (row.discriminator) person.append(node('small', row.discriminator));
       tr.append(person, answerCell(row, detail, optionLabels));
+      if (showStatus) tr.insertCell().textContent = row.responseStatus === 'draft' ? 'Đang làm' : 'Đã nộp';
       if (detail.objective) {
         const cell = tr.insertCell();
+        if (row.responseStatus === 'draft') continue;
         cell.append(node('span', labels[row.verdict], 'thuy-response-verdict ' + row.verdict));
       }
     }
     wrap.append(table);
     controls.replaceChildren(filters);
     result.replaceChildren(...(rows.length ? [wrap, node('p', 'Hiển thị ' + rows.length + '/' + detail.students.length + ' học viên.')]
-      : [node('p', detail.students.length ? 'Không có học viên trong nhóm này.' : 'Chưa có bài nộp cho câu này.')]));
+      : [node('p', detail.students.length ? 'Không có học viên trong nhóm này.' : showStatus ? 'Chưa có câu trả lời đã lưu.' : 'Chưa có bài nộp cho câu này.')]));
     wrap.scrollTop = scroll;
+    if(focusedFilter) {
+      (Array.from(filters.children).find(node=>node.dataset.responseFilter===focusedFilter)
+        || filters.querySelector('[aria-pressed="true"]'))?.focus({preventScroll:true});
+    } else if(focused&&focused===previous&&wrap.isConnected) wrap.focus({preventScroll:true});
     renderedStatus = detail.objective
       ? detail.counts.correct + ' đúng · ' + detail.counts.incorrect + ' sai · ' + detail.counts.graded + ' đã chấm'
       : detail.counts.answered + '/' + detail.counts.visible + ' đã trả lời · Không chấm điểm';
