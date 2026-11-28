@@ -81,7 +81,7 @@ async function start() {
         document.getElementById('lesson-access-style')?.remove();
       },
     });
-    await import('../shared/loader.mjs?v=20261125-lesson7');
+    await import(activity==='lesson6'?'../shared/loader.mjs?v=20261128-lesson6-completion':'../shared/loader.mjs?v=20261125-lesson7');
   }
   await enter(await access.open(root));
 }

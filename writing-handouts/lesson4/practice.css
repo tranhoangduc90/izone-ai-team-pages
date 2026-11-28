@@ -62,3 +62,10 @@ body:is([data-activity="lesson4"],[data-activity="lesson6"]) .reading-practice-g
 }
 
 .lesson7-dock-status { margin: 0 0 6px; font-size: .9rem; }
+
+.homework-completion {
+  margin-top: 14px;
+  border-color: #a9cdbc;
+  background: #f1faf5;
+}
+.homework-completion h2 { color: #195a43; margin-top: 0; }
