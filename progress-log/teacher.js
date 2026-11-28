@@ -22,7 +22,7 @@ import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261105-ic-or
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
 import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261104-the25-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
-import {clearThuyAnalytics,refreshThuyResponses,renderThuyAnalytics} from './thuy-live/question-analytics.js?rev=20261127-submitted-parts';
+import {clearThuyAnalytics,refreshThuyResponses,renderThuyAnalytics} from './thuy-live/question-analytics.js?rev=20261128-live-drafts';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261030-the22-23-v1';
 import {COPY_STUDENT_LINK_LABEL,decorateCopyStudentLinkButton,studentAssignmentLink} from './student-assignment-link.js';
@@ -115,12 +115,87 @@ const thuyLayout=THUY_UI?mountThuyTeacherLayout(elements,{onMode:showThuyMode,on
 document.body.classList.remove('progress-starting');
 const connectionHost=document.getElementById('teacherConnectionStatus');
 const liveUpdates=createTeacherLiveUpdates({
-  read:async({assignmentId,after,force,signal})=>(await apiRequest('/teacher/assignments/'+encodeURIComponent(assignmentId)+'/live-updates?after='+after+'&force='+(force?'1':'0')+(state.questionResponses?'&view='+thuyReadView():'')+(state.submittedPartAnalytics?'&submittedParts=1':''),{signal})).update,
+  read:async({assignmentId,after,force,signal})=>(await apiRequest('/teacher/assignments/'+encodeURIComponent(assignmentId)+'/live-updates?after='+after+'&force='+(force?'1':'0')+(state.questionResponses?'&view='+thuyReadView():'')+(state.submittedPartAnalytics?'&submittedParts=1':'')+(state.draftAnalytics?'&draftAnalytics=1':''),{signal})).update,
   apply:applyLiveUpdate,url:id=>config.API_BASE_URL+'/api/learning/teacher/assignments/'+encodeURIComponent(id)+'/events',
   active:()=>state.authenticated&&!document.hidden&&!elements.dashboardPanel.hidden,
   onState:value=>paintConnection(connectionHost,elements.refreshDashboardButton,value),
   onAccessDenied:error=>{if(error.status===401)clearTeacherLogin();else showClassPortal();setNotice(error.message||'Quyền xem phiếu đã thay đổi.','error');}
 });
+const journeyAnalytics=THUY_UI?mountJourneyAnalytics():null;
+function mountJourneyAnalytics(){
+  const disclosure=document.createElement('details');
+  disclosure.hidden=true;
+  const heading=document.createElement('summary');
+  heading.textContent='Thống kê câu hỏi theo buổi';
+  const label=document.createElement('label'),picker=document.createElement('select');
+  label.append('Buổi học ',picker);
+  const status=document.createElement('small'),refresh=document.createElement('button');
+  status.setAttribute('role','status');
+  refresh.type='button';refresh.className='button secondary';refresh.textContent='Làm mới';
+  const host=document.createElement('div');
+  const controls=document.createElement('div');
+  controls.append(label,' ',refresh,' ',status);
+  disclosure.append(heading,controls,host);
+  elements.courseOverview.before(disclosure);
+  let assignmentId='',classId='',definition=null;
+  const stream=createTeacherLiveUpdates({
+    read:async({assignmentId,after,force,signal})=>(await apiRequest(
+      '/teacher/assignments/'+encodeURIComponent(assignmentId)+'/live-updates?view=overview&submittedParts=1&draftAnalytics=1&after='+after+'&force='+(force?'1':'0'),{signal})).update,
+    url:id=>config.API_BASE_URL+'/api/learning/teacher/assignments/'+encodeURIComponent(id)+'/events',
+    active:()=>state.authenticated&&!document.hidden&&!elements.overviewPanel.hidden&&disclosure.open,
+    onState:value=>paintConnection(status,refresh,value),
+    onAccessDenied:error=>{stop();if(error.status===401)clearTeacherLogin();else status.textContent=error.message||'Quyền xem buổi đã thay đổi.';},
+    apply:update=>{
+      if(update.assignmentId!==assignmentId||classId!==elements.overviewClassSelect.value)return;
+      if(update.dashboard){
+        if(update.dashboard.assignmentId!==assignmentId||
+            (update.dashboard.classId!=null&&String(update.dashboard.classId)!==classId))throw Error('Dữ liệu không cùng buổi.');
+        definition=update.dashboard.definition;
+      }
+      if(!update.analytics)return;
+      if(update.analytics.assignmentId!==assignmentId)throw Error('Dữ liệu không cùng phiếu.');
+      const target=assignmentId,query=update.analytics.draftAnalytics?'?submittedParts=1&draftAnalytics=1':'?submittedParts=1';
+      renderThuyAnalytics(host,update.analytics,{definition,
+        syncResponses:()=>stream.refresh({force:true}),
+        readResponses:async(itemVersionId,signal)=>{
+          try{return (await apiRequest(
+            '/teacher/assignments/'+encodeURIComponent(target)+'/question-analytics/'+encodeURIComponent(itemVersionId)+'/responses'+query,{signal})).detail;}
+          catch(error){
+            if(error.code==='ASSIGNMENT_ACCESS_DENIED'&&assignmentId===target&&!signal.aborted){
+              stop();status.textContent='Quyền xem buổi đã thay đổi.';
+            }
+            throw error;
+          }
+        }});
+    }
+  });
+  function stop(){
+    stream.stop();assignmentId='';definition=null;
+    clearThuyAnalytics(host);host.replaceChildren();
+  }
+  function start(){
+    const chosen=picker.value;
+    if(!disclosure.open||disclosure.hidden||elements.overviewPanel.hidden||!chosen)return;
+    if(assignmentId===chosen)return;
+    stop();assignmentId=chosen;void stream.start(chosen);
+  }
+  disclosure.addEventListener('toggle',()=>{if(disclosure.open)start();else stop();});
+  picker.addEventListener('change',start);
+  refresh.addEventListener('click',event=>{event.preventDefault();if(assignmentId)void stream.refresh({force:true});});
+  return {stop,resume:()=>{if(assignmentId)stream.resume();},
+    setClass(id){
+      const options=state.assignments.filter(row=>String(row.class_id)===id&&row.draft_analytics_enabled===true&&row.live_updates_enabled!==false&&['published','closed'].includes(row.status));
+      const keep=classId===id&&options.some(row=>row.assignment_id===picker.value);
+      const previous=keep?picker.value:elements.assignmentSelect.value;
+      if(classId!==id||!keep)stop();
+      classId=id;
+      disclosure.hidden=!options.length;
+      const ordered=[...options].sort((a,b)=>b.session_number-a.session_number);
+      picker.replaceChildren(...ordered.map(row=>new Option('Buổi '+row.session_number+' · '+row.title,row.assignment_id)));
+      if(options.some(row=>row.assignment_id===previous))picker.value=previous;
+      start();
+    }};
+}
 const managementHost=THUY_UI?document.createElement('div'):null;
 if(managementHost){managementHost.className='thuy-assignment-actions';managementHost.hidden=true;}
 const canManageClass=classId=>state.classes.find(row=>String(row.class_id)===String(classId))?.can_manage!==false;
@@ -257,6 +332,7 @@ function switchPanel(panel,{returning=false}={}) {
   }
   state.activePanel=panel;
   classPortal.hidden=panel!=='classes';
+  if(panel!=='overview')journeyAnalytics?.stop();
   if(panel!=='dashboard'){liveUpdates.stop();clearThuyAnalytics(elements.questionAnalytics);}
   if(THUY_UI){thuyLayout.setPanel(panel);if(panel==='dashboard')showThuyMode(state.thuyMode||'progress');if(panel==='create')formEditor.setContext({classId:thuyLayout.classes.value,sessionNumber:state.dashboard?.sessionNumber});}
   const creating = panel === 'create';
@@ -341,6 +417,7 @@ function mountCommentEditor(root,dialog,target,studentName,comment,focus=false) 
 
 async function loadCourseOverview({preserve=true}={}) {
   const classId=elements.overviewClassSelect.value;
+  journeyAnalytics?.setClass(classId);
   state.overviewController?.abort();
   const generation=++state.overviewGeneration;
   const keeping=preserve&&String(state.overview?.classId)===String(classId);
@@ -480,7 +557,10 @@ function paintQuestionAnalytics(analytics,assignmentId){
       return state.liveEnabled?liveUpdates.refresh({force:true}):loadQuestionAnalytics(assignmentId,{quiet:true});
     }:null,
     readResponses:state.questionResponses?async(itemVersionId,signal)=>{
-      const path='/teacher/assignments/'+encodeURIComponent(assignmentId)+'/question-analytics/'+encodeURIComponent(itemVersionId)+'/responses'+(analytics.parts?'?submittedParts=1':'');
+      const query=new URLSearchParams();
+      if(analytics.parts)query.set('submittedParts','1');
+      if(analytics.draftAnalytics)query.set('draftAnalytics','1');
+      const path='/teacher/assignments/'+encodeURIComponent(assignmentId)+'/question-analytics/'+encodeURIComponent(itemVersionId)+'/responses'+(query.size?'?'+query:'');
       try{return (await apiRequest(path,{signal})).detail;}
       catch(error){if(error.code==='ASSIGNMENT_ACCESS_DENIED'&&elements.assignmentSelect.value===assignmentId&&!signal.aborted){showClassPortal();setNotice(error.message,'error');}throw error;}
     }:null,onStudent:(student,focusItem)=>void openJourneyDetail({
@@ -497,6 +577,7 @@ async function loadQuestionAnalytics(assignmentId,{quiet=false}={}) {
     const query=new URLSearchParams();
     if(state.questionResponses)query.set('view','summary');
     if(state.submittedPartAnalytics)query.set('submittedParts','1');
+    if(state.draftAnalytics)query.set('draftAnalytics','1');
     const payload=await apiRequest('/teacher/assignments/'+encodeURIComponent(assignmentId)+'/question-analytics'+(query.size?'?'+query:''),{signal:controller.signal});
     if(generation!==state.analyticsGeneration||elements.assignmentSelect.value!==assignmentId||
         (state.questionResponses&&thuyReadView()!=='overview')) return;
@@ -683,6 +764,7 @@ async function loadWorkspace() {
   state.liveAvailable=THUY_UI&&options.capabilities?.liveUpdates===true;
   state.questionResponses=THUY_UI&&options.capabilities?.questionResponses===true;
   state.submittedPartAnalytics=THUY_UI&&options.capabilities?.submittedPartAnalytics===true;
+  state.draftAnalytics=THUY_UI&&options.capabilities?.draftAnalytics===true;
   state.liveEnabled=false;
   state.library=[];
   if(THUY_UI){fillSelect(thuyLayout.classes,state.classes,'class_id',c=>c.class_name);if(entryAssignment)thuyLayout.classes.value=String(entryAssignment.class_id);}
@@ -1908,6 +1990,7 @@ function clearTeacherLogin() {
   if(elements.journeyDetailDialog.open) elements.journeyDetailDialog.close();
   state.authGeneration += 1;
   state.authenticated = false;
+  journeyAnalytics?.stop();
   state.reviewer = null;
   state.classes = [];
   state.assignments = [];
@@ -2090,7 +2173,11 @@ window.setInterval(() => {
   if (state.liveEnabled||!state.authenticated || !state.dashboard || document.hidden || elements.dashboardPanel.hidden || state.dashboardLoading) return;
   void loadDashboard({ quiet: true });
 }, 8_000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.authenticated&&!elements.dashboardPanel.hidden){if(state.liveEnabled)liveUpdates.resume();else void loadDashboard({quiet:true});}});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden||!state.authenticated)return;
+  if(!elements.overviewPanel.hidden)journeyAnalytics?.resume();
+  if(!elements.dashboardPanel.hidden){if(state.liveEnabled)liveUpdates.resume();else void loadDashboard({quiet:true});}
+});
 window.addEventListener('online',()=>{if(state.liveEnabled)liveUpdates.resume();});
 window.addEventListener('storage',event=>{
   if(!['izone:teacher-sso-login','izone:teacher-sso-logout'].includes(event.key))return;

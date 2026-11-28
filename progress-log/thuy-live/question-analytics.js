@@ -2,7 +2,7 @@
 import {questionPresentation} from './question-presentation.js?rev=20261022-parity-v1';
 import {questionReview} from './question-review.js?rev=20261030-the17-19-v1';
 const node=(tag,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
-import {createQuestionResponses} from './question-responses.js?rev=20261114-response-sync';
+import {createQuestionResponses} from './question-responses.js?rev=20261128-live-drafts';
 const views=new WeakMap();
 
 export function clearThuyAnalytics(root){views.get(root)?.responses.clear();}
@@ -19,11 +19,12 @@ export function renderThuyAnalytics(root,analytics,{definition,readResponses,syn
     view={header,summary,navigation,review,responses,assignmentId:analytics.assignmentId,rows:new Map(),groups:new Map(),selected:null};views.set(root,view);
   }
   const liveParts=Array.isArray(analytics.parts);
+  const liveDrafts=analytics.draftAnalytics===true;
   const summary=`${analytics.submittedCount}/${analytics.rosterCount} học viên ${liveParts?'đã nộp ít nhất một phần':'có bài nộp hiện hành'}`;
   if(view.summary.textContent!==summary)view.summary.textContent=summary;
   const blocks=definition?.blocks||[];
   const sourceItems=new Map(blocks.flatMap(part=>part.items.map(item=>[item.itemVersionId,{item,part}])));
-  const partCounts=new Map(analytics.parts?.map(part=>[part.blockId,part.submittedCount]));
+  const partCounts=new Map(analytics.parts?.map(part=>[part.blockId,part]));
   const group=item=>!item.objective?3:item.counts.incorrect>0?0:item.counts.graded>0?1:2;
   const items=[...analytics.items].sort((a,b)=>liveParts?a.position-b.position:
     group(a)-group(b)||(b.counts.incorrect||0)-(a.counts.incorrect||0)||a.position-b.position);
@@ -54,9 +55,10 @@ export function renderThuyAnalytics(root,analytics,{definition,readResponses,syn
     const type=source.layoutType==='matching_heading_dropdown'?'Dropdown':source.interactionType==='single_choice'?'Trắc nghiệm':source.interactionType==='multi_choice_group'?'Chọn nhiều đáp án':source.interactionType==='number_score'?'Tự báo điểm':source.interactionType==='long_text'?'Trả lời mở':'Điền từ';
     const percent=graded?new Intl.NumberFormat('vi-VN',{maximumFractionDigits:1}).format(wrong/graded*100)+'%':null;
     const metadata=[part?.title,skills,type].filter(Boolean).join(' · ');
+    const draftLabel=liveDrafts?`${count.draftAnswered} đang làm · `:'';
     const submittedLabel=`${count.answered} đã trả lời`;
     const gradeLabel=item.objective?`${count.correct||0} đúng · ${wrong} sai${count.pending?` · ${count.pending} chờ chấm`:''}`:'Không chấm điểm';
-    const primary=liveParts?submittedLabel:item.objective&&graded?wrong+'/'+graded+' sai':state;
+    const primary=liveParts?draftLabel+submittedLabel:item.objective&&graded?wrong+'/'+graded+' sai':state;
     const secondary=liveParts?gradeLabel:item.objective&&percent?percent+' sai':'';
     const navLabel=JSON.stringify([label,metadata]);
     if(row.navLabel!==navLabel){
@@ -74,16 +76,29 @@ export function renderThuyAnalytics(root,analytics,{definition,readResponses,syn
       card.append(questionReview(source,{correctAnswer:item.correctAnswer??item.referenceAnswer,expectedIds,explanation:item.explanation,reference:!item.objective}));
       row.totals=node('p');
       card.append(row.totals);
+      row.distribution=node('ul','','thuy-response-distribution-summary');
+      row.distribution.hidden=true;
+      card.append(row.distribution);
       row.card=card;row.fingerprint=fingerprint;
     }
-    const totals=liveParts?`${submittedLabel} · ${count.submitted} đã nộp phần · ${gradeLabel}`:
+    const totals=liveParts?draftLabel+`${submittedLabel} · ${count.submitted} đã nộp phần · ${gradeLabel}`:
       item.objective?`${wrong}/${graded} học viên đã chấm trả lời sai · ${percent||'Chưa có mẫu số'}`:
         `${count.answered}/${count.visible} đã trả lời · Không chấm đúng/sai`;
     if(row.totals.textContent!==totals)row.totals.textContent=totals;
+    const distribution=liveDrafts?(source.options||item.options||[]).map(option=>{
+      const choice=item.choices.find(choice=>choice.optionId===option.id);
+      return `${option.label} · ${choice?.draftCount||0} đang làm · ${choice?.count||0} đã nộp`;
+    }):[];
+    const distributionKey=JSON.stringify(distribution);
+    if(row.distributionKey!==distributionKey||row.distribution.childElementCount!==distribution.length){
+      row.distribution.replaceChildren(...distribution.map(text=>node('li',text)));
+      row.distribution.hidden=!distribution.length;
+      row.distributionKey=distributionKey;
+    }
   }
   const desired=[];
   const groups=liveParts&&blocks.length?blocks.map(part=>({key:part.blockId,
-    text:`${part.title} · ${partCounts.get(part.blockId)||0}/${analytics.rosterCount} đã nộp phần`,
+    text:`${part.title} · ${partCounts.get(part.blockId)?.submittedCount||0}/${analytics.rosterCount} đã nộp phần${liveDrafts?` · ${partCounts.get(part.blockId)?.draftCount||0} đang làm`:''}`,
     members:items.filter(item=>sourceItems.get(item.itemVersionId)?.part===part)})):
     ['Thống kê theo câu hỏi','Chưa có học viên trả lời sai','Chưa có kết quả chấm','Không chấm điểm']
       .map((label,key)=>{
