@@ -1,10 +1,11 @@
 import {draftKey,loadBackup,saveBackup} from './drafts.js';
 import {handoutTablesHtml} from './handout-tables.js?v=20261119-lesson5-full-outline';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+import {guidedWritingExperience} from './guided-writing.js?v=20261128-lesson7';
 export function setupHandoutEditor(root,{person,assignment,save,isCurrent,onChange=()=>{}}){
  const storage=draftKey(person.id,assignment.id,'handout');let data,local,editing=false,dirty=false,pending=null,conflict=null,loaded=false,saving=null,mutation=0;
  const content=()=>root.querySelector('#handout-content'),status=()=>root.querySelector('#handout-status');
- const lesson5=assignment.experience==='lesson5-consumerism-body-v1';
+ const lesson5=guidedWritingExperience(assignment);
  let renderedOutline;
  const active=()=>root.isConnected&&isCurrent();
  function collect(){if(!local)return;root.querySelectorAll('[data-handout-path]').forEach(el=>{const p=JSON.parse(el.dataset.handoutPath);let dest=local;for(const k of p.slice(0,-1))dest=dest[k];dest[p.at(-1)]=el.value;});}

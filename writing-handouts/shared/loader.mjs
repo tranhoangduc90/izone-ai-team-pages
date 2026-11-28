@@ -86,7 +86,7 @@ async function boot(){
   for(const el of document.querySelectorAll('[data-lesson-text]'))el.textContent=texts[el.dataset.lessonText];
   document.querySelector('[data-lesson-brand]')?.setAttribute('aria-label','IZONE Writing Lesson '+lesson.number);
   document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':shareHomework?lesson.title:'Lesson '+lesson.number+' · Writing · IZONE';
-  const editorVersion=activity==='lesson6'?'20261128-lesson6-completion':(shareHomework||activity==='lesson7')?'20261125-lesson7':activity==='lesson5'?'20261118-lesson5-writing':lesson.outlineOnly||['opinion-v1','discussion-v1'].includes(lesson.preparationKind)
+  const editorVersion=activity==='lesson6'?'20261128-lesson6-completion':(shareHomework||activity==='lesson7')?'20261128-lesson7-writing':activity==='lesson5'?'20261118-lesson5-writing':lesson.outlineOnly||['opinion-v1','discussion-v1'].includes(lesson.preparationKind)
    ?'20261113-save-log-v1':'20261109-l3-v1&check=20261101-v1&poll=20261104-v1';
   const teacherVersion=activity==='lesson7'?'20261125-lesson7':activity==='lesson5'?'20261118-lesson5-writing':activity==='lesson4'?'20261117-teacher-library67':'20261109-l3-v1';
   await import(view==='teacher'?'../lesson5/teacher.js?v='+teacherVersion+'&startup=20261026-v2':'../lesson5-thu/app.js?v='+editorVersion);
