@@ -44,6 +44,7 @@ function publicationHistoryHtml(data, includeLatest=false){
   const rows=data.publicationHistory||[];if(rows.length<(includeLatest?1:2))return '';
   return '<details class="history-panel block"><summary>Lịch sử trả bài · '+rows.length+' bản</summary><label class="field"><span>Bản nhận xét đã trả</span><select id="publication-history"><option value="">Chọn bản đã trả</option>'+rows.map(p=>'<option value="'+esc(p.id)+'">Bản '+p.publication_version+' · '+date(p.created_ms)+'</option>').join('')+'</select></label><div id="publication-history-content"></div></details>';
 }
+import {guidedWritingExperience,lesson7Experience,splitWritingParts,wordCount} from './guided-writing.js?v=20261128-lesson7';
 const compactLessonTitle = title => title.replace(/ · Viết mở bài$/u,'');
 const lesson3Badge = (status,id='') => status
   ? `<span ${id?`id="${id}"`:''} class="badge ${status==='returned'?'success':'attention'}">${lesson3StatusNames[status]}</span>`
@@ -51,19 +52,23 @@ const lesson3Badge = (status,id='') => status
 export function studentViewHtml({ me, model, assignments, isLocked, feedback, delivery, compactStatus=false }) {
   const { state, text } = model, a = state.assignment;
   const introduction=a.writingPart==='introduction';
-  const lesson5=a.experience==='lesson5-consumerism-body-v1';
+  const guided=guidedWritingExperience(a);
+  const lesson7=lesson7Experience(a);
+  const lesson5=guided&&!lesson7;
+  const [intro,body2]=lesson7?splitWritingParts(text):[text,''];
+  const lessonNumber=lesson7?7:5;
   const compactRevision=compactStatus&&model.kind==='revision';
   const showRevisionGuide=compactRevision&&!!state.publication&&!isLocked;
   const cleanLanguage=state.publication?.result?.languageOutcome==='no_sentence_changes';
-  const editorLabel = `<label class="editor-label" for="essay">${model.kind === 'revision' ? 'Bản sửa của em'+(model.revisionRound>1?' · Lượt '+model.revisionRound:'') : lesson5?'Thân bài 2 của em':introduction?'Phần mở bài của em':'Bài viết bằng tiếng Anh'}${isLocked?'<small>Bản đã nhận · chỉ đọc</small>':compactRevision?'':'<small>Em tự diễn đạt ý của mình</small>'}</label>`;
+  const editorLabel = `<label class="editor-label" for="essay">${model.kind === 'revision' ? 'Bản sửa của em'+(model.revisionRound>1?' · Lượt '+model.revisionRound:'') : lesson7?'Mở bài':lesson5?'Thân bài 2 của em':introduction?'Phần mở bài của em':'Bài viết bằng tiếng Anh'}${lesson7?`<small id="intro-word-count">${wordCount(intro)} từ</small>`:isLocked?'<small>Bản đã nhận · chỉ đọc</small>':compactRevision?'':'<small>Em tự diễn đạt ý của mình</small>'}</label>`;
   const revisionTask=showRevisionGuide
-    ? '<aside class="revision-task" aria-label="Việc cần làm"><div><strong>'+ (lesson5?'Sửa và nộp lại Thân bài 2':'Sửa và nộp lại mở bài') +'</strong><p>'+
+    ? '<aside class="revision-task" aria-label="Việc cần làm"><div><strong>'+ (lesson7?'Sửa và nộp lại Mở bài và Thân bài 2':lesson5?'Sửa và nộp lại Thân bài 2':'Sửa và nộp lại mở bài') +'</strong><p>'+
       (cleanLanguage?'Dựa vào nhận xét của GV để chỉnh phần trả lời đề và mạch ý.':'Đọc nhận xét về nội dung và gợi ý sửa từng câu trước khi viết bản sửa.')+
       '</p></div><a class="revision-task-link" href="#essay" data-go-to-revision>Đến ô viết bản sửa <span aria-hidden="true">→</span></a></aside>'
     : '';
   const saveLabel = model.backupError ? 'Chưa lưu được dự phòng trên thiết bị' : model.text !== model.lastSavedText ? 'Đã khôi phục bản trên thiết bị · chưa đồng bộ' : model.baseRevision ? 'Đã lưu nháp trên hệ thống · bản ' + model.baseRevision : 'Chưa có bản lưu';
   const status = state.publication?'returned':lesson3Status(state.submission);
-  const workspaceTools = `<div class="student-workspace-tools"><button type="button" id="toggle-handout" aria-expanded="false" aria-controls="handout-preview">${lesson5?'Xem dàn ý Lesson 5':'Xem handout Writing'}</button>${lesson5?'':handoutLinkHtml({assignmentId:a.id})}${state.publication ? '<button type="button" id="show-feedback" class="quiet" aria-pressed="true">Nhận xét đã trả</button>' : ''}</div>`;
+  const workspaceTools = `<div class="student-workspace-tools"><button type="button" id="toggle-handout" aria-expanded="false" aria-controls="handout-preview">${guided?'Xem dàn ý Lesson '+lessonNumber:'Xem handout Writing'}</button>${guided?'':handoutLinkHtml({assignmentId:a.id})}${state.publication ? '<button type="button" id="show-feedback" class="quiet" aria-pressed="true">Nhận xét đã trả</button>' : ''}</div>`;
   return `${compactStatus?'':'<button id="student-home" class="text-button back">← Bài được giao</button>'}
     <div class="page-heading${compactStatus?' compact-lesson-heading student-lesson-heading':''}">
       <div><h1>${esc(compactStatus?compactLessonTitle(a.title):a.title)}</h1></div>
@@ -76,17 +81,18 @@ export function studentViewHtml({ me, model, assignments, isLocked, feedback, de
       <section class="card editor-card">${compactStatus?'':`<div class="editor-head"><div><h2>${esc(a.title)}</h2></div><span id="processing-status" class="badge ${statusColor(state.submission)}">${statusLabel(state.submission)}</span></div>`}
         ${!compactStatus&&state.submission?.status==='grading_failed'?'<section class="error-panel grading-failure" role="alert"><strong>Chấm bài đang gặp lỗi</strong><p>Bài của em đã được lưu. Cần người phụ trách kiểm tra để tiếp tục chấm; em không cần nộp lại.</p></section>':''}
         ${compactRevision?'':`<section class="prompt-disclosure writing-prompt"><h2>Đề bài</h2>${prompt(a)}</section>`}
-        ${showRevisionGuide ? `<aside class="revision-guide" id="revision-guide" aria-labelledby="revision-guide-title"><span class="revision-guide-icon" aria-hidden="true">✎</span><div><h3 id="revision-guide-title">Đến lượt em viết bản sửa</h3><p>Dựa vào nhận xét của GV, em hãy sửa lại ${lesson5?'Thân bài 2':'phần mở bài'} rồi nộp bản sửa.</p></div></aside>` : state.publication ? `${compactStatus&&isLocked&&state.revision?'':`<p class="revision-hint">${isLocked&&state.revision ? 'Bản sửa đã được nhận. Bản này chưa được AI chấm lại hoặc xác nhận đạt.' : 'Đọc nhận xét đã duyệt rồi tự viết bản sửa tại đây. Nộp bản sửa chưa đồng nghĩa bài đã đạt.'}</p>`}` : ''}
+        ${showRevisionGuide ? `<aside class="revision-guide" id="revision-guide" aria-labelledby="revision-guide-title"><span class="revision-guide-icon" aria-hidden="true">✎</span><div><h3 id="revision-guide-title">Đến lượt em viết bản sửa</h3><p>Dựa vào nhận xét của GV, em hãy sửa lại ${lesson7?'Mở bài và Thân bài 2':lesson5?'Thân bài 2':'phần mở bài'} rồi nộp bản sửa.</p></div></aside>` : state.publication ? `${compactStatus&&isLocked&&state.revision?'':`<p class="revision-hint">${isLocked&&state.revision ? 'Bản sửa đã được nhận. Bản này chưa được AI chấm lại hoặc xác nhận đạt.' : 'Đọc nhận xét đã duyệt rồi tự viết bản sửa tại đây. Nộp bản sửa chưa đồng nghĩa bài đã đạt.'}</p>`}` : ''}
         ${state.publication ? '<a class="mobile-jump" href="#approved-feedback">↑ Đọc lại nhận xét</a>' : ''}
         ${compactRevision?`<div class="revision-editor-heading">${editorLabel}<button type="button" id="open-writing-prompt" aria-haspopup="dialog" aria-controls="writing-prompt-dialog">Xem đề bài</button></div>
           <dialog id="writing-prompt-dialog" class="format-dialog writing-prompt-dialog" aria-labelledby="writing-prompt-title">
             <div class="dialog-head"><h2 id="writing-prompt-title">Đề bài</h2><form method="dialog"><button type="submit" aria-label="Đóng đề bài" autofocus>×</button></form></div>
             ${prompt(a)}
           </dialog>`:editorLabel}
-        <textarea id="essay" class="writing-area${compactRevision?' writing-area--revision':''}" lang="en" spellcheck="false" aria-describedby="${showRevisionGuide?'revision-guide-title ':''}save-status editor-error" ${isLocked ? 'readonly' : ''} placeholder="Bắt đầu viết tại đây…">${esc(text)}</textarea>
+        <textarea id="essay" class="writing-area${compactRevision?' writing-area--revision':''}${lesson7?' writing-area--intro':''}" lang="en" spellcheck="false" aria-describedby="${showRevisionGuide?'revision-guide-title ':''}save-status editor-error" ${isLocked ? 'readonly' : ''} placeholder="Bắt đầu viết tại đây…">${esc(intro)}</textarea>
+        ${lesson7?`<label class="editor-label" for="essay-body2">Thân bài 2<small id="body-word-count">${wordCount(body2)} từ</small></label><textarea id="essay-body2" class="writing-area" lang="en" spellcheck="false" aria-describedby="save-status editor-error" ${isLocked?'readonly':''} placeholder="Phát triển hai ý đã chốt…">${esc(body2)}</textarea>`:''}
         <div class="editor-status"><span id="save-status">${esc(saveLabel)}</span><span id="word-count">${text.trim() ? text.trim().split(/\s+/).length : 0} từ</span></div>
         <div id="conflict"></div><div id="editor-error" role="alert"></div>${!isLocked?alignmentPanelHtml(model.kind==='revision'?state.revisionHandoutCheck:state.handoutCheck,a.handoutRequired):''}
-        ${lesson5&&state.docsPending?'<p class="notice-panel" role="status">Chưa ghép được Homework Docs cá nhân cho Lesson 5. Em có thể viết và lưu nháp, rồi bấm Cập nhật trạng thái để kiểm tra lại trước khi nộp.</p>':''}
+        ${guided&&state.docsPending?'<p class="notice-panel" role="status">Chưa ghép được Homework Docs cá nhân cho Lesson '+lessonNumber+'. Em có thể viết và lưu nháp, rồi bấm Cập nhật trạng thái để kiểm tra lại trước khi nộp.</p>':''}
         ${!isLocked ? `<div class="editor-bottom"><span id="submit-progress" role="status"></span><p class="save-hint">Lưu nháp chưa phải nộp bài.</p><div class="actions"><button id="save">Lưu nháp</button><button id="submit" class="primary">${model.kind === 'revision' ? 'Nộp bản sửa cho GV' : lesson5?'Nộp thân bài':introduction?'Nộp mở bài':'Nộp bài'}</button></div></div><div class="demo-tool"><button id="sample" class="text-button">${introduction?'Điền mở bài mẫu':'Điền bài giả để thử luồng'}</button></div>` : `<section class="notice-panel submission-confirmation"><strong>✓ ${model.kind === 'revision' ? 'Đã nhận bản sửa của em' : 'Bài đã được nhận trên hệ thống'}</strong></section>`}
         ${!compactStatus&&state.submission ? delivery : ''}
       </section></div>`;

@@ -264,3 +264,6 @@ mark.teacher-highlight{background:#ffeb97;color:inherit;box-decoration-break:clo
  .student-layout.handout-open:has(.handout-lesson5)>.editor-card{height:auto;max-height:none;overflow:visible}
  .handout-lesson5 .handout-sheet{padding-inline:12px}
 }
+
+.editor-card .writing-area--intro { min-height: 6rem; }
+#essay-body2 { min-height: 10rem; }

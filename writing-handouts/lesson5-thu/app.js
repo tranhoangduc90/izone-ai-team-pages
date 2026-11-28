@@ -137,7 +137,8 @@ function render(){
   $('journey-nav').innerHTML=[['prompt','Đề bài','Đọc đề','?',false,true],['topic','Ý tưởng & Topic','Chốt cả hai idea','1',topicDone,true],['idea1','Lập luận ý 1',isWhole(lesson)?'Check cả chuỗi':'B → A → X','2',oneDone,topicDone],['idea2','Lập luận ý 2',isWhole(lesson)?'Check cả chuỗi':'B → A → X','3',twoDone,state.idea2Open]].map(([id,title,sub,num,done,enabled])=>`<button class="nav-item ${done?'done':''} ${id==='topic'&&!topicDone||id==='idea1'&&topicDone&&!oneDone||id==='idea2'&&state.idea2Open?'active':''}" data-target="${id}" ${enabled?'':'disabled'}><span>${done?'✓':num}</span><span>${title}<small>${sub}</small></span></button>`).join('');
   $('completion').hidden=!twoDone;
   if(twoDone)$('completion').innerHTML=renderRecap({...state,body:lesson.body||2});
-  if(twoDone&&lesson5&&writingHandoff?.writingUrl)$('completion').insertAdjacentHTML('afterbegin',
+  if(twoDone&&(lesson5||lesson7)&&writingHandoff?.writingUrl)$('completion').insertAdjacentHTML('afterbegin',lesson7?
+   '<section class="next-idea"><div><strong>Dàn ý Thân bài 2 đã đạt.</strong><p>Dùng các ý đã chốt để viết Mở bài và Thân bài 2.</p><p id="lesson5-writing-error" role="status"></p></div><button type="button" id="lesson5-continue-writing" class="primary">Xác nhận dàn ý và sang viết →</button></section>':
    '<section class="next-idea"><div><strong>Dàn ý Thân bài 2 đã đạt.</strong><p>Em hãy viết đoạn văn dựa trên các ý đã chốt.</p><p id="lesson5-writing-error" role="status"></p></div><button type="button" id="lesson5-continue-writing" class="primary">Tiếp tục viết Thân bài 2 →</button></section>');
   if(isWhole(lesson))$('journey-nav').insertAdjacentHTML('beforeend',`<button class="nav-item ${twoDone?'done':''}" data-target="completion" ${twoDone?'':'disabled'}><span>${twoDone?'✓':'4'}</span><span>Bảng cuối<small>Nội dung & từ vựng chung</small></span></button>`);
   }
@@ -315,10 +316,10 @@ let writingPrompt,acknowledgedWriting,writingHandoffInFlight=false;
 let triedLesson5Writing='';
 function syncLesson5Writing(){
  const button=$('lesson5-continue-writing');
- if(!button||!lesson5||!writingHandoff?.writingUrl)return;
+ if(!button||!(lesson5||lesson7)||!writingHandoff?.writingUrl)return;
  button.onclick=()=>void continueLesson5Writing();
  const key=state.ref+':'+state.version;
- if(writingHandoff.reviewOutline||triedLesson5Writing===key||conflict||Object.keys(dirty).length)return;
+ if(lesson7||writingHandoff.reviewOutline||triedLesson5Writing===key||conflict||Object.keys(dirty).length)return;
  triedLesson5Writing=key;
  queueMicrotask(()=>void continueLesson5Writing());
 }

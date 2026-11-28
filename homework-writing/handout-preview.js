@@ -1,9 +1,10 @@
-import {setupHandoutEditor} from './handout-editor.js?v=20261119-lesson5-full-outline';
+import {guidedWritingExperience,lesson7Experience} from './guided-writing.js?v=20261128-lesson7';
+import {setupHandoutEditor} from './handout-editor.js?v=20261128-lesson7&prior=20261119-lesson5-full-outline';
 import { handoutTablesHtml } from './handout-tables.js?v=20261119-lesson5-full-outline';
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function handoutPreviewHtml(assignment, person, result = {tables:[]}) {
-  const lesson5=assignment.experience==='lesson5-consumerism-body-v1';
-  return `<header class="handout-heading"><div><h2>${lesson5?'Dàn ý từ Handout Lesson 5':assignment.writingPart==='introduction'?'Dàn ý từ Handout Lesson 3':'Handout Writing'}</h2>${lesson5||assignment.writingPart==='introduction'?'':`<p>${esc(assignment.title)}</p>`}</div>${lesson5?'':'<button type="button" id="close-handout" aria-label="Đóng handout">×</button>'}</header>
+  const lesson5=guidedWritingExperience(assignment);
+  return `<header class="handout-heading"><div><h2>${lesson5?'Dàn ý từ Handout Lesson '+(lesson7Experience(assignment)?7:5):assignment.writingPart==='introduction'?'Dàn ý từ Handout Lesson 3':'Handout Writing'}</h2>${lesson5||assignment.writingPart==='introduction'?'':`<p>${esc(assignment.title)}</p>`}</div>${lesson5?'':'<button type="button" id="close-handout" aria-label="Đóng handout">×</button>'}</header>
     <div class="handout-sheet"><div class="handout-person"><strong>${esc(person.label)}</strong><span class="badge neutral">Đang xác định nguồn</span></div>
     <div class="handout-actions"><button type="button" id="reload-handout">Tải lại handout</button><span id="handout-status" role="status"></span></div>
     <div id="handout-content"><p class="section-note">${esc(result.message || '')}</p><div class="handout-summary-title"><h3>Bảng tổng hợp trên lớp</h3><span class="badge neutral">${result.tables.length} bảng</span></div>
@@ -14,7 +15,7 @@ export function setupHandoutPreview(root,{assignment,person,initialMode='handout
   const layout=root.querySelector('.student-layout'), side=root.querySelector('.study-context');
   const handout=root.querySelector('#handout-preview'), feedback=root.querySelector('#approved-feedback');
   const toggle=root.querySelector('#toggle-handout'), showFeedback=root.querySelector('#show-feedback');
-  const lesson5=assignment.experience==='lesson5-consumerism-body-v1';
+  const lesson5=guidedWritingExperience(assignment);
   let mode=feedback ? 'feedback' : 'closed', request=0,copyEditor,shownOutline=false;
   handout.innerHTML=handoutPreviewHtml(assignment,person);
   handout.classList.toggle('handout-lesson5',lesson5);
@@ -76,7 +77,7 @@ export function setupHandoutPreview(root,{assignment,person,initialMode='handout
     if(feedback) feedback.hidden=mode !== 'feedback';
     side.hidden=mode === 'closed'; layout.classList.toggle('handout-open',mode === 'handout');
     toggle.setAttribute('aria-expanded',String(mode === 'handout'));
-    toggle.textContent=lesson5?(mode==='handout'?'Đóng dàn ý':'Xem dàn ý Lesson 5'):assignment.writingPart==='introduction' ? (mode==='handout'?'Đóng dàn ý':'Xem dàn ý Lesson 3') : (mode==='handout'?'Đóng handout Writing':'Xem handout Writing');
+    toggle.textContent=lesson5?(mode==='handout'?'Đóng dàn ý':'Xem dàn ý Lesson '+(lesson7Experience(assignment)?7:5)):assignment.writingPart==='introduction' ? (mode==='handout'?'Đóng dàn ý':'Xem dàn ý Lesson 3') : (mode==='handout'?'Đóng handout Writing':'Xem handout Writing');
     if(showFeedback) showFeedback.setAttribute('aria-pressed',String(mode === 'feedback'));
     side.setAttribute('aria-label',mode === 'handout'?'Handout Writing trên lớp':'Nhận xét đã duyệt');
     side.tabIndex=0; side.scrollTop=positions[mode] || 0;

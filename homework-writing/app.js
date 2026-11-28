@@ -4,7 +4,7 @@ import {setupRichReview} from './rich-review.js';
 import {mountIntegratedReview,equalReview} from './integrated-review.js?v=20261120-feedback-symbols';
 import {basicSubmissionError} from './submission-check.js';
 import {vietnameseWritingError} from './submission-language.js';
-import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261120-feedback-symbols';
+import { accountIdentity, loginViewHtml, studentHomeHtml, docsViewHtml, studentViewHtml, teacherListHtml, teacherReviewHtml, operatorViewHtml, operatorLibraryHtml, operatorReviewHtml } from './views.js?v=20261128-lesson7&prior=20261120-feedback-symbols';
 import { setupLoginForm } from './login-form.js';
 import { draftKey, loadBackup, saveBackup, flushBackups, listBackups } from './drafts.js';
 import { setupFeedbackCards } from './feedback-cards.js?v=20261120-feedback-symbols';
@@ -15,20 +15,20 @@ import { setupTeacherComments } from './teacher-comments.js';
 import { setupTeacherFilters } from './teacher-filters.js';
 import {lesson3Status} from './assignment-status.js';
 import { setupStudentFilters } from './student-filters.js';
-import { setupHandoutPreview } from './handout-preview.js?v=20261119-lesson5-full-outline';
+import { setupHandoutPreview } from './handout-preview.js?v=20261128-lesson7&prior=20261119-lesson5-full-outline';
 import {handoutReadOnlyHtml,setupReadOnlyHandout} from './handout-view.js';
 import {setupStudentAlignment,alignmentTeacherQueueHtml,alignmentTeacherViewHtml} from './handout-alignment.js';
 import {setWriting67Scope} from './master170-writing67.js';
 import {setupSplitPanes} from './split-panes.js';
-import {approvedOutlineVersion,devHandoutUrl,isDevWritingEntry,linkedHandoutUrl} from './fast-food-dev-entry.js?v=20261118-lesson5';
+import {approvedOutlineVersion,devHandoutUrl,isDevWritingEntry,linkedHandoutUrl} from './fast-food-dev-entry.js?v=20261128-lesson7&prior=20261118-lesson5';
 import {languageCards} from './language-cards.js';
 import {setupReviewHighlights} from './review-highlights.js';
 import {initialRevisionText,shouldRestoreRevisionBackup} from './revision-draft.js';
 import {highlightHtml} from './text-highlights.js';
 
 const $ = selector => document.querySelector(selector);
-const lesson5Experience = assignment => assignment?.experience==='lesson5-consumerism-body-v1';
-const lesson3Experience = assignment => assignment?.experience==='fast-food-introduction-v1'||lesson5Experience(assignment);
+import {guidedWritingExperience,splitWritingParts,joinWritingParts,wordCount} from './guided-writing.js?v=20261128-lesson7';
+const lesson3Experience = assignment => assignment?.experience==='fast-food-introduction-v1'||guidedWritingExperience(assignment);
 function setLesson3Chrome(enabled){
   document.body.classList.toggle('fast-food-demo',enabled);
   if(!onlineAccess)return;
@@ -135,7 +135,7 @@ async function home() {
         return id ? await openStudent(id) : showDocsEntry();
       }
       const requested=assignments.find(a=>a.id===query.get('assignment'));
-      if((lesson3Experience(requested)&&onlineAccess?.personal)||lesson5Experience(requested))return await openStudent(requested.id,{fromDocs:true});
+      if((lesson3Experience(requested)&&onlineAccess?.personal)||guidedWritingExperience(requested))return await openStudent(requested.id,{fromDocs:true});
       return query.get('assignment')&&query.get('view')!=='assignments' ? openStudent(query.get('assignment')) : studentHome();
     }
     if (me.role === 'teacher') {
@@ -196,7 +196,7 @@ async function openStudent(id, { resultSubmissionId = null, fromDocs = false } =
   const documentId=new URLSearchParams(location.search).get('documentId');
   let confirmedOutline;
   const linked=state.assignment.approvedOutlineRequired===true;
-  const lesson5=lesson5Experience(state.assignment);
+  const lesson5=guidedWritingExperience(state.assignment);
   if(onlineAccess&&(onlineAccess.personal||lesson5)&&!state.submission&&(linked||isDevWritingEntry(me,id,documentId))){
     const version=lesson5?(state.outlineConfirmation?.version??null):approvedOutlineVersion(documentId);
     if(version!==null)confirmedOutline=await api('/student/assignments/'+encodeURIComponent(id)+'/handout');
@@ -280,7 +280,7 @@ function renderStudent() {
   if(state.assignment.handoutRequired&&!locked())studentAlignment.draw(model.kind==='revision'?state.revisionHandoutCheck:state.handoutCheck);
   const handoutModel=model, handoutPerson=me.id;
   handoutEditor=setupHandoutPreview($('#app'),{assignment:a,person:me,initialMode:handoutModel.handoutMode,
-    revisitOutline:onlineAccess&&lesson5Experience(a)&&!state.submission?async()=>{
+    revisitOutline:onlineAccess&&guidedWritingExperience(a)&&!state.submission?async()=>{
       await persist();
       await saveDraft();
       if(model!==handoutModel||me?.id!==handoutPerson)return;
@@ -291,8 +291,8 @@ function renderStudent() {
     onModeChange:mode=>{handoutModel.handoutMode=mode;},
     loadHandout:async({refresh=false,isCurrent=()=>true}={})=>{
       const confirmed=handoutModel.confirmedOutline;
-      const retryingSource=lesson5Experience(a)&&refresh;
-      if(confirmed&&(!lesson5Experience(a)||confirmed.status==='ready'&&!retryingSource))return confirmed;
+      const retryingSource=guidedWritingExperience(a)&&refresh;
+      if(confirmed&&(!guidedWritingExperience(a)||confirmed.status==='ready'&&!retryingSource))return confirmed;
       const result=await api('/student/assignments/'+encodeURIComponent(a.id)+'/handout');
       if(confirmed&&result.status==='ready'){
         if(result.assignmentId!==a.id||result.sourceVersion!==confirmed.sourceVersion||
@@ -327,7 +327,8 @@ function renderStudent() {
   $('#refresh').onclick = () => openStudent(model.id, { resultSubmissionId: model.resultSubmissionId }).catch(showPageError);
   if ($('#student-home')) $('#student-home').onclick = () => studentWorkspace().catch(editorError);
   if (!locked()) {
-    $('#essay').oninput = () => { const current = model; current.text = $('#essay').value;studentAlignment?.draw(null); $('#essay').removeAttribute('aria-invalid'); if($('#editor-error').dataset.errorCode==='SUBMISSION_INVALID')$('#editor-error').replaceChildren(); $('#word-count').textContent = wordCount(current.text) + ' từ'; persist().then(() => { if (model === current && !current.backupError) setSaveStatus('Đã lưu trên thiết bị này · chờ đồng bộ'); }); clearTimeout(saveTimer); saveTimer = setTimeout(() => saveDraft().catch(editorError), 1500); };
+    const edit = () => { const current = model;const body2=$('#essay-body2');current.text=body2?joinWritingParts($('#essay').value,body2.value):$('#essay').value;studentAlignment?.draw(null);$('#essay').removeAttribute('aria-invalid');body2?.removeAttribute('aria-invalid'); if($('#editor-error').dataset.errorCode==='SUBMISSION_INVALID')$('#editor-error').replaceChildren(); updateWordCounts(current.text); persist().then(() => { if (model === current && !current.backupError) setSaveStatus('Đã lưu trên thiết bị này · chờ đồng bộ'); }); clearTimeout(saveTimer); saveTimer = setTimeout(() => saveDraft().catch(editorError), 1500); };
+    for(const field of document.querySelectorAll('#essay,#essay-body2'))field.oninput=edit;
     $('#save').onclick = () => saveDraft().catch(editorError);
     $('#submit').onclick = () => submitDraft().catch(editorError);
     if(onlineAccess)$('#sample')?.closest('.demo-tool').remove();else $('#sample').onclick = () => { $('#essay').value = a.writingPart==='introduction' ? 'People is eating fast food more often, and it cause health problems when consumed too frequently. Some argue that banning it completely is the only solution. I disagree because a total ban would be hard to enforce and clearer nutrition labels could help people make healthier choices.' : 'People is interested in learning together. Students can share their ideas and support each other.'; $('#essay').dispatchEvent(new Event('input')); };
@@ -341,11 +342,25 @@ function renderStudent() {
     $('.editor-card').append(panel);
     panel.querySelectorAll('[data-restore-backup]').forEach(b => b.onclick = async () => {
       model.history.push({ text: model.text, at: Date.now() }); model.text = backups[Number(b.dataset.restoreBackup)].text;
-      $('#essay').value = model.text; await persist(); setSaveStatus('Đã khôi phục bản dự phòng · chưa lưu lên hệ thống');
+      setEssayText(model.text); await persist(); setSaveStatus('Đã khôi phục bản dự phòng · chưa lưu lên hệ thống');
     });
   }
 }
-const wordCount = text => text.trim() ? text.trim().split(/\s+/).length : 0;
+function setEssayText(text){
+  const body2=$('#essay-body2');
+  if(body2){const [intro,body]=splitWritingParts(text);$('#essay').value=intro;body2.value=body;}
+  else $('#essay').value=text;
+  updateWordCounts(text);
+}
+function updateWordCounts(text){
+  const count=$('#word-count');
+  if(count)count.textContent=wordCount(text)+' từ';
+  const body=$('#essay-body2');
+  if(body){
+    $('#intro-word-count').textContent=wordCount($('#essay').value)+' từ';
+    $('#body-word-count').textContent=wordCount(body.value)+' từ';
+  }
+}
 function deliveryHtml(rows) {
   return `<details class="block"><summary>Trạng thái Docs và email mô phỏng</summary><ul class="delivery-list">${rows.map(r => `<li><span>${esc(events[r.event])}<small> · ${r.channel === 'docs' ? 'Docs giả' : 'Email GV giả'}</small></span><span>${esc(deliveryLabel(r.status))}</span></li>`).join('')}</ul></details>`;
 }
@@ -368,7 +383,7 @@ function editorError(e) {
   const panel=$('#editor-error');if(!panel)return;
   panel.dataset.errorCode=e.code||'';const progress=$('#submit-progress');if(progress)progress.textContent='';
   panel.innerHTML = `<div class="error-panel"><strong>${esc(e.message)}</strong>${e.details?.errors ? '<ul>' + e.details.errors.map(x => `<li>${esc(x.message)}</li>`).join('') + '</ul>' : ''}</div>`;
-  if(e.code==='SUBMISSION_INVALID'){panel.tabIndex=-1;panel.focus({preventScroll:true});panel.scrollIntoView({block:'nearest'});$('#essay')?.setAttribute('aria-invalid','true');}
+  if(e.code==='SUBMISSION_INVALID'){panel.tabIndex=-1;panel.focus({preventScroll:true});panel.scrollIntoView({block:'nearest'});for(const field of document.querySelectorAll('#essay,#essay-body2'))field.setAttribute('aria-invalid','true');}
 }
 function showConflict() {
   const current = model.conflict;
@@ -376,7 +391,7 @@ function showConflict() {
   const resolve = async keepLocal => {
     model.history.push({ text: model.text, serverText: current.text, at: Date.now() });
     model.baseRevision = current.revision; model.lastSavedText = current.text; model.pendingSave = null; model.conflict = null;
-    if (!keepLocal) { model.text = current.text; $('#essay').value = current.text; }
+    if (!keepLocal) { model.text = current.text; setEssayText(current.text); }
     await persist(); $('#conflict').innerHTML = ''; if (keepLocal) await saveDraft(); else setSaveStatus('Đã dùng bản trên hệ thống · bản ' + current.revision);
   };
   $('#use-server').onclick = () => resolve(false).catch(editorError); $('#keep-local').onclick = () => resolve(true).catch(editorError);
@@ -431,7 +446,7 @@ async function submitDraft() {
     if(handoutCheckId)m.pendingSubmit.handoutCheckId=handoutCheckId;
     if(m.kind==='original'&&m.state.assignment.approvedOutlineRequired){
       m.pendingSubmit.outlineVersion=m.confirmedOutline?.sourceVersion;
-      if(lesson5Experience(m.state.assignment))m.pendingSubmit.outlineSessionRef=m.confirmedOutline?.sourceSessionRef;
+      if(guidedWritingExperience(m.state.assignment))m.pendingSubmit.outlineSessionRef=m.confirmedOutline?.sourceSessionRef;
     }
     await persist();
     await api('/student/assignments/' + encodeURIComponent(m.id) + (m.kind === 'revision' ? '/revision' : '/submit'), m.pendingSubmit);
@@ -441,8 +456,9 @@ async function submitDraft() {
     if (!compact) notice(m.kind === 'revision' ? 'Đã nhận bản sửa của em.' : 'Đã nhận bài hợp lệ và xếp hàng chấm.');
     await openStudent(m.id);
   } catch (e) {
-    if(['SUBMISSION_INVALID','HANDOUT_CHECK_REQUIRED','HANDOUT_CHECK_STALE','LESSON3_OUTLINE_NOT_CONFIRMED','LESSON5_OUTLINE_NOT_CONFIRMED'].includes(e.code)&&gen===generation&&model){model.pendingSubmit=null;await persist();}
-    if(e.code==='LESSON3_OUTLINE_NOT_CONFIRMED'&&gen===generation&&model&&onlineAccess?.personal){
+    if(['SUBMISSION_INVALID','HANDOUT_CHECK_REQUIRED','HANDOUT_CHECK_STALE','LESSON3_OUTLINE_NOT_CONFIRMED','LESSON5_OUTLINE_NOT_CONFIRMED','LESSON7_OUTLINE_NOT_CONFIRMED'].includes(e.code)&&gen===generation&&model){model.pendingSubmit=null;await persist();}
+    if((e.code==='LESSON3_OUTLINE_NOT_CONFIRMED'&&onlineAccess?.personal||e.code==='LESSON7_OUTLINE_NOT_CONFIRMED'&&onlineAccess)&&gen===generation&&model){
+      await persist();
       location.assign(linkedHandoutUrl(model.id,new URLSearchParams(location.search).get('documentId')));
       return;
     }

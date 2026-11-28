@@ -14,8 +14,8 @@ export function devHandoutUrl(documentId){
 }
 
 export function linkedHandoutUrl(assignment,documentId){
-  const lesson5=/^hw-k67-writing-lesson5-[1-9]\d{0,17}$/.test(assignment);
-  const url=new URL(lesson5?'../writing-handouts/lesson5/':'../writing-handouts/lesson3-writing/',import.meta.url);
+  const guided=/^hw-k67-writing-(lesson[57])-[1-9]\d{0,17}$/.exec(assignment);
+  const url=new URL(guided?'../writing-handouts/'+guided[1]+'/':'../writing-handouts/lesson3-writing/',import.meta.url);
   url.search=new URLSearchParams({mode:'student',assignment,...(documentId?{documentId}:{}),workspace:'k67'}).toString();
   return url;
 }
